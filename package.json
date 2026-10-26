@@ -1,0 +1,19 @@
+{
+  "name": "plazma-burst-2-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Desktop wrapper for the Plazma Burst 2 HTML5 game, with a dev console",
+  "main": "desktop/main.js",
+  "scripts": {
+    "start": "electron .",
+    "fetch-game": "node tools/fetch-game.js",
+    "find-names": "node tools/find-names.js"
+  },
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "electron": "^45.0.0"
+  }
+}

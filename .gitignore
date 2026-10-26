@@ -1,0 +1,13 @@
+node_modules/
+
+# Game files: downloaded with "npm run fetch-game", never committed.
+/game/
+/game.previous/
+/game.download/
+
+# Generated from the game files with "npm run find-names".
+desktop/dev/names.js
+
+# Local settings
+desktop/credentials.json*
+desktop/dev-overrides.json
