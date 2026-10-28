@@ -1581,6 +1581,20 @@
     l: { what: 'longest', how: 'sets it only where the new text is longer' },
   };
   const VAR_SYNC_TYPES = { 223: 'r', 224: 'd', 225: 'x', 226: 'n', 227: 'l' };
+  // Every action type that writes the variable named by its target A, read out of
+  // scripts/actions.js: each "case" that assigns to the variable store under that name,
+  // directly or through one of the action loop's aliases for target A. Used to warn that
+  // a trigger will write the variable back, which beats any sync for that client.
+  const VAR_WRITE_TYPES = new Set([
+    100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 118, 119, 122, 124, 125, 127, 131,
+    132, 133, 134, 135, 136, 137, 138, 139, 140, 145, 146, 147, 148, 149, 150, 151, 152,
+    153, 154, 155, 157, 158, 159, 160, 177, 178, 180, 181, 182, 183, 184, 185, 186, 187,
+    188, 189, 198, 204, 205, 206, 235, 236, 247, 248, 249, 263, 266, 277, 278, 280, 294,
+    295, 314, 315, 316, 325, 326, 327, 328, 331, 332, 333, 334, 335, 336, 337, 344, 348,
+    349, 350, 354, 369, 373, 376, 393, 394, 397, 398, 399, 405, 410, 425, 426, 427, 428,
+    434, 435, 436, 454, 463, 471, 472, 474, 484, 495, 496, 497, 508, 509, 510, 531, 544,
+    552, 555,
+  ]);
   const VAR_MAX_LEN = 2048; // the length the game's own sync actions refuse past
 
   // This client applies and sends syncs only with the mark. It is never set back to
@@ -1603,6 +1617,26 @@
       for (let a = 0; a < (t[N.trigActionCount] || 0); a++) {
         const mode = VAR_SYNC_TYPES[t[N.trigTypes][a]];
         if (mode && String(t[N.trigTargetA][a]) === name) out.push({ idx: i, uid: t.uid, action: a + 1, mode });
+      }
+    });
+    return out;
+  }
+
+  // Triggers that write this variable and run only once or at map start: the map's own
+  // initialisers. A client that reloads the map runs them again with their calls reset,
+  // so it ends up with the map's value whatever was synced to it earlier.
+  function seedersFor(name) {
+    const out = [];
+    mapList('triggers', 'triggerCount').forEach((t, i) => {
+      if (!t) return;
+      const atStart = !!t[N.trigAtStart];
+      const once = t[N.trigMaxCalls] === 1;
+      if (!atStart && !once) return;
+      for (let a = 0; a < (t[N.trigActionCount] || 0); a++) {
+        if (VAR_WRITE_TYPES.has(t[N.trigTypes][a]) && String(t[N.trigTargetA][a]) === name) {
+          out.push({ idx: i, uid: t.uid, action: a + 1, atStart, once });
+          break;
+        }
       }
     });
     return out;
@@ -1658,6 +1692,18 @@
       if (fight.length) print(`    With ${fight[0].mode === 'x' ? 'max' : 'min'} they can undo your value: see what starts them with "triggers ${fight[0].idx}".`, WARN_COLOR);
     }
 
+    const seeders = seedersFor(name);
+    if (seeders.length) {
+      print(`  ${seeders.length} trigger${seeders.length === 1 ? '' : 's'} set this variable from the map, so any client that reloads`, WARN_COLOR);
+      print('  the map writes the map\'s own value back over what you synced:', WARN_COLOR);
+      for (const sd of seeders.slice(0, 4)) {
+        print(`    #${String(sd.idx).padEnd(4)} ${String(sd.uid || '-').padEnd(18)} action ${String(sd.action).padEnd(3)} ${sd.atStart ? 'runs at map start' : 'one call only'}`);
+      }
+      if (seeders.length > 4) print(`    ... ${seeders.length - 4} more`);
+      print('  So it holds for players already in the match, but not for you after a', WARN_COLOR);
+      print('  rejoin, and not for anyone who joins later. Test it on another client.', WARN_COLOR);
+    }
+
     if (has) {
       print('  What each mode would do with this value:', '#89D0FF');
       for (const [m, info] of Object.entries(VAR_SYNC_MODES)) {
@@ -1696,6 +1742,10 @@
     const synced = syncActionsFor(name).filter((s) => s.mode === 'x' || s.mode === 'n');
     if (synced.length) print(`  ${synced.length} trigger action${synced.length === 1 ? '' : 's'} re-send this variable with ${synced[0].mode === 'x' ? 'max' : 'min'} and may undo it ("triggers ${synced[0].idx}").`, WARN_COLOR);
     if (verdict !== 'yes') print(`  Mode ${mode} is conditional (${verdict}): ${why}.`, '#ffffff99');
+    const seeders = seedersFor(name);
+    if (seeders.length) {
+      print(`  Note: #${seeders[0].idx} ${seeders[0].uid || ''} sets this variable from the map (${seeders[0].atStart ? 'at map start' : 'one call only'}), so a client that reloads the map loses your value. Rejoining is not a test: check it on another client.`, WARN_COLOR);
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -2263,6 +2313,10 @@
         'so when it sees that.',
         'A variable the map syncs with max or min fights back: those actions re-send each',
         'client\'s own value, so max can never lower a value and min can never raise one.',
+        'Loading a map empties the variable store, and a trigger that runs at map start or',
+        'has one call left then writes the map\'s own value in. So a synced value holds for',
+        'the players already in the match, but not for anyone who reloads or joins later,',
+        'and your own rejoin shows the map value whether the sync worked or not.',
         'Multiplayer only, and the game refuses a name or value over 2048 characters.'],
       see: ['vars', 'vars set', 'triggers find', 'triggers run'],
     },
