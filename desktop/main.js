@@ -61,9 +61,9 @@ const MAP_EXTS = ['.xml', '.txt', ''];
 
 // Map cache: every map the game downloads (single-player custom maps over HTTP,
 // multiplayer maps from the page through __dev/savemap) is saved to
-// desktop/maps/<map id>.xml as plain, uncompressed XML. Dev console keys (in
-// dev-overrides.json): save_maps (default on) and fast_maps (default off: on = load
-// maps from desktop/maps instead of downloading them again).
+// desktop/maps/<map id>.xml as plain, uncompressed XML, one tag per line. Dev console
+// keys (in dev-overrides.json): save_maps (default on) and fast_maps (default off:
+// on = load maps from desktop/maps instead of downloading them again).
 function readDevKv() {
   try {
     return JSON.parse(fsSync.readFileSync(DEV_KV_FILE, 'utf8')) || {};
@@ -99,6 +99,30 @@ function decompressMap(text) {
   return out;
 }
 
+// The server sends a map as one long line of self-closing tags. It is saved one tag
+// per line so the files are readable and diff cleanly: the game's parser skips whatever
+// sits between tags. Quoted attribute values are left alone, brackets inside them too.
+function beautifyMap(text) {
+  const lines = [];
+  let line = '';
+  let quoted = false;
+  for (const c of text) {
+    if (quoted) {
+      line += c;
+      if (c === '"') quoted = false;
+      continue;
+    }
+    if (c === '<' && line.trim()) {
+      lines.push(line.trim());
+      line = '';
+    }
+    line += c;
+    if (c === '"') quoted = true;
+  }
+  if (line.trim()) lines.push(line.trim());
+  return lines.length ? lines.join('\n') + '\n' : '';
+}
+
 // Returns 'saved', 'same' or 'off'. Throws on bad input.
 async function saveMap(id, raw) {
   if (!saveMapsOn()) return 'off';
@@ -107,11 +131,12 @@ async function saveMap(id, raw) {
   const text = decompressMap(String(raw || '').replace(/^\uFEFF/, '').trim());
   if (!text.startsWith('<') || text.startsWith('<not_published')) throw new Error('not map XML');
   const file = path.join(MAPS_DIR, mapFileName(id));
+  const out = beautifyMap(text);
   try {
-    if ((await fs.readFile(file, 'utf8')) === text) return 'same';
+    if ((await fs.readFile(file, 'utf8')) === out) return 'same';
   } catch {}
   await fs.mkdir(MAPS_DIR, { recursive: true });
-  await fs.writeFile(file, text);
+  await fs.writeFile(file, out);
   console.log(`Saved map ${id} to ${file} (${text.length} chars)`);
   return 'saved';
 }

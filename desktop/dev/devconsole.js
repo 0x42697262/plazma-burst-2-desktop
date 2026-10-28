@@ -164,7 +164,7 @@
     // Max keeps a whole page (plus title and footer) inside the 500-line log (LOG_MAX).
     trigger_history: { type: 'bool', group: 'console', default: true, desc: 'Record trigger runs for "triggers history" (default on)' },
     page_size:     { type: 'int',    group: 'console', min: 10, max: 480, desc: 'Lines per page for long lists like "triggers" (default 200); "more" = next page' },
-    save_maps:     { type: 'bool',   group: 'maps', default: true, desc: 'Save every map the game downloads to desktop/maps/<map id>.xml, uncompressed (default on)' },
+    save_maps:     { type: 'bool',   group: 'maps', default: true, desc: 'Save every map the game downloads to desktop/maps/<map id>.xml, uncompressed and one tag per line (default on)' },
     fast_maps:     { type: 'bool',   group: 'maps', desc: 'Fast load: use the saved map from desktop/maps instead of downloading it again (default off)' },
   };
   const ALIASES = {
