@@ -789,7 +789,7 @@
   }
 
   const COMMANDS = {
-    help: { usage: 'help', desc: 'Show commands' },
+    help: { usage: 'help [command | key]', desc: 'List every command and key, or explain one in full (also "<command> help")' },
     list: { usage: 'list [group]', desc: 'Show all keys and current values' },
     set: { usage: 'set <key> <value>', desc: 'Set an override (or just "<key> <value>")' },
     get: { usage: 'get <key>', desc: 'Show one value' },
@@ -1767,7 +1767,358 @@
     return null;
   }
 
-  function cmdHelp() {
+  // ---------------------------------------------------------------------------
+  // Help
+  // ---------------------------------------------------------------------------
+  // Other spellings of a command, for "help <topic>" and the "Also:" line.
+  const CMD_ALIASES = {
+    '?': 'help', ls: 'list', del: 'unset', rm: 'unset', cls: 'clear', exit: 'close',
+    res: 'revive', weapons: 'guns', throw: 'drop', players: 'chars', bots: 'chars',
+    teleport: 'tp', where: 'pos', binds: 'bind', next: 'more', page: 'more', pg: 'more',
+    trigger: 'triggers', trig: 'triggers',
+  };
+
+  // Second word of a "triggers <verb>" topic -> the COMMANDS entry it belongs to.
+  // The bare verbs work too, so "help find" is "help triggers find".
+  const TRIGGER_TOPICS = {
+    find: 'find', search: 'find',
+    run: 'run', activate: 'run', fire: 'run', exec: 'run',
+    history: 'history', hist: 'history', log: 'history',
+  };
+
+  // The long form of each command, printed by "help <command>". Every field is
+  // optional: "about" and "notes" are lines, "args" and "examples" are two-column
+  // [left, meaning] pairs, "also" adds spellings CMD_ALIASES does not cover, and
+  // "see" becomes the "Related:" footer. Keys (SCHEMA) may have "about" too.
+  const HELP = {
+    help: {
+      about: ['With no topic: every command, every key, and a few examples.',
+        'With a topic: everything known about one command or key.'],
+      examples: [['help tp', 'the whole tp command'], ['help speed', 'what the speed key does, and its range'],
+        ['help triggers find', 'the trigger search syntax'], ['tp help', 'the same as "help tp"']],
+    },
+    list: {
+      about: ['Every key with its current value and what it does. Keys you have set are',
+        'green, the rest show "default".'],
+      args: [['[group]', 'only this group: player, world, bullets, gun, console, maps']],
+      examples: [['list', 'all keys'], ['list bullets', 'just the bullet keys']],
+      see: ['set', 'get', 'unset', 'reset'],
+    },
+    set: {
+      about: ['The key name on its own works too, so "speed 1.8" is "set speed 1.8".'],
+      args: [['<key>', 'a key name or one of its aliases (see "list")'],
+        ['<value>', 'on/off/1/0 for a bool key, a number in range for the rest']],
+      examples: [['set speed 1.8', 'run 1.8x faster'], ['speed 1.8', 'the same, without "set"'],
+        ['god', 'a bool key on its own toggles it'], ['speed default', 'the same as "unset speed"']],
+      notes: ['Overrides are saved to desktop/dev-overrides.json and survive a restart.',
+        'Keys outside the console and maps groups only apply while you are in a level.'],
+      see: ['list', 'get', 'unset', 'reset'],
+    },
+    get: {
+      args: [['<key>', 'a key name or alias']],
+      examples: [['get speed', 'the value, or "default"'], ['speed', 'a number key on its own shows it too']],
+      see: ['list', 'set'],
+    },
+    unset: {
+      about: ['Removes one override, so the game\'s own value is used again.'],
+      examples: [['unset speed', 'back to the game default'], ['speed default', 'the same']],
+      see: ['reset', 'set'],
+    },
+    reset: {
+      about: ['Removes every override at once. Key binds are kept: "unbind all" clears those.'],
+      see: ['unset', 'unbind'],
+    },
+    heal: {
+      about: ['Refills your HP to your current max. Needs a level, and refuses while you',
+        'are down, because the body has to be stood up first ("revive").'],
+      see: ['revive', 'hp', 'max_hp'],
+    },
+    hp: {
+      about: ['Three things in one, all of them keys underneath:',
+        '  hp <n>     sets max_hp, an exact max HP',
+        '  hp +n      adds a flat bonus (hp_bonus)',
+        '  hp +n%     adds a percentage of the game\'s own max (hp_bonus_pct)',
+        'A bonus applies once per life and per level, so it never stacks. While max_hp',
+        'is set, "hp +n" raises that number instead of the bonus.'],
+      examples: [['hp 500', 'max HP is exactly 500'], ['hp +100', '100 more than the map gives you'],
+        ['hp -25%', 'a quarter less'], ['hp +0', 'back to no bonus (removes the key)']],
+      notes: ['A relative change needs its sign: "hp 50%" is refused, "hp +50%" is not.'],
+      see: ['max_hp', 'hp_bonus', 'hp_bonus_pct', 'heal'],
+    },
+    revive: {
+      about: ['Stands the body up where it lies and refills HP, the way a defibrillator',
+        'does. A destroyed head is repaired first, because the game refuses to revive',
+        'without one. Also cancels the "level failed" screen.'],
+      args: [['(nothing)', 'you'], ['<#>', 'a character index from "chars"'], ['all', 'everyone who is down']],
+      examples: [['revive', 'yourself'], ['revive 3', 'character #3'], ['revive all', 'every downed character']],
+      see: ['chars', 'heal'],
+    },
+    guns: {
+      about: ['Every gun the game can build, read from its own gun factory, in three',
+        'groups: standard, custom (community) and items. The # is what "give" takes,',
+        'and the slot is fixed per gun.'],
+      args: [['[filter]', 'part of a model or of a display name']],
+      examples: [['guns', 'all of them'], ['guns rail', 'only models or names containing "rail"']],
+      see: ['give', 'drop'],
+    },
+    tp: {
+      about: ['With no argument: to your crosshair.'],
+      args: [['x y', 'exact coordinates (see "pos")'],
+        ['<# | name>', 'to a character, by index or part of a nickname'],
+        ['to <name>', 'the same, when the name could be read as something else']],
+      examples: [['tp', 'to the crosshair'], ['tp 1200 -400', 'to those coordinates'],
+        ['tp 3', 'to character #3'], ['tp to bob', 'to the first nickname containing "bob"'],
+        ['bind f tp', 'teleport to the crosshair with F']],
+      notes: ['The old "tp on <key>" and "tp off" still work: they add and remove that bind.'],
+      see: ['pos', 'chars', 'bind'],
+    },
+    pos: {
+      about: ['Your coordinates and your crosshair\'s, both rounded. Feed them to "tp x y".'],
+      see: ['tp'],
+    },
+    give: {
+      about: ['Spawns the gun at the character\'s feet and equips it when that slot is free.'],
+      args: [['<gun>', 'a # from "guns", a model name, or part of a name'],
+        ['[0-3]', 'upgrade level, 3 by default'],
+        ['to #', 'give it to a bot instead (single-player only)']],
+      examples: [['give 12', 'gun #12 from "guns"'], ['give gun_railgun 2', 'by model, upgrade 2'],
+        ['give rail', 'by part of a name, when only one gun matches'], ['give deagle to 3', 'to bot #3']],
+      notes: ['Grenade items are picked up by walking over them; vehicle guns cannot be carried.',
+        'An ambiguous name is refused and the matches are listed.'],
+      see: ['guns', 'drop', 'chars'],
+    },
+    drop: {
+      about: ['Force-drops: the game\'s own V key refuses in a vehicle, or for guns that',
+        'cannot be thrown. This does not.'],
+      args: [['(nothing)', 'the gun in your hands'], ['<1-9>', 'that slot'],
+        ['all', 'every carried gun'], ['from #', 'a bot instead (single-player only)']],
+      examples: [['drop', 'what you are holding'], ['drop 2', 'slot 2'], ['drop all', 'everything'],
+        ['drop all from 3', 'disarm bot #3']],
+      see: ['give', 'guns'],
+    },
+    chars: {
+      about: ['Everyone in the level: index, nickname, team, HP, alive or dead, and how',
+        'far away they are. The index is what "tp", "give to", "drop from" and',
+        '"triggers run as" take.'],
+      see: ['tp', 'give', 'revive'],
+    },
+    bind: {
+      about: ['Binds run in levels while the console and the game chat are both closed.',
+        '"bind" alone lists every bind; "bind <key>" shows just that one.'],
+      args: [['<key>', 'a key name, e.g. f, shift+h, ctrl+alt+3'],
+        ['<command>', 'any console command, arguments included']],
+      examples: [['bind f tp', 'teleport to the crosshair with F'], ['bind shift+h heal', 'refill HP'],
+        ['bind 5 give gun_railgun', 'a gun on a number key'], ['binds', 'list them all']],
+      notes: ['Keys are named by their physical key, so shift+1 is "shift+1", not "shift+!".',
+        'Binding a key the game already uses wins in levels; the console says so.',
+        'Binds live in dev-overrides.json and survive "reset".'],
+      see: ['unbind'],
+    },
+    unbind: {
+      args: [['<key>', 'remove that one bind'], ['all', 'remove every bind']],
+      see: ['bind'],
+    },
+    triggers: {
+      about: ['A read-only view of the map\'s triggers.',
+        'No argument: all of them, with what starts each one (region, timer, map start,',
+        'chat). A number or uid: that trigger in full, action by action. Text: only the',
+        'triggers whose uid contains it.'],
+      args: [['[#]', 'trigger index, e.g. 12 or #12'], ['[uid]', 'exact uid, e.g. #god_all'],
+        ['[text]', 'every uid containing it'], ['on | off', 'only enabled, or only disabled'],
+        ['page n', 'jump to page n of a long list']],
+      examples: [['triggers', 'all of them'], ['triggers off', 'only the disabled ones'],
+        ['triggers 12', 'trigger #12 in full'], ['triggers #god_all', 'the same, by uid'],
+        ['triggers god', 'every uid containing "god"']],
+      notes: ['Long lists are paged: "more" is the next page, page_size sets the length.'],
+      see: ['triggers find', 'triggers run', 'triggers history', 'more'],
+    },
+    'triggers find': {
+      also: ['triggers search'],
+      about: ['Searches trigger uids and every action\'s A and B value.',
+        'All terms must match. A bare term matches a uid, an A or a B; the prefixes',
+        'narrow it. Text matches anywhere and ignores case; a number matches number',
+        'values exactly, so 5 does not match 15.'],
+      args: [['<text>', 'uid, A or B'], ['uid:<text>', 'the trigger uid only'],
+        ['a:<text>', 'A values only'], ['b:<text>', 'B values only'],
+        ['type:<n>', 'the map editor\'s action number'], ['page n', 'jump to page n']],
+      examples: [['triggers find god_all', 'the #god_all trigger and the actions pointing at it'],
+        ['triggers find uid:god', 'every trigger whose uid contains "god"'],
+        ['triggers find type:59', 'every action of type 59'],
+        ['triggers find type:41 a:sound', 'type 41 whose A mentions a sound']],
+      notes: ['A uid hit prints one row for the trigger, not one per action.',
+        '"uid:" on its own lists triggers only; add a:, b: or type: to get actions too.'],
+      see: ['triggers', 'triggers run'],
+    },
+    'triggers run': {
+      also: ['triggers activate', 'triggers fire', 'triggers exec'],
+      about: ['Runs a trigger through the game\'s own function, the way a shot or a region',
+        'does: the activator ("the player who started it", which many actions use) is',
+        'set first.',
+        'Without "force" the game\'s rules apply: the trigger must be enabled with calls',
+        'left, and running uses one up. With "force" it runs anyway, and its enabled',
+        'state and calls left are put back afterwards.'],
+      args: [['<# | uid>', 'which trigger'], ['force', 'ignore enabled and calls left, then restore them'],
+        ['as <char#>', 'run it as that character (see "chars")']],
+      examples: [['triggers run 12', 'by index'], ['triggers run #god_all', 'by uid'],
+        ['triggers run 12 force', 'even when disabled or used up'], ['triggers run 12 as 3', 'as character #3']],
+      notes: ['Multiplayer: the run is sent to the server, so other players run it too.',
+        'Not sent when the other clients would refuse it or run it differently: forced',
+        'on a disabled or used-up trigger, "as" someone else (the server always makes',
+        'the sender the activator), or while spectating. Then it runs in your game only',
+        'and the console says which of those it was.'],
+      see: ['triggers', 'triggers history', 'chars'],
+    },
+    'triggers history': {
+      also: ['triggers hist', 'triggers log'],
+      about: ['Every trigger run since the map loaded, newest first: how long ago, which',
+        'trigger, who started it, and whether it ran. Attempts the game refused',
+        '(disabled, or no calls left) are hidden until you ask for "all".'],
+      args: [['(nothing)', 'runs that succeeded'], ['all', 'refused attempts as well'],
+        ['clear', 'empty the list'], ['<#>', 'one trigger index, refusals included'],
+        ['[text]', 'only uids containing it'], ['page n', 'jump to page n']],
+      examples: [['triggers history', 'the recent runs'], ['triggers history all', 'refusals too'],
+        ['triggers history god', 'only uids containing "god"'], ['triggers history clear', 'start over']],
+      notes: [`Recording is the trigger_history key (on by default), and the last ${TRIG_HISTORY_MAX} runs are kept.`,
+        'Triggers that run while the map loads ("at start") are not recorded.'],
+      see: ['triggers', 'triggers run', 'trigger_history'],
+    },
+    more: {
+      about: ['"more" is the next page of the last long list, "page <n>" jumps to one, and',
+        '"page 1" goes back to the top. Long lists also take "page n" directly, e.g.',
+        '"triggers find god page 2".'],
+      see: ['page_size', 'triggers'],
+    },
+    game: {
+      about: ['Runs one of the game\'s own chat commands. "game help" lists them all,',
+        'grouped, with what each one does.'],
+      examples: [['game help', 'every built-in command'], ['game god', 'the game\'s own god mode'],
+        ['game kill enemies', 'kill everyone not on your team']],
+      notes: ['With builtin on they run silently, on any map and in multiplayer. With',
+        'builtin off they go through game chat, and the game refuses them in multiplayer.'],
+      see: ['builtin'],
+    },
+    builtin: {
+      about: ['A key, so "builtin" toggles it and "builtin on" / "builtin off" set it.'],
+      see: ['game'],
+    },
+    maps: {
+      about: ['The maps in desktop/maps. Play one from Campaign > Custom Map by typing the',
+        'ID listed here. Maps the game downloads land there too, uncompressed and one',
+        'XML tag per line.'],
+      notes: ['Desktop wrapper only: it asks the wrapper for the directory listing.'],
+      see: ['save_maps', 'fast_maps'],
+    },
+    js: { about: ['"help js" prints the full JavaScript guide ("js help" does the same).'] },
+    clear: { about: ['Empties this log. Overrides and binds are untouched.'] },
+    close: { about: ['Closes the console. Shift+` and Esc do the same.'] },
+  };
+
+  // Extra prose for the keys where the name and one-line description are not enough.
+  const KEY_HELP = {
+    max_hp: { about: ['Refills your HP whenever you change it. "hp 500" sets this key.'], ex: '500' },
+    hp_bonus: { about: ['Added once per life and per level, so it never stacks. "hp +100" sets this.'], ex: '100' },
+    hp_bonus_pct: { about: ['A percentage of the game\'s own max, added once per life and per level.',
+      '"hp +50%" sets this.'], ex: '50' },
+    speed: { ex: '1.8' },
+    jump: { ex: '2' },
+    fly: { about: ['Fly with the jump and crouch keys. Turns gravity off while it is on.'] },
+    fly_speed: { ex: '10' },
+    world_gravity: { about: ['Applies to everything, not just you. Most maps use 0.5.'], ex: '0.2' },
+    penetration: { about: ['How much damage a bullet keeps after each hit it passes through.'], ex: '1' },
+    spread: { about: ['0 makes the held gun perfectly accurate.'], ex: '0' },
+    bullet_damage: { ex: '5' },
+    page_size: { about: ['Lines per page for "triggers" and the other long lists. The default (200)',
+      'keeps a whole page inside this log.'], ex: '50' },
+    trigger_history: { about: ['Turns the recording for "triggers history" on and off.'] },
+    save_maps: { about: ['Every map the game downloads is written to desktop/maps/<map id>.xml,',
+      'uncompressed and one XML tag per line.'] },
+    fast_maps: { about: ['Loads the saved copy from desktop/maps instead of downloading the map',
+      'again. Single-player maps are served by the desktop wrapper; multiplayer maps',
+      'are handed to the game as it joins a match.'] },
+  };
+
+  // Two columns while they fit on one line, otherwise the meaning underneath.
+  function printPair(left, right, width) {
+    const l = `  ${left}`;
+    if (!right) { print(l, '#EEF9FF'); return; }
+    if (l.length < width) { print([[l.padEnd(width + 1), '#EEF9FF'], [right, '#ffffff99']]); return; }
+    print(l, '#EEF9FF');
+    print(`      ${right}`, '#ffffff99');
+  }
+
+  function printHelpSections(h) {
+    for (const line of h.about || []) print(`  ${line}`);
+    if (h.args) {
+      print('Arguments:', '#89D0FF');
+      for (const [a, what] of h.args) printPair(a, what, 16);
+    }
+    if (h.examples) {
+      print('Examples:', '#89D0FF');
+      for (const [c, what] of h.examples) printPair(c, what, 34);
+    }
+    for (const line of h.notes || []) print([[`  ${line}`, '#ffffff99', true]]);
+    if (h.see) print(`Related: ${h.see.join('  |  ')}`, '#ffffff99');
+  }
+
+  function printCommandHelp(name) {
+    const c = COMMANDS[name];
+    const h = HELP[name] || {};
+    print(c.usage, '#89D0FF');
+    print(`  ${c.desc}`);
+    const also = [...Object.entries(CMD_ALIASES).filter(([, v]) => v === name).map(([k]) => k), ...(h.also || [])];
+    if (also.length) print(`  Also: ${also.join(', ')}`, '#ffffff99');
+    if (CLIENT_ONLY[name]) print([[`  WARNING: client-only: ${CLIENT_ONLY[name]}.`, WARN_COLOR, true]]);
+    printHelpSections(h);
+  }
+
+  function printKeyHelp(key) {
+    const s = SCHEMA[key];
+    const h = KEY_HELP[key] || {};
+    const range = s.type === 'bool' ? 'on / off'
+      : `${s.type === 'int' ? 'whole number' : 'number'}${s.min === undefined ? '' : ` from ${s.min} to ${s.max}`}`;
+    print(`${key} <value>`, '#89D0FF');
+    print(`  ${s.desc}`);
+    print(`  key in group ${s.group}, ${range}${s.default === undefined ? '' : `, default ${fmt(s.default)}`}`, '#ffffff99');
+    print(`  now: ${has(key) ? fmt(kv[key]) : 'default'}`, has(key) ? '#66ff88' : undefined);
+    const also = Object.entries(ALIASES).filter(([, v]) => v === key).map(([k]) => k);
+    if (also.length) print(`  Also: ${also.join(', ')}`, '#ffffff99');
+    if (CLIENT_ONLY[key]) print([[`  WARNING: client-only: ${CLIENT_ONLY[key]}.`, WARN_COLOR, true]]);
+    for (const line of h.about || []) print(`  ${line}`);
+    print('Examples:', '#89D0FF');
+    printPair(`${key} ${s.type === 'bool' ? 'on' : h.ex || '<value>'}`, 'set it', 34);
+    if (s.type === 'bool') printPair(key, 'toggle it', 34);
+    printPair(`unset ${key}`, 'back to the game default', 34);
+    if (s.group !== 'console' && s.group !== 'maps') {
+      print([['  Applies while you are in a level.', '#ffffff99', true]]);
+    }
+  }
+
+  // "help <topic>": one command (any spelling), one "triggers <verb>" subcommand, or
+  // one key (any alias). "js" has its own guide, which is the whole point of asking.
+  function printTopicHelp(raw) {
+    const words = raw.trim().toLowerCase().split(/\s+/);
+    let name = CMD_ALIASES[words[0]] || words[0];
+    if (name === 'triggers' && words[1]) {
+      const sub = TRIGGER_TOPICS[words[1]];
+      if (!sub) throw new Error(`no help for "${raw}". "help triggers" lists what triggers can do.`);
+      name = `triggers ${sub}`;
+    } else if (words.length === 1 && !COMMANDS[name] && TRIGGER_TOPICS[name]) {
+      name = `triggers ${TRIGGER_TOPICS[name]}`;
+    }
+    if (name === 'js') { cmdJsHelp(); return; }
+    // A one-word topic is a command first, a key second; a key written as several
+    // words ("help hp bonus") the other way round.
+    if (COMMANDS[name] && (words.length === 1 || name.includes(' '))) { printCommandHelp(name); return; }
+    const key = resolveKey(words.join('_')) || resolveKey(words[0]);
+    if (key) { printKeyHelp(key); return; }
+    if (COMMANDS[name]) { printCommandHelp(name); return; }
+    const near = [...Object.keys(COMMANDS), ...Object.keys(SCHEMA), ...Object.keys(ALIASES)]
+      .filter((n) => n.includes(words[0]) || words[0].includes(n)).slice(0, 6);
+    throw new Error(`no help for "${raw}".${near.length ? ` Did you mean: ${near.join(', ')}?` : ''} Type "help" for everything.`);
+  }
+
+  function cmdHelp(topic) {
+    if (topic) { printTopicHelp(topic); return; }
     print('Commands:', '#89D0FF');
     for (const [name, c] of Object.entries(COMMANDS)) {
       const line = [[`  ${c.usage.padEnd(22)} ${c.desc}`]];
@@ -1781,6 +2132,7 @@
     print('Examples: god on | max_hp 500 | speed 1.8 | swords off | penetration 1 | unset speed', '#ffffff99');
     print('Guns: guns | guns rail | give 12 | give gun_railgun 2', '#ffffff99');
     print('Overrides are saved to desktop/dev-overrides.json.', '#ffffff99');
+    print('"help <command>" or "help <key>" explains one in full, e.g. "help triggers find".', '#89D0FF');
   }
 
   // The game's own chat commands (frame2.js keydown handler, around lines 26387-26870).
@@ -2057,8 +2409,10 @@
     try {
       if (cmd === 'hp' && rest.length === 1 && /^[+-]\d+(\.\d+)?%?$/.test(rest[0])) { cmdHpAdd(rest[0]); return; }
       if (cmd === 'hp' && rest.length === 1 && /^\d+(\.\d+)?%$/.test(rest[0])) throw new Error(`use a sign: "hp +${rest[0]}" or "hp -${rest[0]}"`);
+      // "<command> help" is "help <command>". "game" and "js" have their own guides.
+      if (sub === 'help' && rest.length === 1 && !['help', 'game', 'js'].includes(cmd)) { cmdHelp(cmd); return; }
       switch (cmd) {
-        case 'help': case '?': cmdHelp(); return;
+        case 'help': case '?': cmdHelp(arg); return;
         case 'list': case 'ls': cmdList(rest[0]); return;
         case 'clear': case 'cls': logEl.textContent = ''; return;
         case 'close': case 'exit': close(); return;
