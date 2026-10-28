@@ -815,6 +815,7 @@
     'triggers history': { usage: 'triggers history [all | clear | # | uid] [page n]', desc: 'Recent trigger runs, newest first: when, which, by whom. "all" adds refused attempts (disabled / no calls left)' },
     vars: { usage: 'vars [filter] [page n]', desc: 'List the map\'s trigger variables and their values; a filter matches part of a name' },
     'vars set': { usage: 'vars set|get|del <name> [value]', desc: 'Change, read in full, or remove one trigger variable' },
+    'vars sync': { usage: 'vars sync <name> [mode]', desc: 'Send one trigger variable to every player in the match; without a mode it explains what would happen and which to use' },
     more: { usage: 'more | page <n>', desc: 'Next page of the last long list, or jump to page n' },
     'triggers find': { usage: 'triggers find [uid:|a:|b:|type:]<text> [page n]', desc: 'Search trigger uids and every trigger action\'s A/B values (text or number), or by action type' },
     'triggers run': { usage: 'triggers run <# | uid> [force] [as #]', desc: 'Run a trigger now, with you (or character #) as the activator. "force" also runs a disabled/used-up one. Multiplayer: other players see it too (not with "as", or forced on a disabled/used-up one)' },
@@ -1490,7 +1491,7 @@
   // map loads. Values that came from the map are numbers when they look like numbers and
   // strings otherwise, and the "variable equals" actions compare with ===, so a value set
   // here keeps that difference: 5 is the number, "5" is the text.
-  const VAR_VERBS = ['set', 'get', 'del', 'unset', 'rm'];
+  const VAR_VERBS = ['set', 'get', 'del', 'unset', 'rm', 'sync'];
 
   function mapVars() {
     const v = read('mapVars');
@@ -1510,6 +1511,7 @@
   function cmdVars(rawArgs) {
     if (!isActive()) throw new Error('start a level first');
     const verb = (rawArgs[0] || '').toLowerCase();
+    if (verb === 'sync') { syncVar(rawArgs.slice(1)); return; }
     if (VAR_VERBS.includes(verb)) { writeVar(verb, rawArgs.slice(1)); return; }
     const { args, page } = takePage(rawArgs);
     const vars = mapVars();
@@ -1557,6 +1559,136 @@
     vars[name] = value;
     print(`${name} = ${fmtVar(value)}${had ? `  (was ${fmtVar(before)})` : '  (new)'}`, '#66ff88');
     if (!had) print('  No trigger had set it yet, so nothing may read it. "vars" lists the ones in use.', '#ffffff99');
+  }
+
+  // Variable sync: "vars sync <name> [mode]". The game syncs a variable with trigger
+  // action types 223-227, which send the sender's own current value with a merge mode;
+  // this does the same send directly, so it works for variables no trigger syncs.
+  // Both ends are gated on the map's "var_sync" engine mark (<inf mark="var_sync">).
+  // Modes, as the receivers apply them (scripts/libs/flash.js, scripts/frame2.js):
+  const VAR_SYNC_MODES = {
+    r: { what: 'replace', how: 'sets it on every client, whatever they had' },
+    d: { what: 'default', how: 'sets it only where it is unset or not a number' },
+    x: { what: 'max', how: 'keeps the higher number, so it can only raise a value' },
+    n: { what: 'min', how: 'keeps the lower number, so it can only lower a value' },
+    l: { what: 'longest', how: 'sets it only where the new text is longer' },
+  };
+  const VAR_SYNC_TYPES = { 223: 'r', 224: 'd', 225: 'x', 226: 'n', 227: 'l' };
+  const VAR_MAX_LEN = 2048; // the length the game's own sync actions refuse past
+
+  // This client applies and sends syncs only with the mark. It is never set back to
+  // false, so it can still be on from an earlier map in the same session.
+  const syncMarkOn = () => read('varSyncOn') === true;
+
+  // Whether the map now loaded actually carries the mark: true, false, or null when the
+  // map text is not readable (it is compressed until the level starts).
+  function mapHasSyncMark() {
+    const text = read('mapText');
+    if (typeof text !== 'string' || !text || text.startsWith('<q.')) return null;
+    return text.includes('mark="var_sync"');
+  }
+
+  // Every trigger action that syncs this variable, so we can say what will re-send it.
+  function syncActionsFor(name) {
+    const out = [];
+    mapList('triggers', 'triggerCount').forEach((t, i) => {
+      if (!t) return;
+      for (let a = 0; a < (t[N.trigActionCount] || 0); a++) {
+        const mode = VAR_SYNC_TYPES[t[N.trigTypes][a]];
+        if (mode && String(t[N.trigTargetA][a]) === name) out.push({ idx: i, uid: t.uid, action: a + 1, mode });
+      }
+    });
+    return out;
+  }
+
+  // Can this mode deliver this value? Returns [verdict, why].
+  function modeVerdict(mode, value) {
+    const numeric = !isNaN(parseFloat(value)) && isFinite(value);
+    switch (mode) {
+      case 'r': return ['yes', 'assigns it outright'];
+      case 'd': return numeric
+        ? ['no', 'the old value is a number, so it is kept']
+        : ['yes', 'any text counts as "not a number", so it is overwritten'];
+      case 'x': return numeric
+        ? ['raise only', 'clients holding a higher number keep theirs']
+        : ['no', 'text is parsed as a number first, which gives NaN'];
+      case 'n': return numeric
+        ? ['lower only', 'clients holding a lower number keep theirs']
+        : ['no', 'text is parsed as a number first, which gives NaN'];
+      case 'l': {
+        const n = String(value).length;
+        return ['longer only', `only clients whose value is under ${n} character${n === 1 ? '' : 's'}${numeric ? ', which compares a number as text' : ''}`];
+      }
+      default: return ['no', 'unknown mode'];
+    }
+  }
+
+  // "vars sync <name>": what a sync of this variable would do, and the mode to use.
+  function explainSync(name, vars) {
+    const has = Object.prototype.hasOwnProperty.call(vars, name);
+    const value = vars[name];
+    print(`Syncing ${name} to every player in the match`, '#89D0FF');
+    print(`  value to send: ${has ? fmtVar(value) : '(not set here: "vars set" it first)'}`, has ? undefined : '#ffff88');
+
+    const local = syncMarkOn();
+    const inMap = mapHasSyncMark();
+    print(`  engine mark:   ${local ? 'on for you' : 'OFF for you'}${inMap === null ? ', this map unreadable' : inMap ? ', and this map sets it' : ', and this map does NOT set it'}`,
+      local && inMap !== false ? '#66ff88' : WARN_COLOR);
+    if (!local) print('  Without the mark nothing is sent and nothing would be applied.', WARN_COLOR);
+    else if (inMap === false) print('  Your mark is left over from an earlier map (the game never clears it). Players who did not load such a map will drop the message.', WARN_COLOR);
+    if (!game.isMP()) print('  Single-player: there is nobody to send to.', WARN_COLOR);
+
+    const synced = syncActionsFor(name);
+    if (!synced.length) {
+      print('  no trigger syncs this variable, so nothing re-sends it after you', '#66ff88');
+    } else {
+      print(`  ${synced.length} trigger action${synced.length === 1 ? '' : 's'} already sync it, and re-send each client's own value:`, WARN_COLOR);
+      for (const s of synced.slice(0, 6)) {
+        print(`    #${String(s.idx).padEnd(4)} ${String(s.uid || '-').padEnd(18)} action ${String(s.action).padEnd(3)} mode ${s.mode} (${VAR_SYNC_MODES[s.mode].what})`);
+      }
+      if (synced.length > 6) print(`    ... ${synced.length - 6} more`);
+      const fight = synced.filter((s) => s.mode === 'x' || s.mode === 'n');
+      if (fight.length) print(`    With ${fight[0].mode === 'x' ? 'max' : 'min'} they can undo your value: see what starts them with "triggers ${fight[0].idx}".`, WARN_COLOR);
+    }
+
+    if (has) {
+      print('  What each mode would do with this value:', '#89D0FF');
+      for (const [m, info] of Object.entries(VAR_SYNC_MODES)) {
+        const [verdict, why] = modeVerdict(m, value);
+        print([[`    ${m}  ${info.what.padEnd(8)} ${verdict.padEnd(12)}`, verdict === 'no' ? '#ffffff77' : '#EEF9FF'], [why, '#ffffff99']]);
+      }
+      print(`  Recommended: vars sync ${name} r${synced.some((s) => s.mode === 'x' || s.mode === 'n') ? '   (then watch for the map re-sending it)' : ''}`, '#66ff88');
+    }
+    if (String(name).includes('#') || (has && String(value).includes('#'))) {
+      print('  Careful: a "#" is fine on the live message but the server\'s event-list replay splits on it, so a late joiner may get a cut value.', WARN_COLOR);
+    }
+  }
+
+  function syncVar(args) {
+    const usage = 'usage: vars sync <name> [r | d | x | n | l]  (no mode = explain only)';
+    const name = args[0];
+    if (!name || args.length > 2) throw new Error(usage);
+    const vars = mapVars();
+    if (args.length === 1) { explainSync(name, vars); return; }
+    const mode = args[1].toLowerCase();
+    if (!VAR_SYNC_MODES[mode]) throw new Error(`no sync mode "${args[1]}". One of: ${Object.keys(VAR_SYNC_MODES).map((m) => `${m} (${VAR_SYNC_MODES[m].what})`).join(', ')}.`);
+    if (!Object.prototype.hasOwnProperty.call(vars, name)) throw new Error(`no variable "${name}" here: a sync sends your own value, so "vars set ${name} <value>" first.`);
+    const value = vars[name];
+    if (!syncMarkOn()) throw new Error('this map has no "var_sync" engine mark, so the game sends nothing and no client would apply it');
+    if (!game.isMP()) throw new Error('single-player: there is nobody to send to');
+    if (String(name).length > VAR_MAX_LEN || String(value).length > VAR_MAX_LEN) throw new Error(`the game refuses a name or value over ${VAR_MAX_LEN} characters`);
+    const [verdict, why] = modeVerdict(mode, value);
+    if (verdict === 'no') {
+      throw new Error(`mode ${mode} (${VAR_SYNC_MODES[mode].what}) cannot deliver ${fmtVar(value)}: ${why}. Use "vars sync ${name} r", or "vars sync ${name}" to see every mode.`);
+    }
+    const net = read('net');
+    if (!net || typeof net.Event !== 'function') throw new Error('the game network class is not available');
+    // The same call the game's own sync actions make: type, mode, name, our value.
+    net.Event(net.RELIABLE_VAR_SYNC, mode, name, value);
+    print(`Sent ${name} = ${fmtVar(value)} to the match, mode ${mode} (${VAR_SYNC_MODES[mode].what}): ${VAR_SYNC_MODES[mode].how}.`, '#66ff88');
+    const synced = syncActionsFor(name).filter((s) => s.mode === 'x' || s.mode === 'n');
+    if (synced.length) print(`  ${synced.length} trigger action${synced.length === 1 ? '' : 's'} re-send this variable with ${synced[0].mode === 'x' ? 'max' : 'min'} and may undo it ("triggers ${synced[0].idx}").`, WARN_COLOR);
+    if (verdict !== 'yes') print(`  Mode ${mode} is conditional (${verdict}): ${why}.`, '#ffffff99');
   }
 
   // ---------------------------------------------------------------------------
@@ -1869,7 +2001,7 @@
       run: 'run', activate: 'run', fire: 'run', exec: 'run',
       history: 'history', hist: 'history', log: 'history',
     },
-    vars: { set: 'set', get: 'set', del: 'set', unset: 'set', rm: 'set' },
+    vars: { set: 'set', get: 'set', del: 'set', unset: 'set', rm: 'set', sync: 'sync' },
   };
 
   // The long form of each command, printed by "help <command>". Every field is
@@ -2098,6 +2230,32 @@
         'it changes the level. "triggers find <name>" shows which ones do, and',
         '"triggers run <#>" runs one now.'],
       see: ['vars', 'triggers find', 'triggers run'],
+    },
+    'vars sync': {
+      about: ['Sends one variable to every player in the match, the same call the map\'s own',
+        'sync actions (types 223-227) make: your current value, plus a merge mode the',
+        'receivers apply. It works for any variable, including ones no trigger syncs.',
+        'With no mode it only explains: what would be sent, whether the engine mark is',
+        'on, which triggers already sync it, what each mode would do to your value, and',
+        'which mode to use. Nothing leaves your client until you name a mode.'],
+      args: [['<name>', 'the variable; "vars set" it to the value you want first'],
+        ['r', 'replace: sets it everywhere, whatever each client had'],
+        ['d', 'default: only where it is unset or not a number'],
+        ['x', 'max: keeps the higher number, so it can only raise'],
+        ['n', 'min: keeps the lower number, so it can only lower'],
+        ['l', 'longest: only where the new text is longer']],
+      examples: [['vars sync door_1', 'explain, recommend a mode, send nothing'],
+        ['vars set var_presmall "CTHC Lenaa"', 'first set the value you want'],
+        ['vars sync var_presmall r', 'then push it to everyone']],
+      notes: ['The map must carry the "var_sync" engine mark (an <inf mark="var_sync">',
+        'element): without it the game sends nothing and receivers drop the message.',
+        'The game never clears that mark on a map change, so your own client can still',
+        'have it from an earlier map while other players do not. "vars sync <name>" says',
+        'so when it sees that.',
+        'A variable the map syncs with max or min fights back: those actions re-send each',
+        'client\'s own value, so max can never lower a value and min can never raise one.',
+        'Multiplayer only, and the game refuses a name or value over 2048 characters.'],
+      see: ['vars', 'vars set', 'triggers find', 'triggers run'],
     },
     more: {
       about: ['"more" is the next page of the last long list, "page <n>" jumps to one, and',
@@ -2522,6 +2680,9 @@
       if (sub === 'help' && rest.length === 1) { /* help text only */ }
       else if (cmd === 'set') warnIfMP(resolveKey(rest[0]));
       else if (['triggers', 'trigger', 'trig'].includes(cmd) && TRIGGER_RUN_VERBS.includes(sub)) { /* runTriggerCmd reports sync itself */ }
+      // "vars sync" is the one command that does reach the other players, so the
+      // client-only note on "vars" would be wrong; syncVar reports the reach itself.
+      else if (['vars', 'var', 'variables'].includes(cmd) && sub === 'sync') { /* syncVar reports it */ }
       else if (COMMANDS[name]) warnIfMP(name);
       else warnIfMP(resolveKey(cmd));
     } catch {}

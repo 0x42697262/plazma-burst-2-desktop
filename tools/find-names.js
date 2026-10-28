@@ -165,6 +165,10 @@ const RULES = [
     re: String.raw`if\(b\["#ondeath"\]\.charAt\(0\)=="#"\)\s*mc\.⟨ID⟩=b\["#ondeath"\];` },
   { file: 'frame2', keys: ['timerTarget'], what: ['timer property: trigger it calls'],
     re: String.raw`if\(b\["#target"\]\.charAt\(0\)==="#"\)\s*⟨timers⟩\[⟨timerCount⟩\]\.⟨ID⟩=b\["#target"\];` },
+  // The map's "var_sync" engine mark: set from an <inf mark="var_sync"> element, and the
+  // gate on both sending and applying a variable sync. Never set back to false.
+  { file: 'frame2', keys: ['varSyncOn'], what: ['map engine mark: variable syncing allowed'],
+    re: String.raw`if\(b\["#mark"\]==="var_sync"\)\s*\{\s*⟨ID⟩=true;` },
   // Map variables: one object, variable name -> value, emptied when a map loads. Found at
   // the "sync this variable to the server" action, which reads both the name and the value.
   { file: 'actions', keys: ['mapVars'], what: ['map variables object (variable name -> value)'],
