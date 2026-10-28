@@ -672,9 +672,13 @@
   const LOG_MAX = 500;
 
   // text: a string, or an array of segments [text, color?, small?] on one line.
+  // Everything the console prints also goes to the terminal running "npm start":
+  // desktop/main.js forwards the page's console there. Colours and the small-text flag
+  // are for the log pane only, so the terminal gets the plain text of every segment.
   function print(text, color) {
     const segs = Array.isArray(text) ? text : [[text, color]];
-    if (!logEl) { console.log('[pb2dev]', segs.map((s) => s[0]).join('')); return; }
+    console.log(`[pb2dev] ${segs.map((s) => s[0]).join('')}`);
+    if (!logEl) return;
     const line = el('div', color ? { color } : {});
     for (const [t, c, small] of segs) {
       const style = {};
@@ -2509,7 +2513,6 @@
     if (new Error().stack.includes('at <anonymous>:')) { setTimeout(() => run(line, source), 0); return; }
     const echo = source ? `[${source}] > ${text}` : `> ${text}`;
     print(echo, '#89D0FF');
-    console.log(`[pb2dev] ${echo}`); // forwarded to the npm start terminal by desktop/main.js
     const [rawCmd, ...rest] = text.split(/\s+/);
     const cmd = rawCmd.toLowerCase();
     const arg = text.slice(rawCmd.length).trim();
