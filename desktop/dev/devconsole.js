@@ -816,6 +816,7 @@
     vars: { usage: 'vars [filter] [page n]', desc: 'List the map\'s trigger variables and their values; a filter matches part of a name' },
     'vars set': { usage: 'vars set|get|del <name> [value]', desc: 'Change, read in full, or remove one trigger variable' },
     'vars sync': { usage: 'vars sync <name> [mode]', desc: 'Send one trigger variable to every player in the match; without a mode it explains what would happen and which to use' },
+    chain: { usage: '<command> ; <command> ...', desc: 'Run commands one after another in a single go, so nothing from the game can land between them' },
     more: { usage: 'more | page <n>', desc: 'Next page of the last long list, or jump to page n' },
     'triggers find': { usage: 'triggers find [uid:|a:|b:|type:]<text> [page n]', desc: 'Search trigger uids and every trigger action\'s A/B values (text or number), or by action type' },
     'triggers run': { usage: 'triggers run <# | uid> [force] [as #]', desc: 'Run a trigger now, with you (or character #) as the activator. "force" also runs a disabled/used-up one. Multiplayer: other players see it too (not with "as", or forced on a disabled/used-up one)' },
@@ -1711,6 +1712,9 @@
         print([[`    ${m}  ${info.what.padEnd(8)} ${verdict.padEnd(12)}`, verdict === 'no' ? '#ffffff77' : '#EEF9FF'], [why, '#ffffff99']]);
       }
       print(`  Recommended: vars sync ${name} r${synced.some((s) => s.mode === 'x' || s.mode === 'n') ? '   (then watch for the map re-sending it)' : ''}`, '#66ff88');
+      if (seeders.length || syncActionsFor(name).length) {
+        print(`  Set and send on one line so nothing writes it in between: "vars set ${name} <value> ; vars sync ${name} r"`, '#ffffff99');
+      }
     }
     if (String(name).includes('#') || (has && String(value).includes('#'))) {
       print('  Careful: a "#" is fine on the live message but the server\'s event-list replay splits on it, so a late joiner may get a cut value.', WARN_COLOR);
@@ -1774,9 +1778,10 @@
       print(binds[key] ? `${showKey(key)} = ${binds[key]}` : `${showKey(key)} is not bound`, binds[key] ? undefined : '#ffff88');
       return;
     }
-    const command = args.slice(1).join(' ');
-    const word = args[1].toLowerCase();
-    if (!RUN_WORDS.has(word)) throw new Error(`unknown command "${args[1]}". Type "help".`);
+    // Quotes let a bind hold a ";" chain: bind f "vars set x 1; vars sync x r".
+    const command = args.slice(1).join(' ').replace(/^"([\s\S]*)"$/, '$1');
+    const first = command.split(/\s+/)[0];
+    if (!RUN_WORDS.has(first.toLowerCase())) throw new Error(`unknown command "${first}". Type "help".`);
     const old = binds[key];
     binds[key] = command;
     saveKv();
@@ -2320,6 +2325,23 @@
         'Multiplayer only, and the game refuses a name or value over 2048 characters.'],
       see: ['vars', 'vars set', 'triggers find', 'triggers run'],
     },
+    chain: {
+      also: [';'],
+      about: ['Commands separated by ";" run in order, and the whole line runs in one go:',
+        'nothing from the game or the network can happen between them.',
+        'That matters when something else writes what you just set. A chat message runs',
+        'the map\'s "player says" trigger, which overwrites SkinChatVar, so a "vars set"',
+        'and the "vars sync" meant to send it have to be on one line or the sync can send',
+        'whatever was chatted in between.',
+        'A ";" inside double quotes is part of the value. "js" lines are never split,',
+        'because JavaScript uses ";" itself.',
+        'If one command fails the rest do not run, and the console says how many it skipped.'],
+      examples: [['vars set SkinChatVar "-kick 3" ; vars sync SkinChatVar r', 'set and send with no gap'],
+        ['set speed 2 ; get speed', 'any commands, left to right'],
+        ['vars set x "a;b"', 'a quoted ";" is just text'],
+        ['bind f "heal ; revive"', 'a bind holds a chain when you quote it']],
+      see: ['vars sync', 'bind'],
+    },
     more: {
       about: ['"more" is the next page of the last long list, "page <n>" jumps to one, and',
         '"page 1" goes back to the top. Long lists also take "page n" directly, e.g.',
@@ -2724,8 +2746,33 @@
   const PHRASES = [[/^fast\s+load(\s+maps?)?(?=\s|$)/i, 'fast_maps'], [/^save\s+maps?(?=\s|$)/i, 'save_maps']];
   const unphrase = (s) => PHRASES.reduce((t, [re, key]) => t.replace(re, key), s);
 
+  // "a ; b" runs a and then b. The whole chain runs in one go, so nothing from the game
+  // or the network lands between the commands: that is the point of it, because a chat
+  // message runs the map's "player says" trigger, which overwrites variables like
+  // SkinChatVar between a "vars set" and the "vars sync" that should have sent it.
+  // A ";" inside double quotes belongs to the value, and "js" is never split, because
+  // JavaScript uses ";" itself.
+  function splitCommands(text) {
+    if (/^js(\s|$)/i.test(text)) return [text];
+    const parts = [];
+    let cur = '';
+    let quoted = false;
+    for (const c of text) {
+      if (c === '"') quoted = !quoted;
+      if (c === ';' && !quoted) { parts.push(cur); cur = ''; continue; }
+      cur += c;
+    }
+    parts.push(cur);
+    return parts.map((part) => part.trim()).filter(Boolean);
+  }
+
+  // Set by the error handler in runCommand, read by run() to stop a chain. A command
+  // reports its own failure by printing, so there is no return value to check: the
+  // switch below returns from a dozen places.
+  let cmdFailed = false;
+
   function run(line, source) {
-    const text = unphrase(String(line || '').trim());
+    const text = String(line || '').trim();
     if (!text) return;
     // The game reloads the page if the first call of its stack check ($oITOo in
     // libs/tools.js, reached e.g. from the trigger runner) sees "at <anonymous>:",
@@ -2734,6 +2781,20 @@
     if (new Error().stack.includes('at <anonymous>:')) { setTimeout(() => run(line, source), 0); return; }
     const echo = source ? `[${source}] > ${text}` : `> ${text}`;
     print(echo, '#89D0FF');
+    const parts = splitCommands(text);
+    for (let i = 0; i < parts.length; i++) {
+      if (parts.length > 1) print(`[${i + 1}/${parts.length}] ${parts[i]}`, '#ffffff77');
+      cmdFailed = false;
+      runCommand(unphrase(parts[i]));
+      if (cmdFailed) {
+        const left = parts.length - 1 - i;
+        if (left) print(`Stopped: ${left} command${left === 1 ? '' : 's'} after this one did not run.`, WARN_COLOR);
+        return;
+      }
+    }
+  }
+
+  function runCommand(text) {
     const [rawCmd, ...rest] = text.split(/\s+/);
     const cmd = rawCmd.toLowerCase();
     const arg = text.slice(rawCmd.length).trim();
@@ -2843,6 +2904,7 @@
       }
     } catch (e) {
       print(`error: ${e && e.message}`, '#ff6666');
+      cmdFailed = true;
     }
   }
 
