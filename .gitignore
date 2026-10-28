@@ -11,3 +11,4 @@ desktop/dev/names.js
 # Local settings
 desktop/credentials.json*
 desktop/dev-overrides.json
+desktop/maps/*
