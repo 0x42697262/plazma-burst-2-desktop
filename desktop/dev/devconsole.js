@@ -283,10 +283,15 @@
     return out;
   }
 
-  // The file holds the overrides plus "binds". An old "tp_key" setting becomes a "tp" bind.
+  // The file holds the overrides plus "binds" and "history" (typed commands, oldest
+  // first). An old "tp_key" setting becomes a "tp" bind.
   function applyLoaded(obj) {
     kv = sanitize(obj);
     binds = sanitizeBinds(obj && obj.binds);
+    const h = obj && Array.isArray(obj.history) ? obj.history.filter((l) => typeof l === 'string' && l.trim()) : [];
+    history.length = 0;
+    history.push(...h.slice(-HISTORY_MAX));
+    historyPos = history.length;
     if (obj && typeof obj.tp_key === 'string') {
       try {
         const k = parseKeyName(obj.tp_key === ' ' ? 'space' : obj.tp_key);
@@ -306,7 +311,11 @@
   }
 
   function saveKv() {
-    const data = JSON.stringify(Object.keys(binds).length ? { ...kv, binds } : kv);
+    const data = JSON.stringify({
+      ...kv,
+      ...(Object.keys(binds).length ? { binds } : {}),
+      ...(history.length ? { history } : {}),
+    });
     try { localStorage.setItem(LS_KEY, data); } catch {}
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
@@ -574,8 +583,20 @@
   let isOpen = false;
   let toggleKeyHeld = false; // swallow the keyup of a Shift+` we handled, even if Shift is released first
   const heldBoundKeys = new Set(); // e.code of bound keys that are down, to swallow their keyup
+  // Typed commands for Up/Down, saved with the overrides so they survive a restart.
+  const HISTORY_MAX = 200;
   const history = [];
   let historyPos = 0;
+
+  function remember(line) {
+    if (!line.trim()) return;
+    if (history[history.length - 1] !== line) {
+      history.push(line);
+      if (history.length > HISTORY_MAX) history.splice(0, history.length - HISTORY_MAX);
+      saveKv();
+    }
+    historyPos = history.length;
+  }
 
   function el(tag, style, text) {
     const e = document.createElement(tag);
@@ -650,7 +671,7 @@
       if (e.key === 'Enter') {
         const line = inputEl.value;
         inputEl.value = '';
-        if (line.trim()) { history.push(line); historyPos = history.length; }
+        remember(line);
         run(line);
       } else if (e.key === 'ArrowUp') {
         if (historyPos > 0) { historyPos--; inputEl.value = history[historyPos]; }
