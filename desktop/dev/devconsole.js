@@ -161,6 +161,8 @@
     spread:        { type: 'number', group: 'gun', min: 0, max: 10, desc: 'Spread multiplier, 0 = perfectly accurate' },
     recoil:        { type: 'number', group: 'gun', min: 0, max: 10, desc: 'Recoil multiplier for held gun' },
     builtin:       { type: 'bool',   group: 'console', desc: 'game <cmd>: on = silent, works on any map and in multiplayer; off = normal game chat' },
+    save_maps:     { type: 'bool',   group: 'maps', default: true, desc: 'Save every map the game downloads to desktop/maps/<map id>.xml, uncompressed (default on)' },
+    fast_maps:     { type: 'bool',   group: 'maps', desc: 'Fast load: use the saved map from desktop/maps instead of downloading it again (default off)' },
   };
   const ALIASES = {
     hp: 'max_hp', maxhp: 'max_hp', health: 'max_hp', godmode: 'god',
@@ -168,6 +170,8 @@
     dmg: 'bullet_damage', damage: 'bullet_damage', bspeed: 'bullet_speed', range: 'bullet_life',
     rate: 'fire_rate', firerate: 'fire_rate', accuracy: 'spread', jumps: 'jump',
     sword: 'swords', melee: 'swords',
+    savemaps: 'save_maps', mapsave: 'save_maps', fastmaps: 'fast_maps', fastload: 'fast_maps', fast_load: 'fast_maps',
+    fastloadmaps: 'fast_maps', fast_load_maps: 'fast_maps',
   };
 
   let kv = {};
@@ -764,7 +768,7 @@
     drop: 'the drop is not sent to the server; other players still see the gun in your hands',
     game: 'built-in commands run in your game only (with builtin off the game refuses them in multiplayer)',
   };
-  for (const [k, s] of Object.entries(SCHEMA)) if (s.group !== 'console') CLIENT_ONLY[k] = LOCAL;
+  for (const [k, s] of Object.entries(SCHEMA)) if (s.group !== 'console' && s.group !== 'maps') CLIENT_ONLY[k] = LOCAL;
   const CLIENT_TAG = ['  WARNING: client-only', WARN_COLOR, true];
 
   // Prints a yellow note when a client-only command or key is used in multiplayer.
@@ -796,7 +800,7 @@
     'triggers run': { usage: 'triggers run <# | uid> [force] [as #]', desc: 'Run a trigger now, with you (or character #) as the activator. "force" also runs a disabled/used-up one. Multiplayer: other players see it too (not with "as", or forced on a disabled/used-up one)' },
     game: { usage: 'game <command>', desc: 'Run a built-in game chat command. "game help" lists them all' },
     builtin: { usage: 'builtin [on|off]', desc: 'Toggle silent built-in commands everywhere (see "get builtin")' },
-    maps: { usage: 'maps', desc: 'List local maps in desktop/maps (play via Campaign > Custom Map)' },
+    maps: { usage: 'maps', desc: 'List local maps in desktop/maps (play via Campaign > Custom Map). Downloaded maps are saved there too ("save_maps", "fast load maps on")' },
     js: { usage: 'js <code>', desc: 'Evaluate JavaScript in the page. "js help" explains it with examples' },
     clear: { usage: 'clear', desc: 'Clear this log' },
     close: { usage: 'close', desc: 'Close the console (or press Shift+` / Esc)' },
@@ -1624,7 +1628,7 @@
       if (group && s.group !== group) continue;
       (groups[s.group] = groups[s.group] || []).push(k);
     }
-    if (!Object.keys(groups).length) { print(`No group "${group}". Groups: player, world, bullets, gun, console`, '#ff6666'); return; }
+    if (!Object.keys(groups).length) { print(`No group "${group}". Groups: player, world, bullets, gun, console, maps`, '#ff6666'); return; }
     for (const [g, keys] of Object.entries(groups)) {
       print(`[${g}]`, '#89D0FF');
       for (const k of keys) {
@@ -1641,7 +1645,7 @@
     kv[key] = v;
     saveKv();
     print(`${key} = ${fmt(v)}`, '#66ff88');
-    if (!wasActive && SCHEMA[key].group !== 'console') print('  (applies when you are in a level)', '#ffffff99');
+    if (!wasActive && SCHEMA[key].group !== 'console' && SCHEMA[key].group !== 'maps') print('  (applies when you are in a level)', '#ffffff99');
   }
 
   function complete() {
@@ -1777,8 +1781,12 @@
   }
 
   // `source` labels commands that were not typed, e.g. "bind f".
+  // Multi-word names for the map keys: "fast load maps on" = "fast_maps on".
+  const PHRASES = [[/^fast\s+load(\s+maps?)?(?=\s|$)/i, 'fast_maps'], [/^save\s+maps?(?=\s|$)/i, 'save_maps']];
+  const unphrase = (s) => PHRASES.reduce((t, [re, key]) => t.replace(re, key), s);
+
   function run(line, source) {
-    const text = String(line || '').trim();
+    const text = unphrase(String(line || '').trim());
     if (!text) return;
     // The game reloads the page if the first call of its stack check ($oITOo in
     // libs/tools.js, reached e.g. from the trigger runner) sees "at <anonymous>:",
@@ -1875,7 +1883,7 @@
           if (key) {
             if (rest[0] === undefined) {
               // Bare bool key toggles; bare number key shows value.
-              if (SCHEMA[key].type === 'bool') setKey(key, has(key) ? !kv[key] : true);
+              if (SCHEMA[key].type === 'bool') setKey(key, has(key) ? !kv[key] : !SCHEMA[key].default);
               else print(`${key} = ${has(key) ? fmt(kv[key]) : 'default'}`);
             } else if (['default', 'reset', 'unset'].includes(rest[0].toLowerCase())) {
               delete kv[key]; saveKv(); print(`${key} = default`, '#66ff88');
@@ -1889,6 +1897,132 @@
       }
     } catch (e) {
       print(`error: ${e && e.message}`, '#ff6666');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Map cache (desktop/maps/<map id>.xml, written by desktop/main.js)
+  // ---------------------------------------------------------------------------
+  // Single-player custom maps come over HTTP, so desktop/main.js saves and fast-loads
+  // them by itself. Multiplayer maps come over the game socket and are handled here:
+  // - save: once a multiplayer level runs, its map text (already unpacked by the game)
+  //   is sent to __dev/savemap with the match's map ID.
+  // - fast load: joining from the lobby sends RELIABLE_JOIN_MATCH with a "send me the
+  //   map" flag. With fast_maps on and the map saved, the flag is cleared (the game does
+  //   the same when you rejoin a match) and the saved map is put where the game reads
+  //   it. This wraps the lobby connection's send method: the only game method the
+  //   console replaces, only while fast_maps is on, and only on the connection object
+  //   (the anti-tamper scan checks globals, not object methods; see ANTICHEAT.md 9.11).
+  const mapsSaveOn = () => kv.save_maps !== false;
+  const mapsFastOn = () => kv.fast_maps === true;
+  const mapCache = new Map();   // map ID -> saved map text
+  const matchMaps = new Map();  // match uid (string) -> map ID, from the lobby's match list
+  let lastMapText = null;       // map text last saved or fast-loaded
+
+  function saveMapText(id, text) {
+    fetch(`__dev/savemap?id=${encodeURIComponent(id)}`, { method: 'POST', body: text })
+      .then(async (r) => {
+        const res = await r.text();
+        if (!r.ok) { console.warn(`[pb2dev] map ${id} not saved: ${res}`); return; }
+        if (!text.startsWith('<q.')) mapCache.set(id, text);
+        if (res === 'saved') print(`Saved map ${id} to desktop/maps`, '#ffffff99');
+      })
+      .catch(() => {});
+  }
+
+  function autosaveMap() {
+    if (!mapsSaveOn() || !game.isMP() || !isActive()) return;
+    const text = globalThis[nameOf('mapText')];
+    if (typeof text !== 'string' || !text || text === lastMapText) return;
+    const details = read('net').match_details;
+    const id = details && details.map_id;
+    if (!id) return;
+    lastMapText = text;
+    saveMapText(String(id), text);
+  }
+
+  async function prefetchMaps(ids) {
+    for (const id of ids) {
+      if (mapCache.has(id)) continue;
+      try {
+        const r = await fetch(`__dev/mapfile?id=${encodeURIComponent(id)}`, { cache: 'no-store' });
+        if (r.ok) mapCache.set(id, await r.text());
+      } catch {}
+    }
+  }
+
+  // Match list reply: ["ok", JSON array of matches, JSON stats].
+  function onMatchList(reply) {
+    if (!reply || reply[0] !== 'ok') return;
+    const list = JSON.parse(reply[1]);
+    if (!Array.isArray(list)) return;
+    const ids = new Set();
+    for (const m of list) {
+      if (!m || m.uid === undefined || !m.map_id) continue;
+      matchMaps.set(String(m.uid), String(m.map_id));
+      ids.add(String(m.map_id));
+    }
+    prefetchMaps([...ids]);
+  }
+
+  // JOIN_MATCH parts: [type, match uid, callback id, slot, "1" = send me the map, password].
+  function fastJoin(parts) {
+    if (parts[4] !== '1') return parts;
+    const id = matchMaps.get(String(parts[1]));
+    const text = id && mapCache.get(id);
+    if (!text) {
+      if (id) print(`Fast load: map ${id} is not saved yet, downloading it`, '#ffffff99');
+      return parts;
+    }
+    const out = parts.slice();
+    out[4] = '';
+    read('net')[nameOf('mapChunks')] = null;
+    globalThis[nameOf('mapText')] = text;
+    lastMapText = text;
+    print(`Fast load: map ${id} from desktop/maps (not downloaded)`, '#66ff88');
+    return out;
+  }
+
+  const SEND_WRAP = Symbol('pb2dev send wrapper');
+  function syncSendWrapper() {
+    const net = read('net');
+    const conn = net && net[nameOf('lobbyConn')];
+    if (!conn) return;
+    const key = nameOf('netSend');
+    const own = Object.prototype.hasOwnProperty.call(conn, key) ? conn[key] : null;
+    const wrapped = !!(own && own[SEND_WRAP]);
+    if (mapsFastOn() && !wrapped) {
+      const orig = conn[key];
+      const wrapper = function (channel, parts, callback) {
+        try {
+          if (Array.isArray(parts) && parts[0] === net.RELIABLE_JOIN_MATCH) {
+            parts = fastJoin(parts);
+          } else if (Array.isArray(parts) && parts[0] === net.RELIABLE_GET_MATCH_LIST && typeof callback === 'function') {
+            const cb = callback;
+            callback = function (reply) {
+              try { onMatchList(reply); } catch (e) { console.warn('[pb2dev] match list:', e); }
+              return cb.apply(this, arguments);
+            };
+          }
+        } catch (e) {
+          console.warn('[pb2dev] fast load:', e);
+        }
+        return orig.call(this, channel, parts, callback);
+      };
+      wrapper[SEND_WRAP] = true;
+      conn[key] = wrapper;
+    } else if (!mapsFastOn() && wrapped) {
+      delete conn[key];
+    }
+  }
+
+  let mapErrors = 0;
+  function mapTick() {
+    try {
+      syncSendWrapper();
+      autosaveMap();
+    } catch (e) {
+      if (mapErrors++ < 3) print(`Map cache error: ${e && e.message}`, '#ff6666');
     }
   }
 
@@ -1924,6 +2058,7 @@
       const b = Object.keys(binds).length;
       print(`Loaded ${n} override${n === 1 ? '' : 's'} and ${b} bind${b === 1 ? '' : 's'} from ${source === 'file' ? 'desktop/dev-overrides.json' : 'localStorage'}.`, '#ffffff99');
       setInterval(() => { if (isOpen) updateStatus(); }, 500);
+      setInterval(mapTick, 250);
     }, 200);
   }
 

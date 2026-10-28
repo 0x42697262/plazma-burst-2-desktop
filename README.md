@@ -35,7 +35,7 @@ In the game, press Shift+`` ` `` (`~`) for the dev console and type `help`.
 | `desktop/main.js` | Electron app: serves `game/`, injects the dev console | yes |
 | `desktop/dev/devconsole.js` | The dev console | yes |
 | `desktop/dev/names.js` | Obfuscated game names for the current game version (generated) | no |
-| `desktop/maps/` | Local maps (`local-<name>` as the map ID) | yes |
+| `desktop/maps/` | Local maps (`local-<name>` as the map ID), plus every downloaded map saved as `<map id>.xml`, uncompressed (console keys `save_maps`, `fast_maps`) | yes |
 | `desktop/credentials.json` | Your login (copy `credentials.example.json`) | no |
 | `desktop/dev-overrides.json` | Dev console settings | no |
 | `tools/fetch-game.js` | Downloads the game | yes |

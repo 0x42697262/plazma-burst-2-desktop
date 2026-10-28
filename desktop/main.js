@@ -6,6 +6,7 @@ const { app, BrowserWindow, dialog, protocol, net, session } = require('electron
 const fs = require('fs/promises');
 const fsSync = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 // Game files, downloaded with "npm run fetch-game". Override with PB2_GAME_DIR.
 const ROOT = path.resolve(process.env.PB2_GAME_DIR || path.join(__dirname, '..', 'game'));
@@ -57,6 +58,72 @@ function checkNamesFile() {
 const MAPS_DIR = path.join(__dirname, 'maps');
 const LOCAL_MAP_PREFIX = 'local-';
 const MAP_EXTS = ['.xml', '.txt', ''];
+
+// Map cache: every map the game downloads (single-player custom maps over HTTP,
+// multiplayer maps from the page through __dev/savemap) is saved to
+// desktop/maps/<map id>.xml as plain, uncompressed XML. Dev console keys (in
+// dev-overrides.json): save_maps (default on) and fast_maps (default off: on = load
+// maps from desktop/maps instead of downloading them again).
+function readDevKv() {
+  try {
+    return JSON.parse(fsSync.readFileSync(DEV_KV_FILE, 'utf8')) || {};
+  } catch {
+    return {};
+  }
+}
+const saveMapsOn = () => readDevKv().save_maps !== false;
+const fastMapsOn = () => readDevKv().fast_maps === true;
+
+// Map ID -> file name. IDs look like "author-name" (spaces allowed); anything that is
+// not safe in a file name becomes %XX.
+const mapFileName = (id) => id.replace(/[^A-Za-z0-9 _.\-]/g, (c) => '%' + c.charCodeAt(0).toString(16).padStart(2, '0')) + '.xml';
+
+// The server sends maps in a compressed "<q." text format. It is unpacked with the
+// game's own function from scripts/libs/xml.js, run in a sandbox.
+let unpackMap = null;
+function decompressMap(text) {
+  if (!text.startsWith('<q.')) return text;
+  if (!unpackMap) {
+    const ctx = {};
+    ctx.globalThis = ctx;
+    vm.createContext(ctx);
+    vm.runInContext(fsSync.readFileSync(path.join(ROOT, '_strings.js'), 'utf8'), ctx);
+    const src = fsSync.readFileSync(path.join(ROOT, 'scripts', 'libs', 'xml.js'), 'utf8');
+    vm.runInContext(src, ctx);
+    const m = src.match(/function (\$[^\s(]+)\(str\)\s*\{\s*for\(i=/);
+    if (!m) throw new Error('map decompressor not found in scripts/libs/xml.js');
+    unpackMap = vm.runInContext(m[1], ctx);
+  }
+  const out = unpackMap(text);
+  if (out.startsWith('<q.')) throw new Error('map is still compressed after unpacking');
+  return out;
+}
+
+// Returns 'saved', 'same' or 'off'. Throws on bad input.
+async function saveMap(id, raw) {
+  if (!saveMapsOn()) return 'off';
+  id = String(id || '').trim();
+  if (!id || id.toLowerCase().startsWith(LOCAL_MAP_PREFIX)) throw new Error('no map ID');
+  const text = decompressMap(String(raw || '').replace(/^\uFEFF/, '').trim());
+  if (!text.startsWith('<') || text.startsWith('<not_published')) throw new Error('not map XML');
+  const file = path.join(MAPS_DIR, mapFileName(id));
+  try {
+    if ((await fs.readFile(file, 'utf8')) === text) return 'same';
+  } catch {}
+  await fs.mkdir(MAPS_DIR, { recursive: true });
+  await fs.writeFile(file, text);
+  console.log(`Saved map ${id} to ${file} (${text.length} chars)`);
+  return 'saved';
+}
+
+// Saved map for a server map ID, or null.
+async function readSavedMap(id) {
+  try {
+    return await fs.readFile(path.join(MAPS_DIR, mapFileName(String(id || '').trim())), 'utf8');
+  } catch {
+    return null;
+  }
+}
 
 const types = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
@@ -130,11 +197,13 @@ async function findLocalMap(name) {
 
 // Answers the game's map download (POST /pb2/server.php, rq=cmap) for local-* IDs.
 // Returns null for anything else so the request goes to the real server.
+// Other IDs: served from desktop/maps when fast_maps is on, otherwise downloaded and
+// saved there.
 async function serveLocalMap(request) {
   const body = new URLSearchParams(await request.clone().text());
   if (body.get('rq') !== 'cmap') return null;
   const id = (body.get('cmap') || '').trim();
-  if (!id.toLowerCase().startsWith(LOCAL_MAP_PREFIX)) return null;
+  if (!id.toLowerCase().startsWith(LOCAL_MAP_PREFIX)) return serveServerMap(request, id);
   const file = await findLocalMap(id.slice(LOCAL_MAP_PREFIX.length));
   if (!file) {
     console.error(`Local map not found: ${id} (looked in ${MAPS_DIR})`);
@@ -143,6 +212,24 @@ async function serveLocalMap(request) {
   console.log(`Serving local map ${id} from ${file}`);
   const text = (await fs.readFile(file, 'utf8')).replace(/^\uFEFF/, '').trim();
   return new Response(text, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+}
+
+async function serveServerMap(request, id) {
+  if (!id) return null;
+  if (fastMapsOn()) {
+    const saved = await readSavedMap(id);
+    if (saved) {
+      console.log(`Fast load: map ${id} from ${path.join(MAPS_DIR, mapFileName(id))}`);
+      return new Response(saved, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+    }
+  }
+  const res = await net.fetch(request, { bypassCustomProtocolHandlers: true });
+  if (!res.ok) return res;
+  const text = await res.text();
+  saveMap(id, text).catch((e) => {
+    if (!text.startsWith('<not_published')) console.error(`Could not save map ${id}: ${e.message}`);
+  });
+  return new Response(text, { status: res.status, headers: { 'Content-Type': res.headers.get('content-type') || 'text/plain; charset=utf-8' } });
 }
 
 // Local key-value store for dev overrides, backed by desktop/dev-overrides.json.
@@ -165,6 +252,20 @@ async function serveDev(request, url) {
     return new Response(JSON.stringify(await listLocalMaps()), {
       headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
     });
+  }
+  // Multiplayer map cache, used by the dev console (maps arrive over the game socket).
+  if (name === 'savemap' && request.method === 'POST') {
+    try {
+      return new Response(await saveMap(url.searchParams.get('id'), await request.text()));
+    } catch (e) {
+      return new Response(e.message, { status: 400 });
+    }
+  }
+  if (name === 'mapfile') {
+    const text = await readSavedMap(url.searchParams.get('id'));
+    return text
+      ? new Response(text, { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } })
+      : new Response('Not found', { status: 404 });
   }
   if (name === 'kv') {
     if (request.method === 'PUT') {

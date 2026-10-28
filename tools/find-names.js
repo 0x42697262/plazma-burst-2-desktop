@@ -29,6 +29,7 @@ const FILES = {
   actions: 'scripts/actions.js',
   guns: 'scripts/guns.js',
   ui: 'scripts/ui.js',
+  flash: 'scripts/libs/flash.js',
 };
 
 // Each rule: `keys` are the names captured by ⟨ID⟩ in order ('_' = ignore), `file` is a
@@ -152,6 +153,14 @@ const RULES = [
     what: ['multiplayer network class (.Event(type, ...parts) sends to the server)',
       'net function(n): encodes a number for a network message'],
     re: String.raw`⟨ID⟩\.Event\(\s*⟨_⟩\["RELIABLE_EXEC_TRIGGER"\],\s*⟨_⟩\.⟨ID⟩\(` },
+  // Joining a match from the lobby: [type, match uid, callback, slot, "1" = send me the map, password].
+  { file: 'flash', keys: ['lobbyConn', 'netSend'],
+    what: ['net property: lobby/match server connection', 'connection method(channel, parts, callback): send a message'],
+    re: String.raw`⟨net⟩\.⟨ID⟩\.⟨ID⟩\(⟨net⟩\.⟨_⟩,\[⟨net⟩\["RELIABLE_JOIN_MATCH"\],-1,` },
+  { file: 'flash', keys: ['mapText', 'mapChunks'],
+    what: ['globalThis property: map XML of the level being loaded (compressed "<q." until the level starts)',
+      'net property: multiplayer map chunks received so far (null = none)'],
+    re: String.raw`root\.⟨ID⟩=⟨net⟩\.⟨ID⟩\.join\(""\);` },
   { file: 'frame2', keys: ['charOnDeath'], what: ['character property: trigger run when it dies (-1 = none)'],
     re: String.raw`if\(b\["#ondeath"\]\.charAt\(0\)=="#"\)\s*mc\.⟨ID⟩=b\["#ondeath"\];` },
   { file: 'frame2', keys: ['timerTarget'], what: ['timer property: trigger it calls'],
