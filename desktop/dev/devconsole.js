@@ -161,6 +161,8 @@
     spread:        { type: 'number', group: 'gun', min: 0, max: 10, desc: 'Spread multiplier, 0 = perfectly accurate' },
     recoil:        { type: 'number', group: 'gun', min: 0, max: 10, desc: 'Recoil multiplier for held gun' },
     builtin:       { type: 'bool',   group: 'console', desc: 'game <cmd>: on = silent, works on any map and in multiplayer; off = normal game chat' },
+    // Max keeps a whole page (plus title and footer) inside the 500-line log (LOG_MAX).
+    page_size:     { type: 'int',    group: 'console', min: 10, max: 480, desc: 'Lines per page for long lists like "triggers" (default 200); "more" = next page' },
     save_maps:     { type: 'bool',   group: 'maps', default: true, desc: 'Save every map the game downloads to desktop/maps/<map id>.xml, uncompressed (default on)' },
     fast_maps:     { type: 'bool',   group: 'maps', desc: 'Fast load: use the saved map from desktop/maps instead of downloading it again (default off)' },
   };
@@ -660,6 +662,9 @@
     game.overlay().append(root);
   }
 
+  // Lines kept in the log; older lines are removed. Long lists go through the pager.
+  const LOG_MAX = 500;
+
   // text: a string, or an array of segments [text, color?, small?] on one line.
   function print(text, color) {
     const segs = Array.isArray(text) ? text : [[text, color]];
@@ -672,7 +677,7 @@
       line.append(el('span', style, t));
     }
     logEl.append(line);
-    while (logEl.childNodes.length > 500) logEl.firstChild.remove();
+    while (logEl.childNodes.length > LOG_MAX) logEl.firstChild.remove();
     logEl.scrollTop = logEl.scrollHeight;
   }
 
@@ -795,8 +800,9 @@
     chars: { usage: 'chars', desc: 'List characters: #, name, team, HP, distance' },
     bind: { usage: 'bind <key> <command>', desc: 'Run a command with a key in levels, e.g. "bind f tp", "bind shift+h heal". "bind" lists binds' },
     unbind: { usage: 'unbind <key> | all', desc: 'Remove a key bind' },
-    triggers: { usage: 'triggers [# | uid | on | off]', desc: 'List map triggers (enabled, calls left, what starts them), or one trigger\'s actions' },
-    'triggers find': { usage: 'triggers find [a:|b:|type:]<text>', desc: 'Search every trigger action\'s A/B values (text or number), or by action type' },
+    triggers: { usage: 'triggers [# | uid | on | off] [page n]', desc: 'List map triggers (enabled, calls left, what starts them), or one trigger\'s actions. Long lists are paged (page_size)' },
+    more: { usage: 'more | page <n>', desc: 'Next page of the last long list, or jump to page n' },
+    'triggers find': { usage: 'triggers find [a:|b:|type:]<text> [page n]', desc: 'Search every trigger action\'s A/B values (text or number), or by action type' },
     'triggers run': { usage: 'triggers run <# | uid> [force] [as #]', desc: 'Run a trigger now, with you (or character #) as the activator. "force" also runs a disabled/used-up one. Multiplayer: other players see it too (not with "as", or forced on a disabled/used-up one)' },
     game: { usage: 'game <command>', desc: 'Run a built-in game chat command. "game help" lists them all' },
     builtin: { usage: 'builtin [on|off]', desc: 'Toggle silent built-in commands everywhere (see "get builtin")' },
@@ -1065,13 +1071,73 @@
     return max === -1 ? 'unlimited' : `${left}/${max} left`;
   };
 
-  function cmdTriggers(args) {
+  // ---------------------------------------------------------------------------
+  // Pager
+  // ---------------------------------------------------------------------------
+  // Long lists are built as rows first, then printed one page at a time, so the top of
+  // a list never scrolls out of the log (LOG_MAX lines). The last list is kept: "more"
+  // prints its next page, "page <n>" any page. A command takes "page <n>" at the end,
+  // e.g. "triggers on page 3". Page size: the page_size key (default 200).
+  const PAGE_SIZE_DEFAULT = 200;
+  let pager = null; // { title, rows, cmd, hint, empty, color, page, pages, size }
+
+  const pageSize = () => (has('page_size') ? kv.page_size : PAGE_SIZE_DEFAULT);
+
+  // Removes a trailing "page <n>" from args. Returns { args, page } (page 1 if absent).
+  function takePage(args) {
+    const n = args.length;
+    if (n >= 2 && ['page', 'pg'].includes(String(args[n - 2]).toLowerCase())) {
+      if (!/^\d+$/.test(args[n - 1])) throw new Error('page expects a number, e.g. "page 2"');
+      return { args: args.slice(0, n - 2), page: Number(args[n - 1]) };
+    }
+    return { args, page: 1 };
+  }
+
+  // rows: [text, color?] each. cmd: the command that made the list (for the footer).
+  // title: first line; hint: last line; empty: printed when there are no rows.
+  function showPaged({ title, rows, cmd, hint = '', empty = '', color = '#89D0FF', page = 1 }) {
+    const size = pageSize();
+    const pages = Math.max(1, Math.ceil(rows.length / size));
+    if (!Number.isInteger(page) || page < 1) throw new Error('pages start at 1');
+    if (page > pages) throw new Error(`no page ${page}: this list has ${pages} page${pages === 1 ? '' : 's'} of ${size}`);
+    pager = { title, rows, cmd, hint, empty, color, page, pages, size };
+    printPage();
+  }
+
+  function printPage() {
+    const { title, rows, cmd, hint, empty, color, page, pages, size } = pager;
+    const from = (page - 1) * size;
+    const slice = rows.slice(from, from + size);
+    print(pages > 1 ? `${title} Page ${page}/${pages}: ${from + 1}-${from + slice.length} of ${rows.length}.` : title, color);
+    if (!rows.length && empty) print(empty, '#ffff88');
+    for (const [text, c] of slice) print(text, c);
+    if (pages > 1) {
+      print(page < pages
+        ? `Page ${page}/${pages}. "more" = next page, "page <n>" = jump (also "${cmd} page <n>").`
+        : `Last page (${pages}/${pages}). "page 1" = back to the top.`, '#ffffff99');
+    }
+    if (hint) print(hint, '#ffffff99');
+  }
+
+  // "more": next page of the last list. "page <n>": page n of it.
+  function cmdPage(n) {
+    if (!pager) throw new Error('no list to page yet. Try "triggers".');
+    const page = n === undefined ? pager.page + 1 : Number(n);
+    if (n !== undefined && !/^\d+$/.test(String(n))) throw new Error('usage: page <n>');
+    if (n === undefined && page > pager.pages) throw new Error(`already on the last page (${pager.pages}/${pager.pages}). "page 1" goes back to the top.`);
+    if (page < 1 || page > pager.pages) throw new Error(`no page ${page}: this list has ${pager.pages} page${pager.pages === 1 ? '' : 's'}`);
+    pager.page = page;
+    printPage();
+  }
+
+  function cmdTriggers(rawArgs) {
     if (!isActive()) throw new Error('start a level first');
     const list = mapList('triggers', 'triggerCount');
     if (!list.length) { print('This map has no triggers', '#ffff88'); return; }
-    const verb = (args[0] || '').toLowerCase();
-    if (verb === 'find' || verb === 'search') { findTriggerActions(list, args.slice(1)); return; }
-    if (TRIGGER_RUN_VERBS.includes(verb)) { runTriggerCmd(list, args.slice(1)); return; }
+    const verb = (rawArgs[0] || '').toLowerCase();
+    if (TRIGGER_RUN_VERBS.includes(verb)) { runTriggerCmd(list, rawArgs.slice(1)); return; }
+    const { args, page } = takePage(rawArgs);
+    if (verb === 'find' || verb === 'search') { findTriggerActions(list, args.slice(1), page); return; }
     const sources = triggerSources();
     const q = args.join(' ').trim();
     const lc = q.toLowerCase();
@@ -1082,37 +1148,43 @@
     if (exact >= 0) {
       const t = list[exact];
       if (!t) throw new Error(`no trigger #${exact}. This map has ${list.length} (0-${list.length - 1}).`);
-      print(`Trigger #${exact}${t.uid ? ' ' + t.uid : ''}`, '#89D0FF');
-      print(`  ${t[N.trigEnabled] ? 'enabled' : 'disabled'}, calls ${callsText(t)}${t[N.trigAtStart] ? ', runs at map start' : ''}`);
       const by = sources.get(exact);
-      print(`  started by: ${by ? by.join('; ') : 'nothing found (maybe a shot at an object, or another trigger through a variable)'}`);
       const n = t[N.trigActionCount] || 0;
-      print(`  ${n} action${n === 1 ? '' : 's'} (type = the map editor's action number):`);
+      const rows = [];
       for (let a = 0; a < n; a++) {
         const type = t[N.trigTypes][a];
         const name = ACTION_NAMES[type] ? `  (${ACTION_NAMES[type]})` : '';
-        print(`    ${String(a + 1).padStart(3)}. type ${String(type).padEnd(4)} A = ${fmtTarget(t[N.trigTargetA][a])}   B = ${fmtTarget(t[N.trigTargetB][a])}${name}`);
+        rows.push([`    ${String(a + 1).padStart(3)}. type ${String(type).padEnd(4)} A = ${fmtTarget(t[N.trigTargetA][a])}   B = ${fmtTarget(t[N.trigTargetB][a])}${name}`]);
       }
+      print(`Trigger #${exact}${t.uid ? ' ' + t.uid : ''}`, '#89D0FF');
+      print(`  ${t[N.trigEnabled] ? 'enabled' : 'disabled'}, calls ${callsText(t)}${t[N.trigAtStart] ? ', runs at map start' : ''}`);
+      print(`  started by: ${by ? by.join('; ') : 'nothing found (maybe a shot at an object, or another trigger through a variable)'}`);
+      showPaged({ title: `  ${n} action${n === 1 ? '' : 's'} (type = the map editor's action number):`, color: '#ffffff', rows, cmd: `triggers ${exact}`, page });
       return;
     }
 
     // Summary list, optionally filtered by uid text, "on" or "off".
-    let shown = 0;
     const on = list.filter((t) => t && t[N.trigEnabled]).length;
-    print(`Triggers: ${list.length} (${on} enabled, ${list.length - on} disabled). "triggers <#>" shows one in detail.`, '#89D0FF');
+    const rows = [];
     list.forEach((t, i) => {
       if (!t) return;
       const enabled = !!t[N.trigEnabled];
       if (lc === 'on' && !enabled) return;
       if (lc === 'off' && enabled) return;
       if (lc && lc !== 'on' && lc !== 'off' && !String(t.uid).toLowerCase().includes(lc)) return;
-      shown++;
       const by = sources.get(i);
       const flags = [t[N.trigAtStart] ? 'at start' : '', by ? `by ${by.length > 1 ? by[0] + ` +${by.length - 1}` : by[0]}` : ''].filter(Boolean).join(', ');
-      print(`  #${String(i).padEnd(4)} ${String(t.uid || '-').padEnd(20)} ${enabled ? 'on ' : 'off'}  ${callsText(t).padEnd(12)} ${String(t[N.trigActionCount] || 0).padStart(3)} action${t[N.trigActionCount] === 1 ? ' ' : 's'}  ${flags}`,
-        enabled ? undefined : '#ffffff77');
+      rows.push([`  #${String(i).padEnd(4)} ${String(t.uid || '-').padEnd(20)} ${enabled ? 'on ' : 'off'}  ${callsText(t).padEnd(12)} ${String(t[N.trigActionCount] || 0).padStart(3)} action${t[N.trigActionCount] === 1 ? ' ' : 's'}  ${flags}`,
+        enabled ? undefined : '#ffffff77']);
     });
-    if (!shown) print(lc === 'on' ? '  no enabled triggers' : lc === 'off' ? '  no disabled triggers' : `  no trigger matches "${q}"`, '#ffff88');
+    const filtered = q ? ` Filter "${q}": ${rows.length} shown.` : '';
+    showPaged({
+      title: `Triggers: ${list.length} (${on} enabled, ${list.length - on} disabled).${filtered} "triggers <#>" shows one in detail.`,
+      rows,
+      cmd: q ? `triggers ${q}` : 'triggers',
+      empty: lc === 'on' ? '  no enabled triggers' : lc === 'off' ? '  no disabled triggers' : `  no trigger matches "${q}"`,
+      page,
+    });
   }
 
   const TRIGGER_RUN_VERBS = ['run', 'activate', 'fire', 'exec'];
@@ -1188,7 +1260,7 @@
   // "triggers find": every action whose A or B matches. Each term is "text" (A or B),
   // "a:text", "b:text" or "type:n"; all terms must match. Text matches anywhere in a
   // value, case-insensitive; a number matches number values exactly (5 does not match 15).
-  function findTriggerActions(list, args) {
+  function findTriggerActions(list, args, page = 1) {
     const usage = 'usage: triggers find <text>  |  a:<text>  b:<text>  type:<n>  (combine terms, e.g. "type:41 a:sound")';
     if (!args.length) throw new Error(usage);
     const terms = args.map((raw) => {
@@ -1205,7 +1277,7 @@
       const s = String(v).toLowerCase();
       return t.num !== null && /^-?\d+(\.\d+)?$/.test(s) ? Number(s) === t.num : s.includes(t.text);
     };
-    let hits = 0;
+    const rows = [];
     const triggersHit = new Set();
     list.forEach((t, i) => {
       if (!t) return;
@@ -1217,15 +1289,22 @@
               : term.field === 'b' ? valueMatches(B, term)
                 : valueMatches(A, term) || valueMatches(B, term));
         if (!ok) continue;
-        hits++;
         triggersHit.add(i);
         const name = ACTION_NAMES[type] ? `  (${ACTION_NAMES[type]})` : '';
-        print(`  #${String(i).padEnd(4)} ${String(t.uid || '-').padEnd(16)} action ${String(a + 1).padEnd(3)} type ${String(type).padEnd(4)} A = ${fmtTarget(A)}   B = ${fmtTarget(B)}${name}`,
-          t[N.trigEnabled] ? undefined : '#ffffff77');
+        rows.push([`  #${String(i).padEnd(4)} ${String(t.uid || '-').padEnd(16)} action ${String(a + 1).padEnd(3)} type ${String(type).padEnd(4)} A = ${fmtTarget(A)}   B = ${fmtTarget(B)}${name}`,
+          t[N.trigEnabled] ? undefined : '#ffffff77']);
       }
     });
-    print(hits ? `${hits} action${hits === 1 ? '' : 's'} in ${triggersHit.size} trigger${triggersHit.size === 1 ? '' : 's'}. "triggers <#>" shows one in full.`
-      : `No action matches "${args.join(' ')}"`, hits ? '#89D0FF' : '#ffff88');
+    const hits = rows.length;
+    const q = args.join(' ');
+    showPaged({
+      title: hits ? `${hits} action${hits === 1 ? '' : 's'} in ${triggersHit.size} trigger${triggersHit.size === 1 ? '' : 's'} match "${q}". "triggers <#>" shows one in full.`
+        : `No action matches "${q}"`,
+      color: hits ? '#89D0FF' : '#ffff88',
+      rows,
+      cmd: `triggers find ${q}`,
+      page,
+    });
   }
 
   // Action targets are numbers (indexes, values) or text after the map loads.
@@ -1239,6 +1318,7 @@
     'help', '?', 'list', 'ls', 'clear', 'cls', 'close', 'exit', 'reset', 'revive', 'res', 'heal', 'hp', 'game',
     'guns', 'weapons', 'give', 'drop', 'throw', 'chars', 'players', 'bots', 'triggers', 'trigger', 'trig', 'tp',
     'teleport', 'pos', 'where', 'maps', 'js', 'get', 'unset', 'del', 'rm', 'set', 'bind', 'binds', 'unbind', 'trig',
+    'more', 'next', 'page', 'pg',
     ...Object.keys(COMMANDS), ...Object.keys(SCHEMA), ...Object.keys(ALIASES),
   ]);
 
@@ -1838,6 +1918,8 @@
         case 'binds': cmdBinds(); return;
         case 'unbind': cmdUnbind(rest); return;
         case 'triggers': case 'trigger': case 'trig': cmdTriggers(rest); return;
+        case 'more': case 'next': cmdPage(); return;
+        case 'page': case 'pg': cmdPage(rest[0]); return;
         case 'tp': case 'teleport': cmdTeleport(rest); return;
         case 'pos': case 'where': cmdPos(); return;
         case 'maps': {
