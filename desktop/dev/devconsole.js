@@ -1488,9 +1488,10 @@
   // Map variables
   // ---------------------------------------------------------------------------
   // Triggers keep their state in one object, variable name -> value, emptied whenever a
-  // map loads. Values that came from the map are numbers when they look like numbers and
-  // strings otherwise, and the "variable equals" actions compare with ===, so a value set
-  // here keeps that difference: 5 is the number, "5" is the text.
+  // map loads. A value that came from the map went through the loader's own conversion:
+  // a whole number becomes a number, everything else stays text. The "variable equals"
+  // actions compare with ===, so that difference decides whether a gate fires, and a
+  // value set here follows the same rule.
   const VAR_VERBS = ['set', 'get', 'del', 'unset', 'rm', 'sync'];
 
   function mapVars() {
@@ -1499,10 +1500,16 @@
     return v;
   }
 
-  // 5 -> the number, "5" -> the text, anything else -> the text as typed.
+  // The game's rule for a value loaded from a map (the map loader's target fixup in
+  // scripts/frame2.js): a whole number becomes a number, anything else stays text.
+  // So 5 is the number 5, while 3.5, 01 and -0 stay text, like the map itself stores
+  // them. Double quotes force text: "5" is the text 5.
+  // Not copied from the game: it also resolves a leading "#uid" to that object's index,
+  // which only applies to a trigger's own action targets, not to a variable set here.
   function parseVarValue(raw) {
     if (raw.length >= 2 && raw.startsWith('"') && raw.endsWith('"')) return raw.slice(1, -1);
-    return /^-?\d+(\.\d+)?$/.test(raw) ? Number(raw) : raw;
+    const n = parseInt(raw, 10);
+    return String(n) === raw ? n : raw;
   }
 
   // Like fmtTarget, but never shortened: for one value the user asked about.
@@ -2216,7 +2223,8 @@
     'vars set': {
       also: ['vars get', 'vars del', 'vars unset', 'vars rm'],
       about: ['set writes a value, get prints one in full, del removes one.',
-        'A value that looks like a number is stored as a number, anything else as text.',
+        'Typing follows the map loader: a whole number is stored as a number, and',
+        'anything else as text, so 5 is a number while 3.5, 01 and -0 stay text.',
         'Wrap it in double quotes to force text, because the "variable equals" actions',
         'compare types: 5 and "5" are not the same value to them.',
         'A value may contain spaces; everything after the name is taken as the value.'],
@@ -2224,6 +2232,7 @@
         ['get <name>', 'print one value, never shortened'],
         ['del <name>', 'remove it (also unset, rm)']],
       examples: [['vars set var_godhuman 1', 'the number 1'], ['vars set var_text "1"', 'the text "1"'],
+        ['vars set scale 1.5', 'text, because 1.5 is not a whole number'],
         ['vars set var_nickname some player', 'a value with spaces'],
         ['vars del var_godhuman', 'remove it again']],
       notes: ['Setting a variable does not run anything: a trigger has to read it before',
