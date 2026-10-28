@@ -809,7 +809,7 @@
     triggers: { usage: 'triggers [# | uid | on | off] [page n]', desc: 'List map triggers (enabled, calls left, what starts them), or one trigger\'s actions. Long lists are paged (page_size)' },
     'triggers history': { usage: 'triggers history [all | clear | # | uid] [page n]', desc: 'Recent trigger runs, newest first: when, which, by whom. "all" adds refused attempts (disabled / no calls left)' },
     more: { usage: 'more | page <n>', desc: 'Next page of the last long list, or jump to page n' },
-    'triggers find': { usage: 'triggers find [a:|b:|type:]<text> [page n]', desc: 'Search every trigger action\'s A/B values (text or number), or by action type' },
+    'triggers find': { usage: 'triggers find [uid:|a:|b:|type:]<text> [page n]', desc: 'Search trigger uids and every trigger action\'s A/B values (text or number), or by action type' },
     'triggers run': { usage: 'triggers run <# | uid> [force] [as #]', desc: 'Run a trigger now, with you (or character #) as the activator. "force" also runs a disabled/used-up one. Multiplayer: other players see it too (not with "as", or forced on a disabled/used-up one)' },
     game: { usage: 'game <command>', desc: 'Run a built-in game chat command. "game help" lists them all' },
     builtin: { usage: 'builtin [on|off]', desc: 'Toggle silent built-in commands everywhere (see "get builtin")' },
@@ -1403,14 +1403,15 @@
     if (mp && !send) print(`Note: ran in your game only, other players do not see it: ${localWhy}.`, WARN_COLOR);
   }
 
-  // "triggers find": every action whose A or B matches. Each term is "text" (A or B),
-  // "a:text", "b:text" or "type:n"; all terms must match. Text matches anywhere in a
-  // value, case-insensitive; a number matches number values exactly (5 does not match 15).
+  // "triggers find": triggers whose uid matches, and every action whose A or B matches.
+  // Each term is "text" (uid, A or B), "uid:text", "a:text", "b:text" or "type:n"; all
+  // terms must match. Text matches anywhere in a value, case-insensitive; a number
+  // matches number values exactly (5 does not match 15).
   function findTriggerActions(list, args, page = 1) {
-    const usage = 'usage: triggers find <text>  |  a:<text>  b:<text>  type:<n>  (combine terms, e.g. "type:41 a:sound")';
+    const usage = 'usage: triggers find <text>  |  uid:<text>  a:<text>  b:<text>  type:<n>  (combine terms, e.g. "type:41 a:sound")';
     if (!args.length) throw new Error(usage);
     const terms = args.map((raw) => {
-      const m = raw.match(/^(a|b|type):(.*)$/i);
+      const m = raw.match(/^(uid|a|b|type):(.*)$/i);
       const field = m ? m[1].toLowerCase() : 'ab';
       const text = (m ? m[2] : raw).toLowerCase();
       if (!text) throw new Error(usage);
@@ -1423,13 +1424,29 @@
       const s = String(v).toLowerCase();
       return t.num !== null && /^-?\d+(\.\d+)?$/.test(s) ? Number(s) === t.num : s.includes(t.text);
     };
-    const rows = [];
+    const uidMatches = (t, term) => String(t.uid || '').toLowerCase().includes(term.text);
+
+    // "uid:" terms pick which triggers to look at at all; the rest match actions. A bare
+    // term may match the uid instead of an action, so "find god_all" lists the #god_all
+    // trigger itself as well as the actions pointing at it.
+    const uidTerms = terms.filter((term) => term.field === 'uid');
+    const rest = terms.filter((term) => term.field !== 'uid');
+    const trigRows = [];
+    const actRows = [];
     const triggersHit = new Set();
     list.forEach((t, i) => {
       if (!t) return;
+      if (!uidTerms.every((term) => uidMatches(t, term))) return;
+      // The uid alone answers the whole query: one row for the trigger, not for actions.
+      if (rest.every((term) => term.field === 'ab' && uidMatches(t, term))) {
+        const n = t[N.trigActionCount] || 0;
+        trigRows.push([`  #${String(i).padEnd(4)} ${String(t.uid || '-').padEnd(16)} trigger   ${t[N.trigEnabled] ? 'on ' : 'off'}  ${callsText(t).padEnd(12)} ${String(n).padStart(3)} action${n === 1 ? '' : 's'}`,
+          t[N.trigEnabled] ? undefined : '#ffffff77']);
+      }
+      if (!rest.length) return;  // "uid:" only: the trigger row is the whole answer.
       for (let a = 0; a < (t[N.trigActionCount] || 0); a++) {
         const type = t[N.trigTypes][a], A = t[N.trigTargetA][a], B = t[N.trigTargetB][a];
-        const ok = terms.every((term) =>
+        const ok = rest.every((term) =>
           term.field === 'type' ? type === term.num
             : term.field === 'a' ? valueMatches(A, term)
               : term.field === 'b' ? valueMatches(B, term)
@@ -1437,16 +1454,19 @@
         if (!ok) continue;
         triggersHit.add(i);
         const name = ACTION_NAMES[type] ? `  (${ACTION_NAMES[type]})` : '';
-        rows.push([`  #${String(i).padEnd(4)} ${String(t.uid || '-').padEnd(16)} action ${String(a + 1).padEnd(3)} type ${String(type).padEnd(4)} A = ${fmtTarget(A)}   B = ${fmtTarget(B)}${name}`,
+        actRows.push([`  #${String(i).padEnd(4)} ${String(t.uid || '-').padEnd(16)} action ${String(a + 1).padEnd(3)} type ${String(type).padEnd(4)} A = ${fmtTarget(A)}   B = ${fmtTarget(B)}${name}`,
           t[N.trigEnabled] ? undefined : '#ffffff77']);
       }
     });
-    const hits = rows.length;
+    const rows = trigRows.concat(actRows);
     const q = args.join(' ');
+    const bits = [];
+    if (trigRows.length) bits.push(`${trigRows.length} trigger${trigRows.length === 1 ? '' : 's'} by uid`);
+    if (actRows.length) bits.push(`${actRows.length} action${actRows.length === 1 ? '' : 's'} in ${triggersHit.size} trigger${triggersHit.size === 1 ? '' : 's'}`);
     showPaged({
-      title: hits ? `${hits} action${hits === 1 ? '' : 's'} in ${triggersHit.size} trigger${triggersHit.size === 1 ? '' : 's'} match "${q}". "triggers <#>" shows one in full.`
-        : `No action matches "${q}"`,
-      color: hits ? '#89D0FF' : '#ffff88',
+      title: rows.length ? `${bits.join(', ')} match "${q}". "triggers <#>" shows one in full.`
+        : `No trigger or action matches "${q}"`,
+      color: rows.length ? '#89D0FF' : '#ffff88',
       rows,
       cmd: `triggers find ${q}`,
       page,
