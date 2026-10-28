@@ -147,6 +147,11 @@ const RULES = [
     what: ['character index that activated the running trigger', 'power passed to the running trigger (shot damage)',
       'function(trigger index): runs a trigger if enabled with calls left (always returns true in a level)'],
     re: String.raw`⟨ID⟩=⟨me⟩;\s*⟨ID⟩=⟨bullets⟩\[i\]\.⟨bulletDamage⟩;\s*if\(⟨ID⟩\(` },
+  // The same shot, in multiplayer: tells the server so every other client runs it too.
+  { file: 'frame2', keys: ['net', 'netNum'],
+    what: ['multiplayer network class (.Event(type, ...parts) sends to the server)',
+      'net function(n): encodes a number for a network message'],
+    re: String.raw`⟨ID⟩\.Event\(\s*⟨_⟩\["RELIABLE_EXEC_TRIGGER"\],\s*⟨_⟩\.⟨ID⟩\(` },
   { file: 'frame2', keys: ['charOnDeath'], what: ['character property: trigger run when it dies (-1 = none)'],
     re: String.raw`if\(b\["#ondeath"\]\.charAt\(0\)=="#"\)\s*mc\.⟨ID⟩=b\["#ondeath"\];` },
   { file: 'frame2', keys: ['timerTarget'], what: ['timer property: trigger it calls'],

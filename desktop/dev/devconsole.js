@@ -69,6 +69,12 @@
     isCustomMap: () => read('customMap'),        // custom (non-campaign) map: chat goes to map triggers
     setCustomMap: (v) => write('customMap', v),
     isMP: () => read('mp'),                      // in a multiplayer match
+    // Tells the server that you ran trigger i, so every other client runs it too. Same
+    // message the game sends after you use a movable with a trigger (frame2.js).
+    sendTriggerRun: (i) => {
+      const net = read('net');
+      net.Event(net.RELIABLE_EXEC_TRIGGER, net[nameOf('netNum')](i), '', '');
+    },
     setMP: (v) => write('mp', v),
     sayTrigger: () => read('sayTrigger'),        // map "player says" trigger index (-1/undefined = none)
     setSayTrigger: (v) => write('sayTrigger', v),
@@ -756,7 +762,6 @@
     tp: LOCAL,
     give: 'the gun exists only in your game; other players never see it and cannot pick it up',
     drop: 'the drop is not sent to the server; other players still see the gun in your hands',
-    'triggers run': 'the trigger runs for all clients; other players should see what it does',
     game: 'built-in commands run in your game only (with builtin off the game refuses them in multiplayer)',
   };
   for (const [k, s] of Object.entries(SCHEMA)) if (s.group !== 'console') CLIENT_ONLY[k] = LOCAL;
@@ -788,7 +793,7 @@
     unbind: { usage: 'unbind <key> | all', desc: 'Remove a key bind' },
     triggers: { usage: 'triggers [# | uid | on | off]', desc: 'List map triggers (enabled, calls left, what starts them), or one trigger\'s actions' },
     'triggers find': { usage: 'triggers find [a:|b:|type:]<text>', desc: 'Search every trigger action\'s A/B values (text or number), or by action type' },
-    'triggers run': { usage: 'triggers run <# | uid> [force] [as #]', desc: 'Run a trigger now, with you (or character #) as the activator. "force" also runs a disabled/used-up one' },
+    'triggers run': { usage: 'triggers run <# | uid> [force] [as #]', desc: 'Run a trigger now, with you (or character #) as the activator. "force" also runs a disabled/used-up one. Multiplayer: other players see it too (not with "as", or forced on a disabled/used-up one)' },
     game: { usage: 'game <command>', desc: 'Run a built-in game chat command. "game help" lists them all' },
     builtin: { usage: 'builtin [on|off]', desc: 'Toggle silent built-in commands everywhere (see "get builtin")' },
     maps: { usage: 'maps', desc: 'List local maps in desktop/maps (play via Campaign > Custom Map)' },
@@ -1113,6 +1118,10 @@
   // is set first. Without "force" the game's rules apply: it must be enabled with calls
   // left, and running uses up a call. With "force" it runs anyway, and its enabled
   // state and calls left are put back afterwards.
+  // Multiplayer: the run is sent to the server like a normal one, so other players run
+  // it too. Not sent (your client only) when the other clients would refuse it or run
+  // it differently: forced on a disabled/used-up trigger, "as" another character (the
+  // server always makes the sender the activator), or while spectating.
   function runTriggerCmd(list, args) {
     const usage = 'usage: triggers run <# | uid> [force] [as <char#>]';
     let force = false;
@@ -1146,6 +1155,13 @@
       t[N.trigEnabled] = true;
       if (wasCalls !== -1 && !(wasCalls > 0)) t[N.trigCalls] = 1;
     }
+    const mp = game.isMP();
+    const localWhy = !mp ? '' : !usable ? 'it is disabled or used up for the other players'
+      : activator !== game.me() ? '"as" another character only works in your game'
+        : read('spectating') ? 'you are spectating' : '';
+    const send = mp && !localWhy;
+    // A synced run uses up a call on every client, so keep the used call here too.
+    const restore = force && !send;
     const prevActivator = read('triggerActivator');
     const prevPower = read('triggerPower');
     write('triggerActivator', activator);
@@ -1155,11 +1171,14 @@
     } finally {
       write('triggerActivator', prevActivator);
       write('triggerPower', prevPower);
-      if (force) { t[N.trigEnabled] = wasEnabled; t[N.trigCalls] = wasCalls; }
+      if (restore) { t[N.trigEnabled] = wasEnabled; t[N.trigCalls] = wasCalls; }
     }
+    if (send) game.sendTriggerRun(idx);
     const n = t[N.trigActionCount] || 0;
     const by = activator === game.me() ? '' : ` as #${activator}`;
-    print(`Ran trigger ${label}${by} (${n} action${n === 1 ? '' : 's'})${force ? ', forced: enabled state and calls left kept' : `, calls ${callsText(t)}`}`, '#66ff88');
+    const where = !mp ? '' : send ? ', sent to all players' : '';
+    print(`Ran trigger ${label}${by} (${n} action${n === 1 ? '' : 's'})${restore ? ', forced: enabled state and calls left kept' : `, calls ${callsText(t)}`}${where}`, '#66ff88');
+    if (mp && !send) print(`Note: ran in your game only, other players do not see it: ${localWhy}.`, WARN_COLOR);
   }
 
   // "triggers find": every action whose A or B matches. Each term is "text" (A or B),
@@ -1777,7 +1796,7 @@
       const name = cmd === 'teleport' ? 'tp' : cmd === 'throw' ? 'drop' : cmd;
       if (sub === 'help' && rest.length === 1) { /* help text only */ }
       else if (cmd === 'set') warnIfMP(resolveKey(rest[0]));
-      else if (['triggers', 'trigger', 'trig'].includes(cmd) && TRIGGER_RUN_VERBS.includes(sub)) warnIfMP('triggers run');
+      else if (['triggers', 'trigger', 'trig'].includes(cmd) && TRIGGER_RUN_VERBS.includes(sub)) { /* runTriggerCmd reports sync itself */ }
       else if (COMMANDS[name]) warnIfMP(name);
       else warnIfMP(resolveKey(cmd));
     } catch {}
