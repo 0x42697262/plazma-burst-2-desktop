@@ -778,6 +778,7 @@
     give: 'the gun exists only in your game; other players never see it and cannot pick it up',
     drop: 'the drop is not sent to the server; other players still see the gun in your hands',
     game: 'built-in commands run in your game only (with builtin off the game refuses them in multiplayer)',
+    vars: 'the value changes in your game only; the server and the other players keep theirs',
   };
   for (const [k, s] of Object.entries(SCHEMA)) if (s.group !== 'console' && s.group !== 'maps') CLIENT_ONLY[k] = LOCAL;
   const CLIENT_TAG = ['  WARNING: client-only', WARN_COLOR, true];
@@ -808,6 +809,8 @@
     unbind: { usage: 'unbind <key> | all', desc: 'Remove a key bind' },
     triggers: { usage: 'triggers [# | uid | on | off] [page n]', desc: 'List map triggers (enabled, calls left, what starts them), or one trigger\'s actions. Long lists are paged (page_size)' },
     'triggers history': { usage: 'triggers history [all | clear | # | uid] [page n]', desc: 'Recent trigger runs, newest first: when, which, by whom. "all" adds refused attempts (disabled / no calls left)' },
+    vars: { usage: 'vars [filter] [page n]', desc: 'List the map\'s trigger variables and their values; a filter matches part of a name' },
+    'vars set': { usage: 'vars set|get|del <name> [value]', desc: 'Change, read in full, or remove one trigger variable' },
     more: { usage: 'more | page <n>', desc: 'Next page of the last long list, or jump to page n' },
     'triggers find': { usage: 'triggers find [uid:|a:|b:|type:]<text> [page n]', desc: 'Search trigger uids and every trigger action\'s A/B values (text or number), or by action type' },
     'triggers run': { usage: 'triggers run <# | uid> [force] [as #]', desc: 'Run a trigger now, with you (or character #) as the activator. "force" also runs a disabled/used-up one. Multiplayer: other players see it too (not with "as", or forced on a disabled/used-up one)' },
@@ -1477,6 +1480,82 @@
   const fmtTarget = (v) => (v === undefined || v === null ? '-' : typeof v === 'string' ? JSON.stringify(v.length > 40 ? v.slice(0, 40) + '...' : v) : String(v));
 
   // ---------------------------------------------------------------------------
+  // Map variables
+  // ---------------------------------------------------------------------------
+  // Triggers keep their state in one object, variable name -> value, emptied whenever a
+  // map loads. Values that came from the map are numbers when they look like numbers and
+  // strings otherwise, and the "variable equals" actions compare with ===, so a value set
+  // here keeps that difference: 5 is the number, "5" is the text.
+  const VAR_VERBS = ['set', 'get', 'del', 'unset', 'rm'];
+
+  function mapVars() {
+    const v = read('mapVars');
+    if (!v) throw new Error('no variables yet: they are created when a map loads');
+    return v;
+  }
+
+  // 5 -> the number, "5" -> the text, anything else -> the text as typed.
+  function parseVarValue(raw) {
+    if (raw.length >= 2 && raw.startsWith('"') && raw.endsWith('"')) return raw.slice(1, -1);
+    return /^-?\d+(\.\d+)?$/.test(raw) ? Number(raw) : raw;
+  }
+
+  // Like fmtTarget, but never shortened: for one value the user asked about.
+  const fmtVar = (v) => (v === undefined ? '(not set)' : typeof v === 'string' ? JSON.stringify(v) : String(v));
+
+  function cmdVars(rawArgs) {
+    if (!isActive()) throw new Error('start a level first');
+    const verb = (rawArgs[0] || '').toLowerCase();
+    if (VAR_VERBS.includes(verb)) { writeVar(verb, rawArgs.slice(1)); return; }
+    const { args, page } = takePage(rawArgs);
+    const vars = mapVars();
+    const names = Object.keys(vars).sort();
+    const q = args.join(' ').trim();
+    const lc = q.toLowerCase();
+    const rows = [];
+    for (const n of names) {
+      if (lc && !n.toLowerCase().includes(lc)) continue;
+      rows.push([`  ${n.padEnd(28)} ${fmtTarget(vars[n])}`]);
+    }
+    showPaged({
+      title: `Map variables: ${names.length}.${q ? ` Filter "${q}": ${rows.length} shown.` : ''} "vars set <name> <value>" changes one.`,
+      rows,
+      cmd: q ? `vars ${q}` : 'vars',
+      empty: names.length ? `  no variable name contains "${q}"` : '  no trigger has set a variable yet',
+      hint: 'Numbers print bare and text in quotes; "vars get <name>" shows a long value in full. "triggers find <name>" lists the actions that use one.',
+      page,
+    });
+  }
+
+  function writeVar(verb, args) {
+    const usage = 'usage: vars set <name> <value>  |  vars get <name>  |  vars del <name>';
+    const name = args[0];
+    if (!name) throw new Error(usage);
+    const vars = mapVars();
+    const had = Object.prototype.hasOwnProperty.call(vars, name);
+    if (verb === 'get') {
+      if (args.length !== 1) throw new Error(usage);
+      if (!had) throw new Error(`no variable "${name}". Type "vars" to list them, or "vars ${name}" to search.`);
+      print(`${name} = ${fmtVar(vars[name])}`);
+      return;
+    }
+    if (verb !== 'set') {
+      if (args.length !== 1) throw new Error(usage);
+      if (!had) { print(`${name} is not set`, '#ffff88'); return; }
+      const before = vars[name];
+      delete vars[name];
+      print(`Removed ${name} (was ${fmtVar(before)})`, '#66ff88');
+      return;
+    }
+    if (args.length < 2) throw new Error(usage);
+    const before = vars[name];
+    const value = parseVarValue(args.slice(1).join(' '));
+    vars[name] = value;
+    print(`${name} = ${fmtVar(value)}${had ? `  (was ${fmtVar(before)})` : '  (new)'}`, '#66ff88');
+    if (!had) print('  No trigger had set it yet, so nothing may read it. "vars" lists the ones in use.', '#ffffff99');
+  }
+
+  // ---------------------------------------------------------------------------
   // Key binds
   // ---------------------------------------------------------------------------
   // Every first word run() understands (switch cases, keys, aliases).
@@ -1484,7 +1563,7 @@
     'help', '?', 'list', 'ls', 'clear', 'cls', 'close', 'exit', 'reset', 'revive', 'res', 'heal', 'hp', 'game',
     'guns', 'weapons', 'give', 'drop', 'throw', 'chars', 'players', 'bots', 'triggers', 'trigger', 'trig', 'tp',
     'teleport', 'pos', 'where', 'maps', 'js', 'get', 'unset', 'del', 'rm', 'set', 'bind', 'binds', 'unbind', 'trig',
-    'more', 'next', 'page', 'pg',
+    'more', 'next', 'page', 'pg', 'vars', 'var', 'variables',
     ...Object.keys(COMMANDS), ...Object.keys(SCHEMA), ...Object.keys(ALIASES),
   ]);
 
@@ -1775,15 +1854,18 @@
     '?': 'help', ls: 'list', del: 'unset', rm: 'unset', cls: 'clear', exit: 'close',
     res: 'revive', weapons: 'guns', throw: 'drop', players: 'chars', bots: 'chars',
     teleport: 'tp', where: 'pos', binds: 'bind', next: 'more', page: 'more', pg: 'more',
-    trigger: 'triggers', trig: 'triggers',
+    trigger: 'triggers', trig: 'triggers', var: 'vars', variables: 'vars',
   };
 
-  // Second word of a "triggers <verb>" topic -> the COMMANDS entry it belongs to.
+  // Second word of a subcommand topic -> the COMMANDS entry it belongs to, per command.
   // The bare verbs work too, so "help find" is "help triggers find".
-  const TRIGGER_TOPICS = {
-    find: 'find', search: 'find',
-    run: 'run', activate: 'run', fire: 'run', exec: 'run',
-    history: 'history', hist: 'history', log: 'history',
+  const SUB_TOPICS = {
+    triggers: {
+      find: 'find', search: 'find',
+      run: 'run', activate: 'run', fire: 'run', exec: 'run',
+      history: 'history', hist: 'history', log: 'history',
+    },
+    vars: { set: 'set', get: 'set', del: 'set', unset: 'set', rm: 'set' },
   };
 
   // The long form of each command, printed by "help <command>". Every field is
@@ -1982,6 +2064,37 @@
         'Triggers that run while the map loads ("at start") are not recorded.'],
       see: ['triggers', 'triggers run', 'trigger_history'],
     },
+    vars: {
+      about: ['The variables the map\'s triggers keep their state in: one name-value store,',
+        'emptied whenever a map loads, so it only has the variables a trigger has',
+        'touched so far. Numbers print bare and text in quotes, because the "variable',
+        'equals" actions tell the two apart.'],
+      args: [['[filter]', 'only names containing this text, ignoring case'],
+        ['page n', 'jump to page n of a long list']],
+      examples: [['vars', 'every variable with its value'], ['vars god', 'only names containing "god"'],
+        ['vars get var_text', 'one value, never shortened'],
+        ['triggers find var_text', 'the trigger actions that read or write it']],
+      notes: ['A long value is shortened in the list; "vars get <name>" prints it in full.'],
+      see: ['vars set', 'triggers find', 'triggers'],
+    },
+    'vars set': {
+      also: ['vars get', 'vars del', 'vars unset', 'vars rm'],
+      about: ['set writes a value, get prints one in full, del removes one.',
+        'A value that looks like a number is stored as a number, anything else as text.',
+        'Wrap it in double quotes to force text, because the "variable equals" actions',
+        'compare types: 5 and "5" are not the same value to them.',
+        'A value may contain spaces; everything after the name is taken as the value.'],
+      args: [['set <name> <value>', 'write it, creating the variable when it is new'],
+        ['get <name>', 'print one value, never shortened'],
+        ['del <name>', 'remove it (also unset, rm)']],
+      examples: [['vars set var_godhuman 1', 'the number 1'], ['vars set var_text "1"', 'the text "1"'],
+        ['vars set var_nickname some player', 'a value with spaces'],
+        ['vars del var_godhuman', 'remove it again']],
+      notes: ['Setting a variable does not run anything: a trigger has to read it before',
+        'it changes the level. "triggers find <name>" shows which ones do, and',
+        '"triggers run <#>" runs one now.'],
+      see: ['vars', 'triggers find', 'triggers run'],
+    },
     more: {
       about: ['"more" is the next page of the last long list, "page <n>" jumps to one, and',
         '"page 1" goes back to the top. Long lists also take "page n" directly, e.g.',
@@ -2050,11 +2163,11 @@
     for (const line of h.about || []) print(`  ${line}`);
     if (h.args) {
       print('Arguments:', '#89D0FF');
-      for (const [a, what] of h.args) printPair(a, what, 16);
+      for (const [a, what] of h.args) printPair(a, what, 22);
     }
     if (h.examples) {
       print('Examples:', '#89D0FF');
-      for (const [c, what] of h.examples) printPair(c, what, 34);
+      for (const [c, what] of h.examples) printPair(c, what, 38);
     }
     for (const line of h.notes || []) print([[`  ${line}`, '#ffffff99', true]]);
     if (h.see) print(`Related: ${h.see.join('  |  ')}`, '#ffffff99');
@@ -2085,9 +2198,9 @@
     if (CLIENT_ONLY[key]) print([[`  WARNING: client-only: ${CLIENT_ONLY[key]}.`, WARN_COLOR, true]]);
     for (const line of h.about || []) print(`  ${line}`);
     print('Examples:', '#89D0FF');
-    printPair(`${key} ${s.type === 'bool' ? 'on' : h.ex || '<value>'}`, 'set it', 34);
-    if (s.type === 'bool') printPair(key, 'toggle it', 34);
-    printPair(`unset ${key}`, 'back to the game default', 34);
+    printPair(`${key} ${s.type === 'bool' ? 'on' : h.ex || '<value>'}`, 'set it', 38);
+    if (s.type === 'bool') printPair(key, 'toggle it', 38);
+    printPair(`unset ${key}`, 'back to the game default', 38);
     if (s.group !== 'console' && s.group !== 'maps') {
       print([['  Applies while you are in a level.', '#ffffff99', true]]);
     }
@@ -2098,12 +2211,15 @@
   function printTopicHelp(raw) {
     const words = raw.trim().toLowerCase().split(/\s+/);
     let name = CMD_ALIASES[words[0]] || words[0];
-    if (name === 'triggers' && words[1]) {
-      const sub = TRIGGER_TOPICS[words[1]];
-      if (!sub) throw new Error(`no help for "${raw}". "help triggers" lists what triggers can do.`);
-      name = `triggers ${sub}`;
-    } else if (words.length === 1 && !COMMANDS[name] && TRIGGER_TOPICS[name]) {
-      name = `triggers ${TRIGGER_TOPICS[name]}`;
+    const subs = SUB_TOPICS[name];
+    if (subs && words[1]) {
+      const sub = subs[words[1]];
+      if (!sub) throw new Error(`no help for "${raw}". "help ${name}" lists what ${name} can do.`);
+      name = `${name} ${sub}`;
+    } else if (words.length === 1 && !COMMANDS[name]) {
+      for (const [base, map] of Object.entries(SUB_TOPICS)) {
+        if (map[name]) { name = `${base} ${map[name]}`; break; }
+      }
     }
     if (name === 'js') { cmdJsHelp(); return; }
     // A one-word topic is a command first, a key second; a key written as several
@@ -2399,7 +2515,7 @@
     const arg = text.slice(rawCmd.length).trim();
     try {
       const sub = (rest[0] || '').toLowerCase();
-      const name = cmd === 'teleport' ? 'tp' : cmd === 'throw' ? 'drop' : cmd;
+      const name = CMD_ALIASES[cmd] || cmd;
       if (sub === 'help' && rest.length === 1) { /* help text only */ }
       else if (cmd === 'set') warnIfMP(resolveKey(rest[0]));
       else if (['triggers', 'trigger', 'trig'].includes(cmd) && TRIGGER_RUN_VERBS.includes(sub)) { /* runTriggerCmd reports sync itself */ }
@@ -2438,6 +2554,7 @@
         case 'binds': cmdBinds(); return;
         case 'unbind': cmdUnbind(rest); return;
         case 'triggers': case 'trigger': case 'trig': cmdTriggers(rest); return;
+        case 'vars': case 'var': case 'variables': cmdVars(rest.slice()); return;
         case 'more': case 'next': cmdPage(); return;
         case 'page': case 'pg': cmdPage(rest[0]); return;
         case 'tp': case 'teleport': cmdTeleport(rest); return;

@@ -165,6 +165,10 @@ const RULES = [
     re: String.raw`if\(b\["#ondeath"\]\.charAt\(0\)=="#"\)\s*mc\.⟨ID⟩=b\["#ondeath"\];` },
   { file: 'frame2', keys: ['timerTarget'], what: ['timer property: trigger it calls'],
     re: String.raw`if\(b\["#target"\]\.charAt\(0\)==="#"\)\s*⟨timers⟩\[⟨timerCount⟩\]\.⟨ID⟩=b\["#target"\];` },
+  // Map variables: one object, variable name -> value, emptied when a map loads. Found at
+  // the "sync this variable to the server" action, which reads both the name and the value.
+  { file: 'actions', keys: ['mapVars'], what: ['map variables object (variable name -> value)'],
+    re: String.raw`throw new Error\("Buffer overflow during var sync: Variable name is too long"\);\s*if\(\(⟨ID⟩\[⟨triggers⟩\[a\]\.⟨trigTargetA⟩\[⟨_⟩\]\]\+""\)\.length>2048\)` },
 
   // ----- Input, chat, multiplayer, map -----
   { file: 'frame2', keys: ['keyUp'], what: ['jump key held'],
