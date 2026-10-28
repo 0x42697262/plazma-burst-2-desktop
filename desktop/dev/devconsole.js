@@ -162,6 +162,7 @@
     recoil:        { type: 'number', group: 'gun', min: 0, max: 10, desc: 'Recoil multiplier for held gun' },
     builtin:       { type: 'bool',   group: 'console', desc: 'game <cmd>: on = silent, works on any map and in multiplayer; off = normal game chat' },
     // Max keeps a whole page (plus title and footer) inside the 500-line log (LOG_MAX).
+    trigger_history: { type: 'bool', group: 'console', default: true, desc: 'Record trigger runs for "triggers history" (default on)' },
     page_size:     { type: 'int',    group: 'console', min: 10, max: 480, desc: 'Lines per page for long lists like "triggers" (default 200); "more" = next page' },
     save_maps:     { type: 'bool',   group: 'maps', default: true, desc: 'Save every map the game downloads to desktop/maps/<map id>.xml, uncompressed (default on)' },
     fast_maps:     { type: 'bool',   group: 'maps', desc: 'Fast load: use the saved map from desktop/maps instead of downloading it again (default off)' },
@@ -555,6 +556,11 @@
   let errorCount = 0;
   function onFrame() {
     try {
+      syncTriggerHooks();
+    } catch (e) {
+      if (errorCount++ < 5) print(`Trigger history error: ${e && e.message}`, '#ff6666');
+    }
+    try {
       frame();
     } catch (e) {
       if (errorCount++ < 5) print(`Frame error: ${e && e.message}`, '#ff6666');
@@ -801,6 +807,7 @@
     bind: { usage: 'bind <key> <command>', desc: 'Run a command with a key in levels, e.g. "bind f tp", "bind shift+h heal". "bind" lists binds' },
     unbind: { usage: 'unbind <key> | all', desc: 'Remove a key bind' },
     triggers: { usage: 'triggers [# | uid | on | off] [page n]', desc: 'List map triggers (enabled, calls left, what starts them), or one trigger\'s actions. Long lists are paged (page_size)' },
+    'triggers history': { usage: 'triggers history [all | clear | # | uid] [page n]', desc: 'Recent trigger runs, newest first: when, which, by whom. "all" adds refused attempts (disabled / no calls left)' },
     more: { usage: 'more | page <n>', desc: 'Next page of the last long list, or jump to page n' },
     'triggers find': { usage: 'triggers find [a:|b:|type:]<text> [page n]', desc: 'Search every trigger action\'s A/B values (text or number), or by action type' },
     'triggers run': { usage: 'triggers run <# | uid> [force] [as #]', desc: 'Run a trigger now, with you (or character #) as the activator. "force" also runs a disabled/used-up one. Multiplayer: other players see it too (not with "as", or forced on a disabled/used-up one)' },
@@ -1017,10 +1024,148 @@
     14: 'blue player enters', 17: 'bot enters', 18: 'enemy bot enters',
   };
 
+  // Triggers come back unwrapped (see "Trigger history"), so console reads are not logged.
   function mapList(arrKey, countKey) {
     const arr = read(arrKey) || [];
     const n = read(countKey);
-    return arr.slice(0, typeof n === 'number' ? n : arr.length);
+    const out = arr.slice(0, typeof n === 'number' ? n : arr.length);
+    return arrKey === 'triggers' ? out.map((t) => trigTarget.get(t) || t) : out;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Trigger history
+  // ---------------------------------------------------------------------------
+  // Records every trigger run, whatever started it (region, timer, shot, death, chat,
+  // network, another trigger, "triggers run").
+  // How: the game's runner (runTrigger) reads a trigger's "enabled" flag exactly once
+  // per run, at the start. Each trigger object in the map's triggers array is wrapped in
+  // a Proxy that notices that read when the caller is the runner. No game function is
+  // replaced (the anti-tamper scan compares function source). Accessor properties are
+  // not used either: quicksave skips them, so F5/F9 would lose the enabled state. A
+  // Proxy keeps plain data properties, so quicksave and everything else see no change.
+  // Limits: triggers that run while the map loads ("at start") run before the wrap.
+  const TRIG_HISTORY_MAX = 1000;
+  const trigHistory = [];             // oldest first: { idx, uid, by, ok, why, count, first, last }
+  const trigTarget = new WeakMap();   // proxy -> trigger object
+  const trigIndexOf = new WeakMap();  // trigger object -> index
+  let hookedArr = null;
+  let hookedCount = -1;
+  let historyMap = null;              // map text the history belongs to
+  let hookCheckFrame = 0;
+
+  // Name of the function that made the property read (the frame above the trap).
+  function callerName(skipFn) {
+    const prevLimit = Error.stackTraceLimit;
+    const prevPrepare = Error.prepareStackTrace;
+    try {
+      Error.stackTraceLimit = 1;
+      Error.prepareStackTrace = (_, frames) => frames;
+      const holder = {};
+      Error.captureStackTrace(holder, skipFn);
+      const frame = holder.stack && holder.stack[0];
+      return frame ? frame.getFunctionName() : null;
+    } finally {
+      Error.stackTraceLimit = prevLimit;
+      Error.prepareStackTrace = prevPrepare;
+    }
+  }
+
+  function logTriggerRun(t) {
+    const idx = trigIndexOf.get(t);
+    const enabled = !!t[N.trigEnabled];
+    const calls = t[N.trigCalls];
+    const ok = enabled && (calls === -1 || calls > 0); // the runner's own check
+    const by = read('triggerActivator');
+    const now = performance.now();
+    // Merge repeats: a run right after the same run, or a refused attempt seen recently
+    // (regions retry every frame), so they do not flood the history.
+    const look = ok ? 1 : 20;
+    for (let k = trigHistory.length - 1; k >= Math.max(0, trigHistory.length - look); k--) {
+      const h = trigHistory[k];
+      if (h.idx === idx && h.by === by && h.ok === ok) {
+        h.count++;
+        h.last = now;
+        if (k !== trigHistory.length - 1) trigHistory.push(trigHistory.splice(k, 1)[0]);
+        return;
+      }
+    }
+    trigHistory.push({ idx, uid: t.uid, by, ok, why: ok ? '' : !enabled ? 'disabled' : 'no calls left', count: 1, first: now, last: now });
+    if (trigHistory.length > TRIG_HISTORY_MAX) trigHistory.splice(0, trigHistory.length - TRIG_HISTORY_MAX);
+  }
+
+  const trigProxyHandler = {
+    get: function trapGet(t, prop) {
+      if (prop === N.trigEnabled && callerName(trapGet) === N.runTrigger) {
+        try { logTriggerRun(t); } catch {}
+      }
+      return t[prop];
+    },
+  };
+
+  // Called every frame: wraps new triggers (new map), unwraps when turned off.
+  function syncTriggerHooks() {
+    const mapText = globalThis[nameOf('mapText')];
+    if (mapText !== historyMap) { historyMap = mapText; trigHistory.length = 0; }
+    const arr = read('triggers');
+    const n = read('triggerCount');
+    const want = kv.trigger_history !== false && isActive() && Array.isArray(arr) && typeof n === 'number';
+    if (!want) {
+      if (hookedArr) {
+        for (let i = 0; i < hookedArr.length; i++) { const t = trigTarget.get(hookedArr[i]); if (t) hookedArr[i] = t; }
+        hookedArr = null;
+        hookedCount = -1;
+      }
+      return;
+    }
+    // Cheap check each frame, full check every 60 frames (quickload may swap objects).
+    const same = arr === hookedArr && n === hookedCount && (n === 0 || (trigTarget.has(arr[0]) && trigTarget.has(arr[n - 1])));
+    if (same && ++hookCheckFrame % 60) return;
+    for (let i = 0; i < n; i++) {
+      const t = arr[i];
+      if (!t || typeof t !== 'object' || trigTarget.has(t)) continue;
+      const p = new Proxy(t, trigProxyHandler);
+      trigTarget.set(p, t);
+      trigIndexOf.set(t, i);
+      arr[i] = p;
+    }
+    hookedArr = arr;
+    hookedCount = n;
+  }
+
+  const agoText = (ms) => (ms < 1000 ? 'now' : ms < 60000 ? `${(ms / 1000).toFixed(1)}s ago` : `${Math.floor(ms / 60000)}m ${Math.floor(ms % 60000 / 1000)}s ago`);
+
+  // "triggers history [all | clear | # | uid text] [page n]": newest first.
+  function showTriggerHistory(args, page) {
+    const q = args.join(' ').trim().toLowerCase();
+    if (q === 'clear') { trigHistory.length = 0; print('Trigger history cleared', '#66ff88'); return; }
+    if (kv.trigger_history === false) print('Trigger history is off ("trigger_history on" to record).', '#ffff88');
+    const all = q === 'all';
+    const byIdx = /^#?\d+$/.test(q) ? Number(q.replace('#', '')) : -1;
+    const now = performance.now();
+    const me = game.me();
+    const chars = game.chars() || [];
+    const rows = [];
+    let refused = 0;
+    for (let k = trigHistory.length - 1; k >= 0; k--) {
+      const h = trigHistory[k];
+      if (!h.ok) refused++;
+      if (!h.ok && !all && byIdx < 0) continue;
+      if (byIdx >= 0 && h.idx !== byIdx) continue;
+      if (q && !all && byIdx < 0 && !String(h.uid || '').toLowerCase().includes(q)) continue;
+      const who = typeof h.by !== 'number' || h.by < 0 ? '-' : h.by === me ? 'you' : `#${h.by} ${chars[h.by] && chars[h.by].nickname || ''}`.trim();
+      const result = h.ok ? 'ran' : `refused (${h.why})`;
+      rows.push([`  ${agoText(now - h.last).padEnd(10)} #${String(h.idx).padEnd(5)} ${String(h.uid || '-').padEnd(20)} by ${who.padEnd(16)} ${result}${h.count > 1 ? ` x${h.count}` : ''}`,
+        h.ok ? undefined : '#ffffff77']);
+    }
+    const hidden = !all && byIdx < 0 && refused ? ` ${refused} refused attempt${refused === 1 ? '' : 's'} hidden ("triggers history all").` : '';
+    showPaged({
+      title: `Trigger history, newest first (${trigHistory.length} recorded, max ${TRIG_HISTORY_MAX}).${hidden}`,
+      rows,
+      cmd: `triggers history${q ? ' ' + q : ''}`,
+      empty: q && q !== 'all' ? `  no recorded run matches "${q}"` : '  no trigger has run since the map loaded (or since "triggers history clear")',
+      hint: 'Triggers that run while the map loads ("at start") are not recorded. "triggers <#>" shows one trigger.',
+      page,
+    });
   }
 
   // What starts each trigger: regions (by mode), timers, "runs at map start", chat.
@@ -1138,6 +1283,7 @@
     if (TRIGGER_RUN_VERBS.includes(verb)) { runTriggerCmd(list, rawArgs.slice(1)); return; }
     const { args, page } = takePage(rawArgs);
     if (verb === 'find' || verb === 'search') { findTriggerActions(list, args.slice(1), page); return; }
+    if (verb === 'history' || verb === 'hist' || verb === 'log') { showTriggerHistory(args.slice(1), page); return; }
     const sources = triggerSources();
     const q = args.join(' ').trim();
     const lc = q.toLowerCase();
