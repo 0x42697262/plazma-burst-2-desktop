@@ -2513,8 +2513,8 @@
     const [rawCmd, ...rest] = text.split(/\s+/);
     const cmd = rawCmd.toLowerCase();
     const arg = text.slice(rawCmd.length).trim();
+    const sub = (rest[0] || '').toLowerCase();
     try {
-      const sub = (rest[0] || '').toLowerCase();
       const name = CMD_ALIASES[cmd] || cmd;
       if (sub === 'help' && rest.length === 1) { /* help text only */ }
       else if (cmd === 'set') warnIfMP(resolveKey(rest[0]));
