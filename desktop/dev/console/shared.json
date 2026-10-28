@@ -1,0 +1,21 @@
+{
+  "_comment": "Contract between desktop/main.js (serves these) and the dev console (calls them).",
+  "devDir": "__dev/",
+  "routes": {
+    "names": "names.js",
+    "console": "console/",
+    "kv": "kv",
+    "maps": "maps",
+    "saveMap": "savemap",
+    "mapFile": "mapfile"
+  },
+  "map": {
+    "compressedPrefix": "<q.",
+    "notPublished": "<not_published"
+  },
+  "saveResult": {
+    "saved": "saved",
+    "same": "same",
+    "off": "off"
+  }
+}

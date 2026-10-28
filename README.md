@@ -33,7 +33,8 @@ In the game, press Shift+`` ` `` (`~`) for the dev console and type `help`.
 | Path | What | In git |
 |---|---|---|
 | `desktop/main.js` | Electron app: serves `game/`, injects the dev console | yes |
-| `desktop/dev/devconsole.js` | The dev console | yes |
+| `desktop/dev/console/` | The dev console: ES modules, entry `index.js` (layout in its header comment) | yes |
+| `desktop/dev/console/shared.json` | Routes and map markers shared by `main.js` and the console | yes |
 | `desktop/dev/names.js` | Obfuscated game names for the current game version (generated) | no |
 | `desktop/maps/` | Local maps (`local-<name>` as the map ID), plus every downloaded map saved as `<map id>.xml`, uncompressed (console keys `save_maps`, `fast_maps`) | yes |
 | `desktop/credentials.json` | Your login (copy `credentials.example.json`) | no |
@@ -42,6 +43,7 @@ In the game, press Shift+`` ` `` (`~`) for the dev console and type `help`.
 | `tools/find-names.js` | Generates `desktop/dev/names.js` | yes |
 | `game/` | The downloaded game | no |
 | `game.previous/` | The copy before the last update | no |
+| `test/` | Dev console tests against a fake game (`npm test`, Node 20.10+, no game files needed) | yes |
 
 ## 3. Getting the game files
 
@@ -115,9 +117,9 @@ To go back to the old version: delete `game/`, rename `game.previous/` to `game/
 
 ### Why
 
-The game's code uses random names like `$0Ме1А` for its variables (the letters are a mix of Latin and look-alike Cyrillic). They can change with every version. The dev console needs about 95 of them: the characters array, the guns array, the heal function, and so on.
+The game's code uses random names like `$0Ме1А` for its variables (the letters are a mix of Latin and look-alike Cyrillic). They can change with every version. The dev console needs about a hundred of them: the characters array, the guns array, the heal function, and so on.
 
-They are not written in `devconsole.js`. The console reads them from `desktop/dev/names.js`:
+They are not written in the console's code. It reads them from `desktop/dev/names.js`, and only its `game/` folder uses them:
 
 ```js
 globalThis.PB2_NAMES = {
@@ -169,7 +171,7 @@ The output says which one, e.g. `problem: gunRecoil: pattern not found in script
    - `⟨ID⟩` captures a name (in the order of `keys`)
    - `⟨_⟩` is any name, not captured
    - `⟨chars⟩` is a name found by another rule
-5. Run `npm run find-names` again until it says `Found 95 of 95`.
+5. Run `npm run find-names` again until it finds every name (`Found N of N`).
 6. **Test in the game** with the dev console, e.g. `js eval(PB2_NAMES.chars).length` (number of characters) or `js typeof eval(PB2_NAMES.healChar)` (`function`).
 
 Quick fix without changing a pattern: write the name into `desktop/dev/names.js` by hand. The next `npm run find-names` overwrites it.

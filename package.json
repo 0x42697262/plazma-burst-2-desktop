@@ -7,7 +7,8 @@
   "scripts": {
     "start": "electron .",
     "fetch-game": "node tools/fetch-game.js",
-    "find-names": "node tools/find-names.js"
+    "find-names": "node tools/find-names.js",
+    "test": "node --test test/"
   },
   "type": "commonjs",
   "engines": {

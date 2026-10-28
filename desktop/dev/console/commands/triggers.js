@@ -1,0 +1,411 @@
+// "triggers": list the map's triggers, show one, search them, run one, and the run log.
+import { print } from '../ui/log.js';
+import { showPaged, takePage } from '../ui/pager.js';
+import { COLOR } from '../core/colors.js';
+import { plural, s, agoText, parseIndex } from '../core/text.js';
+import { game } from '../game/bindings.js';
+import { F } from '../game/fields.js';
+import { ACTION_NAMES } from '../game/actions.js';
+import { requireLevel, charAt, charLabel, noCharacter } from '../game/level.js';
+import { KEY } from '../state/schema.js';
+import { settings } from '../state/store.js';
+import {
+  triggerList, actionsOf, showTarget, callsText, triggerLabel, findTrigger, triggerSources,
+} from '../triggers/model.js';
+import { triggerRuns, clearTriggerRuns, isUsable, TRIG_HISTORY_MAX } from '../triggers/log.js';
+
+const UID_WIDTH = 20; // the uid column of the trigger list
+const FIND_UID_WIDTH = 16; // the uid column of search results
+const NUMBER_TEXT = /^-?\d+(\.\d+)?$/;
+
+const actionName = (type) => (ACTION_NAMES[type] ? `  (${ACTION_NAMES[type]})` : '');
+const disabledColor = (t) => (t[F.T_ENABLED] ? undefined : COLOR.muted);
+const actionWord = (n) => `action${s(n)}`;
+
+// The map's triggers, or null after saying there are none.
+function triggersOrNone() {
+  requireLevel();
+  const list = triggerList();
+  if (!list.length) { print('This map has no triggers', COLOR.notice); return null; }
+  return list;
+}
+
+// ----- triggers [# | uid | text | on | off] -----
+
+function showOne(list, idx, page) {
+  const t = list[idx];
+  if (!t) throw new Error(`no trigger #${idx}. This map has ${list.length} (0-${list.length - 1}).`);
+  const by = triggerSources().get(idx);
+  const n = t[F.T_ACTIONS] || 0;
+  const rows = [...actionsOf(t)].map(({ n: a, type, A, B }) => [
+    `    ${String(a).padStart(3)}. type ${String(type).padEnd(4)} A = ${showTarget(A)}   B = ${showTarget(B)}${actionName(type)}`]);
+  print(`Trigger ${triggerLabel(idx, t)}`, COLOR.title);
+  print(`  ${t[F.T_ENABLED] ? 'enabled' : 'disabled'}, calls ${callsText(t)}${t[F.T_AT_START] ? ', runs at map start' : ''}`);
+  print(`  started by: ${by ? by.join('; ') : 'nothing found (maybe a shot at an object, or another trigger through a variable)'}`);
+  showPaged({ title: `  ${plural(n, 'action')} (type = the map editor's action number):`, color: COLOR.plain, rows, cmd: `triggers ${idx}`, page });
+}
+
+function listTriggers(rawArgs) {
+  const list = triggersOrNone();
+  if (!list) return;
+  const { args, page } = takePage(rawArgs);
+  const q = args.join(' ').trim();
+  const lc = q.toLowerCase();
+  const idx = findTrigger(list, q);
+  if (idx >= 0) { showOne(list, idx, page); return; }
+
+  const sources = triggerSources();
+  const on = list.filter((t) => t && t[F.T_ENABLED]).length;
+  const rows = [];
+  list.forEach((t, i) => {
+    if (!t) return;
+    const enabled = !!t[F.T_ENABLED];
+    if (lc === 'on' && !enabled) return;
+    if (lc === 'off' && enabled) return;
+    if (lc && lc !== 'on' && lc !== 'off' && !String(t.uid).toLowerCase().includes(lc)) return;
+    const by = sources.get(i);
+    const flags = [t[F.T_AT_START] ? 'at start' : '', by ? `by ${by.length > 1 ? by[0] + ` +${by.length - 1}` : by[0]}` : ''].filter(Boolean).join(', ');
+    const n = t[F.T_ACTIONS] || 0;
+    rows.push([`  #${String(i).padEnd(4)} ${String(t.uid || '-').padEnd(UID_WIDTH)} ${enabled ? 'on ' : 'off'}  ${callsText(t).padEnd(12)} ${String(n).padStart(3)} ${n === 1 ? 'action ' : 'actions'}  ${flags}`,
+      disabledColor(t)]);
+  });
+  showPaged({
+    title: `Triggers: ${list.length} (${on} enabled, ${list.length - on} disabled).${q ? ` Filter "${q}": ${rows.length} shown.` : ''} "triggers <#>" shows one in detail.`,
+    rows,
+    cmd: q ? `triggers ${q}` : 'triggers',
+    empty: lc === 'on' ? '  no enabled triggers' : lc === 'off' ? '  no disabled triggers' : `  no trigger matches "${q}"`,
+    page,
+  });
+}
+
+// ----- triggers history -----
+
+function showHistory(rawArgs) {
+  if (!triggersOrNone()) return;
+  const { args, page } = takePage(rawArgs);
+  const q = args.join(' ').trim().toLowerCase();
+  const runs = triggerRuns();
+  if (q === 'clear') { clearTriggerRuns(); print('Trigger history cleared', COLOR.ok); return; }
+  if (!settings.effective(KEY.TRIGGER_HISTORY)) print(`Trigger history is off ("${KEY.TRIGGER_HISTORY} on" to record).`, COLOR.notice);
+  const all = q === 'all';
+  const byIdx = parseIndex(q) ?? -1;
+  const now = performance.now();
+  const me = game.me();
+  const rows = [];
+  let refused = 0;
+  for (let k = runs.length - 1; k >= 0; k--) {
+    const h = runs[k];
+    if (!h.ok) refused++;
+    if (!h.ok && !all && byIdx < 0) continue;
+    if (byIdx >= 0 && h.idx !== byIdx) continue;
+    if (q && !all && byIdx < 0 && !String(h.uid || '').toLowerCase().includes(q)) continue;
+    const who = typeof h.by !== 'number' || h.by < 0 ? '-' : h.by === me ? 'you' : charLabel(h.by);
+    const result = h.ok ? 'ran' : `refused (${h.why})`;
+    rows.push([`  ${agoText(now - h.last).padEnd(10)} #${String(h.idx).padEnd(5)} ${String(h.uid || '-').padEnd(UID_WIDTH)} by ${who.padEnd(16)} ${result}${h.count > 1 ? ` x${h.count}` : ''}`,
+      h.ok ? undefined : COLOR.muted]);
+  }
+  const hidden = !all && byIdx < 0 && refused ? ` ${plural(refused, 'refused attempt')} hidden ("triggers history all").` : '';
+  showPaged({
+    title: `Trigger history, newest first (${runs.length} recorded, max ${TRIG_HISTORY_MAX}).${hidden}`,
+    rows,
+    cmd: `triggers history${q ? ' ' + q : ''}`,
+    empty: q && q !== 'all' ? `  no recorded run matches "${q}"` : '  no trigger has run since the map loaded (or since "triggers history clear")',
+    hint: 'Triggers that run while the map loads ("at start") are not recorded. "triggers <#>" shows one trigger.',
+    page,
+  });
+}
+
+// ----- triggers find -----
+
+// Each term is "text" (uid, A or B), "uid:text", "a:text", "b:text" or "type:n"; all
+// terms must match. Text matches anywhere, ignoring case; a number matches number
+// values exactly (5 does not match 15).
+const FIELD = Object.freeze({ any: 'ab', uid: 'uid', a: 'a', b: 'b', type: 'type' });
+
+function parseTerms(args, usage) {
+  return args.map((raw) => {
+    const m = raw.match(/^(uid|a|b|type):(.*)$/i);
+    const field = m ? m[1].toLowerCase() : FIELD.any;
+    const text = (m ? m[2] : raw).toLowerCase();
+    if (!text) throw new Error(usage);
+    if (field === FIELD.type && !/^\d+$/.test(text)) throw new Error('type: expects a number, e.g. type:99');
+    return { field, text, num: NUMBER_TEXT.test(text) ? Number(text) : null };
+  });
+}
+
+function valueMatches(v, term) {
+  if (v === undefined || v === null) return false;
+  if (typeof v === 'number') return term.num !== null && v === term.num;
+  const t = String(v).toLowerCase();
+  return term.num !== null && NUMBER_TEXT.test(t) ? Number(t) === term.num : t.includes(term.text);
+}
+
+const uidMatches = (t, term) => String(t.uid || '').toLowerCase().includes(term.text);
+
+function actionMatches({ type, A, B }, term) {
+  switch (term.field) {
+    case FIELD.type: return type === term.num;
+    case FIELD.a: return valueMatches(A, term);
+    case FIELD.b: return valueMatches(B, term);
+    default: return valueMatches(A, term) || valueMatches(B, term);
+  }
+}
+
+function find(rawArgs) {
+  const list = triggersOrNone();
+  if (!list) return;
+  const { args, page } = takePage(rawArgs);
+  const usage = 'usage: triggers find <text>  |  uid:<text>  a:<text>  b:<text>  type:<n>  (combine terms, e.g. "type:41 a:sound")';
+  if (!args.length) throw new Error(usage);
+  const terms = parseTerms(args, usage);
+  // "uid:" terms pick which triggers to look at at all; the others match actions. A bare
+  // term may match the uid instead of an action, so "find god_all" lists the #god_all
+  // trigger itself as well as the actions pointing at it.
+  const uidTerms = terms.filter((term) => term.field === FIELD.uid);
+  const actionTerms = terms.filter((term) => term.field !== FIELD.uid);
+  const trigRows = [];
+  const actRows = [];
+  const triggersHit = new Set();
+  list.forEach((t, i) => {
+    if (!t) return;
+    if (!uidTerms.every((term) => uidMatches(t, term))) return;
+    // The uid alone answers the whole query: one row for the trigger, not for actions.
+    if (actionTerms.every((term) => term.field === FIELD.any && uidMatches(t, term))) {
+      const n = t[F.T_ACTIONS] || 0;
+      trigRows.push([`  #${String(i).padEnd(4)} ${String(t.uid || '-').padEnd(FIND_UID_WIDTH)} trigger   ${t[F.T_ENABLED] ? 'on ' : 'off'}  ${callsText(t).padEnd(12)} ${String(n).padStart(3)} ${actionWord(n)}`,
+        disabledColor(t)]);
+    }
+    if (!actionTerms.length) return; // "uid:" only: the trigger row is the whole answer
+    for (const action of actionsOf(t)) {
+      if (!actionTerms.every((term) => actionMatches(action, term))) continue;
+      triggersHit.add(i);
+      const { n, type, A, B } = action;
+      actRows.push([`  #${String(i).padEnd(4)} ${String(t.uid || '-').padEnd(FIND_UID_WIDTH)} action ${String(n).padEnd(3)} type ${String(type).padEnd(4)} A = ${showTarget(A)}   B = ${showTarget(B)}${actionName(type)}`,
+        disabledColor(t)]);
+    }
+  });
+  const rows = trigRows.concat(actRows);
+  const q = args.join(' ');
+  const bits = [];
+  if (trigRows.length) bits.push(`${plural(trigRows.length, 'trigger')} by uid`);
+  if (actRows.length) bits.push(`${plural(actRows.length, 'action')} in ${plural(triggersHit.size, 'trigger')}`);
+  showPaged({
+    title: rows.length ? `${bits.join(', ')} match "${q}". "triggers <#>" shows one in full.` : `No trigger or action matches "${q}"`,
+    color: rows.length ? COLOR.title : COLOR.notice,
+    rows,
+    cmd: `triggers find ${q}`,
+    page,
+  });
+}
+
+// ----- triggers run -----
+
+const FORCE_WORDS = ['force', '-f'];
+
+// Runs a trigger through the game's own function, the way a shot or a region does: the
+// activator ("the player who started it", which many actions use) is set first. Without
+// "force" the game's rules apply: it must be enabled with calls left, and running uses
+// up a call. With "force" it runs anyway, and its enabled state and calls left are put
+// back afterwards.
+// Multiplayer: the run is sent to the server like a normal one, so other players run it
+// too. Not sent (your client only) when the other clients would refuse it or run it
+// differently: forced on a disabled or used-up trigger, "as" another character (the
+// server always makes the sender the activator), or while spectating.
+function runOne(args) {
+  const list = triggersOrNone();
+  if (!list) return;
+  const usage = 'usage: triggers run <# | uid> [force] [as <char#>]';
+  let force = false;
+  let activator = game.me();
+  const rest = [];
+  for (let k = 0; k < args.length; k++) {
+    const a = args[k].toLowerCase();
+    if (FORCE_WORDS.includes(a)) force = true;
+    else if (a === 'as') {
+      activator = parseIndex(args[++k]);
+      if (activator === null) throw new Error(usage);
+      if (!charAt(activator)) throw noCharacter(activator);
+    } else rest.push(args[k]);
+  }
+  if (rest.length !== 1) throw new Error(usage);
+  const q = rest[0];
+  const idx = findTrigger(list, q);
+  const t = list[idx];
+  if (idx < 0 || !t) throw new Error(`no trigger "${q}". Type "triggers" or "triggers find <text>".`);
+  const label = triggerLabel(idx, t);
+  const wasEnabled = t[F.T_ENABLED];
+  const wasCalls = t[F.T_CALLS];
+  const usable = isUsable(t);
+  if (!usable && !force) {
+    const why = !wasEnabled ? 'is disabled' : `has no calls left (${callsText(t)})`;
+    throw new Error(`trigger ${label} ${why}. "triggers run ${idx} force" runs it anyway.`);
+  }
+  if (force) {
+    t[F.T_ENABLED] = true;
+    if (wasCalls !== -1 && !(wasCalls > 0)) t[F.T_CALLS] = 1;
+  }
+  const mp = game.isMP();
+  const localWhy = !mp ? '' : !usable ? 'it is disabled or used up for the other players'
+    : activator !== game.me() ? '"as" another character only works in your game'
+      : game.spectating() ? 'you are spectating' : '';
+  const send = mp && !localWhy;
+  // A synced run uses up a call on every client, so keep the used call here too.
+  const putBack = force && !send;
+  const prevActivator = game.triggerActivator();
+  const prevPower = game.triggerPower();
+  game.setTriggerActivator(activator);
+  game.setTriggerPower(1);
+  try {
+    game.runTrigger(idx);
+  } finally {
+    game.setTriggerActivator(prevActivator);
+    game.setTriggerPower(prevPower);
+    if (putBack) { t[F.T_ENABLED] = wasEnabled; t[F.T_CALLS] = wasCalls; }
+  }
+  if (send) game.sendTriggerRun(idx);
+  const n = t[F.T_ACTIONS] || 0;
+  const by = activator === game.me() ? '' : ` as #${activator}`;
+  const where = !mp ? '' : send ? ', sent to all players' : '';
+  print(`Ran trigger ${label}${by} (${plural(n, 'action')})${putBack ? ', forced: enabled state and calls left kept' : `, calls ${callsText(t)}`}${where}`, COLOR.ok);
+  if (mp && !send) print(`Note: ran in your game only, other players do not see it: ${localWhy}.`, COLOR.warn);
+}
+
+export const triggersCommand = {
+  name: 'triggers',
+  aliases: ['trigger', 'trig'],
+  usage: 'triggers [# | uid | on | off] [page n]',
+  desc: 'List map triggers (enabled, calls left, what starts them), or one trigger\'s actions. Long lists are paged (page_size)',
+  help: {
+    about: [
+      'A read-only view of the map\'s triggers.',
+      'No argument: all of them, with what starts each one (region, timer, map start,',
+      'chat). A number or uid: that trigger in full, action by action. Text: only the',
+      'triggers whose uid contains it.',
+    ],
+    args: [
+      ['[#]', 'trigger index, e.g. 12 or #12'],
+      ['[uid]', 'exact uid, e.g. #god_all'],
+      ['[text]', 'every uid containing it'],
+      ['on | off', 'only enabled, or only disabled'],
+      ['page n', 'jump to page n of a long list'],
+    ],
+    examples: [
+      ['triggers', 'all of them'],
+      ['triggers off', 'only the disabled ones'],
+      ['triggers 12', 'trigger #12 in full'],
+      ['triggers #god_all', 'the same, by uid'],
+      ['triggers god', 'every uid containing "god"'],
+    ],
+    notes: [
+      'Long lists are paged: "more" is the next page, page_size sets the length.',
+    ],
+    see: ['triggers find', 'triggers run', 'triggers history', 'more'],
+  },
+  run: listTriggers,
+  subcommands: [
+    {
+      name: 'history',
+      aliases: ['hist', 'log'],
+      usage: 'triggers history [all | clear | # | uid] [page n]',
+      desc: 'Recent trigger runs, newest first: when, which, by whom. "all" adds refused attempts (disabled / no calls left)',
+      help: {
+        about: [
+          'Every trigger run since the map loaded, newest first: how long ago, which',
+          'trigger, who started it, and whether it ran. Attempts the game refused',
+          '(disabled, or no calls left) are hidden until you ask for "all".',
+        ],
+        args: [
+          ['(nothing)', 'runs that succeeded'],
+          ['all', 'refused attempts as well'],
+          ['clear', 'empty the list'],
+          ['<#>', 'one trigger index, refusals included'],
+          ['[text]', 'only uids containing it'],
+          ['page n', 'jump to page n'],
+        ],
+        examples: [
+          ['triggers history', 'the recent runs'],
+          ['triggers history all', 'refusals too'],
+          ['triggers history god', 'only uids containing "god"'],
+          ['triggers history clear', 'start over'],
+        ],
+        notes: [
+          `Recording is the trigger_history key (on by default), and the last ${TRIG_HISTORY_MAX} runs are kept.`,
+          'Triggers that run while the map loads ("at start") are not recorded.',
+        ],
+        see: ['triggers', 'triggers run', 'trigger_history'],
+      },
+      run: showHistory,
+    },
+    {
+      name: 'find',
+      aliases: ['search'],
+      usage: 'triggers find [uid:|a:|b:|type:]<text> [page n]',
+      desc: 'Search trigger uids and every trigger action\'s A/B values (text or number), or by action type',
+      help: {
+        about: [
+          'Searches trigger uids and every action\'s A and B value.',
+          'All terms must match. A bare term matches a uid, an A or a B; the prefixes',
+          'narrow it. Text matches anywhere and ignores case; a number matches number',
+          'values exactly, so 5 does not match 15.',
+        ],
+        args: [
+          ['<text>', 'uid, A or B'],
+          ['uid:<text>', 'the trigger uid only'],
+          ['a:<text>', 'A values only'],
+          ['b:<text>', 'B values only'],
+          ['type:<n>', 'the map editor\'s action number'],
+          ['page n', 'jump to page n'],
+        ],
+        examples: [
+          ['triggers find god_all', 'the #god_all trigger and the actions pointing at it'],
+          ['triggers find uid:god', 'every trigger whose uid contains "god"'],
+          ['triggers find type:59', 'every action of type 59'],
+          ['triggers find type:41 a:sound', 'type 41 whose A mentions a sound'],
+        ],
+        notes: [
+          'A uid hit prints one row for the trigger, not one per action.',
+          '"uid:" on its own lists triggers only; add a:, b: or type: to get actions too.',
+        ],
+        see: ['triggers', 'triggers run'],
+      },
+      run: find,
+    },
+    {
+      name: 'run',
+      aliases: ['activate', 'fire', 'exec'],
+      usage: 'triggers run <# | uid> [force] [as #]',
+      desc: 'Run a trigger now, with you (or character #) as the activator. "force" also runs a disabled/used-up one. Multiplayer: other players see it too (not with "as", or forced on a disabled/used-up one)',
+      reportsReach: true,
+      help: {
+        about: [
+          'Runs a trigger through the game\'s own function, the way a shot or a region',
+          'does: the activator ("the player who started it", which many actions use) is',
+          'set first.',
+          'Without "force" the game\'s rules apply: the trigger must be enabled with calls',
+          'left, and running uses one up. With "force" it runs anyway, and its enabled',
+          'state and calls left are put back afterwards.',
+        ],
+        args: [
+          ['<# | uid>', 'which trigger'],
+          ['force', 'ignore enabled and calls left, then restore them'],
+          ['as <char#>', 'run it as that character (see "chars")'],
+        ],
+        examples: [
+          ['triggers run 12', 'by index'],
+          ['triggers run #god_all', 'by uid'],
+          ['triggers run 12 force', 'even when disabled or used up'],
+          ['triggers run 12 as 3', 'as character #3'],
+        ],
+        notes: [
+          'Multiplayer: the run is sent to the server, so other players run it too.',
+          'Not sent when the other clients would refuse it or run it differently: forced',
+          'on a disabled or used-up trigger, "as" someone else (the server always makes',
+          'the sender the activator), or while spectating. Then it runs in your game only',
+          'and the console says which of those it was.',
+        ],
+        see: ['triggers', 'triggers history', 'chars'],
+      },
+      run: runOne,
+    },
+  ],
+};

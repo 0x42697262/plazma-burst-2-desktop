@@ -1,0 +1,176 @@
+// Everything the console reads, writes or calls in the game, in one place. The rest of
+// the console goes through `game` and never touches a game global directly.
+// (stage, gravity, system_non_stop, Guns and the camera globals are the game's own
+// unobfuscated names.)
+import { N, nameOf, read, write, call, escName } from './names.js';
+import { F } from './fields.js';
+import { escapeRe } from '../core/text.js';
+
+// Frame label of the game stage while a level is running.
+const LEVEL_FRAME = 'gaming';
+
+// Message types on the game's network class (plain property names, not obfuscated).
+export const NET = Object.freeze({
+  EXEC_TRIGGER: 'RELIABLE_EXEC_TRIGGER',
+  VAR_SYNC: 'RELIABLE_VAR_SYNC',
+  JOIN_MATCH: 'RELIABLE_JOIN_MATCH',
+  GET_MATCH_LIST: 'RELIABLE_GET_MATCH_LIST',
+});
+
+const ENTER_KEY = {
+  keyCode: 13, which: 13, key: 'Enter', code: 'Enter',
+  ctrlKey: false, shiftKey: false, altKey: false, metaKey: false, repeat: false,
+  preventDefault() {}, stopPropagation() {}, stopImmediatePropagation() {},
+};
+
+const stageOrNull = () => (typeof stage === 'undefined' || !stage ? null : stage);
+
+export const game = {
+  // ----- Names, for the js guide -----
+  typedName: (key) => escName(key), // a game name as \u escapes, which JavaScript accepts
+  namesVersion: () => N.version,
+
+  // ----- Stage -----
+  inLevelFrame: () => { const st = stageOrNull(); return !!st && st.currentFrameLabel === LEVEL_FRAME; },
+  // The stage and the UI overlay exist, so the console can attach.
+  ready: () => {
+    const st = stageOrNull();
+    return !!st && typeof st.addEventListener === 'function' && typeof Event !== 'undefined'
+      && !!Event.ENTER_FRAME && !!game.overlay();
+  },
+  onEnterFrame: (fn) => stage.addEventListener(Event.ENTER_FRAME, fn),
+  overlay: () => { const ui = read('uiOverlay'); return ui && ui.overlay; },
+  isRunning: () => system_non_stop,
+  setRunning: (v) => { system_non_stop = v; },
+
+  // ----- Characters -----
+  chars: () => read('chars'),
+  me: () => read('me'), // your character's index
+  charCount: () => read('charCount'), // character slots in use
+  playerDt: () => read('playerDt'), // player time factor for the next tick
+  keyUp: () => read('keyUp'), // jump key held
+  keyDown: () => read('keyDown'), // crouch key held
+  refreshChar: (i) => call('refreshChar', i), // re-evaluates held weapon and swords
+  // The game's heal/revive (the defibrillator): (target, healer, power, force). The
+  // healer must be on the target's team, otherwise it deals damage instead.
+  healChar: (i, healer, power) => call('healChar', i, healer, power, true),
+  // Re-checks body part HP: breaks parts at <= 0 HP, restores parts that have HP again.
+  updateBody: (i) => call('updateBody', i),
+  spectating: () => read('spectating'),
+
+  // ----- Physics points: characters and guns are made of these -----
+  ptX: () => read('ptX'),
+  ptY: () => read('ptY'),
+  ptPrevX: () => read('ptPrevX'),
+  ptPrevY: () => read('ptPrevY'),
+  ptVelX: () => read('ptVelX'),
+  ptVelY: () => read('ptVelY'),
+  ptCount: () => read('ptCount'),
+  ptOwner: () => read('ptOwner'), // character index, or gunPtBase + gun index
+  gunPtBase: () => read('gunPtBase'),
+  gunPtRange: () => read('gunPtRange'),
+  interpolating: () => call('interpolating'),
+  clearPtInterp: (i) => call('clearPtInterp', i),
+  wakePt: (i) => call('wakePt', i),
+  // Camera and teleport effect, as the map trigger "move character to region" does it
+  // (actions.js, case 30).
+  cameraFollowsMe: () => read('cameraTarget') !== -1 || !read('spectating'),
+  moveCamera: (dx, dy) => {
+    const cam = globalThis.game;
+    cam.x += dx;
+    cam.y += dy;
+    cam.clearMCInterpolationData();
+    graphics_3d.clearMCInterpolationData();
+    graphics_3d_front.clearMCInterpolationData();
+  },
+  teleportFx: (x, y) => call('effect', x, y, read('effectTypes')[nameOf('effectTeleport')], 0, 0),
+
+  // ----- World -----
+  getGravity: () => gravity,
+  setGravity: (v) => { gravity = v; },
+
+  // ----- Guns and bullets -----
+  guns: () => read('guns'),
+  bullets: () => read('bullets'), // ring buffer
+  spawnGun: (model, params) => call('gunFactory', model, params), // gun or null
+  gunName: (model) => call('gunName', model), // display name, '' if unknown
+  gunScripts: () => Guns.gun_class_scripts, // class name -> init script
+  // Every model the gun factory knows: it compares each one through
+  // strDecode(<string variable>, ...), so the variables name them all.
+  gunModels: () => {
+    const models = [];
+    const src = String(read('gunFactory'));
+    for (const m of src.matchAll(new RegExp(`${escapeRe(N.strDecode)}\\((\\$[^,()]+),`, 'g'))) {
+      const v = globalThis[m[1]];
+      if (typeof v === 'string' && !models.includes(v)) models.push(v);
+    }
+    return models;
+  },
+  // The slot a gun model goes in, from its class init script.
+  gunSlotOf: (cls) => {
+    const src = Guns.gun_class_scripts[cls]?.frames?.['1'];
+    const m = typeof src === 'string' && src.match(new RegExp(`\\.${escapeRe(F.G_SLOT)}=(-?\\d+)`));
+    return m ? Number(m[1]) : null;
+  },
+
+  // ----- Level end -----
+  // '' while playing, 'failed' after you (or your team) die in single-player.
+  levelState: () => read('levelState'),
+  setLevelState: (v) => write('levelState', v),
+  fadeOverlay: () => read('fadeOverlay'), // black fade; at alpha 1 the game pauses
+  setFailText: (v) => write('failText', v), // "BAD LUCK, YOU DIED." etc.
+
+  // ----- Map triggers, regions, timers -----
+  triggers: () => read('triggers'),
+  triggerCount: () => read('triggerCount'),
+  regions: () => read('regions'),
+  regionCount: () => read('regionCount'),
+  timers: () => read('timers'),
+  timerCount: () => read('timerCount'),
+  sayTrigger: () => read('sayTrigger'), // the map's "player says" trigger (-1/undefined = none)
+  setSayTrigger: (v) => write('sayTrigger', v),
+  triggerActivator: () => read('triggerActivator'),
+  setTriggerActivator: (v) => write('triggerActivator', v),
+  triggerPower: () => read('triggerPower'),
+  setTriggerPower: (v) => write('triggerPower', v),
+  // Runs a trigger if it is enabled with calls left (always returns true in a level).
+  runTrigger: (i) => call('runTrigger', i),
+  runTriggerName: () => N.runTrigger, // its function name, as seen on a stack frame
+
+  // ----- Map variables and map text -----
+  mapVars: () => read('mapVars'), // variable name -> value
+  varSyncOn: () => read('varSyncOn') === true, // the map's "var_sync" engine mark
+  mapText: () => read('mapText'),
+  setMapText: (text) => write('mapText', text),
+
+  // ----- Multiplayer -----
+  isMP: () => read('mp'),
+  setMP: (v) => write('mp', v),
+  messageType: (name) => read('net')[name],
+  // You ran trigger i: every other client runs it too. Same message the game sends after
+  // you use a movable with a trigger (frame2.js).
+  sendTriggerRun: (i) => {
+    const net = read('net');
+    net.Event(net[NET.EXEC_TRIGGER], net[nameOf('netNum')](i), '', '');
+  },
+  // The call the game's own sync actions make: type, mode, name, value.
+  sendVarSync: (mode, name, value) => {
+    const net = read('net');
+    if (!net || typeof net.Event !== 'function') throw new Error('the game network class is not available');
+    net.Event(net[NET.VAR_SYNC], mode, name, value);
+  },
+  lobbyConnection: () => { const net = read('net'); return net && net[nameOf('lobbyConn')]; },
+  matchMapId: () => { const d = read('net').match_details; return d && d.map_id; }, // map of the match you are in
+  sendMethodName: () => nameOf('netSend'),
+  clearMapChunks: () => { read('net')[nameOf('mapChunks')] = null; },
+
+  // ----- Chat -----
+  chatTyping: () => read('chatTyping'), // the game's chat input is open
+  openChat: (text) => call('openChat', text), // opens chat prefilled with text
+  isCustomMap: () => read('customMap'), // custom map: chat goes to the map's triggers
+  setCustomMap: (v) => write('customMap', v),
+  chatPopups: () => read('chatPopups'), // floating chat messages (HUD mode)
+  chatPanel: () => read('chatPanel'), // chat log panel, if shown
+  pressEnter: () => stage.runEvents(KeyboardEvent.KEY_DOWN, ENTER_KEY),
+  releaseEnter: () => stage.runEvents(KeyboardEvent.KEY_UP, ENTER_KEY),
+};
