@@ -141,6 +141,13 @@ const RULES = [
   { file: 'frame2', keys: ['regionTrigger', 'regionUseOn'],
     what: ['region property: trigger it activates (-1 = none)', 'region property: activation mode (1 = use key)'],
     re: String.raw`if\(b\["#use_target"\]\.charAt\(0\)=="#"\)\s*⟨regions⟩\[⟨regionCount⟩\]\.⟨ID⟩=b\["#use_target"\];\s*else\s*⟨_⟩\[⟨_⟩\]\.⟨_⟩=parseInt\(b\["#use_target"\]\);\s*⟨_⟩\[⟨_⟩\]\.⟨ID⟩=parseInt\(b\["#use_on"\]\);` },
+  { file: 'frame2', keys: ['regionUsesTimer'], what: ['region property: enables the timer its target names instead of running a trigger'],
+    re: String.raw`⟨regions⟩\[⟨regionCount⟩\]\.⟨ID⟩=\(b\["#uses_timer"\]==="true"\|\|b\["#uses_timer"\]==="1"\);` },
+  // The region check: which characters each activation mode accepts.
+  { file: 'frame2', keys: ['charVehicle'], what: ['character property: vehicle it is in (-1 = none)'],
+    re: String.raw`\(⟨regions⟩\[i2\]\.⟨regionUseOn⟩==2&&mc\.⟨ID⟩==-1\)\|\|` },
+  { file: 'frame2', keys: ['charHuman'], what: ['character property: a player, not a bot'],
+    re: String.raw`\(⟨regions⟩\[i2\]\.⟨regionUseOn⟩==17&&\(!mc\.⟨ID⟩&&mc\["hea"\]>0\)\)` },
   { file: 'frame2', keys: ['timers', 'timerCount'], what: ['map timers array', 'number of map timers'],
     re: String.raw`if\(a=="timer"\)\s*\{\s*⟨ID⟩\[⟨ID⟩\]=new Object\(\);` },
   // A shot that hits a movable with a trigger: sets the activator and power, then runs it.

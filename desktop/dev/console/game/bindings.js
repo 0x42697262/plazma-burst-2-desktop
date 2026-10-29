@@ -168,11 +168,13 @@ export const game = {
   isMP: () => read('mp'),
   setMP: (v) => write('mp', v),
   messageType: (name) => read('net')[name],
-  // You ran trigger i: every other client runs it too. Same message the game sends after
-  // you use a movable with a trigger (frame2.js).
-  sendTriggerRun: (i) => {
+  // You ran trigger i: every other client runs it too, with you as the activator. Same
+  // message the game sends after a shot at a movable (frame2.js), or, with the region's
+  // index, after a region fires (receivers only check that the region exists).
+  sendTriggerRun: (i, region) => {
     const net = read('net');
-    net.Event(net[NET.EXEC_TRIGGER], net[nameOf('netNum')](i), '', '');
+    const num = net[nameOf('netNum')];
+    net.Event(net[NET.EXEC_TRIGGER], num(i), region === undefined ? '' : num(region), '');
   },
   // The call the game's own sync actions make: type, mode, name, value.
   sendVarSync: (mode, name, value) => {

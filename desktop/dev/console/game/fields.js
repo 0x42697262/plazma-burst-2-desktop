@@ -17,6 +17,8 @@ export const F = Object.freeze({
   ON_DEATH: N.charOnDeath, // trigger run when it dies (-1 = none)
   AIM: N.aimAngle,
   FACING: N.facing,
+  VEHICLE: N.charVehicle, // the vehicle it is in, -1 = none
+  HUMAN: N.charHuman, // a player, not a bot
   // Body parts: HP field, "broken" flag
   HEAD_HP: N.headHp,
   HEAD_OFF: N.headOff,
@@ -51,7 +53,8 @@ export const F = Object.freeze({
   T_TYPES: N.trigTypes, // per action: the map editor's action number
   // Regions and timers
   R_USE_ON: N.regionUseOn, // activation mode
-  R_TRIGGER: N.regionTrigger, // trigger it runs (-1 = none)
+  R_TRIGGER: N.regionTrigger, // trigger it runs (-1 = none); a timer when R_USES_TIMER
+  R_USES_TIMER: N.regionUsesTimer, // enables the timer R_TRIGGER names instead
   TIMER_TARGET: N.timerTarget,
   // Chat panel item: its text field
   CHAT_TEXT: N.chatPanelText,

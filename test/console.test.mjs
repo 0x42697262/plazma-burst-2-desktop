@@ -239,7 +239,7 @@ test('a bind holds a ";" chain, and pressing the key runs all of it', () => {
 
 test('logic filters by element type', async () => {
   const view = await consoleModule('logic/view.js');
-  assert.match(c.run('logic')[1], /Types: trigger \d+, .*player 2/, 'lists the map\'s types');
+  assert.match(c.run('logic')[1], /Types: trigger \d+, .*player \d+/, 'lists the map\'s types');
   const count = (q) => Number(c.run(`logic show ${q}`)[0].match(/^Showing (\d+) link/)[1]);
   const all = count('');
   const noPlayers = count('not:player');
@@ -322,4 +322,44 @@ test('logic labels never overlap: grouped, collapsed, opened by the crosshair', 
   assert.ok(j.hidden > 0, `${j.hidden} hidden`);
   assert.equal(overlapping(j.labels.filter((l) => !l.open)), false);
   assert.ok(j.labels.some((l) => l.open), 'the group under the crosshair is drawn');
+});
+
+test('regions run fires a region as if its condition were met', () => {
+  const list = c.run('regions');
+  assert.ok(list.some((l) => /#\d+\s+#button\s+use key\s+-> trigger #\d+ #open_door/.test(l)));
+  assert.ok(list.some((l) => /#clock_switch\s+use key\s+-> timer #1 #timer\*2/.test(l)), 'a timer region names its timer');
+  assert.ok(list.some((l) => /#spawn_spot\s+never/.test(l)));
+
+  // Use key, as you: runs its trigger, and sends what the game sends, with the region.
+  c.log.net.length = 0;
+  const runsBefore = c.log.runs.length;
+  const out = c.run('regions run #button');
+  assert.match(out.at(-1), /^Ran region #0 #button: trigger #\d+ #open_door .*sent to all players/);
+  assert.equal(c.log.runs.length, runsBefore + 1, 'the trigger ran through the game\'s runner');
+  assert.deepEqual(c.log.net, [['EXEC', `n${c.triggers.findIndex((t) => t.uid === '#open_door')}`, 'n0', '']]);
+  assert.equal(c.G[c.N.triggerActivator], -1, 'the activator is put back');
+
+  // The mode is checked as the game would: a red-team use key refuses team 0.
+  assert.match(errorsOf(c.run('regions run #red_use'))[0], /would not fire for #0: it is for team 12; #0 is on team 0\./);
+  c.log.net.length = 0;
+  const forced = c.run('regions run #red_use force');
+  assert.ok(forced.some((l) => l.includes('forced past its condition')));
+  assert.ok(forced.some((l) => l.startsWith('Note: ran in your game only') && l.includes('region\'s own condition')));
+  assert.deepEqual(c.log.net, [], 'forced past the mode: not sent');
+
+  // A use key only fires for yourself; a bot is refused.
+  assert.match(errorsOf(c.run('regions run #button as 2'))[0], /only your own use key fires it/);
+
+  // A timer region starts its timer instead of running a trigger, and is not sent.
+  const timer = c.G[c.N.timers][1];
+  timer[c.N.trigEnabled] = false;
+  c.log.net.length = 0;
+  const t = c.run('regions run #clock_switch');
+  assert.match(t[0], /^Fired region #2 #clock_switch: started timer #1 #timer\*2/);
+  assert.equal(timer[c.N.trigEnabled], true);
+  assert.deepEqual(c.log.net, []);
+  assert.ok(!c.run('triggers find by:region').some((l) => l.includes('#clock_switch')), 'a timer region starts no trigger');
+
+  assert.match(errorsOf(c.run('regions run #spawn_spot'))[0], /runs nothing/);
+  assert.match(errorsOf(c.run('regions run #nope'))[0], /no region "#nope"/);
 });

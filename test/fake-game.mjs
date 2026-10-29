@@ -19,6 +19,9 @@ function nameKeys() {
   return [...keys];
 }
 
+// Region modes the map loader rewrites (frame2.js): 8, 11, 12 and 15 are use keys.
+const LOADER_MODES = Object.freeze({ 8: 1, 11: 9, 12: 10, 15: 1 });
+
 function parseMap(xml) {
   const tags = (name) => [...xml.matchAll(new RegExp(`<${name} [^>]*\\/>`, 'g'))].map((m) => {
     const at = {};
@@ -60,9 +63,13 @@ export async function bootConsole({ mapFile = path.join(REPO, 'test/fixtures/map
     return t;
   });
   set('triggers', triggers); set('triggerCount', triggers.length);
-  set('regions', map.regions.map((at) => ({ uid: at.uid, x: +at.x, y: +at.y, [N.regionUseOn]: parseInt(at.use_on), [N.regionTrigger]: fix(at.use_target) })));
+  set('regions', map.regions.map((at) => ({
+    // The loader's own rewrite: hidden use keys become the plain ones.
+    x: +at.x, y: +at.y, w: +(at.w ?? 0), h: +(at.h ?? 0), [N.regionUseOn]: LOADER_MODES[parseInt(at.use_on)] ?? parseInt(at.use_on),
+    [N.regionTrigger]: fix(at.use_target), [N.regionUsesTimer]: at.uses_timer === 'true',
+  })));
   set('regionCount', map.regions.length);
-  set('timers', map.timers.map((at) => ({ uid: at.uid, [N.timerTarget]: fix(at.target) })));
+  set('timers', map.timers.map((at) => ({ [N.timerTarget]: fix(at.target), [N.trigEnabled]: at.enabled === 'true' })));
   set('timerCount', map.timers.length);
   set('mapText', xml);
   set('mapVars', { var_mods: 'CTHC Lenaa', door_1: 0, size_P0: 1, SkinChatVar: '-zoom 0.9' });
@@ -70,7 +77,7 @@ export async function bootConsole({ mapFile = path.join(REPO, 'test/fixtures/map
 
   const chars = map.players.map((at, i) => {
     const c = {
-      nickname: ['you', 'bob'][i], team: +at.team, hea: +at.hea, hmax: +at.hmax, x: +at.x, y: +at.y, io: true,
+      nickname: at.nick || `p${i}`, team: +at.team, [N.charVehicle]: -1, [N.charHuman]: at.human !== 'false', hea: +at.hea, hmax: +at.hmax, x: +at.x, y: +at.y, io: true,
       tarx: 400, tary: -300, curwea: -1, stand: true, sit: 0, tox: 0, toy: 0,
       [N.dead]: false, [N.dying]: false, [N.refPoint]: i, [N.walk]: 0, [N.jump]: 1, [N.noSwords]: false,
       [N.charIndex]: i, [N.charOnDeath]: fix(at.ondeath), [N.aimAngle]: 0, [N.facing]: 1,

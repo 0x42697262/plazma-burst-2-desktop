@@ -6,13 +6,14 @@ import { plural, s, agoText, parseIndex } from '../core/text.js';
 import { game } from '../game/bindings.js';
 import { F } from '../game/fields.js';
 import { ACTION_NAMES } from '../game/actions.js';
-import { requireLevel, charAt, charLabel, noCharacter } from '../game/level.js';
+import { requireLevel, charLabel } from '../game/level.js';
 import { KEY } from '../state/schema.js';
 import { settings } from '../state/store.js';
 import {
   triggerList, actionsOf, showTarget, callsText, triggerLabel, findTrigger, triggerSources, sourcesOf, SOURCE,
 } from '../triggers/model.js';
-import { triggerRuns, clearTriggerRuns, isUsable, TRIG_HISTORY_MAX } from '../triggers/log.js';
+import { triggerRuns, clearTriggerRuns, TRIG_HISTORY_MAX } from '../triggers/log.js';
+import { takeRunOptions, runTriggerAs, reportRun, SHOT_POWER } from '../triggers/run.js';
 
 const UID_WIDTH = 20; // the uid column of the trigger list
 const FIND_UID_WIDTH = 16; // the uid column of search results
@@ -240,74 +241,17 @@ function find(rawArgs) {
 
 // ----- triggers run -----
 
-const FORCE_WORDS = ['force', '-f'];
-
-// Runs a trigger through the game's own function, the way a shot or a region does: the
-// activator ("the player who started it", which many actions use) is set first. Without
-// "force" the game's rules apply: it must be enabled with calls left, and running uses
-// up a call. With "force" it runs anyway, and its enabled state and calls left are put
-// back afterwards.
-// Multiplayer: the run is sent to the server like a normal one, so other players run it
-// too. Not sent (your client only) when the other clients would refuse it or run it
-// differently: forced on a disabled or used-up trigger, "as" another character (the
-// server always makes the sender the activator), or while spectating.
 function runOne(args) {
   const list = triggersOrNone();
   if (!list) return;
   const usage = 'usage: triggers run <# | uid> [force] [as <char#>]';
-  let force = false;
-  let activator = game.me();
-  const rest = [];
-  for (let k = 0; k < args.length; k++) {
-    const a = args[k].toLowerCase();
-    if (FORCE_WORDS.includes(a)) force = true;
-    else if (a === 'as') {
-      activator = parseIndex(args[++k]);
-      if (activator === null) throw new Error(usage);
-      if (!charAt(activator)) throw noCharacter(activator);
-    } else rest.push(args[k]);
-  }
+  const { rest, force, activator } = takeRunOptions(args, usage);
   if (rest.length !== 1) throw new Error(usage);
-  const q = rest[0];
-  const idx = findTrigger(list, q);
+  const idx = findTrigger(list, rest[0]);
   const t = list[idx];
-  if (idx < 0 || !t) throw new Error(`no trigger "${q}". Type "triggers" or "triggers find <text>".`);
-  const label = triggerLabel(idx, t);
-  const wasEnabled = t[F.T_ENABLED];
-  const wasCalls = t[F.T_CALLS];
-  const usable = isUsable(t);
-  if (!usable && !force) {
-    const why = !wasEnabled ? 'is disabled' : `has no calls left (${callsText(t)})`;
-    throw new Error(`trigger ${label} ${why}. "triggers run ${idx} force" runs it anyway.`);
-  }
-  if (force) {
-    t[F.T_ENABLED] = true;
-    if (wasCalls !== -1 && !(wasCalls > 0)) t[F.T_CALLS] = 1;
-  }
-  const mp = game.isMP();
-  const localWhy = !mp ? '' : !usable ? 'it is disabled or used up for the other players'
-    : activator !== game.me() ? '"as" another character only works in your game'
-      : game.spectating() ? 'you are spectating' : '';
-  const send = mp && !localWhy;
-  // A synced run uses up a call on every client, so keep the used call here too.
-  const putBack = force && !send;
-  const prevActivator = game.triggerActivator();
-  const prevPower = game.triggerPower();
-  game.setTriggerActivator(activator);
-  game.setTriggerPower(1);
-  try {
-    game.runTrigger(idx);
-  } finally {
-    game.setTriggerActivator(prevActivator);
-    game.setTriggerPower(prevPower);
-    if (putBack) { t[F.T_ENABLED] = wasEnabled; t[F.T_CALLS] = wasCalls; }
-  }
-  if (send) game.sendTriggerRun(idx);
-  const n = t[F.T_ACTIONS] || 0;
-  const by = activator === game.me() ? '' : ` as #${activator}`;
-  const where = !mp ? '' : send ? ', sent to all players' : '';
-  print(`Ran trigger ${label}${by} (${plural(n, 'action')})${putBack ? ', forced: enabled state and calls left kept' : `, calls ${callsText(t)}`}${where}`, COLOR.ok);
-  if (mp && !send) print(`Note: ran in your game only, other players do not see it: ${localWhy}.`, COLOR.warn);
+  if (idx < 0 || !t) throw new Error(`no trigger "${rest[0]}". Type "triggers" or "triggers find <text>".`);
+  const outcome = runTriggerAs(idx, t, { force, activator, power: SHOT_POWER, forceHint: `triggers run ${idx} force` });
+  reportRun(`trigger ${outcome.label}`, t, activator, outcome);
 }
 
 export const triggersCommand = {

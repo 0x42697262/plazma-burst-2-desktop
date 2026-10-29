@@ -8,13 +8,25 @@ import { unwrap } from './log.js';
 
 const TARGET_SHOWN = 40; // characters of a text target shown in lists
 
-// Region activation modes, from the region check in frame2.js (team 12 = red, 13 = blue).
-const REGION_MODES = Object.freeze({
-  1: 'use key', 2: 'character enters', 3: 'vehicle enters', 4: 'anything enters',
-  5: 'door/elevator arrives', 6: 'player enters', 7: 'all team players inside',
-  9: 'use key, red team', 10: 'use key, blue team', 13: 'red player enters',
-  14: 'blue player enters', 17: 'bot enters', 18: 'enemy bot enters',
+// Region activation modes ("use_on"), from the region check in frame2.js. The map
+// loader turns 8 into 1, 11 into 9 and 12 into 10 (the same use keys without the switch
+// graphic it draws for 1, 9 and 10), and 15 into 1 (no switch, no use sound), so only
+// these occur at run time.
+export const REGION_MODE = Object.freeze({
+  NEVER: 0, USE: 1, ENTER: 2, VEHICLE_ENTERS: 3, ANYTHING_ENTERS: 4, DOOR_ARRIVES: 5,
+  PLAYER_ENTERS: 6, TEAM_INSIDE: 7, USE_RED: 9, USE_BLUE: 10, RED_ENTERS: 13, BLUE_ENTERS: 14,
+  BOT_ENTERS: 17, ENEMY_BOT_ENTERS: 18,
 });
+export const REGION_MODES = Object.freeze({
+  [REGION_MODE.NEVER]: 'never (only a target for other actions)',
+  [REGION_MODE.USE]: 'use key', [REGION_MODE.ENTER]: 'character enters', [REGION_MODE.VEHICLE_ENTERS]: 'vehicle enters',
+  [REGION_MODE.ANYTHING_ENTERS]: 'anything enters', [REGION_MODE.DOOR_ARRIVES]: 'door/elevator arrives',
+  [REGION_MODE.PLAYER_ENTERS]: 'player enters', [REGION_MODE.TEAM_INSIDE]: 'all team players inside',
+  [REGION_MODE.USE_RED]: 'use key, red team', [REGION_MODE.USE_BLUE]: 'use key, blue team',
+  [REGION_MODE.RED_ENTERS]: 'red player enters', [REGION_MODE.BLUE_ENTERS]: 'blue player enters',
+  [REGION_MODE.BOT_ENTERS]: 'bot enters', [REGION_MODE.ENEMY_BOT_ENTERS]: 'enemy bot enters',
+});
+export const regionModeName = (mode) => REGION_MODES[mode] || `mode ${mode}`;
 
 const upTo = (arr, n) => (arr || []).slice(0, typeof n === 'number' ? n : (arr || []).length);
 
@@ -95,8 +107,9 @@ export function triggerSources() {
   };
   const regions = regionList();
   regions.forEach((r, i) => {
-    if (!r || !r[F.R_USE_ON]) return;
-    const mode = REGION_MODES[r[F.R_USE_ON]] || 'mode ' + r[F.R_USE_ON];
+    // A "uses timer" region names a timer, not a trigger: it starts no trigger itself.
+    if (!r || !r[F.R_USE_ON] || r[F.R_USES_TIMER]) return;
+    const mode = regionModeName(r[F.R_USE_ON]);
     add(r[F.R_TRIGGER], SOURCE.REGION, i, uids.region[i], `${named('region', i, uids.region[i])} at ${Math.round(r.x)}, ${Math.round(r.y)} (${mode})`);
   });
   timerList().forEach((t, i) => { if (t) add(t[F.TIMER_TARGET], SOURCE.TIMER, i, uids.timer[i], named('timer', i, uids.timer[i])); });
@@ -124,3 +137,17 @@ export function sourcesOf(sources, i, t) {
   const list = sources.get(i) || [];
   return t[F.T_AT_START] ? [{ kind: SOURCE.START, text: 'map start' }, ...list] : list;
 }
+
+// A region's or timer's uid, from the map text: the game keeps uids only on triggers.
+export const regionUid = (i) => mapUids().region[i];
+export const timerUid = (i) => mapUids().timer[i];
+
+// A region by index ("3", "#3") or uid ("#button"): its index, or -1.
+export function findRegion(q) {
+  const idx = parseIndex(q);
+  if (idx !== null) return idx;
+  const lq = String(q).toLowerCase();
+  return mapUids().region.findIndex((uid) => uid && uid.toLowerCase() === lq);
+}
+
+export const regionLabel = (i) => `#${i}${regionUid(i) ? ' ' + regionUid(i) : ''}`;
