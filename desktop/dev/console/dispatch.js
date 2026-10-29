@@ -22,7 +22,10 @@ const ANONYMOUS_FRAME = 'at <anonymous>:';
 // key setting such as "screenshot_key <key>" (or "set screenshot_key <key>").
 function keyArgOf(words) {
   const cmd = findRunnable(words[0]);
-  if (cmd) return typeof cmd.keyArg === 'function' ? cmd.keyArg(words) : cmd.keyArg;
+  // A subcommand's position counts from the command: "profile bind <name> <key>" is 3.
+  const sub = cmd && words.length > 1 && findSubcommand(cmd, words[1]);
+  const def = sub && sub.keyArg !== undefined ? sub : cmd;
+  if (def) return typeof def.keyArg === 'function' ? def.keyArg(words) : def.keyArg;
   const key = resolveKey(words[0]);
   return key && SCHEMA[key].type === 'key' ? 1 : undefined;
 }

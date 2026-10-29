@@ -72,7 +72,10 @@ export function runKey(key, args) {
 const EXTRAS = Object.freeze({
   binds: () => {
     const keys = binds.keys();
-    return keys.length && [`binds: ${keys.length}`, keys.map((k) => `  ${showKey(k).padEnd(KEY_WIDTH)} ${binds.get(k)}`)];
+    return keys.length && [`binds: ${keys.length}`, keys.map((k) => {
+      const now = binds.active(k);
+      return `  ${showKey(k).padEnd(KEY_WIDTH)} ${binds.get(k)}${now.profile ? `  [profile ${now.profile} binds it here]` : ''}`;
+    })];
   },
   trace: () => {
     if (!traceShown()) return null;
@@ -82,9 +85,13 @@ const EXTRAS = Object.freeze({
   logic: () => logicShown() && ['logic: shown', [`  ${logicDescription() || 'on'}`]],
   profile: () => {
     const p = activeProfile();
-    const keys = p ? Object.keys(p.values).sort() : [];
-    return p && [`profile: ${p.name} (map ${currentMap()})`,
-      keys.length ? keys.map((k) => `  ${k.padEnd(KEY_WIDTH)} ${showValue(k, p.values[k])}`) : ['  (sets nothing yet)']];
+    if (!p) return null;
+    const rows = [
+      ...Object.keys(p.values).sort().map((k) => `  ${k.padEnd(KEY_WIDTH)} ${showValue(k, p.values[k])}`),
+      ...Object.keys(p.binds).sort().map((k) => `  bind ${showKey(k).padEnd(KEY_WIDTH - 5)} ${p.binds[k]}`),
+      ...(p.onload ? [`  onload         ${p.onload}`] : []),
+    ];
+    return [`profile: ${p.name} (map ${currentMap()})`, rows.length ? rows : ['  (sets nothing yet)']];
   },
   vars: () => {
     const changed = isActive() ? editedVars() : [];

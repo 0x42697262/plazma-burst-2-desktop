@@ -758,3 +758,77 @@ test('profiles: a map\'s profile wins over your settings there, and is checked w
   atMap(undefined);
   c.run('unset god');
 });
+
+test('profile binds win over yours on its maps; onload runs as a level on them starts', async () => {
+  const { profileTick } = await consoleModule('commands/profile.js');
+  const atMap = (id) => { c.G[c.N.mapId] = id; };
+  const quiet = (line) => c.run(line).filter((l) => !l.startsWith('Note:'));
+  const level = (on) => { c.G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; };
+  c.run('unbind --all');
+  c.G.pb2dev.reload({});
+  atMap('paul');
+  profileTick(); // settle: already in a level, nothing starts
+
+  c.run('bind shift+j heal');
+  quiet('profile use pb');
+  const made = quiet('profile bind pb shift+j "vars set greet "hi"; vars get greet"');
+  assert.equal(made[0], 'pb: shift+j = vars set greet "hi"; vars get greet');
+  assert.match(made[1], /on maps using "pb" \(paul\); it wins over your own shift\+j bind there/);
+  let out = c.press('KeyJ', { shiftKey: true });
+  assert.equal(out[0], '[profile pb bind shift+j] > vars set greet "hi"; vars get greet', out.join(' | '));
+  assert.ok(out.includes('greet = "hi"'));
+  assert.match(quiet('bind shift+j heal').join('\n'), /but profile "pb" binds shift\+j on this map, which wins there/);
+  const listed = c.run('binds');
+  assert.ok(listed.some((l) => /shift\+j\s+heal\s+\(not on this map: the profile's wins\)/.test(l)));
+  assert.ok(listed.includes('On this map, profile "pb" binds (1):'));
+  c.run('keyname');
+  const named = c.press('KeyJ', { key: 'J', shiftKey: true });
+  assert.ok(named.some((l) => /bound to \(profile pb, this map\): vars set greet/.test(l)), named.join(' | '));
+  assert.ok(named.some((l) => /bound to \(yours, other maps\): heal/.test(l)));
+
+  atMap('other');
+  out = c.press('KeyJ', { shiftKey: true });
+  assert.equal(out[0], '[bind shift+j] > heal', 'elsewhere, your bind');
+  atMap('paul');
+
+  // A ";" key in a profile bind.
+  assert.deepEqual(quiet('profile bind pb ; pos'), ['pb: semicolon = pos', '  on maps using "pb" (paul); it wins over your own semicolon bind there']);
+  assert.match(errorsOf(c.run('profile bind pb k nonsense'))[0], /unknown command "nonsense"/);
+
+  // Onload: once per level start on its maps.
+  const chain = 'vars set loaded 1; vars get loaded';
+  assert.deepEqual(quiet(`profile onload pb "${chain}"`), [`pb onload: ${chain}`, '  runs each time a level starts on a map using "pb"']);
+  const ran = () => c.log.printed.filter((l) => l.startsWith('[profile pb onload]')).length;
+  c.log.printed.length = 0;
+  profileTick();
+  assert.equal(ran(), 0, 'nothing starts while you are already in the level');
+  level(false); profileTick();
+  c.log.printed.length = 0;
+  level(true); profileTick();
+  assert.equal(c.log.printed[0], `[profile pb onload] > ${chain}`, c.log.printed.join(' | '));
+  assert.ok(c.log.printed.includes('loaded = 1'));
+  c.log.printed.length = 0;
+  profileTick();
+  assert.equal(ran(), 0, 'once per start');
+  atMap('other');
+  level(false); profileTick(); level(true); c.log.printed.length = 0; profileTick();
+  assert.ok(!c.log.printed.some((l) => l.includes('onload')), 'not on other maps');
+
+  // In the file: settings, "binds" and "onload" in one object; a list is a chain.
+  const saved = JSON.parse(c.store.get('pb2dev_kv'));
+  assert.deepEqual(saved.profiles.pb, { binds: { 'shift+j': 'vars set greet "hi"; vars get greet', semicolon: 'pos' }, onload: chain });
+  c.log.printed.length = 0;
+  c.G.pb2dev.reload({ profiles: { q: { god: false, binds: { 'shift+k': 'heal', '?!': 'heal', x: 5 }, onload: ['heal', 'pos'] }, r: { onload: 7 } }, maps: { paul: 'q' } });
+  assert.deepEqual(c.log.printed.slice(1), [
+    'dev-overrides.json: profile "q": bind "?!": "?!" is not a key name. Examples: f, 5, f2, space, numpad1, shift+t. "keyname" shows a key\'s name; ignored',
+    'dev-overrides.json: profile "q": bind "x": the command must be text; ignored',
+    'dev-overrides.json: profile "r": "onload" must be commands as text (or a list of them); ignored',
+  ]);
+  atMap('paul');
+  assert.equal(c.run('profile onload q')[0], 'q onload: heal; pos');
+  assert.deepEqual(quiet('profile onload q --clear'), ['q: runs nothing on load now']);
+  assert.match(quiet('profile unbind q shift+k')[0], /^q: unbound shift\+k \(was: heal\)/);
+  c.G.pb2dev.reload({});
+  atMap(undefined);
+  c.run('unbind --all');
+});

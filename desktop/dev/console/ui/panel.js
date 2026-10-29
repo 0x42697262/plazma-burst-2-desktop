@@ -200,13 +200,13 @@ export function onKeyDownCapture(e) {
   }
   if (!isOpen && !e.metaKey) {
     const k = eventKeyName(e);
-    const cmd = k && binds.get(k);
-    if (cmd && !isTextInput(e.target) && !game.chatTyping() && isActive()) {
+    const bound = k && binds.active(k); // this map's profile bind, or yours
+    if (bound && !isTextInput(e.target) && !game.chatTyping() && isActive()) {
       // The game never sees a bound key: not the press, the repeats, or the release.
       e.preventDefault();
       e.stopImmediatePropagation();
       heldBoundKeys.add(e.code);
-      if (!e.repeat) run(cmd, `bind ${showKey(k)}`);
+      if (!e.repeat) run(bound.command, `${bound.profile ? `profile ${bound.profile} ` : ''}bind ${showKey(k)}`);
       return;
     }
   }

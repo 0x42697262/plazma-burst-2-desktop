@@ -14,7 +14,8 @@
 //   handlesHelp         "<name> help" means something to the command itself
 //   rawLine             the rest of the line is one argument, never split at ";"
 //   keyArg              which word is a key name, so a ";" there is the key ("bind ;
-//                       heal"): a number (1 is the first argument), or (words) => one
+//                       heal"): a number (1 is the first argument), or (words) => one;
+//                       on a subcommand too, counted from the command's name
 //   topicOnly           a help topic with nothing to run
 //   complete(i)         words to complete argument i with
 //   run(args, ctx)      args: the words after the name; ctx.rest: that text unsplit

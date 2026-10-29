@@ -4,7 +4,7 @@ import { COLOR } from '../core/colors.js';
 import { plural } from '../core/text.js';
 import { SCHEMA, ALIASES, KEY, unphrase } from '../state/schema.js';
 import { parseKeyName, showKey, baseKey, GAME_KEYS } from '../state/keys.js';
-import { binds, settings } from '../state/store.js';
+import { binds, settings, activeProfile } from '../state/store.js';
 import { runWords } from './registry.js';
 import { splitCommands } from '../dispatch.js';
 
@@ -18,9 +18,17 @@ const canStart = (word) => {
 
 function listBinds() {
   const keys = binds.keys();
-  if (!keys.length) { print('No binds. Example: bind f tp', COLOR.notice); return; }
-  print(`Binds (${keys.length}), active in levels while the console and chat are closed:`, COLOR.title);
-  for (const k of keys) print(`  ${showKey(k).padEnd(KEY_WIDTH)} ${binds.get(k)}`);
+  const p = activeProfile();
+  const mapKeys = p ? Object.keys(p.binds).sort() : [];
+  if (!keys.length && !mapKeys.length) { print('No binds. Example: bind f tp', COLOR.notice); return; }
+  if (keys.length) {
+    print(`Binds (${keys.length}), active in levels while the console and chat are closed:`, COLOR.title);
+    for (const k of keys) print(`  ${showKey(k).padEnd(KEY_WIDTH)} ${binds.get(k)}${mapKeys.includes(k) ? '  (not on this map: the profile\'s wins)' : ''}`);
+  }
+  if (mapKeys.length) {
+    print(`On this map, profile "${p.name}" binds (${mapKeys.length}):`, COLOR.title);
+    for (const k of mapKeys) print(`  ${showKey(k).padEnd(KEY_WIDTH)} ${p.binds[k]}`);
+  }
 }
 
 export function bindKey(args) {
@@ -31,18 +39,31 @@ export function bindKey(args) {
     print(old ? `${showKey(key)} = ${old}` : `${showKey(key)} is not bound`, old ? undefined : COLOR.notice);
     return;
   }
-  // Quotes let a bind hold a ";" chain: bind f "vars set x 1; vars sync x r".
-  const command = args.slice(1).join(' ').replace(/^"([\s\S]*)"$/, '$1');
-  // Each command of the chain is checked the way it will run: split at ";", phrases
-  // turned into keys ("fast load maps on" is fast_maps).
+  const command = commandText(args.slice(1), 'usage: bind <key> <command>');
+  binds.set(key, command);
+  print(`${showKey(key)} = ${command}${old && old !== command ? `  (was: ${old})` : ''}`, COLOR.ok);
+  const now = binds.active(key);
+  if (now && now.profile) print(`  but profile "${now.profile}" binds ${showKey(key)} on this map, which wins there`, COLOR.warn);
+  warnKeyUses(key);
+}
+
+// The command a bind (or a profile's onload) runs, from the words typed. Quotes let it
+// hold a ";" chain: bind f "vars set x 1; vars sync x r". Each command of the chain is
+// checked the way it will run: split at ";", phrases turned into keys ("fast load maps
+// on" is fast_maps).
+export function commandText(words, usage) {
+  const command = words.join(' ').replace(/^"([\s\S]*)"$/, '$1').trim();
   const parts = splitCommands(command);
-  if (!parts.length) throw new Error('usage: bind <key> <command>');
+  if (!parts.length) throw new Error(usage);
   for (const part of parts) {
     const first = unphrase(part).split(/\s+/)[0];
     if (!canStart(first)) throw new Error(`unknown command "${first}"${part !== first ? ` in "${part}"` : ''}. Type "help".`);
   }
-  binds.set(key, command);
-  print(`${showKey(key)} = ${command}${old && old !== command ? `  (was: ${old})` : ''}`, COLOR.ok);
+  return command;
+}
+
+// What else the key does: the screenshot key, a game key.
+export function warnKeyUses(key) {
   if (settings.effective(KEY.SCREENSHOT_KEY) === key) {
     print(`  ${showKey(key)} is the screenshot key, which wins: "screenshot_key <other key>" or "screenshot_key off" frees it.`, COLOR.warn);
   }

@@ -14,7 +14,9 @@ function uses(name) {
   if (name === TOGGLE_KEY) return [`opens and closes the console`];
   const out = [];
   if (settings.effective(KEY.SCREENSHOT_KEY) === name) out.push('the screenshot key ("screenshot_key")');
-  if (binds.get(name)) out.push(`bound to: ${binds.get(name)}`);
+  const bound = binds.active(name);
+  if (bound && bound.profile) out.push(`bound to (profile ${bound.profile}, this map): ${bound.command}`);
+  if (binds.get(name)) out.push(`bound to${bound && bound.profile ? ' (yours, other maps)' : ''}: ${binds.get(name)}`);
   const base = baseKey(name);
   if (GAME_KEYS[base] !== undefined) out.push(`game key${base === name ? '' : ` (${showKey(base)})`}: ${GAME_KEYS[base]}`);
   return out;
