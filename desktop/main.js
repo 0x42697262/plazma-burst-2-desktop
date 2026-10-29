@@ -7,6 +7,7 @@ const fs = require('fs/promises');
 const fsSync = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { loadCredentials, applyLogin } = require('./login');
 
 // Game files, downloaded with "npm run fetch-game". Override with PB2_GAME_DIR.
 const ROOT = path.resolve(process.env.PB2_GAME_DIR || path.join(__dirname, '..', 'game'));
@@ -162,42 +163,15 @@ const types = {
   '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg', '.ttf': 'font/ttf', '.otf': 'font/otf',
 };
 
-// Credentials: env vars win over desktop/credentials.json.
-//   PB2_LOGIN, PB2_PASSWORD, PB2_UID
-//   credentials.json: { "login": "...", "password": "...", "pb2uid": "..." }
-function loadCredentials() {
-  let file = {};
-  const file_path = path.join(__dirname, 'credentials.json');
-  if (fsSync.existsSync(file_path)) {
-    try {
-      file = JSON.parse(fsSync.readFileSync(file_path, 'utf8'));
-    } catch (e) {
-      console.error(`Could not parse ${file_path}: ${e.message}`);
-    }
-  }
-  return {
-    login: process.env.PB2_LOGIN ?? file.login,
-    password: process.env.PB2_PASSWORD ?? file.password,
-    pb2uid: process.env.PB2_UID ?? file.pb2uid,
-  };
-}
-
+// Login: every start clears the site's cookies, then sets the credentials, if any
+// (env vars PB2_LOGIN, PB2_PASSWORD, PB2_UID win over desktop/credentials.json).
+// Without them the game starts logged out. See desktop/login.js.
 async function applyCredentials() {
-  const creds = loadCredentials();
-  const expirationDate = Math.floor(Date.now() / 1000) + 365 * 24 * 3600;
-  for (const [name, value] of Object.entries(creds)) {
-    if (value === undefined || value === null || value === '') continue;
-    await session.defaultSession.cookies.set({
-      url: `https://${HOST}/`,
-      domain: '.plazmaburst2.com',
-      path: '/',
-      name,
-      value: String(value),
-      secure: true,
-      expirationDate,
-    });
-    console.log(`Set cookie: ${name}`);
-  }
+  const credentials = loadCredentials(path.join(__dirname, 'credentials.json'));
+  const { removed, set } = await applyLogin(session.defaultSession.cookies, credentials, HOST);
+  if (removed.length) console.log(`Cleared saved site cookies: ${removed.join(', ')}`);
+  if (set.length) console.log(`Logged in from credentials: ${set.join(', ')}`);
+  else console.log('No credentials (desktop/credentials.json or PB2_LOGIN/PB2_PASSWORD/PB2_UID): starting logged out.');
 }
 
 async function listLocalMaps() {

@@ -187,6 +187,8 @@ If names are missing, the dev console still opens and lists them in red. Only co
 | `PB2_VERSION` | from `pb2-version.json` | Version folder used in the URL |
 | `PB2_LOGIN`, `PB2_PASSWORD`, `PB2_UID` | `desktop/credentials.json` | Login cookies |
 
+Every start clears the game site's cookies before the game loads, then logs in with the credentials above. Without credentials the game starts logged out, even if an account logged in last time; with them, only that account's cookies are set. Saved games and settings (localStorage) are kept.
+
 ## 7. Troubleshooting
 
 - **"No game files found"** when starting: run `npm run fetch-game`.
