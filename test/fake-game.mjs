@@ -30,7 +30,8 @@ function parseMap(xml) {
 
 // Installs the fake game on globalThis, then loads and starts the real console.
 // Returns helpers to drive it.
-export async function bootConsole({ mapFile = path.join(REPO, 'test/fixtures/map.xml') } = {}) {
+// sayTrigger: uid of the map's "player says" trigger (the game sets it when the map runs).
+export async function bootConsole({ mapFile = path.join(REPO, 'test/fixtures/map.xml'), sayTrigger } = {}) {
   const G = globalThis;
   const N = Object.fromEntries(nameKeys().map((k) => [k, `__pb2_${k}`]));
   N.version = 'vTEST';
@@ -72,7 +73,7 @@ export async function bootConsole({ mapFile = path.join(REPO, 'test/fixtures/map
       nickname: ['you', 'bob'][i], team: +at.team, hea: +at.hea, hmax: +at.hmax, x: +at.x, y: +at.y, io: true,
       tarx: 400, tary: -300, curwea: -1, stand: true, sit: 0, tox: 0, toy: 0,
       [N.dead]: false, [N.dying]: false, [N.refPoint]: i, [N.walk]: 0, [N.jump]: 1, [N.noSwords]: false,
-      [N.charIndex]: i, [N.charOnDeath]: -1, [N.aimAngle]: 0, [N.facing]: 1,
+      [N.charIndex]: i, [N.charOnDeath]: fix(at.ondeath), [N.aimAngle]: 0, [N.facing]: 1,
       [N.headHp]: 50, [N.faceHp]: 80, [N.legsHp]: 60, [N.armsHp]: 50,
       [N.headOff]: false, [N.faceGone]: false, [N.legsBroken]: false, [N.armsBroken]: false,
       [N.afterMove]() {},
@@ -96,7 +97,7 @@ export async function bootConsole({ mapFile = path.join(REPO, 'test/fixtures/map
   set('gunFactory', (model, params) => ({ model, upg: params.upg, [N.gunSlot]: 1, [N.charIndex]: 0, [N.gunFixed]: false }));
   set('gunName', (m) => ({ gun_rifle: 'Assault Rifle' }[m] || ''));
 
-  set('mp', true); set('customMap', true); set('sayTrigger', -1);
+  set('mp', true); set('customMap', true); set('sayTrigger', sayTrigger && index.has(sayTrigger) ? index.get(sayTrigger) : -1);
   set('net', {
     RELIABLE_EXEC_TRIGGER: 'EXEC', RELIABLE_VAR_SYNC: 'VSYNC', RELIABLE_JOIN_MATCH: 'JOIN', RELIABLE_GET_MATCH_LIST: 'LIST',
     [N.netNum]: (i) => `n${i}`, [N.mapChunks]: null, Event: (...a) => log.net.push(a),

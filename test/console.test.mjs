@@ -11,7 +11,7 @@ const INTERNAL = /is not defined|is not a function|Cannot (read|set) propert|und
 const errorsOf = (out) => out.filter((l) => l.startsWith('error: '));
 
 let c;
-before(async () => { c = await bootConsole(); });
+before(async () => { c = await bootConsole({ sayTrigger: '#chat_in' }); });
 
 test('every command and subcommand has help, and every "Related" topic exists', async () => {
   const { helpEntries } = await consoleModule('commands/registry.js');
@@ -148,4 +148,36 @@ test('leaving the level puts every forced value back', () => {
   c.G.stage.currentFrameLabel = 'gaming';
   c.run('reset');
   c.frame();
+});
+
+test('triggers find by: finds what runs a trigger', () => {
+  // The rows of a "by:" search: [uid, what runs it].
+  const found = (q) => c.run(`triggers find ${q}`).slice(1).map((l) => l.trim().split(/\s+/)[1]);
+  const row = (q, uid) => c.run(`triggers find ${q}`).find((l) => l.includes(` ${uid} `)) || '';
+  assert.deepEqual(found('by:region'), ['#open_door']);
+  assert.match(row('by:region', '#open_door'), /by region #0 #button at 10, 20 \(use key\)/);
+  assert.deepEqual(found('by:timer'), ['#open_door', '#resync']);
+  // Index and uid differ: timer #0 is the one the map calls #Clock*7.
+  assert.deepEqual(found('by:timer#0'), ['#resync']);
+  assert.deepEqual(found('by:#Clock*7'), ['#resync']);
+  assert.deepEqual(found('by:#clock*7'), ['#resync'], 'uids ignore case');
+  assert.match(row('by:timer#0', '#resync'), /by timer #0 #Clock\*7/);
+  assert.deepEqual(found('by:chat'), ['#chat_in']);
+  assert.deepEqual(found('by:death'), ['#on_death']);
+  assert.deepEqual(found('by:player#1'), ['#on_death']);
+  assert.deepEqual(found('by:start'), ['#boot']);
+  // A 363 jump counts: #chat_in continues in #kick.
+  assert.match(row('by:trigger uid:kick', '#kick'), /by trigger #\d+ #chat_in \(continues in it\)/);
+  assert.ok(found('by:none').includes('#god'), 'nothing in the map starts #god');
+  assert.ok(!found('by:none').includes('#god_all'), '#god continues in #god_all');
+  assert.deepEqual(found('by:#chat_in'), ['#kick']);
+});
+
+test('triggers find by: combines with the other terms', () => {
+  const out = c.run('triggers find by:timer a:door_1');
+  assert.ok(out.some((l) => l.includes('#open_door') && l.includes('action 1')), 'actions inside timer-run triggers');
+  assert.ok(!out.some((l) => l.includes(' trigger ')), 'no trigger rows once actions are asked for');
+  assert.match(errorsOf(c.run('triggers find by:bogus'))[0], /by: expects one of/);
+  assert.match(errorsOf(c.run('triggers find by:chat#2'))[0], /takes no number/);
+  assert.match(c.run('triggers find by:#nothing')[0], /No trigger or action matches/);
 });

@@ -10,7 +10,7 @@ import { requireLevel, charAt, charLabel, noCharacter } from '../game/level.js';
 import { KEY } from '../state/schema.js';
 import { settings } from '../state/store.js';
 import {
-  triggerList, actionsOf, showTarget, callsText, triggerLabel, findTrigger, triggerSources,
+  triggerList, actionsOf, showTarget, callsText, triggerLabel, findTrigger, triggerSources, sourcesOf, SOURCE,
 } from '../triggers/model.js';
 import { triggerRuns, clearTriggerRuns, isUsable, TRIG_HISTORY_MAX } from '../triggers/log.js';
 
@@ -41,7 +41,7 @@ function showOne(list, idx, page) {
     `    ${String(a).padStart(3)}. type ${String(type).padEnd(4)} A = ${showTarget(A)}   B = ${showTarget(B)}${actionName(type)}`]);
   print(`Trigger ${triggerLabel(idx, t)}`, COLOR.title);
   print(`  ${t[F.T_ENABLED] ? 'enabled' : 'disabled'}, calls ${callsText(t)}${t[F.T_AT_START] ? ', runs at map start' : ''}`);
-  print(`  started by: ${by ? by.join('; ') : 'nothing found (maybe a shot at an object, or another trigger through a variable)'}`);
+  print(`  started by: ${by ? by.map((src) => src.text).join('; ') : 'nothing found (maybe a shot at an object, or another trigger through a variable)'}`);
   showPaged({ title: `  ${plural(n, 'action')} (type = the map editor's action number):`, color: COLOR.plain, rows, cmd: `triggers ${idx}`, page });
 }
 
@@ -64,7 +64,7 @@ function listTriggers(rawArgs) {
     if (lc === 'off' && enabled) return;
     if (lc && lc !== 'on' && lc !== 'off' && !String(t.uid).toLowerCase().includes(lc)) return;
     const by = sources.get(i);
-    const flags = [t[F.T_AT_START] ? 'at start' : '', by ? `by ${by.length > 1 ? by[0] + ` +${by.length - 1}` : by[0]}` : ''].filter(Boolean).join(', ');
+    const flags = [t[F.T_AT_START] ? 'at start' : '', by ? `by ${by[0].text}${by.length > 1 ? ` +${by.length - 1}` : ''}` : ''].filter(Boolean).join(', ');
     const n = t[F.T_ACTIONS] || 0;
     rows.push([`  #${String(i).padEnd(4)} ${String(t.uid || '-').padEnd(UID_WIDTH)} ${enabled ? 'on ' : 'off'}  ${callsText(t).padEnd(12)} ${String(n).padStart(3)} ${n === 1 ? 'action ' : 'actions'}  ${flags}`,
       disabledColor(t)]);
@@ -117,19 +117,42 @@ function showHistory(rawArgs) {
 
 // ----- triggers find -----
 
-// Each term is "text" (uid, A or B), "uid:text", "a:text", "b:text" or "type:n"; all
-// terms must match. Text matches anywhere, ignoring case; a number matches number
-// values exactly (5 does not match 15).
-const FIELD = Object.freeze({ any: 'ab', uid: 'uid', a: 'a', b: 'b', type: 'type' });
+// Each term is "text" (uid, A or B), "uid:text", "a:text", "b:text", "type:n" or
+// "by:how"; all terms must match. Text matches anywhere, ignoring case; a number
+// matches number values exactly (5 does not match 15).
+const FIELD = Object.freeze({ any: 'ab', uid: 'uid', a: 'a', b: 'b', type: 'type', by: 'by' });
+
+// "by:" words: what runs a trigger. "none" finds triggers nothing in the map starts
+// (a shot at an object, or a trigger run through a variable).
+const NO_SOURCE = 'none';
+const BY_WORDS = Object.freeze({
+  region: SOURCE.REGION, timer: SOURCE.TIMER, chat: SOURCE.CHAT, death: SOURCE.DEATH, player: SOURCE.DEATH,
+  trigger: SOURCE.TRIGGER, start: SOURCE.START, none: NO_SOURCE,
+});
+// These name one thing that runs triggers, so "by:timer#3" can pick it.
+const NUMBERED = new Set([SOURCE.REGION, SOURCE.TIMER, SOURCE.DEATH, SOURCE.TRIGGER]);
+const SOURCES_SHOWN = 3; // per row; "triggers <#>" lists them all
+const byWords = Object.keys(BY_WORDS).join(', ');
+
+// "by:region", "by:timer#3" (index), or "by:#timer*37" (the uid, as in the map).
+function parseBy(text) {
+  if (text.startsWith('#')) return { uid: text };
+  const m = text.match(/^([a-z]+)(?:#?(\d+))?$/);
+  const kind = m && BY_WORDS[m[1]];
+  if (!kind) throw new Error(`by: expects one of ${byWords}, or a uid; e.g. by:timer, by:region#3, by:#timer*37`);
+  const index = m[2] === undefined ? null : Number(m[2]);
+  if (index !== null && !NUMBERED.has(kind)) throw new Error(`by:${m[1]} takes no number`);
+  return { kind, index };
+}
 
 function parseTerms(args, usage) {
   return args.map((raw) => {
-    const m = raw.match(/^(uid|a|b|type):(.*)$/i);
+    const m = raw.match(/^(uid|a|b|type|by):(.*)$/i);
     const field = m ? m[1].toLowerCase() : FIELD.any;
     const text = (m ? m[2] : raw).toLowerCase();
     if (!text) throw new Error(usage);
     if (field === FIELD.type && !/^\d+$/.test(text)) throw new Error('type: expects a number, e.g. type:99');
-    return { field, text, num: NUMBER_TEXT.test(text) ? Number(text) : null };
+    return { field, text, num: NUMBER_TEXT.test(text) ? Number(text) : null, ...(field === FIELD.by ? parseBy(text) : {}) };
   });
 }
 
@@ -141,6 +164,16 @@ function valueMatches(v, term) {
 }
 
 const uidMatches = (t, term) => String(t.uid || '').toLowerCase().includes(term.text);
+
+// The sources of a trigger that a "by:" term matches ([] for "by:none" when nothing
+// runs it), or null when it does not match.
+function bySources(srcs, term) {
+  if (term.kind === NO_SOURCE) return srcs.length ? null : [];
+  const hit = term.uid
+    ? srcs.filter((src) => src.uid && src.uid.toLowerCase() === term.uid)
+    : srcs.filter((src) => src.kind === term.kind && (term.index === null || src.index === term.index));
+  return hit.length ? hit : null;
+}
 
 function actionMatches({ type, A, B }, term) {
   switch (term.field) {
@@ -155,27 +188,34 @@ function find(rawArgs) {
   const list = triggersOrNone();
   if (!list) return;
   const { args, page } = takePage(rawArgs);
-  const usage = 'usage: triggers find <text>  |  uid:<text>  a:<text>  b:<text>  type:<n>  (combine terms, e.g. "type:41 a:sound")';
+  const usage = 'usage: triggers find <text>  |  uid:<text>  by:<how>  a:<text>  b:<text>  type:<n>  (combine terms, e.g. "type:41 a:sound", "by:timer")';
   if (!args.length) throw new Error(usage);
   const terms = parseTerms(args, usage);
-  // "uid:" terms pick which triggers to look at at all; the others match actions. A bare
-  // term may match the uid instead of an action, so "find god_all" lists the #god_all
-  // trigger itself as well as the actions pointing at it.
+  // "uid:" and "by:" terms pick which triggers to look at at all; the others match
+  // actions. A bare term may match the uid instead of an action, so "find god_all"
+  // lists the #god_all trigger itself as well as the actions pointing at it.
   const uidTerms = terms.filter((term) => term.field === FIELD.uid);
-  const actionTerms = terms.filter((term) => term.field !== FIELD.uid);
+  const byTerms = terms.filter((term) => term.field === FIELD.by);
+  const actionTerms = terms.filter((term) => term.field !== FIELD.uid && term.field !== FIELD.by);
+  const sources = byTerms.length ? triggerSources() : null;
   const trigRows = [];
   const actRows = [];
   const triggersHit = new Set();
   list.forEach((t, i) => {
     if (!t) return;
     if (!uidTerms.every((term) => uidMatches(t, term))) return;
-    // The uid alone answers the whole query: one row for the trigger, not for actions.
+    const srcs = sources && sourcesOf(sources, i, t);
+    const byHits = byTerms.map((term) => bySources(srcs, term));
+    if (byHits.includes(null)) return;
+    // Nothing left to match in the actions: one row for the trigger, not for actions.
     if (actionTerms.every((term) => term.field === FIELD.any && uidMatches(t, term))) {
       const n = t[F.T_ACTIONS] || 0;
-      trigRows.push([`  #${String(i).padEnd(4)} ${String(t.uid || '-').padEnd(FIND_UID_WIDTH)} trigger   ${t[F.T_ENABLED] ? 'on ' : 'off'}  ${callsText(t).padEnd(12)} ${String(n).padStart(3)} ${actionWord(n)}`,
+      const how = [...new Set(byHits.flat().map((src) => src.text))];
+      const shown = how.slice(0, SOURCES_SHOWN).join('; ') + (how.length > SOURCES_SHOWN ? ` +${how.length - SOURCES_SHOWN} more` : '');
+      trigRows.push([`  #${String(i).padEnd(4)} ${String(t.uid || '-').padEnd(FIND_UID_WIDTH)} trigger   ${t[F.T_ENABLED] ? 'on ' : 'off'}  ${callsText(t).padEnd(12)} ${String(n).padStart(3)} ${actionWord(n)}${how.length ? `  by ${shown}` : ''}`,
         disabledColor(t)]);
     }
-    if (!actionTerms.length) return; // "uid:" only: the trigger row is the whole answer
+    if (!actionTerms.length) return; // only "uid:" and "by:": the trigger row is the whole answer
     for (const action of actionsOf(t)) {
       if (!actionTerms.every((term) => actionMatches(action, term))) continue;
       triggersHit.add(i);
@@ -187,10 +227,10 @@ function find(rawArgs) {
   const rows = trigRows.concat(actRows);
   const q = args.join(' ');
   const bits = [];
-  if (trigRows.length) bits.push(`${plural(trigRows.length, 'trigger')} by uid`);
+  if (trigRows.length) bits.push(`${plural(trigRows.length, 'trigger')}${byTerms.length ? '' : ' by uid'}`);
   if (actRows.length) bits.push(`${plural(actRows.length, 'action')} in ${plural(triggersHit.size, 'trigger')}`);
   showPaged({
-    title: rows.length ? `${bits.join(', ')} match "${q}". "triggers <#>" shows one in full.` : `No trigger or action matches "${q}"`,
+    title: rows.length ? `${bits.join(', ')} ${rows.length === 1 ? 'matches' : 'match'} "${q}". "triggers <#>" shows one in full.` : `No trigger or action matches "${q}"`,
     color: rows.length ? COLOR.title : COLOR.notice,
     rows,
     cmd: `triggers find ${q}`,
@@ -339,11 +379,13 @@ export const triggersCommand = {
     {
       name: 'find',
       aliases: ['search'],
-      usage: 'triggers find [uid:|a:|b:|type:]<text> [page n]',
-      desc: 'Search trigger uids and every trigger action\'s A/B values (text or number), or by action type',
+      usage: 'triggers find [uid:|by:|a:|b:|type:]<text> [page n]',
+      desc: 'Search trigger uids and every trigger action\'s A/B values (text or number), by action type, or by what runs a trigger',
       help: {
         about: [
-          'Searches trigger uids and every action\'s A and B value.',
+          'Searches trigger uids and every action\'s A and B value, or finds triggers by',
+          'what runs them: a region, a timer, chat, a character\'s death, another trigger,',
+          'or map start.',
           'All terms must match. A bare term matches a uid, an A or a B; the prefixes',
           'narrow it. Text matches anywhere and ignores case; a number matches number',
           'values exactly, so 5 does not match 15.',
@@ -351,6 +393,9 @@ export const triggersCommand = {
         args: [
           ['<text>', 'uid, A or B'],
           ['uid:<text>', 'the trigger uid only'],
+          ['by:<how>', `what runs it: ${byWords}`],
+          ['by:<how>#<n>', 'one region, timer, character or trigger, by index: by:timer#3'],
+          ['by:#<uid>', 'the same by its uid, as the map names it: by:#timer*37'],
           ['a:<text>', 'A values only'],
           ['b:<text>', 'B values only'],
           ['type:<n>', 'the map editor\'s action number'],
@@ -361,10 +406,22 @@ export const triggersCommand = {
           ['triggers find uid:god', 'every trigger whose uid contains "god"'],
           ['triggers find type:59', 'every action of type 59'],
           ['triggers find type:41 a:sound', 'type 41 whose A mentions a sound'],
+          ['triggers find by:timer', 'every trigger a timer runs, and which timer'],
+          ['triggers find by:region#3', 'what region #3 runs'],
+          ['triggers find by:#timer*37', 'what the timer the map calls #timer*37 runs'],
+          ['triggers find by:trigger uid:kick', 'which trigger runs #kick, or continues in it'],
+          ['triggers find by:none', 'triggers nothing in the map starts'],
         ],
         notes: [
           'A uid hit prints one row for the trigger, not one per action.',
-          '"uid:" on its own lists triggers only; add a:, b: or type: to get actions too.',
+          '"uid:" and "by:" on their own list triggers only; add a:, b: or type: to get',
+          'actions too. A "by:" row says what runs the trigger.',
+          'Indexes and uids differ: #36 is the 37th timer in the map, whatever its uid. The',
+          'rows show both, e.g. "timer #36 #timer*37".',
+          '"by:" is what runs a trigger directly. For a chain (chat runs a trigger that',
+          'continues in another), follow it: "by:trigger" names the one that runs it.',
+          '"by:none" also lists triggers run by a shot at an object or through a variable:',
+          'those leave nothing in the map to find.',
         ],
         see: ['triggers', 'triggers run'],
       },

@@ -7,6 +7,9 @@ export const ACTION = Object.freeze({
   DISABLE_TIMER: 26,
   MOVE_TO_REGION: 30,
   RUN_TRIGGER: 99,
+  // Continues in trigger A from its first action, instead of running the rest of this
+  // one (actions.js: the trigger index is switched and the action index reset).
+  JUMP_TO_TRIGGER: 363,
   RUN_REGION_TRIGGER: 440,
   RUN_REGION_TRIGGER_TOO: 499,
   // Variable sync: send this client's value with a merge mode (see game/vars.js).
@@ -25,6 +28,7 @@ export const ACTION_NAMES = Object.freeze({
   [ACTION.DISABLE_TIMER]: 'disable timer A',
   [ACTION.MOVE_TO_REGION]: 'move character A to region B',
   [ACTION.RUN_TRIGGER]: 'run trigger A',
+  [ACTION.JUMP_TO_TRIGGER]: 'continue in trigger A',
   [ACTION.RUN_REGION_TRIGGER]: 'run the trigger of region A',
   [ACTION.RUN_REGION_TRIGGER_TOO]: 'run the trigger of region A',
 });

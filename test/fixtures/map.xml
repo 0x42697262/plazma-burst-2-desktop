@@ -1,8 +1,9 @@
 <inf x="0" y="0" mark="var_sync" forteam="0" />
 <player uid="#player*0" x="0" y="0" hea="130" hmax="130" team="0" />
-<player uid="#player*1" x="100" y="-50" hea="130" hmax="130" team="0" />
+<player uid="#player*1" x="100" y="-50" hea="130" hmax="130" team="0" ondeath="#on_death" />
 <region uid="#button" x="10" y="20" use_on="1" use_target="#open_door" />
-<timer uid="#timer*1" target="#resync" enabled="true" maxcalls="-1" delay="30" />
+<timer uid="#Clock*7" target="#resync" enabled="true" maxcalls="-1" delay="30" />
+<timer uid="#timer*2" target="#open_door" enabled="true" maxcalls="-1" delay="30" />
 <trigger uid="#open_door" enabled="true" maxcalls="-1" actions_1_type="100" actions_1_targetA="door_1" actions_1_targetB="1" />
 <trigger uid="#god" enabled="true" maxcalls="-1" actions_1_type="123" actions_1_targetA="SkinChatVar" actions_1_targetB="-god all" actions_2_type="363" actions_2_targetA="#god_all" actions_2_targetB="0" />
 <trigger uid="#god_all" enabled="true" maxcalls="-1" actions_1_type="59" actions_1_targetA="#player*0" actions_1_targetB="99999999" actions_2_type="59" actions_2_targetA="#player*1" actions_2_targetB="99999999" />
@@ -10,3 +11,6 @@
 <trigger uid="#resync" enabled="true" maxcalls="-1" actions_1_type="225" actions_1_targetA="door_1" actions_1_targetB="0" actions_2_type="225" actions_2_targetA="size_P0" actions_2_targetB="0" />
 <trigger uid="#kick" enabled="true" maxcalls="-1" actions_1_type="125" actions_1_targetA="Arraychat" actions_1_targetB="SkinChatVar" actions_2_type="349" actions_2_targetA="Arraychat" actions_2_targetB="-kick " actions_3_type="309" actions_3_targetA="0" actions_3_targetB="0" />
 <trigger uid="#locked" enabled="false" maxcalls="-1" actions_1_type="99" actions_1_targetA="#open_door" actions_1_targetB="0" />
+<trigger uid="#chat_in" enabled="true" maxcalls="-1" actions_1_type="363" actions_1_targetA="#kick" actions_1_targetB="0" />
+<trigger uid="#on_death" enabled="true" maxcalls="-1" actions_1_type="100" actions_1_targetA="deaths" actions_1_targetB="1" />
+<trigger uid="#boot" enabled="true" maxcalls="1" execute="true" actions_1_type="100" actions_1_targetA="booted" actions_1_targetB="1" />
