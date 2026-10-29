@@ -8,6 +8,7 @@
     "start": "electron .",
     "fetch-game": "node tools/fetch-game.js",
     "find-names": "node tools/find-names.js",
+    "fetch-opcodes": "node tools/fetch-opcodes.js",
     "test": "node --test test/"
   },
   "type": "commonjs",

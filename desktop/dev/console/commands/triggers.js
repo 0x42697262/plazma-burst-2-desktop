@@ -13,13 +13,19 @@ import {
   triggerList, actionsOf, showTarget, callsText, triggerLabel, findTrigger, triggerSources, sourcesOf, SOURCE,
 } from '../triggers/model.js';
 import { triggerRuns, clearTriggerRuns, TRIG_HISTORY_MAX } from '../triggers/log.js';
-import { takeRunOptions, runTriggerAs, reportRun, SHOT_POWER } from '../triggers/run.js';
+import { takeRunOptions, runTriggerAs, reportRun, SHOT_POWER, resolveActions, runScript } from '../triggers/run.js';
+import { parseScript, actionInfo, opcodeName, opcodesLoaded, searchActions } from '../triggers/script.js';
+import { takeOptions } from '../core/args.js';
 
 const UID_WIDTH = 20; // the uid column of the trigger list
 const FIND_UID_WIDTH = 16; // the uid column of search results
 const NUMBER_TEXT = /^-?\d+(\.\d+)?$/;
 
-const actionName = (type) => (ACTION_NAMES[type] ? `  (${ACTION_NAMES[type]})` : '');
+// What an action does: the console's own name for it, else the editor's description.
+const actionName = (type) => {
+  const what = ACTION_NAMES[type] || actionInfo(type)?.desc;
+  return what ? `  (${what})` : '';
+};
 const disabledColor = (t) => (t[F.T_ENABLED] ? undefined : COLOR.muted);
 const actionWord = (n) => `action${s(n)}`;
 
@@ -283,6 +289,70 @@ function runOne(args) {
   reportRun(`trigger ${outcome.label}`, t, activator, outcome);
 }
 
+// ----- triggers exec -----
+
+const EXEC_OPTIONS = ['check', 'force'];
+const EXEC_USAGE = 'usage: triggers exec [--check] [--force] <script>  (paste a trigger from the map editor\'s text view)';
+
+// The script is the rest of the line as typed (it is never split at ";"), after the
+// options in front of it.
+function scriptText(rest) {
+  const text = rest.replace(/^\S+\s*/, ''); // the subcommand word
+  const words = text.match(/^(?:--\S*\s*)*/)[0];
+  const { options } = takeOptions(words.split(/\s+/).filter(Boolean), EXEC_OPTIONS);
+  return { options, script: text.slice(words.length) };
+}
+
+// The headers say whether the trigger would run at all; like "triggers run", --force
+// runs it anyway.
+function headerRefusal(headers) {
+  if (headers.enabled !== undefined && headers.enabled !== 'true') return `it says "enabled: ${headers.enabled}"`;
+  if (headers.maxcalls !== undefined && Number(headers.maxcalls) === 0) return 'it says "maxcalls: 0"';
+  return '';
+}
+
+function execScript(_args, { rest }) {
+  const { options, script } = scriptText(rest);
+  if (!script.trim()) throw new Error(EXEC_USAGE);
+  // "exec" used to run a map trigger.
+  if (/^#?\S+$/.test(script.trim()) && findTrigger(triggerList(), script.trim()) >= 0) {
+    throw new Error(`"triggers exec" runs a pasted script; "triggers run ${script.trim()}" runs that map trigger.`);
+  }
+  const { headers, actions } = parseScript(script);
+  requireLevel();
+  const resolved = resolveActions(actions);
+  const label = headers.uid ? `"${headers.uid}"` : 'script';
+  if (options.has('check')) {
+    print(`Pasted trigger ${label}: ${plural(actions.length, 'action')}, not run (--check)`, COLOR.title);
+    for (const a of resolved) {
+      print(`  ${String(a.line).padStart(3)}. ${opcodeName(a.type)} (type ${a.type})  A = ${showTarget(a.A)}   B = ${showTarget(a.B)}${actionName(a.type)}`);
+    }
+    return;
+  }
+  const refusal = headerRefusal(headers);
+  if (refusal && !options.has('force')) throw new Error(`not run: ${refusal}. "triggers exec --force ..." runs it anyway.`);
+  runScript(resolved, { activator: game.me(), uid: headers.uid });
+  print(`Ran pasted trigger ${label} (${plural(actions.length, 'action')})`, COLOR.ok);
+  if (game.isMP()) print('Note: ran in your game only: the other players do not have this trigger. What its actions send themselves (vars sync, ...) still reaches them.', COLOR.warn);
+}
+
+// ----- triggers actions -----
+
+function listActions(rawArgs) {
+  if (!opcodesLoaded()) throw new Error('the editor\'s action list is not loaded. Run "npm run fetch-opcodes" and restart.');
+  const { args, page } = takePage(rawArgs);
+  const q = args.join(' ').trim();
+  const hits = searchActions(q);
+  const rows = hits.map((a) => [`  ${String(a.type).padStart(4)}  ${(a.alias || `op${a.type}`).padEnd(28)} ${a.desc}  [A: ${a.a}, B: ${a.b}]`]);
+  showPaged({
+    title: `${q ? `Trigger actions matching "${q}"` : 'Trigger actions'}: ${hits.length}. Write them as Name( "A", "B" ); in "triggers exec".`,
+    rows,
+    cmd: `triggers actions${q ? ' ' + q : ''}`,
+    empty: `  no action matches "${q}"`,
+    page,
+  });
+}
+
 export const triggersCommand = {
   name: 'triggers',
   aliases: ['trigger', 'trig'],
@@ -312,7 +382,7 @@ export const triggersCommand = {
     notes: [
       'Long lists are paged: "more" is the next page, page_size sets the length.',
     ],
-    see: ['triggers find', 'triggers run', 'triggers history', 'more'],
+    see: ['triggers find', 'triggers run', 'triggers exec', 'triggers history', 'more'],
   },
   run: listTriggers,
   subcommands: [
@@ -409,7 +479,7 @@ export const triggersCommand = {
     },
     {
       name: 'run',
-      aliases: ['activate', 'fire', 'exec'],
+      aliases: ['activate', 'fire'],
       usage: 'triggers run <# | uid> [force] [as #]',
       desc: 'Run a trigger now, with you (or character #) as the activator. "force" also runs a disabled/used-up one. Multiplayer: other players see it too (not with "as", or forced on a disabled/used-up one)',
       reportsReach: true,
@@ -443,6 +513,79 @@ export const triggersCommand = {
         see: ['triggers', 'triggers history', 'chars'],
       },
       run: runOne,
+    },
+    {
+      name: 'exec',
+      aliases: ['paste', 'script'],
+      usage: 'triggers exec [--check] [--force] <script>',
+      desc: 'Run a trigger pasted from the map editor\'s text view (uid:/enabled:/maxcalls: lines optional). --check shows what it would do. Multiplayer: your game only',
+      rawLine: true, // the script has its own ";"
+      reportsReach: true,
+      help: {
+        about: [
+          'Runs trigger actions written the way the map editor\'s "edit triggers as text"',
+          'view shows them, once, as a trigger of its own, through the game\'s runner:',
+          '  uid: #trigger*1016',
+          '  enabled: true',
+          '  maxcalls: -1',
+          '  next if VarA == ValueB( "var_suddendeath", "1" );',
+          '  MovableTo( "#door*13", "#region*306" );',
+          'Paste a script with several lines into the console input: it becomes one line,',
+          'with "triggers exec" in front when the input was empty. Then press Enter.',
+          'Targets are read like the map loader reads them: "#door*13" is that object of',
+          'this map, a whole number is a number, anything else is text. You are the',
+          'activator ("the player who started it").',
+        ],
+        args: [
+          ['<script>', 'the actions: Name( "A", "B" ); each, or op<number>( "A", "B" );'],
+          ['--check', 'show the actions and their targets in this map, do not run'],
+          ['--force', 'run even when the headers say "enabled: false" or "maxcalls: 0"'],
+        ],
+        examples: [
+          ['triggers exec MovableTo( "#door*13", "#region*306" );', 'move a door'],
+          ['triggers exec --check TimerDisable( "#timer*631", "0" );', 'see what it would do'],
+          ['triggers exec op100( "my_var", "5" );', 'an action by number (set variable)'],
+        ],
+        notes: [
+          'The headers are optional. uid only names the run; actions cannot refer to the',
+          'pasted trigger by it.',
+          'A "#uid" this map does not have is refused where the action expects an object:',
+          'the game would read it as object #0.',
+          'Nothing is escaped, like in the editor: ""1"" is the text "1" with its quotes.',
+          'The whole rest of the line is the script, so ";" cannot chain another command.',
+          'Multiplayer: it runs in your game only (the other players do not have this',
+          'trigger). Actions that send something themselves, like a var sync, still do.',
+          'Action names come from the map editor ("npm run fetch-opcodes"); without them',
+          'only op<number> works. "triggers actions" lists them.',
+        ],
+        see: ['triggers actions', 'triggers run', 'triggers'],
+      },
+      run: execScript,
+    },
+    {
+      name: 'actions',
+      aliases: ['ops', 'opcodes'],
+      usage: 'triggers actions [text | number] [page n]',
+      desc: 'The map editor\'s trigger actions: number, name for "triggers exec", what it does',
+      help: {
+        about: [
+          'Every trigger action the map editor knows: its number, the name its text view',
+          'uses (op<number> when it has none), what it does, and what A and B are.',
+          'Words filter it: all must appear in the name or the description.',
+        ],
+        args: [
+          ['[text]', 'words in the name or description'],
+          ['[number]', 'one action number'],
+          ['page n', 'jump to page n'],
+        ],
+        examples: [
+          ['triggers actions', 'all of them'],
+          ['triggers actions timer', 'everything about timers'],
+          ['triggers actions 123', 'action 123'],
+        ],
+        see: ['triggers exec'],
+      },
+      run: listActions,
     },
   ],
 };

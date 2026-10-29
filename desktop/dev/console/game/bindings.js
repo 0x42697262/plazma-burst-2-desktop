@@ -157,6 +157,9 @@ export const game = {
   // Runs a trigger if it is enabled with calls left (always returns true in a level).
   runTrigger: (i) => call('runTrigger', i),
   runTriggerName: () => N.runTrigger, // its function name, as seen on a stack frame
+  // An action target as the map loader stores it: "#uid" -> that object's index (left
+  // as text when no object has it), "12" -> 12, other text as is.
+  resolveTarget: (v) => call('resolveTarget', v),
 
   // ----- Map variables and map text -----
   mapVars: () => read('mapVars'), // variable name -> value

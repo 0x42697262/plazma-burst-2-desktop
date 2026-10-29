@@ -8,6 +8,9 @@ node_modules/
 # Generated from the game files with "npm run find-names".
 desktop/dev/names.js
 
+# The map editor's trigger action names, from "npm run fetch-opcodes".
+desktop/dev/opcodes.js
+
 # Screenshots taken with the dev console's "screenshot"
 /screenshots/
 

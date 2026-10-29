@@ -3,6 +3,7 @@
   "devDir": "__dev/",
   "routes": {
     "names": "names.js",
+    "opcodes": "opcodes.js",
     "console": "console/",
     "kv": "kv",
     "maps": "maps",

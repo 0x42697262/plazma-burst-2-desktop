@@ -16,8 +16,8 @@ const ANONYMOUS_FRAME = 'at <anonymous>:';
 // between them. That is the point: a chat message runs the map's "player says" trigger,
 // which overwrites variables like SkinChatVar between a "vars set" and the "vars sync"
 // meant to send it. A ";" inside double quotes belongs to the value, and a command that
-// takes the rest of the line ("js": JavaScript uses ";" itself) is never split. Where a
-// key name goes, ";" is the key: "bind ; heal".
+// takes the rest of the line ("js": JavaScript uses ";" itself, and "triggers exec") is
+// never split. Where a key name goes, ";" is the key: "bind ; heal".
 // The position of the key-name word in a command: "bind <key>", "unbind <key>", and a
 // key setting such as "screenshot_key <key>" (or "set screenshot_key <key>").
 function keyArgOf(words) {
@@ -40,8 +40,9 @@ function atKeyName(cur) {
 }
 
 export function splitCommands(text) {
-  const cmd = findRunnable(text.split(/\s+/)[0]);
-  if (cmd && cmd.rawLine) return [text];
+  const words = text.trim().split(/\s+/);
+  const cmd = findRunnable(words[0]);
+  if (cmd && (cmd.rawLine || findSubcommand(cmd, words[1])?.rawLine)) return [text];
   const parts = [];
   let cur = '';
   let quoted = false;

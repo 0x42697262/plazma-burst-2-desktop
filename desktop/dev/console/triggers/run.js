@@ -16,6 +16,7 @@ import { F } from '../game/fields.js';
 import { charAt, noCharacter } from '../game/level.js';
 import { isUsable } from './log.js';
 import { callsText } from './model.js';
+import { actionInfo } from './script.js';
 
 const FORCE_WORDS = ['force', '-f'];
 export const SHOT_POWER = 1; // "triggers run" passes this as the shot power some actions read
@@ -92,3 +93,61 @@ export function reportRun(what, t, activator, { send, putBack, localWhy }) {
   if (game.isMP() && !send) print(`Note: ran in your game only, other players do not see it: ${localWhy}.`, COLOR.warn);
 }
 
+
+// ----- Triggers written as text ("triggers exec") -----
+
+// Target kinds that name an object of the map by uid. A "#uid" there that the map does
+// not have would reach the action as text, which most actions read as index 0: a
+// different object.
+const OBJECT_KINDS = new Set(['door', 'region', 'vehicle', 'character', 'gun', 'barrel', 'trigger', 'timer',
+  'decor', 'pushf', 'pushf_damage', 'lamp', 'water']);
+
+// The targets as the map loader would store them, or an error naming the first "#uid"
+// this map does not have.
+export function resolveActions(actions) {
+  return actions.map((a) => {
+    const info = actionInfo(a.type);
+    const out = { ...a, A: game.resolveTarget(a.A), B: game.resolveTarget(a.B) };
+    for (const [side, kind] of [['A', info?.a], ['B', info?.b]]) {
+      const v = out[side];
+      if (typeof v === 'string' && v.startsWith('#') && OBJECT_KINDS.has(kind)) {
+        throw new Error(`line ${a.line}: this map has no ${kind} ${v} (${a.name} target ${side})`);
+      }
+    }
+    return out;
+  });
+}
+
+// Runs a parsed script once as a trigger of its own, through the game's runner like any
+// other: it is put in the triggers array just past the map's, run, and removed again, so
+// nothing else can start it. Actions that jump to or run other triggers work; nothing
+// can refer to this one by uid. activator: who started it (many actions use it).
+// Multiplayer: not sent; the other players have no such trigger. What its actions send
+// themselves ("vars sync") still goes out.
+export function runScript(actions, { activator, uid }) {
+  const list = game.triggers();
+  const idx = Math.max(list.length, game.triggerCount() || 0);
+  const t = {
+    uid: uid || undefined,
+    [F.T_ENABLED]: true, [F.T_AT_START]: false, [F.T_MAX_CALLS]: 1, [F.T_CALLS]: 1,
+    [F.T_ACTIONS]: actions.length,
+    [F.T_TYPES]: actions.map((a) => a.type),
+    [F.T_A]: actions.map((a) => a.A),
+    [F.T_B]: actions.map((a) => a.B),
+  };
+  const length = list.length;
+  const prevActivator = game.triggerActivator();
+  const prevPower = game.triggerPower();
+  list[idx] = t;
+  game.setTriggerActivator(activator);
+  game.setTriggerPower(SHOT_POWER);
+  try {
+    game.runTrigger(idx);
+  } finally {
+    game.setTriggerActivator(prevActivator);
+    game.setTriggerPower(prevPower);
+    delete list[idx];
+    list.length = length;
+  }
+  return idx;
+}

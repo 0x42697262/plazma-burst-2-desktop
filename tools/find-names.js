@@ -155,6 +155,11 @@ const RULES = [
     what: ['character index that activated the running trigger', 'power passed to the running trigger (shot damage)',
       'function(trigger index): runs a trigger if enabled with calls left (always returns true in a level)'],
     re: String.raw`⟨ID⟩=⟨me⟩;\s*⟨ID⟩=⟨bullets⟩\[i\]\.⟨bulletDamage⟩;\s*if\(⟨ID⟩\(` },
+  // The map loader's target fixup, run on every trigger action's A and B once the map
+  // is in: "#uid" becomes that object's index, a whole number becomes a number.
+  { file: 'frame2', keys: ['resolveTarget'],
+    what: ['function(text): an action target as the map loader stores it ("#uid" -> index, "12" -> 12)'],
+    re: String.raw`function ⟨ID⟩\(⟨_⟩\)\s*\{\s*if\(⟨_⟩===null\|\|⟨_⟩===undefined\)\s*⟨_⟩="-1";\s*⟨_⟩\+="";\s*if\(⟨_⟩\.charAt\(0\)==="#"\)` },
   // The same shot, in multiplayer: tells the server so every other client runs it too.
   { file: 'frame2', keys: ['net', 'netNum'],
     what: ['multiplayer network class (.Event(type, ...parts) sends to the server)',

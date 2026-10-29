@@ -10,12 +10,13 @@
 // Usage: node tools/fetch-game.js [version] [--out dir] [--no-names] [--jobs n]
 //   version     e.g. v1769098419 (default: the version linked from /h5/)
 //   --out       target folder (default: game/). The old copy is kept as <out>.previous
-//   --no-names  do not run tools/find-names.js afterwards
+//   --no-names  do not run tools/find-names.js and tools/fetch-opcodes.js afterwards
 //   --jobs      parallel downloads (default 8)
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 const SITE = 'https://www.plazmaburst2.com';
 const REPO = path.join(__dirname, '..');
@@ -212,6 +213,12 @@ async function main() {
     if (r.missing.length || r.problems.length) {
       console.log('Some names were not found. The dev console may not fully work; see README.md, "Finding the obfuscated names".');
       process.exitCode = 1;
+    }
+    console.log('\nFetching the map editor\'s trigger action names...');
+    try {
+      execFileSync(process.execPath, [path.join(__dirname, 'fetch-opcodes.js')], { stdio: 'inherit' });
+    } catch {
+      console.log('Not updated: "triggers exec" only knows actions written as op<number>. Run "npm run fetch-opcodes" later.');
     }
   }
   if (problems.length) process.exitCode = 1;

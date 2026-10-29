@@ -11,6 +11,7 @@ import { binds, history, settings } from '../state/store.js';
 import { KEY } from '../state/schema.js';
 import { levelWasActive } from '../overrides/frame.js';
 import { run } from '../dispatch.js';
+import { looksLikeScript } from '../triggers/script.js';
 
 const THEME = Object.freeze({
   background: '#0E2236e5',
@@ -101,6 +102,27 @@ function onInputKey(e) {
   }
 }
 
+// The input has one line. A trigger script pasted with several lines (from the map
+// editor's text view) is joined into one, which "triggers exec" reads the same way; in
+// an empty input "triggers exec" goes in front. Other pastes are left to the browser.
+const EXEC_PREFIX = 'triggers exec ';
+export function pasteText(text, input = inputEl) {
+  if (!/[\r\n]/.test(text) || !looksLikeScript(text)) return false;
+  const one = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).join(' ');
+  const value = input.value || '';
+  const start = input.selectionStart ?? value.length;
+  const before = value.slice(0, start);
+  const after = value.slice(input.selectionEnd ?? start);
+  const lead = before.trim() ? before : EXEC_PREFIX;
+  input.value = lead + one + after;
+  input.selectionStart = input.selectionEnd = lead.length + one.length;
+  return true;
+}
+
+function onPaste(e) {
+  if (pasteText(e.clipboardData?.getData('text') || '')) e.preventDefault();
+}
+
 export function buildPanel() {
   root = el('div', {
     position: 'absolute', left: '10px', top: '40px', width: '780px', height: '320px',
@@ -158,6 +180,7 @@ export function buildPanel() {
 
   for (const type of SWALLOWED_EVENTS) root.addEventListener(type, (e) => e.stopPropagation());
   inputEl.addEventListener('keydown', onInputKey);
+  inputEl.addEventListener('paste', onPaste);
   historyPos = history.lines.length;
   game.overlay().append(root);
 }

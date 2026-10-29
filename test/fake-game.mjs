@@ -31,6 +31,18 @@ function parseMap(xml) {
   return { triggers: tags('trigger'), regions: tags('region'), timers: tags('timer'), players: tags('player') };
 }
 
+// A few of the map editor's actions (desktop/dev/opcodes.js has them all).
+const FAKE_OPCODES = Object.freeze({
+  aliases: { MovableTo: 0, TimerDisable: 26, 'next if VarA == ValueB': 123, SetVar: 100 },
+  actions: {
+    0: { desc: "Movable › Force Movable 'A' move to region 'B'", a: 'door', b: 'region', alias: 'MovableTo' },
+    26: { desc: "Timer › Deactivate Timer 'A'", a: 'timer', b: 'nochange', alias: 'TimerDisable' },
+    100: { desc: "Var › Set variable 'A' to value 'B'", a: 'string', b: 'string', alias: 'SetVar' },
+    123: { desc: "Var › Skip next trigger action if value of variable 'A' does not equals value 'B'", a: 'string', b: 'string', alias: 'next if VarA == ValueB' },
+    562: { desc: 'Debug › Something without a name', a: 'string', b: 'string' },
+  },
+});
+
 // Installs the fake game on globalThis, then loads and starts the real console.
 // Returns helpers to drive it.
 // sayTrigger: uid of the map's "player says" trigger (the game sets it when the map runs).
@@ -39,14 +51,27 @@ export async function bootConsole({ mapFile = path.join(REPO, 'test/fixtures/map
   const N = Object.fromEntries(nameKeys().map((k) => [k, `__pb2_${k}`]));
   N.version = 'vTEST';
   G.PB2_NAMES = N;
+  G.PB2_OPCODES = FAKE_OPCODES;
   const set = (k, v) => { G[N[k]] = v; };
-  const log = { net: [], runs: [], printed: [] };
+  const log = { net: [], runs: [], ran: [], printed: [] };
 
   const xml = fs.readFileSync(mapFile, 'utf8');
   const map = parseMap(xml);
   const index = new Map();
   for (const list of Object.values(map)) list.forEach((o, i) => index.set(o.uid, i));
   // The map loader's target fixup: "#uid" -> index, whole numbers -> numbers.
+  // The loader's uid registry has every object of the map, in the order listed.
+  const uidIndex = new Map();
+  const perTag = {};
+  for (const m of xml.matchAll(/<(\w+) uid="([^"]*)"/g)) {
+    perTag[m[1]] = (perTag[m[1]] ?? -1) + 1;
+    if (!uidIndex.has(m[2])) uidIndex.set(m[2], perTag[m[1]]);
+  }
+  set('resolveTarget', (v) => {
+    const t = String(v ?? '-1');
+    if (t.charAt(0) === '#') return uidIndex.has(t) ? uidIndex.get(t) : t;
+    return parseInt(t) + '' === t ? parseInt(t) : t;
+  });
   const fix = (v = '-1') => (v.charAt(0) === '#' ? (index.has(v) ? index.get(v) : v) : parseInt(v) + '' === v ? parseInt(v) : v);
   const triggers = map.triggers.map((at) => {
     const t = { uid: at.uid, [N.trigTargetA]: [], [N.trigTargetB]: [], [N.trigTypes]: [] };
@@ -113,7 +138,12 @@ export async function bootConsole({ mapFile = path.join(REPO, 'test/fixtures/map
   // A runner named like the game's, reading "enabled" the way it does, so the run log
   // sees it.
   const runner = N.runTrigger;
-  set('runTrigger', ({ [runner](i) { log.runs.push(i); return G[N.triggers][i][N.trigEnabled]; } })[runner]);
+  set('runTrigger', ({ [runner](i) {
+    log.runs.push(i);
+    const t = G[N.triggers][i];
+    log.ran.push({ i, uid: t.uid, types: [...t[N.trigTypes]], A: [...t[N.trigTargetA]], B: [...t[N.trigTargetB]], by: G[N.triggerActivator] });
+    return t[N.trigEnabled];
+  } })[runner]);
   set('openChat', () => {}); set('chatPopups', []); set('chatPanel', null);
 
   // Browser and stage: just enough for the panel to build and frames to run.

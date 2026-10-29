@@ -832,3 +832,85 @@ test('profile binds win over yours on its maps; onload runs as a level on them s
   atMap(undefined);
   c.run('unbind --all');
 });
+
+test('triggers exec runs a trigger pasted from the map editor\'s text view, once, in your game only', async () => {
+  const { pasteText } = await consoleModule('ui/panel.js');
+  const pasted = [
+    'uid: #trigger*1016',
+    'enabled: true',
+    'maxcalls: -1',
+    '',
+    'next if VarA == ValueB( "var_suddendeath", "1" );',
+    'MovableTo( "#door_a", "#spawn_spot" );',
+    'next if VarA == ValueB( "var_suddendeath", ""1"" );',
+    'TimerDisable( "#timer*2", "0" );',
+    'op562( "a; b", "12" );',
+  ].join('\r\n');
+  // Pasted into the empty input: one line, "triggers exec" in front.
+  const input = { value: '', selectionStart: 0, selectionEnd: 0 };
+  assert.ok(pasteText(pasted, input));
+  assert.equal(input.value, 'triggers exec uid: #trigger*1016 enabled: true maxcalls: -1 next if VarA == ValueB( "var_suddendeath", "1" ); '
+    + 'MovableTo( "#door_a", "#spawn_spot" ); next if VarA == ValueB( "var_suddendeath", ""1"" ); TimerDisable( "#timer*2", "0" ); op562( "a; b", "12" );');
+  assert.equal(input.selectionStart, input.value.length);
+  assert.ok(!pasteText('pos\nheal', { value: '' }), 'commands are left to the browser');
+  assert.ok(!pasteText('MovableTo( "#door_a", "#spawn_spot" );', { value: '' }), 'one line is left to the browser');
+
+  const triggersBefore = c.G[c.N.triggers].length;
+  c.log.ran.length = 0;
+  c.log.net.length = 0;
+  const out = c.run(input.value);
+  assert.deepEqual(errorsOf(out), []);
+  assert.equal(out[0], 'Ran pasted trigger "#trigger*1016" (5 actions)');
+  assert.match(out[1], /^Note: ran in your game only/);
+  assert.equal(c.log.ran.length, 1);
+  const ran = c.log.ran[0];
+  assert.equal(ran.i, triggersBefore, 'its own trigger, past the map\'s');
+  assert.equal(ran.uid, '#trigger*1016');
+  assert.equal(ran.by, c.G[c.N.me], 'you are the activator');
+  assert.deepEqual(ran.types, [123, 0, 123, 26, 562]);
+  // Targets as the map loader stores them: uids are indexes, whole numbers numbers.
+  assert.deepEqual(ran.A, ['var_suddendeath', 0, 'var_suddendeath', 1, 'a; b']);
+  assert.deepEqual(ran.B, [1, 3, '"1"', 0, 12]);
+  assert.equal(c.G[c.N.triggers].length, triggersBefore, 'removed again');
+  assert.deepEqual(c.log.net, [], 'not sent');
+  assert.equal(c.G[c.N.triggerActivator], -1, 'activator put back');
+
+  // The same in the multi-line form the editor shows (pb2dev.run, or a bind).
+  c.log.ran.length = 0;
+  assert.deepEqual(errorsOf(c.run(`triggers exec ${pasted}`)), []);
+  assert.deepEqual(c.log.ran[0].B, [1, 3, '"1"', 0, 12]);
+
+  // --check shows it, does not run it.
+  c.log.ran.length = 0;
+  const shown = c.run('triggers exec --check MovableTo( "#door_a", "#spawn_spot" );');
+  assert.equal(shown[0], 'Pasted trigger script: 1 action, not run (--check)');
+  assert.match(shown[1], /1\. MovableTo \(type 0\)\s+A = 0\s+B = 3\s+\(Movable › Force Movable 'A' move to region 'B'\)/);
+  assert.equal(c.log.ran.length, 0);
+
+  // Refusals, before anything runs.
+  const err = (line) => errorsOf(c.run(line))[0] || '';
+  assert.match(err('triggers exec TimerDisable( "#timer*999", "0" );'), /line 1: this map has no timer #timer\*999/);
+  assert.match(err('triggers exec movableto( "#door_a", "#spawn_spot" );'), /unknown action "movableto"\. Did you mean MovableTo\?/);
+  assert.match(err('triggers exec Nope( "a", "b" );'), /unknown action "Nope"\. "triggers actions <text>" searches/);
+  assert.match(err('triggers exec SetVar( "x", "1" ); heal'), /line 2 "heal": not an action/);
+  assert.match(err('triggers exec colour: red SetVar( "x", "1" );'), /unknown action "colour: red SetVar"/);
+  assert.match(err('triggers exec colour: red'), /line 1 "colour: red": "colour" is not uid, enabled, maxcalls/);
+  assert.match(err('triggers exec #god'), /"triggers run #god" runs that map trigger/);
+  assert.match(err('triggers exec uid: #x'), /no actions in the script/);
+  assert.match(err('triggers exec --bogus SetVar( "x", "1" );'), /unknown option "--bogus"/);
+  assert.match(err('triggers exec'), /usage: triggers exec/);
+  assert.match(err('triggers exec enabled: false SetVar( "x", "1" );'), /not run: it says "enabled: false"\. "triggers exec --force/);
+  assert.equal(c.log.ran.length, 0);
+  assert.deepEqual(errorsOf(c.run('triggers exec --force enabled: false SetVar( "x", "1" );')), []);
+  assert.equal(c.log.ran.length, 1);
+  // A "#" value that is not an object stays text: a colour, a missing trigger name.
+  assert.deepEqual(errorsOf(c.run('triggers exec SetVar( "name_color", "#78dbe2" );')), []);
+  assert.equal(c.log.ran[1].B[0], '#78dbe2');
+
+  // The editor's list, searchable; triggers <#> describes actions with it.
+  const listed = c.run('triggers actions timer');
+  assert.match(listed[0], /^Trigger actions matching "timer": 1\./);
+  assert.match(listed[1], /^\s+26\s+TimerDisable\s+Timer › Deactivate Timer 'A'\s+\[A: timer, B: nochange\]/);
+  assert.match(c.run('triggers actions 562')[1], /562\s+op562\s+Debug/);
+  assert.ok(c.run('triggers #god').some((l) => /type 123\s.*\(Var › Skip next trigger action/.test(l)));
+});

@@ -9,7 +9,8 @@ export const namesMissing = globalThis.PB2_NAMES
 
 export function nameOf(key) {
   const name = N[key];
-  if (!name) throw new Error(`game name "${key}" unknown for this game version. Run "npm run find-names".`);
+  // Missing: not found in this game version, or names.js is older than the console.
+  if (!name) throw new Error(`game name "${key}" is not in desktop/dev/names.js. Run "npm run find-names", then restart the app.`);
   return name;
 }
 

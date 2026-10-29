@@ -20,8 +20,9 @@
 //   complete(i)         words to complete argument i with
 //   run(args, ctx)      args: the words after the name; ctx.rest: that text unsplit
 //   subcommands         [{ name, aliases, usage, desc, help, clientOnly, reportsReach,
-//                       run(args, ctx) }]: "triggers find ...". ctx.verb is the word
-//                       typed for it. reportsReach: it says itself whether others see it.
+//                       rawLine, run(args, ctx) }]: "triggers find ...". ctx.verb is the
+//                       word typed for it. reportsReach: it says itself whether others
+//                       see it.
 
 const commands = [];
 const byWord = new Map();
@@ -32,6 +33,13 @@ export function register(...defs) {
   for (const raw of defs) {
     const def = norm(raw);
     def.subcommands = def.subcommands.map(norm);
+    const subWords = new Set();
+    for (const sub of def.subcommands) {
+      for (const word of [sub.name, ...sub.aliases]) {
+        if (subWords.has(word)) throw new Error(`subcommand word "${def.name} ${word}" is defined twice`);
+        subWords.add(word);
+      }
+    }
     for (const word of [def.name, ...def.aliases]) {
       if (byWord.has(word)) throw new Error(`command word "${word}" is defined twice`);
       byWord.set(word, def);
