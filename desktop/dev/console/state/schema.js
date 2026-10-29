@@ -2,6 +2,7 @@
 // This table is the only place a key is defined; KEY gives every other module its name.
 import { onOff } from '../core/text.js';
 import { PAGE_SIZE_DEFAULT, PAGE_SIZE_MAX } from '../core/limits.js';
+import { parseKeyName, showKey } from './keys.js';
 
 // Groups that only configure the console itself: they need no level and are not
 // client-only. Every other group changes your own game client.
@@ -70,6 +71,14 @@ export const SCHEMA = Object.freeze({
       'keeps a whole page inside this log.'],
     example: '50',
   },
+  screenshot_key: {
+    type: 'key', group: GROUP.console, default: 'f12',
+    desc: 'Key that saves a screenshot to screenshots/, anywhere in the game; off = none',
+    about: ['Works in menus, levels and with the console open (the console is left out of',
+      'the picture). A function key works while you type; other keys wait until you',
+      'are not typing in the chat or the console.'],
+    example: 'f2',
+  },
   save_maps: {
     type: 'bool', group: GROUP.maps, default: true,
     desc: 'Save every map the game downloads to desktop/maps/<map id>.xml, uncompressed and one tag per line',
@@ -99,6 +108,7 @@ export const ALIASES = Object.freeze({
   dmg: KEY.BULLET_DAMAGE, damage: KEY.BULLET_DAMAGE, bspeed: KEY.BULLET_SPEED, range: KEY.BULLET_LIFE,
   rate: KEY.FIRE_RATE, firerate: KEY.FIRE_RATE, accuracy: KEY.SPREAD, jumps: KEY.JUMP,
   sword: KEY.SWORDS, melee: KEY.SWORDS,
+  screenshotkey: KEY.SCREENSHOT_KEY, shot_key: KEY.SCREENSHOT_KEY, sskey: KEY.SCREENSHOT_KEY,
   savemaps: KEY.SAVE_MAPS, mapsave: KEY.SAVE_MAPS, fastmaps: KEY.FAST_MAPS, fastload: KEY.FAST_MAPS,
   fast_load: KEY.FAST_MAPS, fastloadmaps: KEY.FAST_MAPS, fast_load_maps: KEY.FAST_MAPS,
 });
@@ -132,6 +142,11 @@ export function parseValue(key, raw) {
     if (FALSE_WORDS.includes(v)) return false;
     throw new Error(`${key} expects on/off`);
   }
+  // A key name as "bind" takes it, or off for none.
+  if (s.type === 'key') {
+    if (raw === false || FALSE_WORDS.includes(String(raw).toLowerCase()) || String(raw).toLowerCase() === 'none') return false;
+    return parseKeyName(raw);
+  }
   const n = Number(raw);
   if (!Number.isFinite(n)) throw new Error(`${key} expects a number`);
   if (s.type === 'int' && !Number.isInteger(n)) throw new Error(`${key} expects a whole number`);
@@ -139,8 +154,11 @@ export function parseValue(key, raw) {
   return n;
 }
 
+// A value as it prints: on/off, a number, or a key name ("f12", "shift+`").
+export const showValue = (key, v) => (SCHEMA[key].type === 'key' && typeof v === 'string' ? showKey(v) : onOff(v));
+
 // The one-line description, with the default when there is one.
 export const describeKey = (key) => {
   const s = SCHEMA[key];
-  return s.default === undefined ? s.desc : `${s.desc} (default ${onOff(s.default)})`;
+  return s.default === undefined ? s.desc : `${s.desc} (default ${showValue(key, s.default)})`;
 };

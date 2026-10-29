@@ -2,8 +2,7 @@
 // ("speed 1.8", "god").
 import { print } from '../ui/log.js';
 import { COLOR } from '../core/colors.js';
-import { onOff } from '../core/text.js';
-import { SCHEMA, GROUPS, KEY, resolveKey, parseValue, affectsGame, keyClientOnly, describeKey } from '../state/schema.js';
+import { SCHEMA, GROUPS, KEY, resolveKey, parseValue, affectsGame, keyClientOnly, describeKey, showValue } from '../state/schema.js';
 import { settings, binds } from '../state/store.js';
 import { showKey } from '../state/keys.js';
 import { isActive, charLabel } from '../game/level.js';
@@ -18,7 +17,7 @@ const RESET_WORDS = ['default', 'reset', 'unset'];
 const KEY_WIDTH = 14;
 const VALUE_WIDTH = 9;
 
-const shown = (key) => (settings.has(key) ? onOff(settings.get(key)) : 'default');
+const shown = (key) => (settings.has(key) ? showValue(key, settings.get(key)) : 'default');
 
 function requireKey(word) {
   const key = resolveKey(word);
@@ -29,7 +28,7 @@ function requireKey(word) {
 export function setKey(key, raw) {
   const v = parseValue(key, raw);
   settings.set(key, v);
-  print(`${key} = ${onOff(v)}`, COLOR.ok);
+  print(`${key} = ${showValue(key, v)}`, COLOR.ok);
   if (!levelWasActive() && affectsGame(key)) print('  (applies when you are in a level)', COLOR.hint);
 }
 

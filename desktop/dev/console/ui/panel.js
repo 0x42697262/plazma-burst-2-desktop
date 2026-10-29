@@ -7,7 +7,8 @@ import { COLOR } from '../core/colors.js';
 import { game } from '../game/bindings.js';
 import { isActive } from '../game/level.js';
 import { eventKeyName, showKey, baseKey, TOGGLE_KEY } from '../state/keys.js';
-import { binds, history } from '../state/store.js';
+import { binds, history, settings } from '../state/store.js';
+import { KEY } from '../state/schema.js';
 import { levelWasActive } from '../overrides/frame.js';
 import { run } from '../dispatch.js';
 
@@ -59,6 +60,11 @@ export function closePanel() {
   isOpen = false;
   root.style.display = 'none';
   inputEl.blur();
+}
+
+// Out of sight but still open (input and focus kept), e.g. for a screenshot.
+export function setPanelHidden(hidden) {
+  if (root) root.style.visibility = hidden ? 'hidden' : 'visible';
 }
 
 const togglePanel = () => (isOpen ? closePanel() : openPanel());
@@ -148,8 +154,21 @@ export function buildPanel() {
 
 const isTextInput = (t) => !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
 
+// A function key types nothing, so it can take a screenshot while you type.
+const typesNothing = (k) => /^f\d+$/.test(baseKey(k));
+
 export function onKeyDownCapture(e) {
   const inRoot = root && root.contains(e.target);
+  const shotKey = settings.effective(KEY.SCREENSHOT_KEY);
+  if (shotKey && !e.metaKey && eventKeyName(e) === shotKey
+    && (typesNothing(shotKey) || (!isTextInput(e.target) && !game.chatTyping()))) {
+    // Before binds and the game: anywhere, also with the console open.
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    heldBoundKeys.add(e.code);
+    if (!e.repeat) run('screenshot', `key ${showKey(shotKey)}`);
+    return;
+  }
   if (!e.metaKey && eventKeyName(e) === TOGGLE_KEY) {
     if (!(!inRoot && isTextInput(e.target)) && !game.chatTyping()) {
       e.preventDefault();

@@ -2,8 +2,7 @@
 // registry) and the settings schema: nothing here lists commands or keys by hand.
 import { print } from '../ui/log.js';
 import { COLOR } from '../core/colors.js';
-import { onOff } from '../core/text.js';
-import { SCHEMA, ALIASES, resolveKey, aliasesOf, keyClientOnly, affectsGame, describeKey } from '../state/schema.js';
+import { SCHEMA, ALIASES, resolveKey, aliasesOf, keyClientOnly, affectsGame, describeKey, showValue } from '../state/schema.js';
 import { settings } from '../state/store.js';
 import {
   findCommand, findSubcommand, findSubcommandAnywhere, helpEntries, findHelpEntry,
@@ -52,13 +51,13 @@ function printEntry(entry) {
 
 function printKeyHelp(key) {
   const sc = SCHEMA[key];
-  const range = sc.type === 'bool' ? 'on / off'
+  const range = sc.type === 'bool' ? 'on / off' : sc.type === 'key' ? 'a key name (as in "bind"), or off'
     : `${sc.type === 'int' ? 'whole number' : 'number'}${sc.min === undefined ? '' : ` from ${sc.min} to ${sc.max}`}`;
   print(`${key} <value>`, COLOR.title);
   print(`  ${describeKey(key)}`);
-  print(`  key in group ${sc.group}, ${range}${sc.default === undefined ? '' : `, default ${onOff(sc.default)}`}`, COLOR.hint);
+  print(`  key in group ${sc.group}, ${range}${sc.default === undefined ? '' : `, default ${showValue(key, sc.default)}`}`, COLOR.hint);
   const set = settings.has(key);
-  print(`  now: ${set ? onOff(settings.get(key)) : 'default'}`, set ? COLOR.ok : undefined);
+  print(`  now: ${set ? showValue(key, settings.get(key)) : 'default'}`, set ? COLOR.ok : undefined);
   const also = aliasesOf(key);
   if (also.length) print(`  Also: ${also.join(', ')}`, COLOR.hint);
   const reason = keyClientOnly(key);

@@ -13,6 +13,7 @@ import { traceCommand } from './trace.js';
 import { moreCommand, chainTopic, consoleCommands } from './console.js';
 import { gameCommand } from './game-chat.js';
 import { mapsCommand } from './maps.js';
+import { screenshotCommand } from './screenshot.js';
 import { jsCommand } from './js.js';
 
 const [list, set, get, unset, reset, builtin] = settingsCommands;
@@ -21,5 +22,5 @@ register(
   helpCommand, list, set, get, unset, reset,
   ...playerCommands, gunsCommand, tpCommand, posCommand, ...gunCommands, charsCommand, traceCommand,
   ...bindCommands, triggersCommand, regionsCommand, varsCommand, logicCommand, chainTopic, moreCommand,
-  gameCommand, builtin, mapsCommand, jsCommand, ...consoleCommands,
+  gameCommand, builtin, mapsCommand, screenshotCommand, jsCommand, ...consoleCommands,
 );

@@ -2,9 +2,9 @@
 import { print } from '../ui/log.js';
 import { COLOR } from '../core/colors.js';
 import { plural } from '../core/text.js';
-import { SCHEMA, ALIASES, unphrase } from '../state/schema.js';
+import { SCHEMA, ALIASES, KEY, unphrase } from '../state/schema.js';
 import { parseKeyName, showKey, baseKey, GAME_KEYS } from '../state/keys.js';
-import { binds } from '../state/store.js';
+import { binds, settings } from '../state/store.js';
 import { runWords } from './registry.js';
 import { splitCommands } from '../dispatch.js';
 
@@ -43,6 +43,9 @@ export function bindKey(args) {
   }
   binds.set(key, command);
   print(`${showKey(key)} = ${command}${old && old !== command ? `  (was: ${old})` : ''}`, COLOR.ok);
+  if (settings.effective(KEY.SCREENSHOT_KEY) === key) {
+    print(`  ${showKey(key)} is the screenshot key, which wins: "screenshot_key <other key>" or "screenshot_key off" frees it.`, COLOR.warn);
+  }
   const base = baseKey(key);
   if (GAME_KEYS[base] !== undefined) {
     print(`  ${showKey(key)} is also a game key (${base === key ? '' : showKey(base) + ': '}${GAME_KEYS[base]}). In levels the bind runs instead.`, COLOR.warn);

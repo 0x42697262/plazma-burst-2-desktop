@@ -8,6 +8,9 @@ node_modules/
 # Generated from the game files with "npm run find-names".
 desktop/dev/names.js
 
+# Screenshots taken with the dev console's "screenshot"
+/screenshots/
+
 # Local settings
 desktop/credentials.json*
 desktop/dev-overrides.json

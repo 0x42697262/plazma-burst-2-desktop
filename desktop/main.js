@@ -63,6 +63,8 @@ function checkNamesFile() {
 // Loads desktop/maps/<name>.xml (or .txt / no extension). Plain map XML or the
 // server's compressed "<q." format both work. Re-read on every load.
 const MAPS_DIR = path.join(__dirname, 'maps');
+const SCREENSHOT_DIR = path.join(__dirname, '..', 'screenshots');
+let mainWindow = null;
 const LOCAL_MAP_PREFIX = 'local-';
 const MAP_EXTS = ['.xml', '.txt', ''];
 
@@ -250,6 +252,27 @@ async function serveConsoleFile(rel) {
 }
 
 // The dev console's files, and its local key-value store (desktop/dev-overrides.json).
+// The window as it looks now, as screenshots/pb2-<date>_<time>.png. Returns the path
+// from the repository root.
+async function saveScreenshot() {
+  if (!mainWindow) throw new Error('no game window');
+  const png = (await mainWindow.webContents.capturePage()).toPNG();
+  await fs.mkdir(SCREENSHOT_DIR, { recursive: true });
+  const d = new Date();
+  const two = (n) => String(n).padStart(2, '0');
+  const stamp = `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}_${two(d.getHours())}-${two(d.getMinutes())}-${two(d.getSeconds())}`;
+  // Several in one second: pb2-<stamp>-2.png and so on.
+  for (let n = 1; ; n++) {
+    const file = path.join(SCREENSHOT_DIR, `pb2-${stamp}${n > 1 ? `-${n}` : ''}.png`);
+    try {
+      await fs.writeFile(file, png, { flag: 'wx' });
+      return path.relative(path.join(__dirname, '..'), file);
+    } catch (e) {
+      if (e.code !== 'EEXIST') throw e;
+    }
+  }
+}
+
 async function serveDev(request, url) {
   const name = decodeURIComponent(url.pathname.slice(DEV_PREFIX.length));
   if (name.startsWith(ROUTE.console)) {
@@ -283,6 +306,13 @@ async function serveDev(request, url) {
     return text
       ? new Response(text, { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } })
       : new Response('Not found', { status: 404 });
+  }
+  if (name === ROUTE.screenshot && request.method === 'POST') {
+    try {
+      return new Response(JSON.stringify({ file: await saveScreenshot() }), { headers: { 'Content-Type': 'application/json' } });
+    } catch (e) {
+      return new Response(e.message, { status: 500 });
+    }
   }
   if (name === ROUTE.kv) {
     if (request.method === 'PUT') {
@@ -368,7 +398,7 @@ app.whenReady().then(async () => {
     { label: 'Window', submenu: [{ role: 'minimize' }] },
   ]));
 
-  const win = new BrowserWindow({
+  const win = mainWindow = new BrowserWindow({
     width: 1280,
     height: 720,
     autoHideMenuBar: true,
