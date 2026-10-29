@@ -259,3 +259,32 @@ test('logic filters by element type', async () => {
   assert.ok(!tree.some((l) => l.includes('#player')), 'the tree drops player rows');
   assert.ok(c.run('logic #door_a type:region').some((l) => l.includes('nothing that passes the filters')));
 });
+
+test('logic screen keeps only what the camera shows, as it moves', async () => {
+  const view = await consoleModule('logic/view.js');
+  const cam = c.G.game;
+  const labels = () => { c.log.drawn.length = 0; view.drawFrame(); return c.log.drawn.filter((d) => d[0] === 'fillText').map((d) => d[1]); };
+  const lineStarts = () => c.log.drawn.filter((d) => d[0] === 'moveTo').map((d) => `${d[1]},${d[2]}`);
+  // The view covers world x -100..700, y -50..350: #god_all (40, -300) is off screen,
+  // the players it acts on are on it.
+  cam.x = 100; cam.y = 50; cam.scaleX = cam.scaleY = 1;
+  // #god_all is at world (40, -300): screen (140, -250), above the top edge.
+  c.run('logic show');
+  labels();
+  assert.ok(lineStarts().includes('140,-250'), 'without "screen", a link running off the edge is drawn');
+  c.run('logic show screen');
+  labels();
+  assert.ok(!lineStarts().includes('140,-250'), 'with it, only links with both ends on screen');
+  assert.ok(labels().includes('#button'), 'what is on screen still is');
+  cam.y = 400; // the camera moves up: #god and #god_all come on screen (y 100), #button leaves (y 420)
+  assert.ok(labels().includes('#god_all'), 'it follows the camera');
+  assert.ok(!labels().includes('#button'), 'and drops what left it');
+  cam.y = 50;
+  assert.match(c.run('logic show visible')[0], /both ends on screen .*\d+ links? right now/);
+  c.run('logic hide');
+
+  assert.ok(c.run('logic #god_all screen').some((l) => /-> #player\*0/.test(l)), 'the tree keeps rows on screen');
+  cam.x = 1e6;
+  assert.ok(!c.run('logic #god_all screen').some((l) => l.includes('-> #player')), 'and drops the rest');
+  cam.x = 100;
+});

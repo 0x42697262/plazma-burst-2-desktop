@@ -6,7 +6,7 @@ import { COLOR } from '../core/colors.js';
 import { plural } from '../core/text.js';
 import { requireLevel } from '../game/level.js';
 import { LINK, logicGraph, findNode, placeOf, chatTriggerUid } from '../logic/graph.js';
-import { showLogic, hideLogic, logicShown } from '../logic/view.js';
+import { showLogic, hideLogic, logicShown, isVisible } from '../logic/view.js';
 
 const KINDS = Object.values(LINK);
 const DEFAULT_DEPTH = Object.freeze({ show: 1, tree: 3 });
@@ -53,6 +53,7 @@ function resolveType(g, word) {
   return tag;
 }
 
+const SCREEN_WORDS = ['screen', 'visible', 'onscreen']; // only what the camera shows now
 const TYPE_PREFIX = 'type:'; // only elements of these types
 const NOT_PREFIX = 'not:'; // no elements of these types
 
@@ -60,7 +61,9 @@ const NOT_PREFIX = 'not:'; // no elements of these types
 //   start | control | act | attach | ref   only links of these kinds
 //   type:<t>[,<t>...]                      only elements of these types
 //   not:<t>[,<t>...]                       no elements of these types
+//   screen                                 only elements inside the camera view
 function takeFilters(g, args) {
+  let screen = false;
   const kinds = new Set();
   let only = null;
   const without = new Set();
@@ -68,6 +71,7 @@ function takeFilters(g, args) {
   for (const a of args) {
     const w = a.toLowerCase();
     if (KINDS.includes(w)) kinds.add(w);
+    else if (SCREEN_WORDS.includes(w)) screen = true;
     else if (w.startsWith(TYPE_PREFIX)) {
       only = only || new Set();
       for (const t of w.slice(TYPE_PREFIX.length).split(',').filter(Boolean)) only.add(resolveType(g, t));
@@ -81,8 +85,9 @@ function takeFilters(g, args) {
     kinds.size ? [...kinds].join(', ') : 'every kind',
     only ? `only ${[...only].join(', ')}` : '',
     without.size ? `not ${[...without].join(', ')}` : '',
+    screen ? 'on screen' : '',
   ].filter(Boolean).join(', ');
-  return { args: rest, typeOk, kindOk, describe, filtered: kinds.size > 0 || !!only || without.size > 0 };
+  return { args: rest, typeOk, kindOk, screen, describe, filtered: kinds.size > 0 || !!only || without.size > 0 || screen };
 }
 
 const name = (node) => `${node.uid}  ${node.tag} #${node.index}`;
@@ -113,7 +118,7 @@ function around(g, node, depth, keep) {
 function show(rawArgs) {
   const g = requireGraph();
   const { args: rest, depth } = takeDepth(rawArgs, DEFAULT_DEPTH.show);
-  const { args, typeOk, kindOk, describe } = takeFilters(g, rest);
+  const { args, typeOk, kindOk, screen, describe } = takeFilters(g, rest);
   // A uid may hold spaces ("#activate commands"), so the other words are one uid.
   const target = args.join(' ');
   const node = target ? requireNode(g, target) : null;
@@ -122,10 +127,14 @@ function show(rawArgs) {
   const keep = (l) => kindOk(l) && ends(l.from) && ends(l.to);
   const near = node ? around(g, node, depth, keep) : null;
   const filter = (l) => keep(l) && (!near || near.has(l));
-  showLogic(filter);
-  const count = g.links.filter(filter).length;
+  showLogic(filter, { screen });
   const where = node ? `around ${node.uid} (depth ${depth})` : 'in the whole map';
-  print(`Showing ${plural(count, 'link')} ${where}: ${describe}. Only the ones on screen are drawn; "logic hide" stops.`, COLOR.ok);
+  if (screen) {
+    const now = g.links.filter((l) => filter(l) && isVisible(l.from) && isVisible(l.to)).length;
+    print(`Showing the links with both ends on screen ${where}: ${describe}. ${plural(now, 'link')} right now; it follows the camera. "logic hide" stops.`, COLOR.ok);
+  } else {
+    print(`Showing ${plural(g.links.filter(filter).length, 'link')} ${where}: ${describe}. Only the ones on screen are drawn; "logic hide" stops.`, COLOR.ok);
+  }
   print('  green: starts a trigger   yellow: enables/disables   blue: acts on   white: attached   pink: other', COLOR.hint);
 }
 
@@ -155,11 +164,11 @@ function tree(rawArgs) {
   const g = requireGraph();
   const { args: rest, depth } = takeDepth(rawArgs, DEFAULT_DEPTH.tree);
   const { args: unpaged, page } = takePage(rest);
-  const { args, typeOk, kindOk, describe, filtered } = takeFilters(g, unpaged);
+  const { args, typeOk, kindOk, screen, describe, filtered } = takeFilters(g, unpaged);
   if (!args.length) throw new Error('usage: logic <uid> [depth n] [type:<t>] [not:<t>] [start | control | act | attach | ref]');
   const node = requireNode(g, args.join(' '));
   // A row is kept when its link passes and the element at its other end does.
-  const keepRow = (l, other) => kindOk(l) && typeOk(other);
+  const keepRow = (l, other) => kindOk(l) && typeOk(other) && (!screen || isVisible(other));
   const chat = chatTriggerUid();
   const rows = [];
   const back = (n, level, path) => {
@@ -213,6 +222,7 @@ export const logicCommand = {
       ['hide', 'stop drawing them'],
       ['type:<t>[,<t>]', 'only elements of these types; "logic" lists the map\'s types'],
       ['not:<t>[,<t>]', 'no elements of these types'],
+      ['screen', 'only what is inside the camera view now'],
     ],
     examples: [
       ['logic #god_all', 'what reaches #god_all, and what it acts on'],
@@ -255,11 +265,13 @@ export const logicCommand = {
           ['ref', 'any other reference'],
           ['type:<t>[,<t>]', 'only links whose two ends are of these types (region, trigger, door...)'],
           ['not:<t>[,<t>]', 'no links touching an element of these types'],
+          ['screen', 'only links with both ends in the camera view (also: visible)'],
         ],
         examples: [
           ['logic show', 'everything'],
           ['logic show not:player', 'without the links to every player (most of them, on many maps)'],
           ['logic show type:region,trigger start', 'what regions start, and nothing else'],
+          ['logic show screen not:player', 'only the logic around you, as you move'],
           ['logic show #button depth 3', 'what the button starts, three steps deep'],
           ['logic show start control', 'the flow of the map, without the actions'],
         ],
@@ -267,6 +279,9 @@ export const logicCommand = {
           'Only links with an end on screen are drawn, so a big map stays usable.',
           'Types are the map\'s own element names; plurals work too (regions). Around a',
           '<uid>, that element is kept whatever its type, so "type:" picks its neighbours.',
+          'Without "screen", a link with one end on screen is drawn too, running off the',
+          'edge; with it, only links that start and end on screen, worked out every frame.',
+          'A region or a door counts as on screen when any part of it is.',
           'Colours: green starts a trigger, yellow enables or disables, blue acts on,',
           'white is attached, pink is any other reference.',
         ],
@@ -302,6 +317,7 @@ export const logicCommand = {
           ['type:<t>[,<t>]', 'only rows whose element is of these types'],
           ['not:<t>[,<t>]', 'no rows whose element is of these types'],
           ['start | control | act ...', 'only rows of these kinds of link'],
+          ['screen', 'only rows whose element is in the camera view now'],
         ],
         examples: [
           ['logic tree #kick', 'chat -> trigger -> ... -> #kick'],

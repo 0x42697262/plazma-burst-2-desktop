@@ -28,6 +28,7 @@ const MARGIN = 40; // game units past the screen edge that still count as on scr
 let overlay = null;
 let frame = 0; // the pending animation frame
 let filter = null; // which links to draw: (link) => boolean
+let screenOnly = false; // only links with both ends inside the camera view
 
 // The transform from world units to overlay pixels, as the game's debug view sets it.
 function worldTransform(canvas, cam) {
@@ -45,6 +46,31 @@ function worldTransform(canvas, cam) {
 export const toScreen = (m, p) => ({ x: (m.a * p.x + m.e) / m.unit, y: (m.d * p.y + m.f) / m.unit });
 
 const onScreen = (p) => p.x > -MARGIN && p.x < GAME_WIDTH + MARGIN && p.y > -MARGIN && p.y < GAME_HEIGHT + MARGIN;
+
+// Inside the camera view now: a point on screen, or a rectangle (region, door) that
+// overlaps it.
+function visibleWith(m, node) {
+  const place = placeOf(node);
+  if (!Number.isFinite(place.x) || !Number.isFinite(place.y)) return false;
+  const tl = toScreen(m, place);
+  const br = Number.isFinite(place.w) && Number.isFinite(place.h)
+    ? toScreen(m, { x: place.x + place.w, y: place.y + place.h }) : tl;
+  return Math.max(tl.x, br.x) >= 0 && Math.min(tl.x, br.x) <= GAME_WIDTH
+    && Math.max(tl.y, br.y) >= 0 && Math.min(tl.y, br.y) <= GAME_HEIGHT;
+}
+
+// The world-to-screen transform now, or null without a level, canvas or camera.
+function currentTransform() {
+  const canvas = game.gameCanvas();
+  const cam = game.camera();
+  return canvas && cam && isActive() ? worldTransform(canvas, cam) : null;
+}
+
+// For commands: whether an element is in the camera view right now.
+export function isVisible(node) {
+  const m = currentTransform();
+  return !!m && visibleWith(m, node);
+}
 
 // Keeps the overlay exactly over the game canvas, whatever size the window is.
 function fit(canvas) {
@@ -91,11 +117,17 @@ export function drawFrame() {
     return at.get(node);
   };
   const shown = new Set();
+  const seen = new Map(); // node -> visible, worked out once per frame
+  const visible = (node) => {
+    if (!seen.has(node)) seen.set(node, visibleWith(m, node));
+    return seen.get(node);
+  };
   let lines = 0;
   for (const link of g.links) {
     if (filter && !filter(link)) continue;
     const a = point(link.from), b = point(link.to);
-    if (![a.x, a.y, b.x, b.y].every(Number.isFinite) || (!onScreen(a) && !onScreen(b))) continue;
+    if (![a.x, a.y, b.x, b.y].every(Number.isFinite)) continue;
+    if (screenOnly ? !(visible(link.from) && visible(link.to)) : !onScreen(a) && !onScreen(b)) continue;
     ctx.strokeStyle = ctx.fillStyle = LINK_COLOR[link.kind];
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
@@ -130,8 +162,10 @@ function loop() {
   frame = requestAnimationFrame(loop);
 }
 
-export function showLogic(linkFilter) {
+// screen: draw only links with both ends inside the camera view, as it moves.
+export function showLogic(linkFilter, { screen = false } = {}) {
   filter = linkFilter;
+  screenOnly = screen;
   if (!frame) frame = requestAnimationFrame(loop);
 }
 
@@ -139,6 +173,7 @@ export function hideLogic() {
   if (frame) cancelAnimationFrame(frame);
   frame = 0;
   filter = null;
+  screenOnly = false;
   if (overlay) { overlay.remove(); overlay = null; }
 }
 
