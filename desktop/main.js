@@ -2,7 +2,7 @@
 // Serves the local game copy under its real URL so the game behaves exactly
 // like the official site (main server, login cookies, multiplayer).
 // Every other request is passed through to the real network.
-const { app, BrowserWindow, dialog, protocol, net, session } = require('electron');
+const { app, BrowserWindow, Menu, dialog, protocol, net, session } = require('electron');
 const fs = require('fs/promises');
 const fsSync = require('fs');
 const path = require('path');
@@ -358,6 +358,15 @@ app.whenReady().then(async () => {
     }
     return net.fetch(request, { bypassCustomProtocolHandlers: true });
   });
+
+  // Electron's default menu without Window > Close, whose Ctrl+W closed the game. The
+  // rest stays: Quit (Ctrl+Q), copy/paste, reload, DevTools, zoom, full screen.
+  Menu.setApplicationMenu(Menu.buildFromTemplate([
+    { role: 'fileMenu' },
+    { role: 'editMenu' },
+    { role: 'viewMenu' },
+    { label: 'Window', submenu: [{ role: 'minimize' }] },
+  ]));
 
   const win = new BrowserWindow({
     width: 1280,
