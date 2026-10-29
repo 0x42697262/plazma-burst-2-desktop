@@ -121,7 +121,32 @@ function showHistory(rawArgs) {
 // Each term is "text" (uid, A or B), "uid:text", "a:text", "b:text", "type:n" or
 // "by:how"; all terms must match. Text matches anywhere, ignoring case; a number
 // matches number values exactly (5 does not match 15).
-const FIELD = Object.freeze({ any: 'ab', uid: 'uid', a: 'a', b: 'b', type: 'type', by: 'by' });
+const FIELD = Object.freeze({
+  any: 'ab', uid: 'uid', a: 'a', b: 'b', type: 'type', by: 'by', calls: 'calls', maxcalls: 'maxcalls',
+});
+// Terms about the trigger itself rather than its actions.
+const TRIGGER_FIELDS = new Set([FIELD.uid, FIELD.by, FIELD.calls, FIELD.maxcalls]);
+
+// "calls:" and "maxcalls:": a number, optionally after a comparison. Unlimited (-1 in the
+// game) counts as more than any number, so "calls:>5" includes it; "unlimited" alone
+// picks only those.
+const UNLIMITED = -1;
+const UNLIMITED_WORDS = ['unlimited', 'inf', 'infinite', '-1'];
+const COMPARE = Object.freeze({
+  '=': (a, b) => a === b, '!=': (a, b) => a !== b, '>': (a, b) => a > b,
+  '<': (a, b) => a < b, '>=': (a, b) => a >= b, '<=': (a, b) => a <= b,
+});
+const asCount = (n) => (n === UNLIMITED ? Infinity : n);
+const countOf = (t, field) => asCount(t[field === FIELD.calls ? F.T_CALLS : F.T_MAX_CALLS]);
+
+function parseCount(field, text) {
+  const m = text.match(/^(<=|>=|!=|<|>|=)?(.+)$/);
+  const op = m[1] || '=';
+  const word = m[2];
+  const value = UNLIMITED_WORDS.includes(word) ? Infinity : /^\d+$/.test(word) ? Number(word) : null;
+  if (value === null) throw new Error(`${field}: expects a number or "unlimited", with < > <= >= != if you like: ${field}:>3`);
+  return { compare: COMPARE[op], value };
+}
 
 // "by:" words: what runs a trigger. "none" finds triggers nothing in the map starts
 // (a shot at an object, or a trigger run through a variable).
@@ -148,12 +173,14 @@ function parseBy(text) {
 
 function parseTerms(args, usage) {
   return args.map((raw) => {
-    const m = raw.match(/^(uid|a|b|type|by):(.*)$/i);
+    const m = raw.match(/^(uid|a|b|type|by|calls|maxcalls):(.*)$/i);
     const field = m ? m[1].toLowerCase() : FIELD.any;
     const text = (m ? m[2] : raw).toLowerCase();
     if (!text) throw new Error(usage);
     if (field === FIELD.type && !/^\d+$/.test(text)) throw new Error('type: expects a number, e.g. type:99');
-    return { field, text, num: NUMBER_TEXT.test(text) ? Number(text) : null, ...(field === FIELD.by ? parseBy(text) : {}) };
+    const extra = field === FIELD.by ? parseBy(text)
+      : field === FIELD.calls || field === FIELD.maxcalls ? parseCount(field, text) : {};
+    return { field, text, num: NUMBER_TEXT.test(text) ? Number(text) : null, ...extra };
   });
 }
 
@@ -189,15 +216,16 @@ function find(rawArgs) {
   const list = triggersOrNone();
   if (!list) return;
   const { args, page } = takePage(rawArgs);
-  const usage = 'usage: triggers find <text>  |  uid:<text>  by:<how>  a:<text>  b:<text>  type:<n>  (combine terms, e.g. "type:41 a:sound", "by:timer")';
+  const usage = 'usage: triggers find <text>  |  uid:<text>  by:<how>  calls:<n>  maxcalls:<n>  a:<text>  b:<text>  type:<n>  (combine terms, e.g. "type:41 a:sound", "by:timer", "calls:>3")';
   if (!args.length) throw new Error(usage);
   const terms = parseTerms(args, usage);
-  // "uid:" and "by:" terms pick which triggers to look at at all; the others match
+  // "uid:", "by:", "calls:" and "maxcalls:" pick which triggers to look at at all; the others match
   // actions. A bare term may match the uid instead of an action, so "find god_all"
   // lists the #god_all trigger itself as well as the actions pointing at it.
   const uidTerms = terms.filter((term) => term.field === FIELD.uid);
   const byTerms = terms.filter((term) => term.field === FIELD.by);
-  const actionTerms = terms.filter((term) => term.field !== FIELD.uid && term.field !== FIELD.by);
+  const countTerms = terms.filter((term) => term.field === FIELD.calls || term.field === FIELD.maxcalls);
+  const actionTerms = terms.filter((term) => !TRIGGER_FIELDS.has(term.field));
   const sources = byTerms.length ? triggerSources() : null;
   const trigRows = [];
   const actRows = [];
@@ -205,6 +233,7 @@ function find(rawArgs) {
   list.forEach((t, i) => {
     if (!t) return;
     if (!uidTerms.every((term) => uidMatches(t, term))) return;
+    if (!countTerms.every((term) => term.compare(countOf(t, term.field), term.value))) return;
     const srcs = sources && sourcesOf(sources, i, t);
     const byHits = byTerms.map((term) => bySources(srcs, term));
     if (byHits.includes(null)) return;
@@ -216,7 +245,7 @@ function find(rawArgs) {
       trigRows.push([`  #${String(i).padEnd(4)} ${String(t.uid || '-').padEnd(FIND_UID_WIDTH)} trigger   ${t[F.T_ENABLED] ? 'on ' : 'off'}  ${callsText(t).padEnd(12)} ${String(n).padStart(3)} ${actionWord(n)}${how.length ? `  by ${shown}` : ''}`,
         disabledColor(t)]);
     }
-    if (!actionTerms.length) return; // only "uid:" and "by:": the trigger row is the whole answer
+    if (!actionTerms.length) return; // only trigger terms: the trigger row is the whole answer
     for (const action of actionsOf(t)) {
       if (!actionTerms.every((term) => actionMatches(action, term))) continue;
       triggersHit.add(i);
@@ -228,7 +257,7 @@ function find(rawArgs) {
   const rows = trigRows.concat(actRows);
   const q = args.join(' ');
   const bits = [];
-  if (trigRows.length) bits.push(`${plural(trigRows.length, 'trigger')}${byTerms.length ? '' : ' by uid'}`);
+  if (trigRows.length) bits.push(`${plural(trigRows.length, 'trigger')}${byTerms.length || countTerms.length ? '' : ' by uid'}`);
   if (actRows.length) bits.push(`${plural(actRows.length, 'action')} in ${plural(triggersHit.size, 'trigger')}`);
   showPaged({
     title: rows.length ? `${bits.join(', ')} ${rows.length === 1 ? 'matches' : 'match'} "${q}". "triggers <#>" shows one in full.` : `No trigger or action matches "${q}"`,
@@ -323,7 +352,7 @@ export const triggersCommand = {
     {
       name: 'find',
       aliases: ['search'],
-      usage: 'triggers find [uid:|by:|a:|b:|type:]<text> [page n]',
+      usage: 'triggers find [uid:|by:|calls:|maxcalls:|a:|b:|type:]<text> [page n]',
       desc: 'Search trigger uids and every trigger action\'s A/B values (text or number), by action type, or by what runs a trigger',
       help: {
         about: [
@@ -340,6 +369,8 @@ export const triggersCommand = {
           ['by:<how>', `what runs it: ${byWords}`],
           ['by:<how>#<n>', 'one region, timer, character or trigger, by index: by:timer#3'],
           ['by:#<uid>', 'the same by its uid, as the map names it: by:#timer*37'],
+          ['calls:<n>', 'calls left; with < > <= >= !=, e.g. calls:>3, calls:0 (used up)'],
+          ['maxcalls:<n>', 'the most calls the map allows; maxcalls:1 is a one-shot'],
           ['a:<text>', 'A values only'],
           ['b:<text>', 'B values only'],
           ['type:<n>', 'the map editor\'s action number'],
@@ -355,6 +386,9 @@ export const triggersCommand = {
           ['triggers find by:#timer*37', 'what the timer the map calls #timer*37 runs'],
           ['triggers find by:trigger uid:kick', 'which trigger runs #kick, or continues in it'],
           ['triggers find by:none', 'triggers nothing in the map starts'],
+          ['triggers find calls:0', 'used up: they will not run again'],
+          ['triggers find maxcalls:1 calls:1', 'one-shots that have not run yet'],
+          ['triggers find calls:unlimited by:region', 'region triggers that never run out'],
         ],
         notes: [
           'A uid hit prints one row for the trigger, not one per action.',
@@ -364,6 +398,8 @@ export const triggersCommand = {
           'rows show both, e.g. "timer #36 #timer*37".',
           '"by:" is what runs a trigger directly. For a chain (chat runs a trigger that',
           'continues in another), follow it: "by:trigger" names the one that runs it.',
+          '"calls:" and "maxcalls:" count unlimited as more than any number, so',
+          '"calls:>5" includes unlimited triggers; "calls:unlimited" lists only those.',
           '"by:none" also lists triggers run by a shot at an object or through a variable:',
           'those leave nothing in the map to find.',
         ],

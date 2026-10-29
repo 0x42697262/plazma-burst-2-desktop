@@ -363,3 +363,23 @@ test('regions run fires a region as if its condition were met', () => {
   assert.match(errorsOf(c.run('regions run #spawn_spot'))[0], /runs nothing/);
   assert.match(errorsOf(c.run('regions run #nope'))[0], /no region "#nope"/);
 });
+
+test('triggers find calls: and maxcalls: compare calls', () => {
+  const found = (q) => c.run(`triggers find ${q}`).slice(1).map((l) => l.trim().split(/\s+/)[1]);
+  const byUid = (uid) => c.triggers.find((t) => t.uid === uid);
+  const boot = byUid('#boot'), init = byUid('#init');
+  boot[c.N.trigCalls] = 1; init[c.N.trigCalls] = 0; // #boot not run yet, #init used up
+  assert.deepEqual(found('maxcalls:1').sort(), ['#boot', '#init'], 'one-shots');
+  assert.deepEqual(found('calls:0'), ['#init'], 'used up');
+  assert.deepEqual(found('maxcalls:1 calls:1'), ['#boot'], 'one-shots not run yet');
+  assert.deepEqual(found('calls:<1'), ['#init']);
+  assert.deepEqual(found('calls:>=1 maxcalls:<=1'), ['#boot']);
+  const unlimited = c.triggers.filter((t) => t[c.N.trigMaxCalls] === -1).length;
+  assert.equal(found('calls:unlimited').length, unlimited);
+  assert.equal(found('calls:>5').length, unlimited, 'unlimited counts as more than any number');
+  assert.equal(found('calls:!=0').length, c.triggers.length - 1);
+  assert.match(c.run('triggers find calls:0')[0], /^1 trigger matches "calls:0"/, 'not "by uid"');
+  assert.deepEqual(found('calls:0 uid:boot'), [], 'combines with the other terms');
+  assert.match(errorsOf(c.run('triggers find calls:lots'))[0], /calls: expects a number or "unlimited"/);
+  boot[c.N.trigCalls] = 1; init[c.N.trigCalls] = 1;
+});
