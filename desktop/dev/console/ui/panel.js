@@ -34,6 +34,16 @@ let isOpen = false;
 let historyPos = 0; // where Up/Down is in the typed history
 let toggleKeyHeld = false; // swallow the keyup of a Shift+` we handled, even if Shift goes up first
 const heldBoundKeys = new Set(); // e.code of bound keys that are down, to swallow their keyup
+let keyCatcher = null; // takes the next key press instead of everything else ("keyname")
+
+const MODIFIER_CODE = /^(shift|control|alt|meta|os)(left|right)?$/i;
+
+// The next key pressed (not a modifier on its own) goes to fn(e) and nowhere else, or
+// fn(null) for Esc. Returns a function that gives up waiting.
+export function catchNextKey(fn) {
+  keyCatcher = fn;
+  return () => { if (keyCatcher === fn) keyCatcher = null; };
+}
 
 export function updateStatus() {
   if (!statusEl) return;
@@ -158,6 +168,16 @@ const isTextInput = (t) => !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTA
 const typesNothing = (k) => /^f\d+$/.test(baseKey(k));
 
 export function onKeyDownCapture(e) {
+  if (keyCatcher) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    if (MODIFIER_CODE.test(e.code || '') || e.repeat) return; // wait for the whole combination
+    heldBoundKeys.add(e.code);
+    const fn = keyCatcher;
+    keyCatcher = null;
+    fn(e.key === 'Escape' && !e.ctrlKey && !e.altKey && !e.shiftKey ? null : e);
+    return;
+  }
   const inRoot = root && root.contains(e.target);
   const shotKey = settings.effective(KEY.SCREENSHOT_KEY);
   if (shotKey && !e.metaKey && eventKeyName(e) === shotKey

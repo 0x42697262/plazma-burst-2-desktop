@@ -1,11 +1,19 @@
 // Key names for binds. Keys are named by their physical key (KeyboardEvent.code), so
 // shift+1 is "shift+1", not "shift+!". Modifiers are always written ctrl+alt+shift+.
+// A shifted character can be typed too ("!", ">"): it is read as Shift and the key it
+// is on in the US layout. "keyname" shows the name of any key you press.
 
 const SYMBOL_KEYS = Object.freeze({
   '`': 'backquote', '-': 'minus', '=': 'equal', '[': 'bracketleft', ']': 'bracketright',
   '\\': 'backslash', ';': 'semicolon', "'": 'quote', ',': 'comma', '.': 'period', '/': 'slash',
   ' ': 'space', esc: 'escape', return: 'enter', del: 'delete', ins: 'insert',
   up: 'arrowup', down: 'arrowdown', left: 'arrowleft', right: 'arrowright', pgup: 'pageup', pgdn: 'pagedown',
+});
+// Characters typed with Shift, and the key under them in the US layout.
+const SHIFTED_KEYS = Object.freeze({
+  '~': 'backquote', '!': '1', '@': '2', '#': '3', '$': '4', '%': '5', '^': '6', '&': '7', '*': '8',
+  '(': '9', ')': '0', '_': 'minus', '+': 'equal', '{': 'bracketleft', '}': 'bracketright',
+  '|': 'backslash', ':': 'semicolon', '"': 'quote', '<': 'comma', '>': 'period', '?': 'slash',
 });
 const MODIFIERS = Object.freeze(['ctrl', 'alt', 'shift']);
 const MOD_ALIASES = Object.freeze({ control: 'ctrl', ctl: 'ctrl', option: 'alt' });
@@ -29,8 +37,9 @@ export function parseKeyName(raw) {
     if (!MODIFIERS.includes(mod)) throw new Error(`unknown modifier "${m}" (use ctrl+, alt+, shift+)`);
     mods.add(mod);
   }
+  if (SHIFTED_KEYS[base]) { mods.add('shift'); base = SHIFTED_KEYS[base]; }
   base = normalize(SYMBOL_KEYS[base] || base);
-  if (!base || !/^[a-z0-9]+$/.test(base)) throw new Error(`"${raw}" is not a key name. Examples: f, 5, f2, space, numpad1, shift+t`);
+  if (!base || !/^[a-z0-9]+$/.test(base)) throw new Error(`"${raw}" is not a key name. Examples: f, 5, f2, space, numpad1, shift+t. "keyname" shows a key's name`);
   if (MODIFIERS.includes(base) || /^(control|shift|alt|meta)(left|right)?$/.test(base)) throw new Error('a modifier alone cannot be bound; use e.g. shift+f');
   const name = [...MODIFIERS.filter((m) => mods.has(m)), base].join('+');
   if (name === TOGGLE_KEY) throw new Error(`${showKey(TOGGLE_KEY)} opens the console`);

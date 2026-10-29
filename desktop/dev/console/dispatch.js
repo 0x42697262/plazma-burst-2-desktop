@@ -4,7 +4,7 @@ import { print } from './ui/log.js';
 import { COLOR } from './core/colors.js';
 import { plural, isHelpArg } from './core/text.js';
 import { game } from './game/bindings.js';
-import { resolveKey, keyClientOnly, unphrase } from './state/schema.js';
+import { SCHEMA, resolveKey, keyClientOnly, unphrase } from './state/schema.js';
 import { findRunnable, findSubcommand, reachOf } from './commands/registry.js';
 import { printTopicHelp } from './commands/help.js';
 import { runKey } from './commands/settings.js';
@@ -16,7 +16,26 @@ const ANONYMOUS_FRAME = 'at <anonymous>:';
 // between them. That is the point: a chat message runs the map's "player says" trigger,
 // which overwrites variables like SkinChatVar between a "vars set" and the "vars sync"
 // meant to send it. A ";" inside double quotes belongs to the value, and a command that
-// takes the rest of the line ("js": JavaScript uses ";" itself) is never split.
+// takes the rest of the line ("js": JavaScript uses ";" itself) is never split. Where a
+// key name goes, ";" is the key: "bind ; heal".
+// The position of the key-name word in a command: "bind <key>", "unbind <key>", and a
+// key setting such as "screenshot_key <key>" (or "set screenshot_key <key>").
+function keyArgOf(words) {
+  const cmd = findRunnable(words[0]);
+  if (cmd) return typeof cmd.keyArg === 'function' ? cmd.keyArg(words) : cmd.keyArg;
+  const key = resolveKey(words[0]);
+  return key && SCHEMA[key].type === 'key' ? 1 : undefined;
+}
+
+// Just before a ";", with only modifiers ("shift+") typed of the word: is that word a key
+// name? Then the ";" is the key, not the end of the command.
+const MODIFIERS_ONLY = /^((ctrl|control|ctl|alt|option|shift)\+)*$/i;
+function atKeyName(cur) {
+  const words = cur.trimStart().split(/\s+/);
+  const typing = words.pop();
+  return words.length > 0 && MODIFIERS_ONLY.test(typing) && keyArgOf(words) === words.length;
+}
+
 export function splitCommands(text) {
   const cmd = findRunnable(text.split(/\s+/)[0]);
   if (cmd && cmd.rawLine) return [text];
@@ -25,7 +44,7 @@ export function splitCommands(text) {
   let quoted = false;
   for (const c of text) {
     if (c === '"') quoted = !quoted;
-    if (c === ';' && !quoted) { parts.push(cur); cur = ''; continue; }
+    if (c === ';' && !quoted && !atKeyName(cur)) { parts.push(cur); cur = ''; continue; }
     cur += c;
   }
   parts.push(cur);

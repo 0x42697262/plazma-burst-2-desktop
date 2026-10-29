@@ -130,6 +130,8 @@ export const settingsCommands = [
   {
     name: 'set',
     usage: 'set <key> <value>',
+    // "set screenshot_key ;": the value is a key name.
+    keyArg: (words) => { const key = resolveKey(words[1]); return key && SCHEMA[key].type === 'key' ? 2 : undefined; },
     desc: 'Set an override (or just "<key> <value>")',
     // Client-only when the key is.
     clientOnly: (args) => { const key = resolveKey(args[0]); const reason = keyClientOnly(key); return reason && [key, reason]; },

@@ -629,3 +629,53 @@ test('screenshot hides the console, asks the wrapper, and has a hotkey (F12) you
     c.G.fetch = realFetch;
   }
 });
+
+test('a ";" where a key name goes is the ";" key; everywhere else it ends a command', () => {
+  c.run('unbind --all');
+  assert.deepEqual(c.run('bind ; "heal; pos"'), ['semicolon = heal; pos']);
+  assert.deepEqual(c.run('bind shift+; heal'), ['shift+semicolon = heal']);
+  const pressed = c.press('Semicolon');
+  assert.ok(pressed.includes('[1/2] heal') && pressed.includes('[2/2] pos'), pressed.join(' | '));
+  assert.deepEqual(c.run('bind ;'), ['semicolon = heal; pos']);
+  // After the key, ";" ends the command as always.
+  const split = c.run('bind ;; pos');
+  assert.equal(split[0], '[1/2] bind ;');
+  assert.equal(split[2], '[2/2] pos');
+  assert.ok(c.run('bind f heal; pos').includes('[2/2] pos'), 'unquoted, the bind ends at ";"');
+  assert.deepEqual(c.run('unbind ;'), ['Unbound semicolon (was: heal; pos)']);
+  assert.deepEqual(c.run('screenshot_key ;'), ['screenshot_key = semicolon']);
+  assert.deepEqual(c.run('set screenshot_key shift+;'), ['screenshot_key = shift+semicolon']);
+  assert.equal(c.run('set speed 2; speed')[0], '[1/2] set speed 2', 'not a key setting: splits');
+  c.run('unset screenshot_key; unset speed; unbind --all');
+});
+
+test('shifted characters are Shift and their US key; keyname names the key you press', () => {
+  c.run('unbind --all');
+  for (const [typed, name] of [['>', 'shift+period'], ['?', 'shift+slash'], ['<', 'shift+comma'], [':', 'shift+semicolon'],
+    ['!', 'shift+1'], ['{', 'shift+bracketleft'], ['|', 'shift+backslash'], ['_', 'shift+minus'], ['+', 'shift+equal'],
+    ['ctrl+>', 'ctrl+shift+period'], ['shift+>', 'shift+period'], ['ctrl++', 'ctrl+shift+equal']]) {
+    assert.equal(c.run(`bind ${typed} heal`)[0], `${name} = heal`, typed);
+  }
+  assert.match(errorsOf(c.run('bind ~ heal'))[0], /opens the console/, '~ is Shift+`');
+  assert.match(errorsOf(c.run('bind ¤ heal'))[0], /not a key name.*"keyname" shows a key's name/);
+  c.run('unbind --all');
+
+  // keyname: the next key goes to it, not to binds, the screenshot key or the game.
+  c.run('bind shift+period heal');
+  assert.match(c.run('keyname')[0], /^Press a key/);
+  assert.deepEqual(c.press('ShiftLeft', { key: 'Shift', shiftKey: true }), [], 'waits for the whole combination');
+  const out = c.press('Period', { key: '>', shiftKey: true });
+  assert.deepEqual(out, ['shift+period', '  types ">", code Period', '  bound to: heal', '  bind shift+period <command>'], out.join(' | '));
+  assert.ok(c.press('Period', { key: '>', shiftKey: true }).some((l) => /HP = /.test(l)), 'then the bind works again');
+
+  c.run('keyname');
+  const f12 = c.press('F12', { key: 'F12' });
+  assert.deepEqual(f12.slice(0, 3), ['f12', '  key "F12", code F12', '  the screenshot key ("screenshot_key")']);
+  c.run('keyname');
+  assert.ok(c.press('KeyW', { key: 'w' }).includes('  game key: jump'));
+  c.run('keyname');
+  assert.ok(c.press('Backquote', { key: '~', shiftKey: true }).includes('  cannot be bound: shift+` opens the console'));
+  c.run('keyname');
+  assert.deepEqual(c.press('Escape', { key: 'Escape' }), ['keyname: cancelled']);
+  c.run('unbind --all');
+});

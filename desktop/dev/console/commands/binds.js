@@ -70,6 +70,7 @@ export const bindCommands = [
     name: 'bind',
     aliases: ['binds'],
     usage: 'bind <key> <command>',
+    keyArg: 1,
     desc: 'Run a command with a key in levels, e.g. "bind f tp", "bind shift+h heal". "bind" lists binds',
     help: {
       about: [
@@ -84,20 +85,25 @@ export const bindCommands = [
         ['bind f tp', 'teleport to the crosshair with F'],
         ['bind shift+h heal', 'refill HP'],
         ['bind 5 give gun_railgun', 'a gun on a number key'],
+        ['bind f "heal; pos"', 'several commands: quote them, or the ";" ends the bind'],
+        ['bind ; heal', 'the ";" key itself (also "semicolon", "shift+;")'],
+        ['bind > heal', 'Shift and the "." key: shift+period'],
         ['binds', 'list them all'],
       ],
       notes: [
-        'Keys are named by their physical key, so shift+1 is "shift+1", not "shift+!".',
+        'Keys are named by their physical key, so shift+1 is "shift+1"; typing "!" means the',
+        'same (shifted characters are read with the US layout). "keyname" shows any key\'s name.',
         'Binding a key the game already uses wins in levels; the console says so.',
         'Binds live in dev-overrides.json and survive "reset".',
       ],
-      see: ['unbind'],
+      see: ['unbind', 'keyname'],
     },
     run: bindKey,
   },
   {
     name: 'unbind',
     usage: 'unbind <key> | --all',
+    keyArg: 1,
     desc: 'Remove a key bind',
     help: {
       args: [
