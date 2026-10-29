@@ -463,7 +463,7 @@ test('list shows binds, traces, the logic view and the vars you changed after th
 test('trace --players skips bots, and a word that is not an option is a name', () => {
   const traced = () => c.run('trace').slice(1).map((l) => l.trim().split(/\s+/).slice(0, 2).join(' '));
   c.run('trace --off');
-  assert.match(c.run('trace --players')[0], /^Tracing every other player, no bots: 1 character now/);
+  assert.match(c.run('trace --players')[0], /^Tracing every other player: 1 character now/);
   assert.deepEqual(traced(), ['#1 bob'], 'bluebot is a bot');
   c.chars[2][c.N.charHuman] = true; // a player in that slot now
   assert.deepEqual(traced(), ['#1 bob', '#2 bluebot'], 'who joins later is traced too');
@@ -472,7 +472,7 @@ test('trace --players skips bots, and a word that is not an option is a name', (
   assert.deepEqual(traced(), ['#1 bob', '#2 bluebot'], 'a bot on top of the players');
   c.run('trace --off 1');
   assert.deepEqual(traced(), ['#2 bluebot'], 'one left out, the group stays');
-  assert.match(c.run('trace')[0], /\(every other player, no bots, also who joins later\)/);
+  assert.match(c.run('trace')[0], /\(every other player, also who joins later\)/);
   c.run('trace --off');
 
   // Old keywords are names now; a miss says what was meant.
@@ -483,14 +483,51 @@ test('trace --players skips bots, and a word that is not an option is a name', (
   assert.match(c.run('trace all')[0], /^Tracing #1 all/, 'a player named "all"');
   c.run('trace --off');
   bob.nickname = '--odd--';
-  assert.match(errorsOf(c.run('trace --odd--'))[0], /unknown option "--odd--"\. Options: --all, --players, --off\. "-- --odd--" if it is a name/);
+  assert.match(errorsOf(c.run('trace --odd--'))[0], /unknown option "--odd--"\. Options: --all, --players, --npc, --team, --enemies, --off\. "-- --odd--" if it is a name/);
   assert.match(c.run('trace -- --odd--')[0], /^Tracing #1 --odd--/);
   c.run('trace --off');
   bob.nickname = '1 2';
   assert.match(c.run('tp -- 1 2').at(-1), /^Teleported to #1 1 2 at/, 'after "--" two numbers are a name');
   bob.nickname = 'bob';
-  assert.match(errorsOf(c.run('trace --all --players'))[0], /--all and --players do not go together/);
   for (const help of ['trace --help', 'tp -h', 'revive --help']) {
     assert.deepEqual(c.run(help), c.run(`help ${help.split(' ')[0]}`), help);
   }
+});
+
+test('trace filters: a kind and a side combine, and what cannot go together says so', () => {
+  // You and bob (#1, a player) are team 0; bluebot (#2, an NPC) is team 13.
+  const traced = () => c.run('trace').slice(1).map((l) => l.trim().split(/\s+/).slice(0, 2).join(' '));
+  const bot = c.chars[2];
+  c.run('trace --off');
+  assert.match(c.run('trace --enemies')[0], /^Tracing everyone on the other teams: 1 character now/);
+  assert.deepEqual(traced(), ['#2 bluebot']);
+  c.run('trace --team');
+  assert.deepEqual(traced(), ['#1 bob'], 'a new group replaces the old one');
+  assert.deepEqual(c.run('trace --all --team'), c.run('trace --team'), '--all with a filter changes nothing');
+  c.run('trace --npc');
+  assert.deepEqual(traced(), ['#2 bluebot']);
+  assert.match(c.run('trace --players --enemies')[0], /^Tracing every other player on the other teams: 0 characters now/);
+  assert.match(c.run('trace')[0], /^Tracing every other player on the other teams, but nobody is here yet/);
+  assert.ok(c.run('list trace').includes('[trace: 0 (--players --enemies)]'));
+  c.run('trace --npc --team');
+  assert.deepEqual(traced(), [], 'bluebot is not on your team');
+  bot.team = 0;
+  assert.deepEqual(traced(), ['#2 bluebot'], 'teams are checked as they are now');
+  bot.team = 13;
+  c.run('trace --npc --team 1');
+  assert.deepEqual(traced(), ['#1 bob'], 'a name on top of a group that has nobody');
+
+  for (const [line, err] of [
+    ['trace --players --npc', /--players and --npc do not go together/],
+    ['trace --team --enemies', /--team and --enemies do not go together/],
+    ['trace --off --enemies', /--off and --enemies do not go together/],
+    ['trace --off --all', /--off and --all do not go together/],
+    ['trace --enemy', /unknown option "--enemy"/],
+  ]) {
+    const before = traced();
+    assert.match(errorsOf(c.run(line))[0] || '', err, line);
+    assert.deepEqual(traced(), before, `${line} changes nothing`);
+  }
+  assert.match(errorsOf(c.run('trace enemies'))[0], /For the option, type "trace --enemies"/);
+  c.run('trace --off');
 });

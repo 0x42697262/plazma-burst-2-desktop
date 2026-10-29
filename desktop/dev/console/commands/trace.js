@@ -5,16 +5,34 @@ import { plural } from '../core/text.js';
 import { takeOptions, oneOf } from '../core/args.js';
 import { game } from '../game/bindings.js';
 import { requireLevel, resolveChar, charLabel } from '../game/level.js';
-import { tracedNow, tracingGroup, distanceTo, traceAdd, traceGroup, traceRemove, traceOff, TRACE_GROUP } from '../ui/trace.js';
+import { tracedNow, tracingGroup, distanceTo, traceAdd, traceGroup, traceRemove, traceOff, TRACE_KIND, TRACE_SIDE } from '../ui/trace.js';
 
-const OPTION = Object.freeze({ ALL: 'all', PLAYERS: 'players', OFF: 'off' });
-const GROUP_OF = Object.freeze({ [OPTION.ALL]: TRACE_GROUP.ALL, [OPTION.PLAYERS]: TRACE_GROUP.PLAYERS });
-const GROUP_TEXT = Object.freeze({
-  [TRACE_GROUP.ALL]: 'everyone else',
-  [TRACE_GROUP.PLAYERS]: 'every other player, no bots',
+const OPTION = Object.freeze({
+  ALL: 'all', PLAYERS: 'players', NPC: 'npc', TEAM: 'team', ENEMIES: 'enemies', OFF: 'off',
 });
+// --all is everyone; the others narrow it down, one of each pair.
+const KINDS = [OPTION.PLAYERS, OPTION.NPC];
+const SIDES = [OPTION.TEAM, OPTION.ENEMIES];
+const GROUP_OPTIONS = [OPTION.ALL, ...KINDS, ...SIDES];
+const KIND_OF = Object.freeze({ [OPTION.PLAYERS]: TRACE_KIND.PLAYERS, [OPTION.NPC]: TRACE_KIND.NPC });
+const SIDE_OF = Object.freeze({ [OPTION.TEAM]: TRACE_SIDE.TEAM, [OPTION.ENEMIES]: TRACE_SIDE.ENEMIES });
+const KIND_TEXT = Object.freeze({ [TRACE_KIND.PLAYERS]: 'every other player', [TRACE_KIND.NPC]: 'every NPC' });
+const SIDE_TEXT = Object.freeze({ [TRACE_SIDE.TEAM]: 'on your team', [TRACE_SIDE.ENEMIES]: 'on the other teams' });
+
+// The options that make a group: "--players --enemies", or "--all".
+export const groupOptions = ({ kind, side }) => [kind, side].filter(Boolean).map((o) => `--${o}`).join(' ') || `--${OPTION.ALL}`;
+
+// "every other player on the other teams", "everyone else".
+function groupText({ kind, side }) {
+  if (!kind && !side) return 'everyone else';
+  return `${kind ? KIND_TEXT[kind] : 'everyone'}${side ? ` ${SIDE_TEXT[side]}` : ''}`;
+}
+
 // Words that used to be keywords: now names, but a miss says what was meant.
-const OLD_WORDS = Object.freeze({ all: '--all', off: '--off', stop: '--off', clear: '--off', players: '--players' });
+const OLD_WORDS = Object.freeze({
+  all: '--all', off: '--off', stop: '--off', clear: '--off',
+  players: '--players', npc: '--npc', bots: '--npc', team: '--team', enemies: '--enemies',
+});
 
 // "1, bob" or "1 bob": characters by # or part of a nickname. Commas let a name hold
 // spaces. Never you: a trace starts from you.
@@ -37,19 +55,22 @@ function targets(args) {
 function status() {
   const now = tracedNow();
   if (!now.length) {
-    print(tracingGroup() ? `Tracing ${GROUP_TEXT[tracingGroup()]}, but nobody is here yet`
-      : 'Not tracing anyone. "trace --all", "trace --players" or "trace <# | name>".', COLOR.notice);
+    print(tracingGroup() ? `Tracing ${groupText(tracingGroup())}, but nobody is here yet`
+      : 'Not tracing anyone. "trace --all", "trace --enemies" or "trace <# | name>" ("help trace" for more).', COLOR.notice);
     return;
   }
-  print(`Tracing ${plural(now.length, 'character')}${tracingGroup() ? ` (${GROUP_TEXT[tracingGroup()]}, also who joins later)` : ''}:`, COLOR.title);
+  print(`Tracing ${plural(now.length, 'character')}${tracingGroup() ? ` (${groupText(tracingGroup())}, also who joins later)` : ''}:`, COLOR.title);
   for (const i of now) print(`  ${charLabel(i).padEnd(20)} ${distanceTo(i)}px`);
 }
 
 function trace(rawArgs) {
   const { options, rest } = takeOptions(rawArgs, Object.values(OPTION));
-  const group = oneOf(options, [OPTION.ALL, OPTION.PLAYERS]);
+  const kind = oneOf(options, KINDS);
+  const side = oneOf(options, SIDES);
+  const grouped = GROUP_OPTIONS.some((o) => options.has(o));
   if (options.has(OPTION.OFF)) {
-    if (group) throw new Error(`--off and --${group} do not go together`);
+    const also = GROUP_OPTIONS.find((o) => options.has(o));
+    if (also) throw new Error(`--off and --${also} do not go together: "trace --off" stops all, "trace --off <# | name>" stops one`);
     if (!rest.length) { traceOff(); print('Traces off', COLOR.ok); return; }
     requireLevel();
     for (const i of targets(rest)) {
@@ -58,20 +79,20 @@ function trace(rawArgs) {
     }
     return;
   }
-  if (!group && !rest.length) { requireLevel(); status(); return; }
+  if (!grouped && !rest.length) { requireLevel(); status(); return; }
   requireLevel();
   const picked = rest.length ? targets(rest) : [];
-  if (group) traceGroup(GROUP_OF[group]);
+  if (grouped) traceGroup({ kind: KIND_OF[kind] ?? null, side: SIDE_OF[side] ?? null });
   if (picked.length) traceAdd(picked);
   const named = picked.map((i) => `${charLabel(i)} (${distanceTo(i)}px)`).join(', ');
-  if (!group) { print(`Tracing ${named}`, COLOR.ok); return; }
-  print(`Tracing ${GROUP_TEXT[tracingGroup()]}${named ? `, and ${named}` : ''}: ${plural(tracedNow().length, 'character')} now, and who joins later`, COLOR.ok);
+  if (!grouped) { print(`Tracing ${named}`, COLOR.ok); return; }
+  print(`Tracing ${groupText(tracingGroup())}${named ? `, and ${named}` : ''}: ${plural(tracedNow().length, 'character')} now, and who joins later`, COLOR.ok);
 }
 
 export const traceCommand = {
   name: 'trace',
   aliases: ['tracer', 'track'],
-  usage: 'trace [--all | --players] [<# | name>...]  |  trace --off [<# | name>...]',
+  usage: 'trace [--all] [--players | --npc] [--team | --enemies] [<# | name>...]  |  trace --off [<# | name>...]',
   desc: 'Draw a white line from you to other characters, with their distance',
   help: {
     about: [
@@ -86,21 +107,33 @@ export const traceCommand = {
     args: [
       ['(nothing)', 'who is traced, and how far away'],
       ['<# | name>...', 'trace these too: # from "chars", or part of a nickname'],
-      ['--all', 'everyone but you, bots too, also characters who join later'],
-      ['--players', 'only real players, no bots, also players who join later'],
+      ['--all', 'everyone but you, NPCs too, also characters who join later'],
+      ['--players', 'only real players (no NPCs), also who joins later'],
+      ['--npc', 'only NPCs (bots)'],
+      ['--team', 'only characters on your team'],
+      ['--enemies', 'only characters on the other teams'],
       ['--off', 'stop tracing'],
-      ['--off <# | name>...', 'stop tracing these (from --all or --players, the others stay)'],
+      ['--off <# | name>...', 'stop tracing these (from a group, the others stay)'],
     ],
     examples: [
       ['trace 2', 'character #2'],
       ['trace bob, 4', 'bob and #4 (commas let a name hold spaces)'],
-      ['trace --players', 'every other player, no bots'],
+      ['trace --players', 'every other player, no NPCs'],
+      ['trace --enemies', 'everyone on the other teams'],
+      ['trace --players --enemies', 'enemy players, no NPCs'],
+      ['trace --npc --team', 'the NPCs on your team'],
       ['trace --players bluebot', 'the players, and that one bot'],
       ['trace --all', 'everyone else'],
       ['trace --off 3', 'everyone traced but #3'],
       ['trace --off', 'no more lines'],
     ],
-    notes: ['Only drawn in your game: nothing is sent, and nobody else sees it.'],
+    notes: [
+      'A kind (--players or --npc) and a side (--team or --enemies) go together; --all',
+      'with them changes nothing. A new group replaces the old one; picked names stay.',
+      'Teams are checked every frame, so after a team switch the lines follow.',
+      'Your team is the same team number, as in "chars" (ally / enemy).',
+      'Only drawn in your game: nothing is sent, and nobody else sees it.',
+    ],
     see: ['chars', 'tp', 'logic show'],
   },
   run: trace,

@@ -14,24 +14,34 @@ const LINE_WIDTH = 0.7; // game units
 const EDGE = 4; // labels of off-screen characters stay this far inside the screen
 const BOUNDS = Object.freeze({ w: GAME_WIDTH, h: GAME_HEIGHT });
 
-// A group traces characters who join later too: everyone else, or only real players
-// (not bots). Picked characters are traced on top of it, dropped ones are left out.
-export const TRACE_GROUP = Object.freeze({ ALL: 'all', PLAYERS: 'players' });
-const IN_GROUP = Object.freeze({
-  [TRACE_GROUP.ALL]: () => true,
-  [TRACE_GROUP.PLAYERS]: (c) => !!c[F.HUMAN],
+// A group traces characters who join later too: everyone else, or only some of them by
+// kind (real players or NPCs) and by side (your team or the others), checked every
+// frame. Picked characters are traced on top of it, dropped ones are left out.
+export const TRACE_KIND = Object.freeze({ PLAYERS: 'players', NPC: 'npc' });
+export const TRACE_SIDE = Object.freeze({ TEAM: 'team', ENEMIES: 'enemies' });
+const KIND_OK = Object.freeze({
+  [TRACE_KIND.PLAYERS]: (c) => !!c[F.HUMAN],
+  [TRACE_KIND.NPC]: (c) => !c[F.HUMAN],
 });
-let group = null;
+// The same team as "chars" and the game's damage and team chat: an equal team number.
+const SIDE_OK = Object.freeze({
+  [TRACE_SIDE.TEAM]: (c, me) => c.team === me.team,
+  [TRACE_SIDE.ENEMIES]: (c, me) => c.team !== me.team,
+});
+let group = null; // { kind, side }, each null for any
 const picked = new Set(); // character indexes
 const dropped = new Set(); // character indexes the group would trace
+
+const inGroup = (c, me) => !!group && (!group.kind || KIND_OK[group.kind](c)) && (!group.side || SIDE_OK[group.side](c, me));
 
 // Who is traced right now: characters that are still in the match, never you.
 export function tracedNow() {
   const out = [];
+  const me = player();
   for (let i = 0; i < game.charCount(); i++) {
     const c = charAt(i);
     if (i === game.me() || !c) continue;
-    if (picked.has(i) || (group && IN_GROUP[group](c) && !dropped.has(i))) out.push(i);
+    if (picked.has(i) || (inGroup(c, me) && !dropped.has(i))) out.push(i);
   }
   return out;
 }
@@ -89,9 +99,9 @@ export function traceAdd(indexes) {
   refresh();
 }
 
-// Characters picked before stay traced too.
-export function traceGroup(g) {
-  group = g;
+// { kind, side }, each null for any. Characters picked before stay traced too.
+export function traceGroup({ kind = null, side = null } = {}) {
+  group = Object.freeze({ kind, side });
   dropped.clear();
   refresh();
 }

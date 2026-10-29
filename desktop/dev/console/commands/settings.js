@@ -9,6 +9,7 @@ import { showKey } from '../state/keys.js';
 import { isActive, charLabel } from '../game/level.js';
 import { tracedNow, tracingGroup, traceShown, distanceTo } from '../ui/trace.js';
 import { logicShown, logicDescription } from '../logic/view.js';
+import { groupOptions } from './trace.js';
 import { editedVars, showVar } from '../triggers/vars.js';
 import { levelWasActive } from '../overrides/frame.js';
 import { CLIENT_TAG } from './help.js';
@@ -61,7 +62,7 @@ const EXTRAS = Object.freeze({
   trace: () => {
     if (!traceShown()) return null;
     const now = isActive() ? tracedNow() : [];
-    return [`trace: ${now.length}${tracingGroup() ? ` (--${tracingGroup()})` : ''}`, now.map((i) => `  ${charLabel(i).padEnd(20)} ${distanceTo(i)}px`)];
+    return [`trace: ${now.length}${tracingGroup() ? ` (${groupOptions(tracingGroup())})` : ''}`, now.map((i) => `  ${charLabel(i).padEnd(20)} ${distanceTo(i)}px`)];
   },
   logic: () => logicShown() && ['logic: shown', [`  ${logicDescription() || 'on'}`]],
   vars: () => {
