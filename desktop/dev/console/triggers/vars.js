@@ -37,6 +37,25 @@ export function mapVars() {
   return v;
 }
 
+// The variables you changed with the console, per map load: name -> the value before
+// your first change (undefined when it was not set).
+const edits = new WeakMap();
+
+export function noteVarEdit(vars, name, before) {
+  if (!edits.has(vars)) edits.set(vars, new Map());
+  const m = edits.get(vars);
+  if (!m.has(name)) { if (before !== vars[name]) m.set(name, before); } else if (m.get(name) === vars[name]) m.delete(name); // back where it started
+}
+
+// [{ name, was, now }] for the map loaded now, sorted by name; empty without one.
+export function editedVars() {
+  const vars = game.mapVars();
+  const m = vars && edits.get(vars);
+  if (!m) return [];
+  return [...m].map(([name, was]) => ({ name, was, now: vars[name] }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
 export function requireVars() {
   requireLevel();
   return mapVars();

@@ -7,7 +7,7 @@ import { game } from '../game/bindings.js';
 import { showTarget } from '../triggers/model.js';
 import {
   requireVars, showVar, parseVarValue, SYNC_MODES, RECOMMENDED_MODE, VAR_MAX_LEN, fights, modeName,
-  syncMarkOn, mapHasSyncMark, syncActionsFor, seedersFor, modeVerdict, NO, YES,
+  syncMarkOn, mapHasSyncMark, syncActionsFor, seedersFor, modeVerdict, NO, YES, noteVarEdit,
 } from '../triggers/vars.js';
 
 const NAME_WIDTH = 28;
@@ -52,12 +52,14 @@ function writeVar(args, { verb }) {
       if (args.length !== 1) throw new Error(usage);
       if (!had) { print(`${name} is not set`, COLOR.notice); return; }
       delete vars[name];
+      noteVarEdit(vars, name, before);
       print(`Removed ${name} (was ${showVar(before)})`, COLOR.ok);
       return;
     default: {
       if (args.length < 2) throw new Error(usage);
       const value = parseVarValue(args.slice(1).join(' '));
       vars[name] = value;
+      noteVarEdit(vars, name, before);
       print(`${name} = ${showVar(value)}${had ? `  (was ${showVar(before)})` : '  (new)'}`, COLOR.ok);
       if (!had) print('  No trigger had set it yet, so nothing may read it. "vars" lists the ones in use.', COLOR.hint);
     }

@@ -127,8 +127,8 @@ function show(rawArgs) {
   const keep = (l) => kindOk(l) && ends(l.from) && ends(l.to);
   const near = node ? around(g, node, depth, keep) : null;
   const filter = (l) => keep(l) && (!near || near.has(l));
-  showLogic(filter, { screen });
   const where = node ? `around ${node.uid} (depth ${depth})` : 'in the whole map';
+  showLogic(filter, { screen, describe: `${screen ? 'on screen ' : ''}${where}: ${describe}` });
   if (screen) {
     const now = g.links.filter((l) => filter(l) && isVisible(l.from) && isVisible(l.to)).length;
     print(`Showing the links with both ends on screen ${where}: ${describe}. ${plural(now, 'link')} right now; it follows the camera. "logic hide" stops.`, COLOR.ok);

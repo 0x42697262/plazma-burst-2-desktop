@@ -434,3 +434,28 @@ test('trace draws a white line from you to each traced character', async () => {
   c.run('trace off');
   assert.equal(c.log.frames.length, 0, 'the overlay goes with its last layer');
 });
+
+test('list shows binds, traces, the logic view and the vars you changed after the keys', () => {
+  // Earlier tests changed these; undoing a change takes it off the list.
+  c.run('unbind all; trace off; logic hide; vars del a; vars del q; vars del x; vars set var_mods "CTHC Lenaa"');
+  const quiet = c.run('list');
+  for (const extra of ['binds', 'trace', 'logic', 'vars']) {
+    assert.ok(!quiet.some((l) => l.startsWith(`[${extra}`)), `${extra} only shows when something is set`);
+  }
+  const before = c.run('vars get door_1').find((l) => l.startsWith('door_1 = ')).slice('door_1 = '.length);
+  c.run('bind f tp; trace 1; logic show type:trigger; vars set door_1 7; vars set fresh "hi"; vars set fresh "yo"');
+  const out = c.run('list');
+  const at = (title) => out.findIndex((l) => l.startsWith(`[${title}`));
+  assert.ok(at('player') < at('binds'), 'after the keys');
+  assert.match(out[at('binds') + 1], /^ {2}f\s+tp$/);
+  assert.match(out[at('trace') + 1], /#1 bob\s+\d+px/);
+  assert.match(out[at('logic') + 1], /in the whole map/);
+  assert.equal(out[at('vars')], '[vars you changed: 2]');
+  assert.ok(out.includes(`  ${'door_1'.padEnd(14)} 7  (was ${before})`), out.join('\n'));
+  assert.ok(out.some((l) => /fresh\s+"yo"\s+\(was \(not set\)\)/.test(l)), 'the value before the first change');
+  assert.deepEqual(c.run('list binds'), ['[binds: 1]', `  ${'f'.padEnd(14)} tp`]);
+  // Back to where it started: no longer a change.
+  c.run(`vars set door_1 ${before}; vars del fresh`);
+  assert.deepEqual(c.run('list vars'), ['[vars] nothing']);
+  c.run('unbind all; trace off; logic hide');
+});

@@ -22,6 +22,7 @@ const BOUNDS = Object.freeze({ w: GAME_WIDTH, h: GAME_HEIGHT });
 
 let filter = null; // which links to draw: (link) => boolean
 let screenOnly = false; // only links with both ends inside the camera view
+let shownAs = ''; // what is shown, in words, for "list"
 
 // Inside the camera view now: a point on screen, or a rectangle (region, door) that
 // overlaps it.
@@ -106,9 +107,11 @@ export function drawFrame() {
 }
 
 // screen: draw only links with both ends inside the camera view, as it moves.
-export function showLogic(linkFilter, { screen = false } = {}) {
+// describe: what is shown, in words.
+export function showLogic(linkFilter, { screen = false, describe = '' } = {}) {
   filter = linkFilter;
   screenOnly = screen;
+  shownAs = describe;
   setLayer(LAYER, drawLogic);
 }
 
@@ -116,6 +119,8 @@ export function hideLogic() {
   setLayer(LAYER, null);
   filter = null;
   screenOnly = false;
+  shownAs = '';
 }
 
 export const logicShown = () => hasLayer(LAYER);
+export const logicDescription = () => shownAs;

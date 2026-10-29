@@ -4,7 +4,12 @@ import { print } from '../ui/log.js';
 import { COLOR } from '../core/colors.js';
 import { onOff } from '../core/text.js';
 import { SCHEMA, GROUPS, KEY, resolveKey, parseValue, affectsGame, keyClientOnly, describeKey } from '../state/schema.js';
-import { settings } from '../state/store.js';
+import { settings, binds } from '../state/store.js';
+import { showKey } from '../state/keys.js';
+import { isActive, charLabel } from '../game/level.js';
+import { tracedNow, tracingAll, traceShown, distanceTo } from '../ui/trace.js';
+import { logicShown, logicDescription } from '../logic/view.js';
+import { editedVars, showVar } from '../triggers/vars.js';
 import { levelWasActive } from '../overrides/frame.js';
 import { CLIENT_TAG } from './help.js';
 
@@ -47,14 +52,45 @@ export function runKey(key, args) {
   }
 }
 
+// What else you changed, after the keys: [title, rows] or null when there is nothing.
+const EXTRAS = Object.freeze({
+  binds: () => {
+    const keys = binds.keys();
+    return keys.length && [`binds: ${keys.length}`, keys.map((k) => `  ${showKey(k).padEnd(KEY_WIDTH)} ${binds.get(k)}`)];
+  },
+  trace: () => {
+    if (!traceShown()) return null;
+    const now = isActive() ? tracedNow() : [];
+    return [`trace: ${tracingAll() ? 'everyone' : now.length}`, now.map((i) => `  ${charLabel(i).padEnd(20)} ${distanceTo(i)}px`)];
+  },
+  logic: () => logicShown() && ['logic: shown', [`  ${logicDescription() || 'on'}`]],
+  vars: () => {
+    const changed = isActive() ? editedVars() : [];
+    return changed.length && [`vars you changed: ${changed.length}`,
+      changed.map((v) => `  ${v.name.padEnd(KEY_WIDTH)} ${showVar(v.now)}  (was ${showVar(v.was)})`)];
+  },
+});
+const LIST_GROUPS = [...GROUPS, ...Object.keys(EXTRAS)];
+
+function listExtras(only) {
+  for (const [name, make] of Object.entries(EXTRAS)) {
+    if (only && name !== only) continue;
+    const got = make();
+    if (!got) { if (only) print(`[${name}] nothing`, COLOR.notice); continue; }
+    print(`[${got[0]}]`, COLOR.title);
+    for (const row of got[1]) print(row, COLOR.ok);
+  }
+}
+
 function listKeys(group) {
+  if (Object.hasOwn(EXTRAS, group)) { listExtras(group); return; }
   const byGroup = new Map();
   for (const [k, sc] of Object.entries(SCHEMA)) {
     if (group && sc.group !== group) continue;
     if (!byGroup.has(sc.group)) byGroup.set(sc.group, []);
     byGroup.get(sc.group).push(k);
   }
-  if (!byGroup.size) { print(`No group "${group}". Groups: ${GROUPS.join(', ')}`, COLOR.error); return; }
+  if (!byGroup.size) { print(`No group "${group}". Groups: ${LIST_GROUPS.join(', ')}`, COLOR.error); return; }
   for (const [g, keys] of byGroup) {
     print(`[${g}]`, COLOR.title);
     for (const k of keys) {
@@ -63,6 +99,7 @@ function listKeys(group) {
       print(line);
     }
   }
+  if (!group) listExtras();
 }
 
 export const settingsCommands = [
@@ -70,18 +107,21 @@ export const settingsCommands = [
     name: 'list',
     aliases: ['ls'],
     usage: 'list [group]',
-    desc: 'Show all keys and current values',
+    desc: 'Show all keys and values, then binds, traces, logic view, changed vars',
     help: {
       about: [
         'Every key with its current value and what it does. Keys you have set are',
-        'green, the rest show "default".',
+        'green, the rest show "default". After the keys, everything else you changed:',
+        'key binds, traced players, the logic view, and map variables you set or',
+        'removed with "vars" in this level (with the value before).',
       ],
       args: [
-        ['[group]', 'only this group: player, world, bullets, gun, console, maps'],
+        ['[group]', `only this group: ${LIST_GROUPS.join(', ')}`],
       ],
       examples: [
-        ['list', 'all keys'],
+        ['list', 'all keys, then binds and the rest'],
         ['list bullets', 'just the bullet keys'],
+        ['list vars', 'just the variables you changed'],
       ],
       see: ['set', 'get', 'unset', 'reset'],
     },
