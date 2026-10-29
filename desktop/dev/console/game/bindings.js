@@ -184,6 +184,7 @@ export const game = {
   },
   lobbyConnection: () => { const net = read('net'); return net && net[nameOf('lobbyConn')]; },
   matchMapId: () => { const d = read('net').match_details; return d && d.map_id; }, // map of the match you are in
+  mapId: () => read('mapId'), // map loaded last: campaign "c31a" or a custom map ID
   sendMethodName: () => nameOf('netSend'),
   clearMapChunks: () => { read('net')[nameOf('mapChunks')] = null; },
 

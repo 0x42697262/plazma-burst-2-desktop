@@ -57,7 +57,9 @@ function printKeyHelp(key) {
   print(`  ${describeKey(key)}`);
   print(`  key in group ${sc.group}, ${range}${sc.default === undefined ? '' : `, default ${showValue(key, sc.default)}`}`, COLOR.hint);
   const set = settings.has(key);
-  print(`  now: ${set ? showValue(key, settings.get(key)) : 'default'}`, set ? COLOR.ok : undefined);
+  const from = settings.source(key);
+  const via = from === 'yours' || from === 'default' ? '' : `  (profile ${from}${settings.hasOwn(key) ? `; yours: ${showValue(key, settings.own(key))}` : ''})`;
+  print(`  now: ${set ? showValue(key, settings.get(key)) : 'default'}${via}`, set ? COLOR.ok : undefined);
   const also = aliasesOf(key);
   if (also.length) print(`  Also: ${also.join(', ')}`, COLOR.hint);
   const reason = keyClientOnly(key);

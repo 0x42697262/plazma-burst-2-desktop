@@ -38,7 +38,8 @@ In the game, press Shift+`` ` `` (`~`) for the dev console and type `help`.
 | `desktop/dev/names.js` | Obfuscated game names for the current game version (generated) | no |
 | `desktop/maps/` | Local maps (`local-<name>` as the map ID), plus every downloaded map saved as `<map id>.xml`, uncompressed (console keys `save_maps`, `fast_maps`) | yes |
 | `desktop/credentials.json` | Your login (copy `credentials.example.json`) | no |
-| `desktop/dev-overrides.json` | Dev console settings | no |
+| `desktop/dev-overrides.json` | Dev console settings, binds and profiles (per-map settings, `profile` in the console). Editing it while the game runs reloads it | no |
+| `desktop/kv-file.js` | Shares `dev-overrides.json` between the console and your edits | yes |
 | `screenshots/` | Screenshots from the dev console: F12 (console key `screenshot_key`) or `screenshot` | no |
 | `tools/fetch-game.js` | Downloads the game | yes |
 | `tools/find-names.js` | Generates `desktop/dev/names.js` | yes |

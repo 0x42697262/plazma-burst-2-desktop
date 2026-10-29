@@ -80,3 +80,10 @@ export function takeCharSuffix(args, word, usage) {
   if (target === null || args.length !== at + 2) throw new Error(usage);
   return { args: args.slice(0, at), target };
 }
+
+// The map you are on, for profiles: the match's map in multiplayer, otherwise the map
+// loaded last (a campaign level such as "c31a", or the custom map ID you typed).
+export function currentMapId() {
+  const id = (game.isMP() && game.matchMapId()) || game.mapId();
+  return id === undefined || id === null || id === '' ? null : String(id);
+}

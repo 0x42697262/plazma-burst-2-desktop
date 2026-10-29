@@ -679,3 +679,82 @@ test('shifted characters are Shift and their US key; keyname names the key you p
   assert.deepEqual(c.press('Escape', { key: 'Escape' }), ['keyname: cancelled']);
   c.run('unbind --all');
 });
+
+test('profiles: a map\'s profile wins over your settings there, and is checked when the file is edited', async () => {
+  const { profileTick } = await consoleModule('commands/profile.js');
+  const atMap = (id) => { c.G[c.N.mapId] = id; };
+  const saved = () => JSON.parse(c.store.get('pb2dev_kv'));
+  atMap(undefined);
+  assert.match(c.run('profile')[0], /^No map loaded yet/);
+  assert.match(errorsOf(c.run('profile use hard'))[0], /no map loaded yet/);
+
+  atMap('c1a');
+  c.run('god on; unset max_hp');
+  assert.match(c.run('profile')[0], /^Map c1a: no profile, your settings apply/);
+  assert.match(c.run('profile use hard')[0], /^Map c1a uses profile "hard" \(new\): nothing yet/);
+  const quiet = (line) => c.run(line).filter((l) => !l.startsWith('Note:'));
+  assert.deepEqual(quiet('profile set hard god off'), ['hard: god = off']);
+  assert.deepEqual(quiet('get god'), ['god = off  [profile hard, yours: on]']);
+  assert.ok(c.run('list player').some((l) => /^ {2}god\s+off\s.*\[profile hard, yours: on\]/.test(l)), 'list tags it');
+  const on = c.run('god on').filter((l) => !l.startsWith('Note:'));
+  assert.equal(on[0], 'god = on');
+  assert.match(on[1], /but profile "hard" sets god = off on this map, which wins \("profile unset hard god" to drop it\)/);
+
+  // The game overrides read the profile too.
+  c.run('profile set hard max_hp 500');
+  c.frame();
+  assert.equal(c.player.hmax, 500, 'max_hp from the profile');
+
+  // Another map: yours again.
+  atMap('c2a');
+  assert.deepEqual(quiet('get god'), ['god = on']);
+  profileTick();
+  atMap('c1a');
+  c.log.printed.length = 0;
+  profileTick();
+  assert.deepEqual(c.log.printed, ['Map c1a uses profile "hard": god off, max_hp 500']);
+  atMap('c2a');
+  c.log.printed.length = 0;
+  profileTick();
+  assert.deepEqual(c.log.printed, ['Map c2a: no profile, your settings apply']);
+
+  assert.deepEqual(c.run('profile use hard c3a'), ['Map c3a uses profile "hard": god off, max_hp 500']);
+  const listed = c.run('profile list');
+  assert.ok(listed.some((l) => /^ {2}hard\s+god off, max_hp 500\s+maps: c1a, c3a$/.test(l)), listed.join(' | '));
+  assert.match(errorsOf(c.run('profile set hard page_size 20'))[0], /page_size is a console key/);
+  assert.match(errorsOf(c.run('profile set none god on'))[0], /"none" means no profile/);
+  assert.match(errorsOf(c.run('profile set hard speed 99'))[0], /speed must be between/);
+  assert.deepEqual(saved().profiles, { hard: { god: false, max_hp: 500 } });
+  assert.deepEqual(saved().maps, { c1a: 'hard', c3a: 'hard' });
+
+  assert.deepEqual(c.run('profile unset hard max_hp'), ['hard: max_hp removed, your setting applies on its maps']);
+  atMap('c3a');
+  assert.match(c.run('profile use none')[0], /^Map c3a: no profile \(was "hard"\), your settings apply/);
+  assert.match(c.run('profile delete hard')[0], /^Deleted profile "hard"; 1 map no longer use it: c1a/);
+  assert.equal(saved().profiles, undefined);
+
+  // Edited by hand: taken as it is, and whatever is wrong is said.
+  c.log.printed.length = 0;
+  c.G.pb2dev.reload({
+    god: true,
+    profiles: { fun: { speed: 99, page_size: 5, nokey: 1, jump: 2 }, 'bad name!': {}, odd: 5 },
+    maps: { c2a: 'fun', c4a: 'ghost' },
+  });
+  assert.deepEqual(c.log.printed, [
+    'dev-overrides.json changed: reloaded',
+    'dev-overrides.json: profile "fun": speed 99: speed must be between 0.1 and 10; ignored',
+    'dev-overrides.json: profile "fun": page_size is a console key, which a profile cannot set; ignored',
+    'dev-overrides.json: profile "fun": unknown key "nokey", ignored',
+    'dev-overrides.json: profile "bad name!": not a profile name (letters, digits, _ and -); ignored',
+    'dev-overrides.json: profile "odd": must be an object of settings; ignored',
+    'dev-overrides.json: map "c4a": no profile "ghost"; ignored',
+  ]);
+  atMap('c2a');
+  assert.deepEqual(quiet('get jump'), ['jump = 2  [profile fun]']);
+  assert.deepEqual(quiet('get god'), ['god = on']);
+  c.G.pb2dev.fileError('Unexpected token } in JSON at position 12');
+  assert.match(c.log.printed.at(-1), /cannot be read \(Unexpected token.*not saving changes to the file until it is fixed/);
+  c.G.pb2dev.reload({});
+  atMap(undefined);
+  c.run('unset god');
+});

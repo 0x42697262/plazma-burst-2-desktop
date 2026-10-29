@@ -3,7 +3,7 @@
 import { print } from '../ui/log.js';
 import { COLOR } from '../core/colors.js';
 import { SCHEMA, GROUPS, KEY, resolveKey, parseValue, affectsGame, keyClientOnly, describeKey, showValue } from '../state/schema.js';
-import { settings, binds } from '../state/store.js';
+import { settings, binds, activeProfile, currentMap } from '../state/store.js';
 import { showKey } from '../state/keys.js';
 import { isActive, charLabel } from '../game/level.js';
 import { tracedNow, tracingGroup, traceShown, distanceTo } from '../ui/trace.js';
@@ -19,6 +19,20 @@ const VALUE_WIDTH = 9;
 
 const shown = (key) => (settings.has(key) ? showValue(key, settings.get(key)) : 'default');
 
+// When the value in effect is a profile's: '[profile hardcore, yours: on]'.
+export function sourceTag(key) {
+  const from = settings.source(key);
+  if (from === 'yours' || from === 'default') return '';
+  return `[profile ${from}${settings.hasOwn(key) ? `, yours: ${showValue(key, settings.own(key))}` : ''}]`;
+}
+
+// After you change your value: say so when the map's profile still decides it.
+function profileWins(key) {
+  const from = settings.source(key);
+  if (from === 'yours' || from === 'default') return;
+  print(`  but profile "${from}" sets ${key} = ${showValue(key, settings.get(key))} on this map, which wins ("profile unset ${from} ${key}" to drop it)`, COLOR.warn);
+}
+
 function requireKey(word) {
   const key = resolveKey(word);
   if (!key) throw new Error(`unknown key "${word || ''}"`);
@@ -30,11 +44,13 @@ export function setKey(key, raw) {
   settings.set(key, v);
   print(`${key} = ${showValue(key, v)}`, COLOR.ok);
   if (!levelWasActive() && affectsGame(key)) print('  (applies when you are in a level)', COLOR.hint);
+  profileWins(key);
 }
 
 export function unsetKey(key, note = '') {
   settings.unset(key);
   print(`${key} = default${note}`, COLOR.ok);
+  profileWins(key);
 }
 
 // A key typed as the command: alone it toggles a bool or shows a number, with
@@ -64,6 +80,12 @@ const EXTRAS = Object.freeze({
     return [`trace: ${now.length}${tracingGroup() ? ` (${groupOptions(tracingGroup())})` : ''}`, now.map((i) => `  ${charLabel(i).padEnd(20)} ${distanceTo(i)}px`)];
   },
   logic: () => logicShown() && ['logic: shown', [`  ${logicDescription() || 'on'}`]],
+  profile: () => {
+    const p = activeProfile();
+    const keys = p ? Object.keys(p.values).sort() : [];
+    return p && [`profile: ${p.name} (map ${currentMap()})`,
+      keys.length ? keys.map((k) => `  ${k.padEnd(KEY_WIDTH)} ${showValue(k, p.values[k])}`) : ['  (sets nothing yet)']];
+  },
   vars: () => {
     const changed = isActive() ? editedVars() : [];
     return changed.length && [`vars you changed: ${changed.length}`,
@@ -95,6 +117,8 @@ function listKeys(group) {
     print(`[${g}]`, COLOR.title);
     for (const k of keys) {
       const line = [[`  ${k.padEnd(KEY_WIDTH)} ${shown(k).padEnd(VALUE_WIDTH)} ${describeKey(k)}`, settings.has(k) ? COLOR.ok : undefined]];
+      const tag = sourceTag(k);
+      if (tag) line.push([`  ${tag}`, COLOR.warn, true]);
       if (keyClientOnly(k)) line.push(CLIENT_TAG);
       print(line);
     }
@@ -111,7 +135,8 @@ export const settingsCommands = [
     help: {
       about: [
         'Every key with its current value and what it does. Keys you have set are',
-        'green, the rest show "default". After the keys, everything else you changed:',
+        'green, the rest show "default". A value from this map\'s profile is tagged',
+        '[profile <name>, yours: <value>]. After the keys, everything else you changed:',
         'key binds, traced players, the logic view, and map variables you set or',
         'removed with "vars" in this level (with the value before).',
       ],
@@ -175,7 +200,7 @@ export const settingsCommands = [
       ],
       see: ['list', 'set'],
     },
-    run: (args) => { const key = requireKey(args[0]); print(`${key} = ${shown(key)}`); },
+    run: (args) => { const key = requireKey(args[0]); const tag = sourceTag(key); print(`${key} = ${shown(key)}${tag ? `  ${tag}` : ''}`); },
   },
   {
     name: 'unset',
@@ -201,10 +226,11 @@ export const settingsCommands = [
     help: {
       about: [
         'Removes every override at once. Key binds are kept: "unbind --all" clears those.',
+        'Profiles are kept too: "profile" shows them.',
       ],
       see: ['unset', 'unbind'],
     },
-    run: () => { settings.clear(); print('All overrides removed (binds kept; "unbind --all" removes them)', COLOR.ok); },
+    run: () => { settings.clear(); print('All overrides removed (binds and profiles kept; "unbind --all" removes binds)', COLOR.ok); },
   },
   {
     name: 'builtin',

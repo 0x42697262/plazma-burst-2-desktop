@@ -182,6 +182,10 @@ const RULES = [
     re: String.raw`throw new Error\("Buffer overflow during var sync: Variable name is too long"\);\s*if\(\(⟨ID⟩\[⟨triggers⟩\[a\]\.⟨trigTargetA⟩\[⟨_⟩\]\]\+""\)\.length>2048\)` },
 
   // ----- Input, chat, multiplayer, map -----
+  // The map being loaded or played: a campaign level ("c31a") or a custom map ID, set as
+  // the load starts, before the built-in levels table is looked up.
+  { file: 'frame2', keys: ['mapId'], what: ['ID of the map loaded last (campaign "c31a" or a custom map ID)'],
+    re: String.raw`⟨_⟩=str;\s*⟨ID⟩=str;\s*⟨_⟩\.visible=true;\s*⟨_⟩\.⟨_⟩\.gotoAndPlay\(1\);\s*if\(⟨_⟩\[⟨_⟩\]!=undefined\)` },
   { file: 'frame2', keys: ['keyUp'], what: ['jump key held'],
     re: String.raw`if\(event\.keyCode===87\|\|event\.keyCode===38\|\|event\.keyCode===32\)\s*\{\s*⟨ID⟩=true;` },
   { file: 'frame2', keys: ['keyDown'], what: ['crouch key held'],
