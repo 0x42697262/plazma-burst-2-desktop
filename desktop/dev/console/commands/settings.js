@@ -7,7 +7,7 @@ import { SCHEMA, GROUPS, KEY, resolveKey, parseValue, affectsGame, keyClientOnly
 import { settings, binds } from '../state/store.js';
 import { showKey } from '../state/keys.js';
 import { isActive, charLabel } from '../game/level.js';
-import { tracedNow, tracingAll, traceShown, distanceTo } from '../ui/trace.js';
+import { tracedNow, tracingGroup, traceShown, distanceTo } from '../ui/trace.js';
 import { logicShown, logicDescription } from '../logic/view.js';
 import { editedVars, showVar } from '../triggers/vars.js';
 import { levelWasActive } from '../overrides/frame.js';
@@ -61,7 +61,7 @@ const EXTRAS = Object.freeze({
   trace: () => {
     if (!traceShown()) return null;
     const now = isActive() ? tracedNow() : [];
-    return [`trace: ${tracingAll() ? 'everyone' : now.length}`, now.map((i) => `  ${charLabel(i).padEnd(20)} ${distanceTo(i)}px`)];
+    return [`trace: ${now.length}${tracingGroup() ? ` (--${tracingGroup()})` : ''}`, now.map((i) => `  ${charLabel(i).padEnd(20)} ${distanceTo(i)}px`)];
   },
   logic: () => logicShown() && ['logic: shown', [`  ${logicDescription() || 'on'}`]],
   vars: () => {
@@ -198,11 +198,11 @@ export const settingsCommands = [
     desc: 'Remove all overrides',
     help: {
       about: [
-        'Removes every override at once. Key binds are kept: "unbind all" clears those.',
+        'Removes every override at once. Key binds are kept: "unbind --all" clears those.',
       ],
       see: ['unset', 'unbind'],
     },
-    run: () => { settings.clear(); print('All overrides removed (binds kept; "unbind all" removes them)', COLOR.ok); },
+    run: () => { settings.clear(); print('All overrides removed (binds kept; "unbind --all" removes them)', COLOR.ok); },
   },
   {
     name: 'builtin',

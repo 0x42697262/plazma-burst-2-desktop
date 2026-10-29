@@ -2,6 +2,7 @@
 import { print } from '../ui/log.js';
 import { COLOR } from '../core/colors.js';
 import { plural, isNumberText, parseIndex, capitalize } from '../core/text.js';
+import { takeOptions } from '../core/args.js';
 import { game } from '../game/bindings.js';
 import { F } from '../game/fields.js';
 import {
@@ -103,12 +104,13 @@ function cancelLevelFailed() {
   print('  level failure cancelled', COLOR.hint);
 }
 
-function revive(args) {
+function revive(rawArgs) {
   requireLevel();
-  const usage = 'usage: revive  |  revive <#>  |  revive all';
-  if (args.length > 1) throw new Error(usage);
+  const { options, rest: args } = takeOptions(rawArgs, ['all']);
+  const usage = 'usage: revive  |  revive <#>  |  revive --all';
+  if (args.length > 1 || (options.size && args.length)) throw new Error(usage);
   const a = (args[0] || '').toLowerCase();
-  if (a === 'all') {
+  if (options.has('all') || a === 'all') {
     let n = 0;
     for (let i = 0; i < game.charCount(); i++) {
       const c = game.chars()[i];
@@ -186,26 +188,36 @@ function teleportToChar(q) {
   teleportTo(x, y, charLabel(i, t));
 }
 
-function tp(args) {
-  const sub = (args[0] || '').toLowerCase();
+const TP_OPTION = Object.freeze({ ON: 'on', OFF: 'off' });
+
+function tp(rawArgs) {
+  const { options, rest: args, literal } = takeOptions(rawArgs, Object.values(TP_OPTION));
   // The old hotkey syntax, now a bind.
-  if (sub === 'on') {
-    if (args.length !== 2) throw new Error('usage: bind <key> tp   e.g. bind f tp');
-    bindKey([args[1], 'tp']);
+  if (options.has(TP_OPTION.ON)) {
+    if (options.has(TP_OPTION.OFF) || args.length !== 1) throw new Error('usage: bind <key> tp   e.g. bind f tp');
+    bindKey([args[0], 'tp']);
     return;
   }
-  if (sub === 'off') {
+  if (options.has(TP_OPTION.OFF)) {
+    if (args.length) throw new Error('usage: tp --off   (unbinds every key bound to "tp")');
     const keys = binds.boundTo('tp');
     if (!keys.length) { print('No key is bound to "tp"', COLOR.notice); return; }
     for (const k of keys) unbindKey([k]);
     return;
   }
   if (!args.length) { teleportToCrosshair(); return; }
-  if (args.length === 2 && isNumberText(args[0]) && isNumberText(args[1])) { teleportTo(Number(args[0]), Number(args[1])); return; }
+  // After "--", "tp -- 1 2" is a character named "1 2".
+  if (!literal && args.length === 2 && isNumberText(args[0]) && isNumberText(args[1])) { teleportTo(Number(args[0]), Number(args[1])); return; }
   // Anything else is a character: tp 2 | tp #2 | tp bot | tp to <name>
-  const who = sub === 'to' ? args.slice(1) : args;
-  if (!who.length) throw new Error('usage: tp to <# | name>');
-  teleportToChar(who.join(' '));
+  const who = !literal && args.length > 1 && args[0].toLowerCase() === 'to' ? args.slice(1) : args;
+  try {
+    teleportToChar(who.join(' '));
+  } catch (e) {
+    // "tp on f" / "tp off" were keywords once.
+    const old = Object.values(TP_OPTION).find((o) => o === who[0].toLowerCase());
+    if (old && !literal && /^no character named/.test(e.message)) throw new Error(`${e.message.replace(/ Type "chars"\.$/, '')} For the old hotkey syntax, type "tp --${old}${who.length > 1 ? ' ' + who.slice(1).join(' ') : ''}".`);
+    throw e;
+  }
 }
 
 // ----- chars, pos -----
@@ -288,7 +300,7 @@ export const playerCommands = [
   {
     name: 'revive',
     aliases: ['res'],
-    usage: 'revive [# | all]',
+    usage: 'revive [# | --all]',
     desc: 'Revive yourself, character # (see "chars"), or every dead character',
     clientOnly: CLIENT_ONLY_REASON,
     help: {
@@ -300,12 +312,12 @@ export const playerCommands = [
       args: [
         ['(nothing)', 'you'],
         ['<#>', 'a character index from "chars"'],
-        ['all', 'everyone who is down'],
+        ['--all', 'everyone who is down ("all" works too)'],
       ],
       examples: [
         ['revive', 'yourself'],
         ['revive 3', 'character #3'],
-        ['revive all', 'every downed character'],
+        ['revive --all', 'every downed character'],
       ],
       see: ['chars', 'heal'],
     },
@@ -328,6 +340,9 @@ export const tpCommand = {
       ['x y', 'exact coordinates (see "pos")'],
       ['<# | name>', 'to a character, by index or part of a nickname'],
       ['to <name>', 'the same, when the name could be read as something else'],
+      ['-- <name>', 'everything after "--" is the name: "tp -- 1 2" is a player named "1 2"'],
+      ['--on <key>', 'the old hotkey syntax: the same as "bind <key> tp"'],
+      ['--off', 'unbind every key bound to "tp"'],
     ],
     examples: [
       ['tp', 'to the crosshair'],
@@ -337,7 +352,7 @@ export const tpCommand = {
       ['bind f tp', 'teleport to the crosshair with F'],
     ],
     notes: [
-      'The old "tp on <key>" and "tp off" still work: they add and remove that bind.',
+      'Words that are not options are a character, so "tp off" goes to a player named "off".',
     ],
     see: ['pos', 'chars', 'bind'],
   },

@@ -25,5 +25,6 @@ export const agoText = (ms) => (ms < 1000 ? 'now'
   : ms < 60000 ? `${(ms / 1000).toFixed(1)}s ago`
     : `${Math.floor(ms / 60000)}m ${Math.floor(ms % 60000 / 1000)}s ago`);
 
-// The words "help" alone after a command: "tp help".
-export const isHelpArg = (args) => args.length === 1 && args[0].toLowerCase() === 'help';
+// The word "help" alone after a command, or --help / -h: "tp help", "tp --help".
+const HELP_WORDS = ['help', '--help', '-h'];
+export const isHelpArg = (args) => args.length === 1 && HELP_WORDS.includes(args[0].toLowerCase());

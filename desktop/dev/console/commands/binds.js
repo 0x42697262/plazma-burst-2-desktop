@@ -50,8 +50,8 @@ export function bindKey(args) {
 }
 
 export function unbindKey(args) {
-  if (args.length !== 1) throw new Error('usage: unbind <key>  |  unbind all');
-  if (args[0].toLowerCase() === 'all') {
+  if (args.length !== 1) throw new Error('usage: unbind <key>  |  unbind --all');
+  if (['all', '--all'].includes(args[0].toLowerCase())) {
     print(`Removed ${plural(binds.clear(), 'bind')}`, COLOR.ok);
     return;
   }
@@ -94,12 +94,12 @@ export const bindCommands = [
   },
   {
     name: 'unbind',
-    usage: 'unbind <key> | all',
+    usage: 'unbind <key> | --all',
     desc: 'Remove a key bind',
     help: {
       args: [
         ['<key>', 'remove that one bind'],
-        ['all', 'remove every bind'],
+        ['--all', 'remove every bind ("all" works too)'],
       ],
       see: ['bind'],
     },

@@ -2,6 +2,7 @@
 // and a small label with their name and distance. A character off screen gets its
 // label where the line leaves the screen, so the direction and distance still show.
 import { GAME_WIDTH, GAME_HEIGHT, game } from '../game/bindings.js';
+import { F } from '../game/fields.js';
 import { player, charAt, isDown, charLabel, BODY_MIDDLE } from '../game/level.js';
 import { setLayer, hasLayer, toScreen, crosshair } from './overlay.js';
 import { drawLabels } from './labels.js';
@@ -13,18 +14,28 @@ const LINE_WIDTH = 0.7; // game units
 const EDGE = 4; // labels of off-screen characters stay this far inside the screen
 const BOUNDS = Object.freeze({ w: GAME_WIDTH, h: GAME_HEIGHT });
 
-let all = false; // every other character, also ones who join later
-const picked = new Set(); // character indexes, when not all
-
-const others = () => {
-  const out = [];
-  for (let i = 0; i < game.charCount(); i++) if (i !== game.me() && charAt(i)) out.push(i);
-  return out;
-};
+// A group traces characters who join later too: everyone else, or only real players
+// (not bots). Picked characters are traced on top of it, dropped ones are left out.
+export const TRACE_GROUP = Object.freeze({ ALL: 'all', PLAYERS: 'players' });
+const IN_GROUP = Object.freeze({
+  [TRACE_GROUP.ALL]: () => true,
+  [TRACE_GROUP.PLAYERS]: (c) => !!c[F.HUMAN],
+});
+let group = null;
+const picked = new Set(); // character indexes
+const dropped = new Set(); // character indexes the group would trace
 
 // Who is traced right now: characters that are still in the match, never you.
-export const tracedNow = () => (all ? others() : [...picked].filter((i) => i !== game.me() && charAt(i)));
-export const tracingAll = () => all;
+export function tracedNow() {
+  const out = [];
+  for (let i = 0; i < game.charCount(); i++) {
+    const c = charAt(i);
+    if (i === game.me() || !c) continue;
+    if (picked.has(i) || (group && IN_GROUP[group](c) && !dropped.has(i))) out.push(i);
+  }
+  return out;
+}
+export const tracingGroup = () => group;
 
 // From you to character i, in world units, as "chars" measures it.
 export function distanceTo(i) {
@@ -71,33 +82,30 @@ function drawTrace(ctx, m) {
   return { lines: items.length, labels };
 }
 
-const refresh = () => setLayer(LAYER, all || picked.size ? drawTrace : null);
+const refresh = () => setLayer(LAYER, group || picked.size ? drawTrace : null);
 
 export function traceAdd(indexes) {
-  if (!all) for (const i of indexes) picked.add(i);
+  for (const i of indexes) { picked.add(i); dropped.delete(i); }
   refresh();
 }
 
-export function traceAll() {
-  all = true;
-  picked.clear();
+// Characters picked before stay traced too.
+export function traceGroup(g) {
+  group = g;
+  dropped.clear();
   refresh();
 }
 
-// Stops tracing one; from "all", the others stay traced.
 export function traceRemove(i) {
-  if (all) {
-    all = false;
-    for (const o of others()) if (o !== i) picked.add(o);
-  } else {
-    picked.delete(i);
-  }
+  picked.delete(i);
+  if (group) dropped.add(i);
   refresh();
 }
 
 export function traceOff() {
-  all = false;
+  group = null;
   picked.clear();
+  dropped.clear();
   refresh();
 }
 

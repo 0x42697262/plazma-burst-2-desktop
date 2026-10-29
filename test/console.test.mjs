@@ -403,9 +403,9 @@ test('trace draws a white line from you to each traced character', async () => {
   assert.ok(c.log.drawn.some((d) => d[0] === 'lineTo' && d[1] === 200 && d[2] === -41), 'to bob\'s middle');
   assert.ok(texts().includes('#1 bob 112px'), 'name and distance');
 
-  c.run('trace all');
+  c.run('trace --all');
   assert.equal(frame().trace.lines, 2, 'everyone but you');
-  c.run('trace off 2');
+  c.run('trace --off 2');
   frame();
   assert.deepEqual(texts(), ['#1 bob 112px'], 'from "all", the others stay');
   assert.match(errorsOf(c.run('trace 0'))[0], /that is you/);
@@ -431,13 +431,13 @@ test('trace draws a white line from you to each traced character', async () => {
   assert.ok(both.logic && both.trace, 'logic and traces in one frame');
   c.run('logic hide');
   assert.ok(frame().trace, 'hiding logic keeps the traces');
-  c.run('trace off');
+  c.run('trace --off');
   assert.equal(c.log.frames.length, 0, 'the overlay goes with its last layer');
 });
 
 test('list shows binds, traces, the logic view and the vars you changed after the keys', () => {
   // Earlier tests changed these; undoing a change takes it off the list.
-  c.run('unbind all; trace off; logic hide; vars del a; vars del q; vars del x; vars set var_mods "CTHC Lenaa"');
+  c.run('unbind --all; trace --off; logic hide; vars del a; vars del q; vars del x; vars set var_mods "CTHC Lenaa"');
   const quiet = c.run('list');
   for (const extra of ['binds', 'trace', 'logic', 'vars']) {
     assert.ok(!quiet.some((l) => l.startsWith(`[${extra}`)), `${extra} only shows when something is set`);
@@ -457,5 +457,40 @@ test('list shows binds, traces, the logic view and the vars you changed after th
   // Back to where it started: no longer a change.
   c.run(`vars set door_1 ${before}; vars del fresh`);
   assert.deepEqual(c.run('list vars'), ['[vars] nothing']);
-  c.run('unbind all; trace off; logic hide');
+  c.run('unbind --all; trace --off; logic hide');
+});
+
+test('trace --players skips bots, and a word that is not an option is a name', () => {
+  const traced = () => c.run('trace').slice(1).map((l) => l.trim().split(/\s+/).slice(0, 2).join(' '));
+  c.run('trace --off');
+  assert.match(c.run('trace --players')[0], /^Tracing every other player, no bots: 1 character now/);
+  assert.deepEqual(traced(), ['#1 bob'], 'bluebot is a bot');
+  c.chars[2][c.N.charHuman] = true; // a player in that slot now
+  assert.deepEqual(traced(), ['#1 bob', '#2 bluebot'], 'who joins later is traced too');
+  c.chars[2][c.N.charHuman] = false;
+  c.run('trace --players bluebot');
+  assert.deepEqual(traced(), ['#1 bob', '#2 bluebot'], 'a bot on top of the players');
+  c.run('trace --off 1');
+  assert.deepEqual(traced(), ['#2 bluebot'], 'one left out, the group stays');
+  assert.match(c.run('trace')[0], /\(every other player, no bots, also who joins later\)/);
+  c.run('trace --off');
+
+  // Old keywords are names now; a miss says what was meant.
+  assert.match(errorsOf(c.run('trace all'))[0], /no character named "all"\. For the option, type "trace --all"/);
+  assert.match(errorsOf(c.run('tp off'))[0], /no character named "off"\. For the old hotkey syntax, type "tp --off"/);
+  const bob = c.chars[1];
+  bob.nickname = 'all';
+  assert.match(c.run('trace all')[0], /^Tracing #1 all/, 'a player named "all"');
+  c.run('trace --off');
+  bob.nickname = '--odd--';
+  assert.match(errorsOf(c.run('trace --odd--'))[0], /unknown option "--odd--"\. Options: --all, --players, --off\. "-- --odd--" if it is a name/);
+  assert.match(c.run('trace -- --odd--')[0], /^Tracing #1 --odd--/);
+  c.run('trace --off');
+  bob.nickname = '1 2';
+  assert.match(c.run('tp -- 1 2').at(-1), /^Teleported to #1 1 2 at/, 'after "--" two numbers are a name');
+  bob.nickname = 'bob';
+  assert.match(errorsOf(c.run('trace --all --players'))[0], /--all and --players do not go together/);
+  for (const help of ['trace --help', 'tp -h', 'revive --help']) {
+    assert.deepEqual(c.run(help), c.run(`help ${help.split(' ')[0]}`), help);
+  }
 });
