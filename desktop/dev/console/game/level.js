@@ -3,6 +3,10 @@ import { game } from './bindings.js';
 import { F } from './fields.js';
 import { parseIndex } from '../core/text.js';
 
+// The game takes a character's middle this far above its feet (x, y): the region check
+// tests y - 41, and the teleport effect plays there.
+export const BODY_MIDDLE = 41;
+
 export const player = () => {
   const c = game.chars();
   return c ? c[game.me()] : null;

@@ -290,7 +290,7 @@ test('logic screen keeps only what the camera shows, as it moves', async () => {
 });
 
 test('logic labels never overlap: grouped, collapsed, opened by the crosshair', async () => {
-  const { layoutLabels } = await consoleModule('logic/labels.js');
+  const { layoutLabels } = await consoleModule('ui/labels.js');
   const bounds = { w: 800, h: 400 };
   const hit = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
   const overlapping = (ls) => ls.some((a, i) => ls.some((b, j) => j > i && hit(a, b)));
@@ -382,4 +382,55 @@ test('triggers find calls: and maxcalls: compare calls', () => {
   assert.deepEqual(found('calls:0 uid:boot'), [], 'combines with the other terms');
   assert.match(errorsOf(c.run('triggers find calls:lots'))[0], /calls: expects a number or "unlimited"/);
   boot[c.N.trigCalls] = 1; init[c.N.trigCalls] = 1;
+});
+
+test('trace draws a white line from you to each traced character', async () => {
+  const overlay = await consoleModule('ui/overlay.js');
+  const cam = c.G.game;
+  cam.x = 100; cam.y = 50; cam.scaleX = cam.scaleY = 1;
+  // You at (0, 0), bob (#1) at (100, -50), bluebot (#2) at (600, 100). Set here: earlier
+  // tests teleport you around.
+  const place = [[0, 0], [100, -50], [600, 100]];
+  place.forEach(([x, y], i) => { c.chars[i].x = x; c.chars[i].y = y; });
+  const frame = () => { c.log.drawn.length = 0; return overlay.drawOverlay(); };
+  const texts = () => c.log.drawn.filter((d) => d[0] === 'fillText').map((d) => d[1]);
+
+  assert.match(c.run('trace')[0], /Not tracing anyone/);
+  assert.match(c.run('trace 1')[0], /^Tracing #1 bob \(112px\)/);
+  assert.equal(frame().trace.lines, 1);
+  // Middles are 41 above the feet: you (0, -41) -> screen (100, 9); bob -> (200, -41).
+  assert.ok(c.log.drawn.some((d) => d[0] === 'moveTo' && d[1] === 100 && d[2] === 9), 'from your middle');
+  assert.ok(c.log.drawn.some((d) => d[0] === 'lineTo' && d[1] === 200 && d[2] === -41), 'to bob\'s middle');
+  assert.ok(texts().includes('#1 bob 112px'), 'name and distance');
+
+  c.run('trace all');
+  assert.equal(frame().trace.lines, 2, 'everyone but you');
+  c.run('trace off 2');
+  frame();
+  assert.deepEqual(texts(), ['#1 bob 112px'], 'from "all", the others stay');
+  assert.match(errorsOf(c.run('trace 0'))[0], /that is you/);
+  assert.match(errorsOf(c.run('trace nobody'))[0], /no character named "nobody"/);
+
+  // Off screen: bluebot far right, its label where the line leaves the screen.
+  c.run('trace 2');
+  const bot = c.chars[2];
+  bot.x = 5000;
+  frame();
+  const plate = c.log.drawn.filter((d) => d[0] === 'fillRect').map((d) => ({ x: d[1], w: d[3] }));
+  assert.ok(plate.every((r) => r.x >= 0 && r.x + r.w <= 800), 'every label inside the screen');
+  assert.ok(texts().some((t) => t.startsWith('#2 bluebot 5001px')), 'distance from (0, 0) to (5000, 100)');
+  bot.x = 600;
+
+  bot.hea = 0;
+  frame();
+  assert.ok(texts().some((t) => t.endsWith('(down)')), 'a downed character is marked');
+  bot.hea = 100;
+
+  c.run('logic show');
+  const both = frame();
+  assert.ok(both.logic && both.trace, 'logic and traces in one frame');
+  c.run('logic hide');
+  assert.ok(frame().trace, 'hiding logic keeps the traces');
+  c.run('trace off');
+  assert.equal(c.log.frames.length, 0, 'the overlay goes with its last layer');
 });

@@ -1,9 +1,10 @@
-// Where the uid labels of the logic view go, so they never pile up. Elements that sit
+// Labels over the game (uids in the logic view, names in traces), placed so they never
+// pile up. Points that sit
 // within a few units of each other share one label, one uid per line; a big group shows
 // its first lines and "+N more", and opens fully while the crosshair is on it. Each
 // label takes the first free spot around its point, nearest the crosshair first; one
 // with no free spot is hidden (zoomed far out there is no room for every label), and
-// the crosshair opens it like any other. Pure: points in, boxes out.
+// the crosshair opens it like any other. layoutLabels is pure: points in, boxes out.
 
 export const FONT_SIZE = 5; // game units
 const CHAR_WIDTH = FONT_SIZE * 0.61; // DejaVuSansMono is monospaced: every character this wide
@@ -71,4 +72,34 @@ export function layoutLabels(items, { cursor = null, bounds }) {
     else hidden++;
   }
   return { labels: placed.sort((a, b) => a.open - b.open), hidden };
+}
+
+const LABEL_COLOR = '#ffffffdd';
+const LABEL_PLATE = '#000000aa'; // behind the text, so it reads over the level
+const LABEL_OPEN_PLATE = '#0E2236ee'; // the group under the crosshair
+const LABEL_LEADER = '#ffffff55'; // from a moved label back to its point
+const LABEL_FONT = `${FONT_SIZE}px DejaVuSansMono`; // in game units, so it stays tiny at any zoom
+const MOVED = PAD * 4; // a label further than this from its point gets a leader line
+
+// Lays out and draws labels for items [{ x, y, text }] in screen units. cursor: the
+// crosshair in screen units, or null. Returns { shown, hidden }.
+export function drawLabels(ctx, items, cursor, bounds) {
+  const { labels, hidden } = layoutLabels(items, { cursor, bounds });
+  ctx.font = LABEL_FONT;
+  ctx.textBaseline = 'top';
+  for (const l of labels) {
+    const moved = l.x > l.at.x + MOVED || l.x + l.w < l.at.x - MOVED || l.y > l.at.y + MOVED || l.y + l.h < l.at.y - MOVED;
+    if (moved) {
+      ctx.strokeStyle = LABEL_LEADER;
+      ctx.beginPath();
+      ctx.moveTo(l.at.x, l.at.y);
+      ctx.lineTo(Math.min(Math.max(l.at.x, l.x), l.x + l.w), Math.min(Math.max(l.at.y, l.y), l.y + l.h));
+      ctx.stroke();
+    }
+    ctx.fillStyle = l.open ? LABEL_OPEN_PLATE : LABEL_PLATE;
+    ctx.fillRect(l.x, l.y, l.w, l.h);
+    ctx.fillStyle = LABEL_COLOR;
+    l.lines.forEach((text, i) => ctx.fillText(text, l.x + PAD, l.y + PAD + i * LINE_HEIGHT));
+  }
+  return { shown: labels.length, hidden };
 }

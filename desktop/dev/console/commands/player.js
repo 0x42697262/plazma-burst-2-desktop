@@ -5,7 +5,7 @@ import { plural, isNumberText, parseIndex, capitalize } from '../core/text.js';
 import { game } from '../game/bindings.js';
 import { F } from '../game/fields.js';
 import {
-  player, isActive, requireLevel, isDown, charAt, charLabel, be, noCharacter, resolveChar,
+  player, isActive, requireLevel, isDown, charAt, charLabel, be, noCharacter, resolveChar, BODY_MIDDLE,
 } from '../game/level.js';
 import { KEY, CLIENT_ONLY_REASON } from '../state/schema.js';
 import { settings, binds } from '../state/store.js';
@@ -132,8 +132,6 @@ function revive(args) {
 
 // ----- teleport -----
 
-const FX_HEIGHT = 41; // the teleport effect plays this far above a character's position
-
 // Same steps as the game's own "move character to region" trigger: shift every physics
 // point of the player and their carried guns, move the camera, play the effect.
 function teleportTo(tx, ty, label) {
@@ -161,10 +159,10 @@ function teleportTo(tx, ty, label) {
     if (interp) { PX[i] -= u; PY[i] -= v; }
     game.clearPtInterp(i);
   }
-  try { game.teleportFx(p.x, p.y - FX_HEIGHT); } catch {}
+  try { game.teleportFx(p.x, p.y - BODY_MIDDLE); } catch {}
   p.x -= u;
   p.y -= v;
-  try { game.teleportFx(p.x, p.y - FX_HEIGHT); } catch {}
+  try { game.teleportFx(p.x, p.y - BODY_MIDDLE); } catch {}
   p[F.AFTER_MOVE]();
   print(`Teleported to ${label ? label + ' at ' : ''}${Math.round(tx)}, ${Math.round(ty)}`, COLOR.ok);
 }
