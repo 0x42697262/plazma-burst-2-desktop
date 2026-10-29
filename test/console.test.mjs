@@ -236,3 +236,26 @@ test('a bind holds a ";" chain, and pressing the key runs all of it', () => {
   assert.deepEqual(errorsOf(c.run('bind h fast load maps on')), [], 'a phrase is checked as its key');
   c.run('unbind all; unset god');
 });
+
+test('logic filters by element type', async () => {
+  const view = await consoleModule('logic/view.js');
+  assert.match(c.run('logic')[1], /Types: trigger \d+, .*player 2/, 'lists the map\'s types');
+  const count = (q) => Number(c.run(`logic show ${q}`)[0].match(/^Showing (\d+) link/)[1]);
+  const all = count('');
+  const noPlayers = count('not:player');
+  assert.ok(noPlayers < all, 'not: drops links touching players');
+  assert.equal(count('not:players'), noPlayers, 'plurals work');
+  assert.equal(count('type:region,trigger'), count('type:regions,triggers'));
+  assert.ok(count('type:region,trigger start') <= count('type:region,trigger'), 'combines with a kind');
+  assert.equal(count('#door_a type:decor'), 1, 'around an element, type: picks its neighbours');
+  assert.match(errorsOf(c.run('logic show type:nonsense'))[0], /this map has no "nonsense"\. Types: /);
+  c.run('logic show not:player');
+  c.log.drawn.length = 0;
+  view.drawFrame();
+  assert.ok(!c.log.drawn.some((d) => d[0] === 'fillText' && /^#player/.test(d[1])), 'no player is drawn');
+  c.run('logic hide');
+
+  const tree = c.run('logic #god_all not:player');
+  assert.ok(!tree.some((l) => l.includes('#player')), 'the tree drops player rows');
+  assert.ok(c.run('logic #door_a type:region').some((l) => l.includes('nothing that passes the filters')));
+});
