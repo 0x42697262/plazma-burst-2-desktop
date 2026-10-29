@@ -169,6 +169,14 @@ export async function bootConsole({ mapFile = path.join(REPO, 'test/fixtures/map
       return log.printed.filter((l) => !l.startsWith('> '));
     },
     frame(n = 1) { for (let i = 0; i < n; i++) listeners.frame(); },
+    // Presses a key (KeyboardEvent.code) with the console closed; returns what it printed.
+    press(code, mods = {}) {
+      log.printed.length = 0;
+      const e = { code, key: code, target: null, repeat: false, preventDefault() {}, stopImmediatePropagation() {}, ...mods };
+      listeners.keydown(e);
+      listeners.keyup(e);
+      return log.printed.slice();
+    },
     setMP(on) { G[N.mp] = on; },
   };
 }

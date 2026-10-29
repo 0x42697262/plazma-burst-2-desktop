@@ -225,3 +225,14 @@ test('logic show draws every link where the camera puts it', async () => {
   c.run('logic hide');
   assert.equal(c.log.frames.length, 0, 'no frame left pending');
 });
+
+test('a bind holds a ";" chain, and pressing the key runs all of it', () => {
+  assert.deepEqual(errorsOf(c.run('bind shift+t "revive; god"')), [], 'a one-word first command');
+  const out = c.press('KeyT', { shiftKey: true });
+  assert.equal(out[0], '[bind shift+t] > revive; god');
+  assert.ok(out.includes('[1/2] revive') && out.includes('[2/2] god'), out.join(' | '));
+  assert.match(errorsOf(c.run('bind g "revive; nonsense"'))[0], /unknown command "nonsense"\./, 'every command is checked');
+  assert.match(errorsOf(c.run('bind g "revive; nonsense 5"'))[0], /unknown command "nonsense" in "nonsense 5"/);
+  assert.deepEqual(errorsOf(c.run('bind h fast load maps on')), [], 'a phrase is checked as its key');
+  c.run('unbind all; unset god');
+});

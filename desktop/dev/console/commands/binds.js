@@ -2,10 +2,11 @@
 import { print } from '../ui/log.js';
 import { COLOR } from '../core/colors.js';
 import { plural } from '../core/text.js';
-import { SCHEMA, ALIASES } from '../state/schema.js';
+import { SCHEMA, ALIASES, unphrase } from '../state/schema.js';
 import { parseKeyName, showKey, baseKey, GAME_KEYS } from '../state/keys.js';
 import { binds } from '../state/store.js';
 import { runWords } from './registry.js';
+import { splitCommands } from '../dispatch.js';
 
 const KEY_WIDTH = 16;
 
@@ -32,8 +33,14 @@ export function bindKey(args) {
   }
   // Quotes let a bind hold a ";" chain: bind f "vars set x 1; vars sync x r".
   const command = args.slice(1).join(' ').replace(/^"([\s\S]*)"$/, '$1');
-  const first = command.split(/\s+/)[0];
-  if (!canStart(first)) throw new Error(`unknown command "${first}". Type "help".`);
+  // Each command of the chain is checked the way it will run: split at ";", phrases
+  // turned into keys ("fast load maps on" is fast_maps).
+  const parts = splitCommands(command);
+  if (!parts.length) throw new Error('usage: bind <key> <command>');
+  for (const part of parts) {
+    const first = unphrase(part).split(/\s+/)[0];
+    if (!canStart(first)) throw new Error(`unknown command "${first}"${part !== first ? ` in "${part}"` : ''}. Type "help".`);
+  }
   binds.set(key, command);
   print(`${showKey(key)} = ${command}${old && old !== command ? `  (was: ${old})` : ''}`, COLOR.ok);
   const base = baseKey(key);
