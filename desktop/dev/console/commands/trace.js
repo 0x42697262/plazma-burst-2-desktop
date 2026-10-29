@@ -5,7 +5,8 @@ import { plural } from '../core/text.js';
 import { takeOptions, oneOf } from '../core/args.js';
 import { game } from '../game/bindings.js';
 import { requireLevel, resolveChar, charLabel } from '../game/level.js';
-import { tracedNow, tracingGroup, distanceTo, traceAdd, traceGroup, traceRemove, traceOff, TRACE_KIND, TRACE_SIDE } from '../ui/trace.js';
+import { parseIndex } from '../core/text.js';
+import { tracedNow, pickedBySlot, tracingGroup, distanceTo, traceAdd, traceGroup, traceRemove, traceOff, TRACE_KIND, TRACE_SIDE } from '../ui/trace.js';
 
 const OPTION = Object.freeze({
   ALL: 'all', PLAYERS: 'players', NPC: 'npc', TEAM: 'team', ENEMIES: 'enemies', OFF: 'off',
@@ -34,8 +35,8 @@ const OLD_WORDS = Object.freeze({
   players: '--players', npc: '--npc', bots: '--npc', team: '--team', enemies: '--enemies',
 });
 
-// "1, bob" or "1 bob": characters by # or part of a nickname. Commas let a name hold
-// spaces. Never you: a trace starts from you.
+// "1, bob" or "1 bob": characters by # or part of a nickname, as [index, bySlot]. Commas
+// let a name hold spaces. Never you: a trace starts from you.
 function targets(args) {
   const text = args.join(' ');
   const words = (text.includes(',') ? text.split(',') : args).map((w) => w.trim()).filter(Boolean);
@@ -48,7 +49,7 @@ function targets(args) {
       throw meant ? new Error(`${e.message.replace(/ Type "chars"\.$/, '')} For the option, type "trace ${meant}".`) : e;
     }
     if (i === game.me()) throw new Error('that is you: traces start from you');
-    return i;
+    return [i, parseIndex(w) !== null];
   });
 }
 
@@ -60,7 +61,7 @@ function status() {
     return;
   }
   print(`Tracing ${plural(now.length, 'character')}${tracingGroup() ? ` (${groupText(tracingGroup())}, also who joins later)` : ''}:`, COLOR.title);
-  for (const i of now) print(`  ${charLabel(i).padEnd(20)} ${distanceTo(i)}px`);
+  for (const i of now) print(`  ${charLabel(i).padEnd(20)} ${`${distanceTo(i)}px`.padEnd(8)}${pickedBySlot(i) ? ' slot: whoever is in it' : ''}`.trimEnd());
 }
 
 function trace(rawArgs) {
@@ -73,8 +74,8 @@ function trace(rawArgs) {
     if (also) throw new Error(`--off and --${also} do not go together: "trace --off" stops all, "trace --off <# | name>" stops one`);
     if (!rest.length) { traceOff(); print('Traces off', COLOR.ok); return; }
     requireLevel();
-    for (const i of targets(rest)) {
-      traceRemove(i);
+    for (const [i, bySlot] of targets(rest)) {
+      traceRemove(i, bySlot);
       print(`Stopped tracing ${charLabel(i)}`, COLOR.ok);
     }
     return;
@@ -84,7 +85,7 @@ function trace(rawArgs) {
   const picked = rest.length ? targets(rest) : [];
   if (grouped) traceGroup({ kind: KIND_OF[kind] ?? null, side: SIDE_OF[side] ?? null });
   if (picked.length) traceAdd(picked);
-  const named = picked.map((i) => `${charLabel(i)} (${distanceTo(i)}px)`).join(', ');
+  const named = picked.map(([i, bySlot]) => `${bySlot ? 'slot ' : ''}${charLabel(i)} (${distanceTo(i)}px)`).join(', ');
   if (!grouped) { print(`Tracing ${named}`, COLOR.ok); return; }
   print(`Tracing ${groupText(tracingGroup())}${named ? `, and ${named}` : ''}: ${plural(tracedNow().length, 'character')} now, and who joins later`, COLOR.ok);
 }
@@ -106,7 +107,7 @@ export const traceCommand = {
     ],
     args: [
       ['(nothing)', 'who is traced, and how far away'],
-      ['<# | name>...', 'trace these too: # from "chars", or part of a nickname'],
+      ['<# | name>...', 'trace these too: # from "chars" (that slot, whoever is in it), or part of a nickname (that player, until they leave)'],
       ['--all', 'everyone but you, NPCs too, also characters who join later'],
       ['--players', 'only real players (no NPCs), also who joins later'],
       ['--npc', 'only NPCs (bots)'],
@@ -116,8 +117,9 @@ export const traceCommand = {
       ['--off <# | name>...', 'stop tracing these (from a group, the others stay)'],
     ],
     examples: [
-      ['trace 2', 'character #2'],
-      ['trace bob, 4', 'bob and #4 (commas let a name hold spaces)'],
+      ['trace 2', 'slot #2: whoever is in it, also after a player leaves and another joins'],
+      ['trace bob', 'bob: stops when bob leaves'],
+      ['trace bob, 4', 'bob and slot #4 (commas let a name hold spaces)'],
       ['trace --players', 'every other player, no NPCs'],
       ['trace --enemies', 'everyone on the other teams'],
       ['trace --players --enemies', 'enemy players, no NPCs'],
@@ -131,6 +133,8 @@ export const traceCommand = {
       'A kind (--players or --npc) and a side (--team or --enemies) go together; --all',
       'with them changes nothing. A new group replaces the old one; picked names stay.',
       'Teams are checked every frame, so after a team switch the lines follow.',
+      'A player picked by name is known by their account (NPCs and guests, which have',
+      'none, by slot and nickname): leaving ends their trace, even if they come back.',
       'Your team is the same team number, as in "chars" (ally / enemy).',
       'Only drawn in your game: nothing is sent, and nobody else sees it.',
     ],

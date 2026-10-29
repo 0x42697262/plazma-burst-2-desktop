@@ -396,7 +396,7 @@ test('trace draws a white line from you to each traced character', async () => {
   const texts = () => c.log.drawn.filter((d) => d[0] === 'fillText').map((d) => d[1]);
 
   assert.match(c.run('trace')[0], /Not tracing anyone/);
-  assert.match(c.run('trace 1')[0], /^Tracing #1 bob \(112px\)/);
+  assert.match(c.run('trace 1')[0], /^Tracing slot #1 bob \(112px\)/);
   assert.equal(frame().trace.lines, 1);
   // Middles are 41 above the feet: you (0, -41) -> screen (100, 9); bob -> (200, -41).
   assert.ok(c.log.drawn.some((d) => d[0] === 'moveTo' && d[1] === 100 && d[2] === 9), 'from your middle');
@@ -530,4 +530,48 @@ test('trace filters: a kind and a side combine, and what cannot go together says
   }
   assert.match(errorsOf(c.run('trace enemies'))[0], /For the option, type "trace --enemies"/);
   c.run('trace --off');
+});
+
+test('trace by name follows the player until they leave; by # follows the slot', async () => {
+  const traced = () => c.run('trace').slice(1).map((l) => l.trim().split(/\s+/).slice(0, 2).join(' '));
+  const bob = c.chars[1];
+  // A player leaves: the game switches the slot off. Another joins: the same character,
+  // with their account and nickname.
+  const leave = (ch) => { ch.io = false; };
+  const join = (ch, login, nick) => { Object.assign(ch, { io: true, login, nickname: nick }); };
+  const settle = () => new Promise((r) => queueMicrotask(r));
+  c.run('trace --off');
+  join(bob, 'bob_account', 'bob');
+
+  c.run('trace bob');
+  assert.deepEqual(traced(), ['#1 bob']);
+  leave(bob);
+  assert.deepEqual(traced(), [], 'bob left');
+  await settle();
+  assert.equal(c.log.frames.length, 0, 'nothing left to draw: the overlay goes');
+  join(bob, 'eve_account', 'eve');
+  assert.deepEqual(traced(), [], 'eve in bob\'s slot is not bob');
+  join(bob, 'bob_account', 'bob');
+  assert.deepEqual(traced(), [], 'leaving ended it, even when bob comes back');
+
+  c.run('trace 1');
+  join(bob, 'eve_account', 'eve');
+  assert.deepEqual(traced(), ['#1 eve'], 'a slot, whoever is in it');
+  assert.ok(c.run('trace').some((l) => /#1 eve\s+\d+px\s+slot: whoever is in it/.test(l)));
+  leave(bob);
+  assert.deepEqual(traced(), []);
+  join(bob, 'bob_account', 'bob');
+  assert.deepEqual(traced(), ['#1 bob'], 'the slot stays traced while it is empty');
+  c.run('trace --off');
+
+  // Dropped from a group the same way: by name the person, by # the slot.
+  c.run('trace --all; trace --off bob');
+  assert.deepEqual(traced(), ['#2 bluebot']);
+  join(bob, 'eve_account', 'eve');
+  assert.deepEqual(traced(), ['#1 eve', '#2 bluebot'], 'eve was never dropped');
+  c.run('trace --off 1');
+  join(bob, 'bob_account', 'bob');
+  assert.deepEqual(traced(), ['#2 bluebot'], 'the slot stays dropped');
+  c.run('trace --off');
+  delete bob.login;
 });

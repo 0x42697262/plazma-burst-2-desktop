@@ -17,6 +17,11 @@ const BOUNDS = Object.freeze({ w: GAME_WIDTH, h: GAME_HEIGHT });
 // A group traces characters who join later too: everyone else, or only some of them by
 // kind (real players or NPCs) and by side (your team or the others), checked every
 // frame. Picked characters are traced on top of it, dropped ones are left out.
+//
+// A character is picked (or dropped) by slot or as a person. The game keeps one
+// character per slot and gives it to whoever joins next, so a slot is traced whoever is
+// in it, and a person only while they are in the match: when they leave, that is the end
+// of it, even if they come back.
 export const TRACE_KIND = Object.freeze({ PLAYERS: 'players', NPC: 'npc' });
 export const TRACE_SIDE = Object.freeze({ TEAM: 'team', ENEMIES: 'enemies' });
 const KIND_OK = Object.freeze({
@@ -29,22 +34,46 @@ const SIDE_OK = Object.freeze({
   [TRACE_SIDE.ENEMIES]: (c, me) => c.team !== me.team,
 });
 let group = null; // { kind, side }, each null for any
-const picked = new Set(); // character indexes
-const dropped = new Set(); // character indexes the group would trace
+const picked = { slots: new Set(), people: new Set() }; // indexes, personOf keys
+const dropped = { slots: new Set(), people: new Set() }; // ones the group would trace
+
+// Who is in slot i: their account, which a slot keeps for the player in it. Without one
+// (NPCs, guests), the nickname in that slot.
+const NO_ACCOUNT = ['', '.guest'];
+function personOf(i, c = charAt(i)) {
+  const login = typeof c.login === 'string' ? c.login : '';
+  return NO_ACCOUNT.includes(login) ? `#${i} ${c.nickname}` : `@${login}`;
+}
+
+const isPicked = (set, i, who) => set.slots.has(i) || set.people.has(who);
+const isEmpty = (set) => !set.slots.size && !set.people.size;
+const clear = (set) => { set.slots.clear(); set.people.clear(); };
+const pickedBySlot = (i) => picked.slots.has(i);
 
 const inGroup = (c, me) => !!group && (!group.kind || KIND_OK[group.kind](c)) && (!group.side || SIDE_OK[group.side](c, me));
 
-// Who is traced right now: characters that are still in the match, never you.
+// Who is traced right now: characters that are still in the match, never you. People
+// who left are forgotten here.
 export function tracedNow() {
   const out = [];
   const me = player();
+  const here = new Set();
   for (let i = 0; i < game.charCount(); i++) {
     const c = charAt(i);
     if (i === game.me() || !c) continue;
-    if (picked.has(i) || (inGroup(c, me) && !dropped.has(i))) out.push(i);
+    const who = personOf(i, c);
+    here.add(who);
+    if (isPicked(picked, i, who) || (inGroup(c, me) && !isPicked(dropped, i, who))) out.push(i);
   }
+  let left = false;
+  for (const set of [picked.people, dropped.people]) {
+    for (const who of set) if (!here.has(who)) { set.delete(who); left = true; }
+  }
+  // Not while the overlay draws this layer: it would come back for the next frame.
+  if (left) queueMicrotask(refresh);
   return out;
 }
+export { pickedBySlot };
 export const tracingGroup = () => group;
 
 // From you to character i, in world units, as "chars" measures it.
@@ -92,30 +121,39 @@ function drawTrace(ctx, m) {
   return { lines: items.length, labels };
 }
 
-const refresh = () => setLayer(LAYER, group || picked.size ? drawTrace : null);
+const refresh = () => setLayer(LAYER, group || !isEmpty(picked) ? drawTrace : null);
 
-export function traceAdd(indexes) {
-  for (const i of indexes) { picked.add(i); dropped.delete(i); }
+// Characters as [index, bySlot]: by slot ("#2") the slot, else the person in it.
+export function traceAdd(targets) {
+  for (const [i, bySlot] of targets) {
+    const who = personOf(i);
+    if (bySlot) picked.slots.add(i); else picked.people.add(who);
+    dropped.slots.delete(i);
+    dropped.people.delete(who);
+  }
   refresh();
 }
 
 // { kind, side }, each null for any. Characters picked before stay traced too.
 export function traceGroup({ kind = null, side = null } = {}) {
   group = Object.freeze({ kind, side });
-  dropped.clear();
+  clear(dropped);
   refresh();
 }
 
-export function traceRemove(i) {
-  picked.delete(i);
-  if (group) dropped.add(i);
+// Whatever traces character i stops. A group leaves out the slot or the person.
+export function traceRemove(i, bySlot) {
+  const who = personOf(i);
+  picked.slots.delete(i);
+  picked.people.delete(who);
+  if (group) { if (bySlot) dropped.slots.add(i); else dropped.people.add(who); }
   refresh();
 }
 
 export function traceOff() {
   group = null;
-  picked.clear();
-  dropped.clear();
+  clear(picked);
+  clear(dropped);
   refresh();
 }
 
