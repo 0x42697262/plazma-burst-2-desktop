@@ -136,6 +136,7 @@ function show(rawArgs) {
     print(`Showing ${plural(g.links.filter(filter).length, 'link')} ${where}: ${describe}. Only the ones on screen are drawn; "logic hide" stops.`, COLOR.ok);
   }
   print('  green: starts a trigger   yellow: enables/disables   blue: acts on   white: attached   pink: other', COLOR.hint);
+  print('  Aim the crosshair at a label to open its group ("+N more", or hidden for lack of room).', COLOR.hint);
 }
 
 // The links from one element to another, as one row: "actions 5, 12: 20 enable trigger A"
@@ -282,6 +283,9 @@ export const logicCommand = {
           'Without "screen", a link with one end on screen is drawn too, running off the',
           'edge; with it, only links that start and end on screen, worked out every frame.',
           'A region or a door counts as on screen when any part of it is.',
+          'Labels never overlap. Elements at the same spot share one, a big group shows',
+          '"+N more", and a label with no room left (zoomed far out) is hidden. Aim the',
+          'crosshair at a group to open it in full.',
           'Colours: green starts a trigger, yellow enables or disables, blue acts on,',
           'white is attached, pink is any other reference.',
         ],

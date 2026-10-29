@@ -4,8 +4,9 @@
 // changed: the debug view's switch is an anti-cheat guarded value, this only reads the
 // camera. Redrawn every animation frame while shown.
 import { game, GAME_WIDTH, GAME_HEIGHT } from '../game/bindings.js';
-import { isActive } from '../game/level.js';
+import { isActive, player } from '../game/level.js';
 import { LINK, logicGraph, placeOf, centreOf } from './graph.js';
+import { layoutLabels, FONT_SIZE, LINE_HEIGHT, PAD } from './labels.js';
 
 const LINK_COLOR = Object.freeze({
   [LINK.START]: '#33ff33', // the debug view's green
@@ -17,12 +18,13 @@ const LINK_COLOR = Object.freeze({
 const NODE_COLOR = Object.freeze({ trigger: '#33ff33', timer: '#ffd84d', region: '#3C9DFF', player: '#ff6666' });
 const OTHER_NODE_COLOR = '#ffffff';
 const LABEL_COLOR = '#ffffffdd';
-const LABEL_SHADOW = '#000000';
-const LABEL_FONT = '5px DejaVuSansMono'; // in game units, so it stays tiny at any zoom
+const LABEL_PLATE = '#000000aa'; // behind the text, so it reads over the level
+const LABEL_OPEN_PLATE = '#0E2236ee'; // the group under the crosshair
+const LABEL_LEADER = '#ffffff55'; // from a moved label back to its point
+const LABEL_FONT = `${FONT_SIZE}px DejaVuSansMono`; // in game units, so it stays tiny at any zoom
 const LINE_WIDTH = 0.6; // game units
 const NODE_SIZE = 2.5;
 const ARROW = 4;
-const LABEL_OFFSET = 4;
 const MARGIN = 40; // game units past the screen edge that still count as on screen
 
 let overlay = null;
@@ -137,7 +139,7 @@ export function drawFrame() {
     shown.add(link.from).add(link.to);
     lines++;
   }
-  ctx.font = LABEL_FONT;
+  const items = [];
   for (const node of shown) {
     const p = point(node);
     if (!onScreen(p)) continue;
@@ -149,12 +151,37 @@ export function drawFrame() {
     } else {
       ctx.fillRect(p.x - NODE_SIZE / 2, p.y - NODE_SIZE / 2, NODE_SIZE, NODE_SIZE);
     }
-    ctx.fillStyle = LABEL_SHADOW;
-    ctx.fillText(node.uid, p.x + LABEL_OFFSET + 0.4, p.y - LABEL_OFFSET + 0.4);
-    ctx.fillStyle = LABEL_COLOR;
-    ctx.fillText(node.uid, p.x + LABEL_OFFSET, p.y - LABEL_OFFSET);
+    items.push({ x: p.x, y: p.y, text: node.uid });
   }
-  return { lines, nodes: shown.size };
+  const labels = drawLabels(ctx, items, m);
+  return { lines, nodes: shown.size, labels };
+}
+
+// The crosshair, which follows the mouse in world units (also with the pointer locked).
+function crosshair(m) {
+  const p = player();
+  return p && Number.isFinite(p.tarx) && Number.isFinite(p.tary) ? toScreen(m, { x: p.tarx, y: p.tary }) : null;
+}
+
+function drawLabels(ctx, items, m) {
+  const { labels, hidden } = layoutLabels(items, { cursor: crosshair(m), bounds: { w: GAME_WIDTH, h: GAME_HEIGHT } });
+  ctx.font = LABEL_FONT;
+  ctx.textBaseline = 'top';
+  for (const l of labels) {
+    const moved = l.x > l.at.x + PAD * 4 || l.x + l.w < l.at.x - PAD * 4 || l.y > l.at.y + PAD * 4 || l.y + l.h < l.at.y - PAD * 4;
+    if (moved) {
+      ctx.strokeStyle = LABEL_LEADER;
+      ctx.beginPath();
+      ctx.moveTo(l.at.x, l.at.y);
+      ctx.lineTo(Math.min(Math.max(l.at.x, l.x), l.x + l.w), Math.min(Math.max(l.at.y, l.y), l.y + l.h));
+      ctx.stroke();
+    }
+    ctx.fillStyle = l.open ? LABEL_OPEN_PLATE : LABEL_PLATE;
+    ctx.fillRect(l.x, l.y, l.w, l.h);
+    ctx.fillStyle = LABEL_COLOR;
+    l.lines.forEach((text, i) => ctx.fillText(text, l.x + PAD, l.y + PAD + i * LINE_HEIGHT));
+  }
+  return { shown: labels.length, hidden };
 }
 
 function loop() {

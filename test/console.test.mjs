@@ -288,3 +288,38 @@ test('logic screen keeps only what the camera shows, as it moves', async () => {
   assert.ok(!c.run('logic #god_all screen').some((l) => l.includes('-> #player')), 'and drops the rest');
   cam.x = 100;
 });
+
+test('logic labels never overlap: grouped, collapsed, opened by the crosshair', async () => {
+  const { layoutLabels } = await consoleModule('logic/labels.js');
+  const bounds = { w: 800, h: 400 };
+  const hit = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  const overlapping = (ls) => ls.some((a, i) => ls.some((b, j) => j > i && hit(a, b)));
+  const at = (x, y, ...texts) => texts.map((text) => ({ x, y, text }));
+
+  // Elements at the same spot share one label, one uid per line.
+  let { labels } = layoutLabels(at(100, 100, '#a', '#b', '#c'), { bounds });
+  assert.equal(labels.length, 1);
+  assert.deepEqual(labels[0].lines, ['#a', '#b', '#c']);
+
+  // A big group shows two and "+N more" until the crosshair is on it.
+  const five = at(100, 100, '#a', '#b', '#c', '#d', '#e');
+  assert.deepEqual(layoutLabels(five, { bounds }).labels[0].lines, ['#a', '#b', '+3 more']);
+  ({ labels } = layoutLabels([...five, ...at(300, 300, '#far')], { cursor: { x: 103, y: 98 }, bounds }));
+  assert.deepEqual(labels.at(-1).lines, ['#a', '#b', '#c', '#d', '#e'], 'open, and drawn last (on top)');
+  assert.equal(labels.at(-1).open, true);
+
+  // A crowded screen: no two drawn labels overlap.
+  let seed = 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const crowd = Array.from({ length: 150 }, (_, i) => ({ x: 300 + rnd() * 200, y: 150 + rnd() * 100, text: `#element*${i}` }));
+  const r = layoutLabels(crowd, { bounds });
+  assert.equal(overlapping(r.labels), false);
+
+  // Far too many for the screen: the extras are hidden, still none overlap, and the one
+  // under the crosshair is always shown.
+  const jam = Array.from({ length: 400 }, (_, i) => ({ x: 380 + (i % 20) * 2, y: 190 + Math.floor(i / 20) * 1, text: `#jam*${i}` }));
+  const j = layoutLabels(jam, { cursor: { x: 420, y: 205 }, bounds });
+  assert.ok(j.hidden > 0, `${j.hidden} hidden`);
+  assert.equal(overlapping(j.labels.filter((l) => !l.open)), false);
+  assert.ok(j.labels.some((l) => l.open), 'the group under the crosshair is drawn');
+});
