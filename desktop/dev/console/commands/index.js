@@ -7,6 +7,7 @@ import { gunsCommand, gunCommands } from './guns.js';
 import { bindCommands } from './binds.js';
 import { triggersCommand } from './triggers.js';
 import { varsCommand } from './vars.js';
+import { logicCommand } from './logic.js';
 import { moreCommand, chainTopic, consoleCommands } from './console.js';
 import { gameCommand } from './game-chat.js';
 import { mapsCommand } from './maps.js';
@@ -17,6 +18,6 @@ const [list, set, get, unset, reset, builtin] = settingsCommands;
 register(
   helpCommand, list, set, get, unset, reset,
   ...playerCommands, gunsCommand, tpCommand, posCommand, ...gunCommands, charsCommand,
-  ...bindCommands, triggersCommand, varsCommand, chainTopic, moreCommand,
+  ...bindCommands, triggersCommand, varsCommand, logicCommand, chainTopic, moreCommand,
   gameCommand, builtin, mapsCommand, jsCommand, ...consoleCommands,
 );

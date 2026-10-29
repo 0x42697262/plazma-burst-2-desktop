@@ -122,13 +122,29 @@ export async function bootConsole({ mapFile = path.join(REPO, 'test/fixtures/map
   });
   const listeners = {};
   set('uiOverlay', { overlay: node() });
-  G.document = { createElement: node, addEventListener: (t, f) => { listeners[t] = f; }, pointerLockElement: null };
+  G.document = { createElement: (tag) => (tag === 'canvas' ? canvasNode(0, 0) : node()), addEventListener: (t, f) => { listeners[t] = f; }, pointerLockElement: null };
   G.stage = { currentFrameLabel: 'gaming', addEventListener: (t, f) => { listeners.frame = f; }, runEvents() {} };
   G.Event = { ENTER_FRAME: 'enterFrame' };
   G.KeyboardEvent = { KEY_DOWN: 'keyDown', KEY_UP: 'keyUp' };
   G.gravity = 0.5;
   G.system_non_stop = true;
-  G.game = { x: 0, y: 0, clearMCInterpolationData() {} };
+  G.game = { x: 0, y: 0, scaleX: 1, scaleY: 1, parent: { x: 0, y: 0, scaleX: 1, scaleY: 1 }, clearMCInterpolationData() {} };
+  // The game canvas at resolution 2 (two pixels per game unit), and a 2D context that
+  // records what is drawn instead of drawing it.
+  const drawn = [];
+  const recorder = () => new Proxy({}, {
+    get: (t, k) => (k in t ? t[k] : (...args) => drawn.push([k, ...args])),
+    set: (t, k, v) => { t[k] = v; return true; },
+  });
+  const canvasNode = (w, h) => ({ ...node(), width: w, height: h, getContext: () => recorder(),
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: w / 2, height: h / 2 }), after() {}, remove() {} });
+  G.game_canvas = canvasNode(1600, 800);
+  G.game_canvas.style.zIndex = '2';
+  log.drawn = drawn;
+  const frames = [];
+  G.requestAnimationFrame = (fn) => frames.push(fn);
+  G.cancelAnimationFrame = () => { frames.length = 0; };
+  log.frames = frames;
   G.graphics_3d = G.graphics_3d_front = { clearMCInterpolationData() {} };
   const store = new Map();
   G.localStorage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) };

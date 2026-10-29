@@ -181,3 +181,47 @@ test('triggers find by: combines with the other terms', () => {
   assert.match(errorsOf(c.run('triggers find by:chat#2'))[0], /takes no number/);
   assert.match(c.run('triggers find by:#nothing')[0], /No trigger or action matches/);
 });
+
+test('logic: a tree of what reaches an element and what it acts on', () => {
+  const out = c.run('logic #kick');
+  const i = out.indexOf('Reached from:');
+  assert.match(out[i + 1], /<- #chat_in\s+trigger #\d+\s+action 1: 363 continue in trigger A/);
+  assert.match(out[i + 2], /<- chat message/, 'the chat trigger is followed back to chat');
+  const door = c.run('logic #door_a');
+  assert.ok(door.some((l) => /<- #open_door .*action 2: 0/.test(l)), 'the action on the door');
+  assert.ok(door.some((l) => /<- #sign\s+decor #0\s+attach/.test(l)), 'what is attached to it');
+  assert.ok(c.run('logic #two words').some((l) => /<- #open_door .*action 3: 99 run trigger A/.test(l)), 'a uid with a space');
+  assert.match(errorsOf(c.run('logic #nope'))[0], /nothing in this map is called "#nope"/);
+});
+
+test('logic show draws every link where the camera puts it', async () => {
+  const view = await consoleModule('logic/view.js');
+  const cam = c.G.game;
+  const lineStarts = () => c.log.drawn.filter((d) => d[0] === 'moveTo').map((d) => [d[1], d[2]].join(','));
+  cam.x = 100; cam.y = 50; cam.scaleX = cam.scaleY = 1;
+  c.run('logic show');
+  c.log.drawn.length = 0;
+  const all = view.drawFrame();
+  assert.ok(all.lines > 5, `${all.lines} lines`);
+  // Region #button (10, 20) runs #open_door: world + camera, in game units.
+  assert.ok(lineStarts().includes('110,70'), 'region at world 10,20 is drawn at 110,70');
+  assert.ok(c.log.drawn.some((d) => d[0] === 'setTransform' && d[1] === 2), 'two canvas pixels per game unit');
+  assert.ok(c.log.drawn.some((d) => d[0] === 'fillText' && d[1] === '#button'), 'labelled with its uid');
+
+  cam.scaleX = cam.scaleY = 0.5; // zoom 50
+  c.log.drawn.length = 0;
+  view.drawFrame();
+  assert.ok(lineStarts().includes('105,60'), 'zoom scales the world, not the screen offset');
+
+  c.run('logic show start');
+  const starts = view.drawFrame();
+  assert.ok(starts.lines > 0 && starts.lines < all.lines, 'a kind filter draws fewer');
+  c.run('logic show #door_a');
+  assert.equal(view.drawFrame().lines, 2, 'around one element: its two links');
+
+  cam.x = 1e6; // the camera far away: nothing on screen is drawn
+  assert.equal(view.drawFrame().lines, 0);
+  cam.x = 100; cam.scaleX = cam.scaleY = 1;
+  c.run('logic hide');
+  assert.equal(c.log.frames.length, 0, 'no frame left pending');
+});

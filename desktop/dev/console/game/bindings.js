@@ -9,6 +9,10 @@ import { escapeRe } from '../core/text.js';
 // Frame label of the game stage while a level is running.
 const LEVEL_FRAME = 'gaming';
 
+// The stage size in game units (index.html: <canvas width="800" height="400">).
+export const GAME_WIDTH = 800;
+export const GAME_HEIGHT = 400;
+
 // Message types on the game's network class (plain property names, not obfuscated).
 export const NET = Object.freeze({
   EXEC_TRIGGER: 'RELIABLE_EXEC_TRIGGER',
@@ -84,6 +88,23 @@ export const game = {
     graphics_3d_front.clearMCInterpolationData();
   },
   teleportFx: (x, y) => call('effect', x, y, read('effectTypes')[nameOf('effectTeleport')], 0, 0),
+
+  // ----- Drawing over the game -----
+  // The canvas the game draws on (scripts/main.js), and the camera, read the way the
+  // game's own debug view (the "debug 1" chat command) uses them: the stage is
+  // GAME_WIDTH x GAME_HEIGHT units, drawn at canvas.width / GAME_WIDTH pixels per unit,
+  // and the world goes through game.x/y and game.scaleX/Y (zoom), inside game.parent.
+  // Read only: these are anti-cheat guarded values (ANTICHEAT.md 3.3, slots 46-51).
+  gameCanvas: () => (typeof game_canvas === 'undefined' ? null : game_canvas),
+  camera: () => {
+    const g = globalThis.game;
+    if (!g) return null;
+    const p = g.parent || {};
+    return {
+      x: g.x, y: g.y, scaleX: g.scaleX, scaleY: g.scaleY,
+      parentX: p.x || 0, parentY: p.y || 0, parentScaleX: p.scaleX ?? 1, parentScaleY: p.scaleY ?? 1,
+    };
+  },
 
   // ----- World -----
   getGravity: () => gravity,
