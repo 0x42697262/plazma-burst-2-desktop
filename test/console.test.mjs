@@ -1020,7 +1020,7 @@ test('editor: on and off by its key, outlines every object, selects by click and
   } finally {
     c.G.stage.currentFrameLabel = 'gaming';
     c.G[c.N.mapText] = original;
-    session.setEditor(false);
+    session.setEditor(false); session.forgetDocument();
   }
 });
 
@@ -1126,7 +1126,7 @@ test('editor: edits go into the running level, in any mode, and again after a re
     assert.ok(c.log.printed.some((l) => /could not save \(no desktop wrapper in tests\)/.test(l)), c.log.printed.join(' | '));
     assert.match(errorsOf(c.run('editor save'))[0], /usage: editor save <name>/);
   } finally {
-    session.setEditor(false);
+    session.setEditor(false); session.forgetDocument();
     c.G[c.N.mapText] = original;
   }
 });
@@ -1181,6 +1181,11 @@ test('editor tools: place, copy, delete and undo; live edits still reach the rig
     assert.match(doc.toText(), /<box x="2000" y="0" w="100" h="100" m="0" \/>/, 'in the map, for "editor save"');
     assert.deepEqual(c.press('Escape'), []);
     assert.equal(session.currentTool(), 'select', 'Esc: back to select');
+    // F8 off and on again: the placed walls are still there and can be selected.
+    c.press('F8'); c.press('F8');
+    assert.equal(session.editorDoc(), doc, 'the same document');
+    assert.equal(walls(), before + 2);
+    assert.equal(session.pickAt({ x: 2050, y: 50 })?.attrs.x, '2000');
 
     // Add by command, with a uid numbered like the map editor's; copy gets the next one.
     assert.match(quiet('editor add region 100 200 50 50')[0], /^Added #region\*1 at 100, 200 \(50 x 50\)/);
@@ -1230,7 +1235,7 @@ test('editor tools: place, copy, delete and undo; live edits still reach the rig
     assert.match(errorsOf(c.run('editor delete'))[0], /select an object first/);
   } finally {
     session.setTool('select');
-    session.setEditor(false);
+    session.setEditor(false); session.forgetDocument();
     c.G[c.N.mapText] = original;
   }
 });
@@ -1284,7 +1289,7 @@ test('logic: old maps without uids link by number, as the game reads them', asyn
     assert.equal(drawEditorFrame().links, 4, 'a region runs it; it moves a door to a region, disables a timer');
     assert.deepEqual(errorsOf(c.run('editor status')), []);
   } finally {
-    session.setEditor(false);
+    session.setEditor(false); session.forgetDocument();
     c.G[c.N.mapText] = original;
   }
 });
@@ -1438,7 +1443,7 @@ test('editor: walls (with trims), backgrounds, water, pushers and movables move 
     assert.deepEqual(cellsOf(G[N.grid], 1), freshCells(1));
     assert.deepEqual([lift.w, G[N.pushToY][0]], [80, -3]);
   } finally {
-    session.setEditor(false);
+    session.setEditor(false); session.forgetDocument();
     G[N.mapText] = original;
     for (const k of ['doors', 'doorCount', 'wallCount', 'waters', 'waterCount', 'bgCount', 'pushCount']) delete G[N[k]];
     delete G.graphics_3d;
@@ -1507,7 +1512,7 @@ test('editor: a trigger\'s actions are added, changed and removed, or edited as 
     setAttrs(t, valuesFromText(t.attrs, 'uid: #t'));
     assert.deepEqual(actionsOf(t.attrs), []);
   } finally {
-    session.setEditor(false);
+    session.setEditor(false); session.forgetDocument();
     c.G[c.N.mapText] = original;
   }
 });
@@ -1526,7 +1531,7 @@ test('editor: Params shows every parameter of the kind, with the editor\'s title
       assert.ok(texts.includes(t), `${t}: ${texts.slice(-30).join(' | ')}`);
     }
   } finally {
-    session.setEditor(false);
+    session.setEditor(false); session.forgetDocument();
     c.G[c.N.mapText] = original;
   }
 });
@@ -1581,7 +1586,7 @@ test('editor: an object parameter is picked by clicking the object in the world,
     c.press('Escape');
     c.run('editor undo'); c.run('editor undo');
   } finally {
-    session.setEditor(false);
+    session.setEditor(false); session.forgetDocument();
   }
 });
 
@@ -1617,7 +1622,7 @@ test('editor: the selection\'s connections are dashed lines as in the map editor
     assert.ok(lines.some((l) => l.color === '#ffffff' && l.dash), 'white, dashed: what points at it');
     assert.ok(!c.log.drawn.some((d) => d[0] === 'closePath'), 'no arrowheads');
   } finally {
-    session.setEditor(false);
+    session.setEditor(false); session.forgetDocument();
     c.G[c.N.mapText] = original;
   }
 });
@@ -1723,7 +1728,7 @@ $regionR++;
     c.run('editor undo'); // the add
     assert.equal(regions[n].x, 1e7);
   } finally {
-    session.setEditor(false);
+    session.setEditor(false); session.forgetDocument();
     for (const k of ['$tagBox', '$tagRegion', '$tagDecor', '$regionN', '$regionR', '$wallsBuilt']) delete G[k];
   }
 });
@@ -1764,7 +1769,7 @@ test('editor: a map gun moves, changes model, is deleted and comes back in the r
     c.run('editor undo');
     assert.deepEqual([made.length, made[1].model, made[1].x], [2, 'gun_sniper', 300]);
   } finally {
-    session.setEditor(false);
+    session.setEditor(false); session.forgetDocument();
     G[N.gunFactory] = factory;
     G[N.guns] = [];
     G[N.mapText] = original;

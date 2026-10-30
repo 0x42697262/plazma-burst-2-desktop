@@ -23,6 +23,9 @@ const state = {
   selectable: new Set(KIND_TAGS), // the active layers: what a click can select (the rest is drawn faint)
   moreLayers: false, // the Layers list shows every kind ("More"), not just the groups
   pick: null, // { kinds, what, onPick(element) }: a parameter waiting for an object clicked in the world
+  levelStarts: 0, // level starts seen, editor on or off
+  levelRunning: false,
+  docLevel: -1, // the level start the running level got the document's edits at
   tool: 'select', // TOOL: what a click in the world does
   preview: null, // { tag, x, y, w, h }: the rectangle being dragged out with the place tool
   lastPick: null, // { at, ids, k }: the stack under the last click, for cycling
@@ -111,13 +114,23 @@ export function setEditor(on) {
   if (on === state.on) return false;
   if (on) {
     requireLevel();
-    takeDoc(readDoc());
+    // The same map still running: the document goes on, with everything added, deleted
+    // and changed. If the level started over meanwhile, the edits go in again.
+    const text = game.mapText();
+    if (state.doc && state.doc.source === text) {
+      if (state.docLevel !== state.levelStarts) { state.docLevel = state.levelStarts; changed('reloaded'); }
+    } else {
+      takeDoc(readDoc());
+    }
     if (!loaderReady()) readLoader(); // the game's loader, for rebuilding objects
   }
   state.on = on;
   setShown(on);
   return true;
 }
+
+// Drops the document (the next "editor on" reads the map again). For tests.
+export function forgetDocument() { if (!state.on) { state.doc = null; state.selectedId = null; } }
 
 function setShown(shown) {
   if (shown === state.shown) return;
@@ -130,6 +143,7 @@ function setShown(shown) {
 // 'doc').
 function takeDoc(doc) {
   state.doc = doc;
+  state.docLevel = state.levelStarts;
   state.selectedId = null;
   state.lastPick = null;
   state.pending.clear();
@@ -221,8 +235,10 @@ export function pickAt(p) {
 // one. A level that starts on the same map (a restart, dying, a new round) gets the
 // edits again; any other map starts a new document.
 export function editorTick() {
-  if (!state.on) return;
   const active = isActive();
+  if (active && !state.levelRunning) state.levelStarts++;
+  state.levelRunning = active;
+  if (!state.on) return;
   if (active === state.shown) return;
   if (active) {
     const text = game.mapText();
@@ -231,6 +247,7 @@ export function editorTick() {
       if (!doc) return; // not readable yet: try next frame
       takeDoc(doc);
     } else {
+      state.docLevel = state.levelStarts;
       changed('reloaded'); // the same map again: edit.js puts the edits back in
     }
   }
