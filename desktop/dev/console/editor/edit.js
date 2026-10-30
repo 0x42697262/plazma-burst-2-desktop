@@ -74,6 +74,8 @@ function remove(e, { recorded = true } = {}) {
 }
 
 export const setAttr = (e, attr, value) => change(e, { [attr]: value });
+// Several attributes at once (undefined removes one): one step for undo.
+export const setAttrs = (e, values) => change(e, values);
 
 // A rectangle's place and size, or a point's place (w and h ignored).
 export function setPlace(e, { x, y, w, h }) {

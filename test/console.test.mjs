@@ -976,7 +976,7 @@ test('editor: on and off by its key, outlines every object, selects by click and
     assert.equal(drawEditorFrame().links, 1, 'the timer that runs it');
     assert.equal(session.currentLayer(), 'trigger');
     const texts = textsOf(overlay);
-    assert.ok(texts.includes('Objects: trigger (1)') && texts.includes('#t') && texts.includes('actions_1_targetA'), texts.join(' | '));
+    assert.ok(texts.includes('Objects: trigger (1)') && texts.includes('#t') && texts.includes('1. SetVar') && texts.includes('A (string)'), 'the trigger\'s actions');
     assert.ok(texts.includes('1 trigger selected: #t'));
 
     // Esc clears the selection; a hidden layer is neither drawn nor picked.
@@ -1422,5 +1422,47 @@ test('the anti-cheat scan report is logged as the game sends it, once', () => {
   } finally {
     console.warn = realWarn;
     G[N.lockedArrays].length = 0;
+  }
+});
+
+test('editor: a trigger\'s actions are added, changed and removed, or edited as the map editor\'s text', async () => {
+  const session = await consoleModule('editor/session.js');
+  const { actionsOf, actionValues, triggerText, valuesFromText } = await consoleModule('editor/actions.js');
+  const { setAttrs, undo } = await consoleModule('editor/edit.js');
+  const original = c.G[c.N.mapText];
+  const level = (on) => { c.G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; c.frame(); };
+  try {
+    c.run('editor on');
+    c.G[c.N.mapText] = '<trigger uid="#t" x="0" y="0" enabled="true" maxcalls="1" actions_1_type="100" actions_1_targetA="a" actions_1_targetB="1" actions_2_type="-1" actions_2_targetA="" actions_2_targetB="" actions_3_type="26" actions_3_targetA="#clock" actions_3_targetB="0" />';
+    level(false); level(true);
+    const t = session.editorDoc().byUid('#t');
+    // Empty slots (type -1) are not actions.
+    assert.deepEqual(actionsOf(t.attrs), [{ type: '100', A: 'a', B: '1' }, { type: '26', A: '#clock', B: '0' }]);
+    // The text view, as the map editor writes it.
+    assert.equal(triggerText(t.attrs), 'uid: #t\nenabled: true\nmaxcalls: 1\n\nSetVar( "a", "1" );\nTimerDisable( "#clock", "0" );');
+    // Add one: renumbered from 1, the empty slot gone; one undo step.
+    setAttrs(t, actionValues(t.attrs, [...actionsOf(t.attrs), { type: 0, A: '#door', B: '#spot' }]));
+    assert.deepEqual([t.attrs.actions_2_type, t.attrs.actions_3_type, t.attrs.actions_3_targetB], ['26', '0', '#spot']);
+    assert.ok(!t.attrs.actions_4_type);
+    undo();
+    assert.equal(t.attrs.actions_2_type, '-1', 'undo puts the slots back as they were');
+    // Edit as text, apply: headers and actions replaced.
+    setAttrs(t, valuesFromText(t.attrs, 'uid: #t\nenabled: false\nmaxcalls: -1\n\nMovableTo( "#door", "#spot" );'));
+    assert.deepEqual([t.attrs.enabled, t.attrs.maxcalls, t.attrs.actions_1_type, t.attrs.actions_1_targetA], ['false', '-1', '0', '#door']);
+    assert.ok(!('actions_2_type' in t.attrs) && !('actions_3_type' in t.attrs));
+    assert.throws(() => valuesFromText(t.attrs, 'Nope( "a", "b" );'), /unknown action "Nope"/);
+    // The params panel in text mode: the text view and its Apply.
+    const { setTriggersAsText } = await consoleModule('editor/trigger-panel.js');
+    setTriggersAsText(true);
+    session.select(null); session.select(t);
+    const texts = textsOf(c.G[c.N.uiOverlay].overlay);
+    assert.ok(texts.includes('Edit triggers as text:') && texts.includes('Apply') && texts.includes('Edit triggers as param list'));
+    setTriggersAsText(false);
+    // A trigger with no actions at all is fine too.
+    setAttrs(t, valuesFromText(t.attrs, 'uid: #t'));
+    assert.deepEqual(actionsOf(t.attrs), []);
+  } finally {
+    session.setEditor(false);
+    c.G[c.N.mapText] = original;
   }
 });

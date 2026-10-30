@@ -20,6 +20,9 @@ import {
 import { setAttr, deleteElement, duplicateElement, undo, redo, notLiveReason } from './edit.js';
 import { canUndo, canRedo } from './history.js';
 import { PALETTE, FONT, FONT_SIZE, panel, caption, icon, button, listRow, paramRow, onClick } from './style.js';
+import { drawTriggerActions } from './trigger-panel.js';
+import { isActionAttr } from './actions.js';
+import { editField } from './fields.js';
 
 const OBJECTS_SHOWN = 400; // rows in the object box; a long layer says how many more
 const HIDDEN_ALPHA = '0.35';
@@ -96,29 +99,17 @@ function drawObjects() {
   nodes.objectsCaption.textContent = `Objects: ${kindOf(tag).title} (${list.length})`;
 }
 
-// A value turns into a text box when clicked: Enter applies it, Esc or clicking
-// elsewhere leaves it as it was.
+// A value turns into a text box when clicked (fields.js).
 function editValue(span, sel, attr) {
-  const input = el('input', {
-    width: '100%', boxSizing: 'border-box', fontFamily: FONT, fontSize: `${FONT_SIZE}px`, color: PALETTE.title,
-    background: PALETTE.box, border: `0.5px solid ${PALETTE.activeEdge}`, padding: '0 1px', height: '9px',
-  });
-  input.value = sel.attrs[attr];
-  input.spellcheck = false;
-  input.addEventListener('keydown', (e) => {
-    e.stopPropagation();
-    if (e.key === 'Enter') {
+  editField(span, {
+    initial: sel.attrs[attr], onDone: drawParams,
+    onCommit: (text) => {
       try {
-        const { live, why } = setAttr(sel, attr, input.value);
+        const { live, why } = setAttr(sel, attr, text);
         if (!live) say(`${attr}: not in the running level (${why})`, COLOR.notice);
       } catch (err) { say(`error: ${err.message}`, COLOR.error); }
-      drawParams();
-    } else if (e.key === 'Escape') drawParams();
+    },
   });
-  input.addEventListener('blur', () => { if (input.parentNode) drawParams(); });
-  span.replaceWith(input);
-  input.focus();
-  input.select();
 }
 
 function drawParams() {
@@ -131,11 +122,13 @@ function drawParams() {
   head.append(icon(sel.tag), el('span', {}, `1 ${kindOf(sel.tag)?.title || sel.tag} selected: ${nameOf(doc, sel)}`));
   box.append(head);
   for (const [attr, value] of Object.entries(sel.attrs)) {
+    if (sel.tag === 'trigger' && isActionAttr(attr)) continue; // listed as actions below
     const span = el('span', {}, value);
     const { row, value: cell } = paramRow(attr, span);
     onClick(cell, () => editValue(span, sel, attr));
     box.append(row);
   }
+  if (sel.tag === 'trigger') drawTriggerActions(box, sel, { redraw: drawParams, say });
 }
 
 // The top line: what the mouse does, edits the running level does not have, the last

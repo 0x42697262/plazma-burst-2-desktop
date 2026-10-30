@@ -27,9 +27,11 @@ export const opcodesLoaded = () => !!OPCODES;
 // { desc, a, b, alias } for an action number, from the editor's list.
 export const actionInfo = (type) => OPCODES?.actions?.[type];
 export const opcodeName = (type) => actionInfo(type)?.alias || `op${type}`;
+// Every action name the editor has, for completion.
+export const opcodeNames = () => (OPCODES ? Object.keys(OPCODES.aliases) : []);
 
-// An action name as the editor reads it: its number, or null.
-function opcodeType(name) {
+// An action name as the editor reads it ("MovableTo", "op562"): its number, or null.
+export function opcodeType(name) {
   const m = name.match(OP_NUMBER);
   if (m) return Number(m[1]);
   return OPCODES && Object.hasOwn(OPCODES.aliases, name) ? OPCODES.aliases[name] : null;
