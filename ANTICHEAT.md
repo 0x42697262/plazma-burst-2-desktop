@@ -278,7 +278,16 @@ This is the **only** layer that tells the server anything.
 
 ## 7. Layer E: Locked Array Snapshots (`tools.js`)
 
-For arrays registered with `$IeTlO([], undefined)` (skin colors, unlocks, attachments: `frame2.js:2475–2479`, `4499–4517`):
+For arrays registered with `$IeTlO([], undefined)` (`tools.js:193`):
+
+| Lines (`frame2.js`) | Arrays |
+|---|---|
+| `2475–2479` | per-character unlock counter (`$рHоеН`), skin colors (`skin_color_head`, `_body`, `_arms`, `_legs`) |
+| `4499–4502` | **walls**: x, y, w, h (`$сАоОo`, `$o1О00`, `$с0МAр`, `$MМрTТ`). The material array `$I10Ор` (4503) is not registered |
+| `4512–4522` | **pushers**: left, top, acceleration x/y, stability damage, damage, right (x + w), bottom (y + h) |
+| `4528–4533` | **water**: area x, y, w, h (the loader widens them, `frame2.js:13054–13056`), damage, "acts as water" |
+
+Not registered (plain arrays or objects, never compared): backgrounds (`$0eM1p`…, set at `frame2.js:11063`), movables (`$АAHОе`), regions (`$HсTНe`), decorations (`$AAрlТ`), triggers, timers, the wall collision grid (`$АТHМрM`), and the water display objects (`$НсОТе`).
 
 | Function | Does |
 |---|---|
@@ -288,6 +297,56 @@ For arrays registered with `$IeTlO([], undefined)` (skin colors, unlocks, attach
 | `$ррОM1I()` | Calls `lock` first, then deep-compares **one** array per call: `-1` = mismatch, `1` = full cycle done |
 
 Legit use: `Campaign.js:386–390`, `Equipment.js:84–88` do `$oITOo(); arr[x]++;`.
+
+### 7.1 When the baseline is taken again
+
+`lock` only re-snapshots when the arrays are **unlocked**, and the game unlocks them far more often than the two screens above:
+
+| Unlock | Where | Then locked by |
+|---|---|---|
+| **every trigger run** | the trigger runner `$pАTIТ` ends with `$oITOo()` (`actions.js:6501`) | the next `lock` |
+| map load | `$ееААT` (`frame2.js:10517`) | end of map construction (`frame2.js:14562`) |
+| quicksave restore | `frame2.js:3191` | the next `lock` |
+
+The next `lock` comes from `snapshotGuardedValues` (`$oеeес` starts with `$oIeeol()`, `frame2.js:38149`) or from the scan itself (`$ррОM1I` calls `lock` first, `tools.js:162`). Whatever the arrays hold at that moment becomes the new baseline, without a check.
+
+So a change to a registered array is only caught when the scan compares that array **before** the next unlock/lock pair. A change made just before any trigger runs (a timer, a region, a death) is taken into the baseline silently. On a map whose timers run triggers every frame, most changes are never reported; on a map with no trigger activity, the next scan tick (at most ~300 ms later) reports it.
+
+### 7.2 Editing the level live (the dev console's map editor)
+
+The dev console's in-game editor (`editor`) writes edits straight into the running level. What that does to the checks:
+
+| Edit | Writes | Layer E |
+|---|---|---|
+| wall place or size | wall x/y/w/h arrays, the collision grid, the wall's body sprite, its trims | **compared** (`4499–4502`) |
+| pusher place, size, push, damage | pusher arrays | **compared** (`4512–4522`) |
+| water place, size, damage | water area arrays, the water display object | **compared** (`4528–4533`) |
+| background place or size | background arrays, its drawn rectangle | not registered |
+| movable, region, decoration, trigger, timer | their objects | not registered |
+
+What follows a compared write is [§6.2](#62-tick-сmlcа1-called-every-frame-from-mainjs165) and [§7.1](#71-when-the-baseline-is-taken-again):
+
+1. If no trigger runs before the next scan tick, `$ррОM1I` returns `-1`.
+2. The scan sends `RELIABLE_PING` with code `3` and, as the detail, **the index of the array that failed** (`$eOMАер()`, `tools.js:156`, sent at `main.js:1036–1047`), when `MP.serverConnection` exists.
+3. It stops scanning (`$1eoAНl = Infinity`) and reloads the page after 300 ms (`main.js:1053`). Everything in the tab is lost, including the editor's unsaved edits.
+4. If a trigger ran first, nothing happens: the edit is now the baseline.
+
+The scan runs in **every mode** here, single-player and campaign included: it needs `isCompiled` (`errors.js:5`: the URL has no `/game/`), and the desktop wrapper serves the game under its real `/h5/versions/…/` URL.
+
+An edit can also make the game throw (for example a wall moved where other code does not expect one). `window.onerror` and `ReportCaughtError` (`errors.js:137–146`) then POST the error, with its stack, to `/h5/index.php?action=report_error`, unless error reporting was turned off ([§9.15](#915-the-error-reporting-kill-switch-еl1нсi)).
+
+### 7.3 Leaving to the campaign screen is not the anti-cheat
+
+No check above sends you to the campaign screen. Only the level state `$AAсAр` does, through the black fade (`frame2.js:42165–42250`: when the fade is shown and the state is not `""`, the fade rises; at full black the state is acted on):
+
+| State | Single-player | Multiplayer | Set by |
+|---|---|---|---|
+| `"exit"` | campaign screen (`frame2.js:43027`) | lobby (`frame2.js:43015`) | the Esc menu's exit button (`frame18.js:442–462`); trigger actions 309 "end the level", 310 and 311 (for one player) (`actions.js:3990–4025`) |
+| `"complete"` | campaign screen (`frame2.js:43061`) | channel | trigger action "mission complete" (`actions.js:373`) |
+| `"restart"` | the level loads again (`frame2.js:43033`) | | the Esc menu's restart (`frame18.js:1037`), trigger action 307 (`actions.js:3980`), playing a map (`frame2.js:20079`), Space/R on the failed screen (`frame2.js:27209`) |
+| `"failed"` | main menu (`frame2.js:43036–43044`) | | dying in single-player (`frame2.js:16635`, `35204`, `35228`) |
+
+The state starts as `"exit"` (`frame2.js:2391`) and a level sets it to `""` when it starts (`frame18.js:362`). So a level that ends on the campaign screen during live editing was ended by one of these: usually an edit that made a map trigger with action 309–311 or "mission complete" run (a region moved onto a player, a wall or a pusher that moved a player into one), or the Esc menu. `triggers history` shows which trigger ran.
 
 ---
 
@@ -312,7 +371,9 @@ It also crashes when, in an **approved** MP match:
 - [x] a registered array was replaced or its contents changed while locked
 - [x] `$МОеIe` canary string changed (also crashes)
 
-**Does not trigger** in: singleplayer, campaign, custom maps, the editor test, or **any MP match after a custom map was played in the same tab**.
+The **value guard** (Layer A) does **not** trigger in: singleplayer, campaign, custom maps, the editor test, or **any MP match after a custom map was played in the same tab**.
+
+The **scan** (Layers D/E) has no such exceptions: when the game is served under its real URL it runs in every mode, single-player and campaign included ([§7.2](#72-editing-the-level-live-the-dev-consoles-map-editor)). Locked-array changes are only caught when no unlock re-baselines them first ([§7.1](#71-when-the-baseline-is-taken-again)).
 
 ---
 
@@ -690,7 +751,7 @@ if ($IHТcc && $pMМ1)                               // only in approved MP matc
 
 ### 9.12 Locked arrays
 
-**What it is:** arrays registered with `$IeTlO([], undefined)` (skin colors, unlocks, attachments: `frame2.js:2475–2479`, `4499–4517`) are deep-compared with a saved copy ([§7](#7-layer-e-locked-array-snapshots-toolsjs)). A mismatch sends code `3` and reloads.
+**What it is:** arrays registered with `$IeTlO([], undefined)` (unlocks, skin colors, and the wall, pusher and water geometry: `frame2.js:2475–2479`, `4499–4533`, listed in [§7](#7-layer-e-locked-array-snapshots-toolsjs)) are deep-compared with a saved copy. A mismatch sends code `3` with the index of the failing array, and reloads.
 
 **Step by step:**
 
