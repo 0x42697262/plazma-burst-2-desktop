@@ -1,6 +1,7 @@
 // The editor's state: whether it is on, the map document, what is selected, which
-// layers are hidden. Views (overlay, panels) read it and redraw when `changed` fires;
-// nothing here touches the screen.
+// layers are hidden, which edits wait for the level to load again. Views (overlay,
+// panels) read it and redraw when it notifies them; nothing here touches the screen.
+// While no level runs (loading, menus) the editor stays on but is not shown.
 import { game } from '../game/bindings.js';
 import { isActive, requireLevel } from '../game/level.js';
 import { MapDoc } from './doc.js';
@@ -13,6 +14,8 @@ const SAME_SPOT = 3; // world units: a click this close to the last one cycles t
 const listeners = new Set();
 const state = {
   on: false,
+  shown: false, // on, and a level is running
+  pending: new Set(), // ids of elements with edits the running game does not have yet
   doc: null,
   selectedId: null,
   layer: 'region', // the layer the objects list shows
@@ -21,9 +24,14 @@ const state = {
 };
 
 export const onChange = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
-const changed = (what) => { for (const fn of listeners) fn(what); };
+// what: 'shown' (on/off or level start/end), 'doc', 'selection', 'layer', 'layers', 'edit'.
+export const notify = (what) => { for (const fn of listeners) fn(what); };
+const changed = notify;
 
 export const editorOn = () => state.on;
+export const editorShown = () => state.shown;
+export const pendingCount = () => state.pending.size;
+export const markPending = (e) => { state.pending.add(e.id); };
 export const editorDoc = () => state.doc;
 export const currentLayer = () => state.layer;
 export const isHidden = (tag) => state.hidden.has(tag);
@@ -40,13 +48,25 @@ export function setEditor(on) {
   if (on === state.on) return false;
   if (on) {
     requireLevel();
-    state.doc = readDoc();
-    state.selectedId = null;
+    takeDoc(readDoc());
   }
   state.on = on;
-  state.lastPick = null;
-  changed('on');
+  setShown(on);
   return true;
+}
+
+function setShown(shown) {
+  if (shown === state.shown) return;
+  state.shown = shown;
+  state.lastPick = null;
+  changed('shown');
+}
+
+function takeDoc(doc) {
+  state.doc = doc;
+  state.selectedId = null;
+  state.lastPick = null;
+  state.pending.clear();
 }
 
 export function select(e) {
@@ -104,18 +124,24 @@ export function pickAt(p) {
   return e;
 }
 
-// Once per frame: the editor goes off when the level ends, and starts over on a new map
-// (or a restart, which loads the map text again).
+// Once per frame. The editor hides while no level runs and shows again with the next
+// one. A level that starts on the map text the document wrote (a reload, a restart,
+// dying in single-player) has every edit, so nothing is pending any more; any other map
+// text (another map) starts a new document.
 export function editorTick() {
   if (!state.on) return;
-  if (!isActive()) { setEditor(false); return; }
-  const text = game.mapText();
-  if (text !== state.doc.source) {
-    const doc = MapDoc.of(text);
-    if (!doc) return;
-    state.doc = doc;
-    state.selectedId = null;
-    state.lastPick = null;
-    changed('doc');
+  const active = isActive();
+  if (active === state.shown) return;
+  if (active) {
+    const text = game.mapText();
+    if (text !== state.doc.source) {
+      const doc = MapDoc.of(text);
+      if (!doc) return; // not readable yet: try next frame
+      takeDoc(doc);
+      changed('doc');
+    } else {
+      state.pending.clear();
+    }
   }
+  setShown(active);
 }

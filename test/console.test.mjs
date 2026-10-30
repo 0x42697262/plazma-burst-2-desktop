@@ -944,7 +944,12 @@ test('editor: on and off by its key, outlines every object, selects by click and
       '<trigger uid="#t" x="500" y="0" enabled="true" maxcalls="-1" actions_1_type="100" actions_1_targetA="a" actions_1_targetB="1" />',
       '<timer uid="#clock" x="560" y="0" enabled="true" maxcalls="-1" target="#t" delay="30" />',
     ].join('\n');
-    c.frame();
+    const level = (on) => { c.G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; c.frame(); };
+    level(false);
+    assert.ok(session.editorOn() && !session.editorShown(), 'hidden while no level runs');
+    assert.equal(drawEditorFrame(), null);
+    level(true);
+    assert.ok(session.editorShown(), 'back with the level');
     const doc = session.editorDoc();
     assert.equal(doc.elements.length, 4);
     assert.equal(doc.toText(), c.G[c.N.mapText], 'the map text comes back as it was');
@@ -976,14 +981,108 @@ test('editor: on and off by its key, outlines every object, selects by click and
     assert.equal(session.pickAt(at), null);
     session.setHidden('box', false);
 
-    // It goes off with the level.
-    c.G.stage.currentFrameLabel = 'menu';
-    c.frame();
+    // Off works without a level; on needs one.
+    level(false);
+    c.run('editor off');
     assert.ok(!session.editorOn());
     assert.match(errorsOf(c.run('editor'))[0], /start a level first/);
   } finally {
     c.G.stage.currentFrameLabel = 'gaming';
     c.G[c.N.mapText] = original;
     session.setEditor(false);
+  }
+});
+
+test('editor: edits go live where the game can take them, the rest on a reload; drag moves and resizes', async () => {
+  const session = await consoleModule('editor/session.js');
+  const { mouse, grabOf, dragPlace } = await consoleModule('editor/input.js');
+  const { currentTransform, toScreen } = await consoleModule('ui/overlay.js');
+  const original = c.G[c.N.mapText];
+  const quiet = (line) => c.run(line).filter((l) => !l.startsWith('Note:'));
+  // A mouse event at a world point, through the screen the way a real one comes in.
+  const at = (p, extra = {}) => { const s = toScreen(currentTransform(), p); return { button: 0, clientX: s.x, clientY: s.y, ...extra }; };
+  try {
+    c.setMP(false);
+    c.run('editor on');
+    const doc = session.editorDoc();
+    const region = doc.byUid('#red_use'); // region #1: 400, 0, 20 x 20
+    const live = c.G[c.N.regions][1];
+
+    // Live: the game's region moves at once; the map text follows (single-player).
+    session.select(region);
+    assert.deepEqual(quiet('editor set x 450'), ['#red_use: x = "450", live now']);
+    assert.equal(live.x, 450);
+    assert.match(c.G[c.N.mapText], /<region uid="#red_use" x="450" y="0" w="20" h="20" use_on="9" use_target="#open_door" \/>/);
+    assert.equal(session.editorDoc(), doc, 'the editor keeps its document');
+    quiet('editor set use_on 12');
+    assert.equal(live[c.N.regionUseOn], 10, 'stored as the loader stores it');
+    quiet('editor set use_target #locked');
+    assert.equal(live[c.N.regionTrigger], c.triggers.findIndex((t) => t.uid === '#locked'));
+
+    // Trigger actions are loaded again from the attributes.
+    const trig = doc.byUid('#on_death');
+    session.select(trig);
+    quiet('editor set actions_1_targetB 5');
+    const t = c.G[c.N.triggers][doc.ordinal(trig)];
+    assert.deepEqual(t[c.N.trigTargetB], [5]);
+    quiet('editor set enabled false');
+    assert.equal(t[c.N.trigEnabled], false);
+
+    // Not live: kept, and the status says a reload brings it.
+    const door = doc.byUid('#door_a');
+    session.select(door);
+    assert.deepEqual(quiet('editor set w 60'), ['#door_a: w = "60", shows after "editor reload"']);
+    assert.equal(session.pendingCount(), 1);
+    assert.match(errorsOf(c.run('editor set x abc'))[0], /x must be a number/);
+    assert.match(errorsOf(c.run('editor set c "a"b"'))[0], /cannot contain a double quote/);
+
+    // Drag: press on the selection, move, let go. Snaps to 10.
+    mouse.down(at({ x: 210, y: 50 }));
+    mouse.move(at({ x: 233, y: 64 }));
+    mouse.up();
+    assert.deepEqual([door.attrs.x, door.attrs.y, door.attrs.w], ['220', '10', '60']);
+    // Its right edge resizes; Alt does not snap.
+    assert.equal(grabOf(door, { x: 220, y: 10, w: 60, h: 100 }, { x: 279, y: 50 }, 3), 'r');
+    assert.equal(grabOf(door, { x: 220, y: 10, w: 60, h: 100 }, { x: 221, y: 11 }, 3), 'lt');
+    mouse.down(at({ x: 279, y: 50 }));
+    mouse.move(at({ x: 301.5, y: 50 }, { altKey: true }));
+    mouse.up();
+    assert.deepEqual([door.attrs.x, door.attrs.w], ['220', '82.5']);
+    assert.deepEqual(dragPlace({ x: 0, y: 0, w: 10, h: 10 }, 'l', 30, 0, false), { x: 10, y: 0, w: 20, h: 10 }, 'dragged past the far edge: flips');
+    // A click without moving selects what is under it instead.
+    mouse.down(at({ x: 400 + 50, y: 10 }));
+    mouse.up();
+    assert.equal(session.selected(), region);
+
+    // Reload: the game's own restart, from the edited text; then nothing is pending.
+    c.G[c.N.fadeOverlay] = { alpha: 0, visible: false };
+    assert.match(c.run('editor reload')[0], /^Reloading the level from the edited map \(1 object not live until now\)/);
+    assert.equal(c.G[c.N.levelState], 'restart');
+    assert.deepEqual(c.G[c.N.fadeOverlay], { alpha: 1, visible: true });
+    c.G[c.N.levelState] = '';
+    c.G[c.N.fadeOverlay] = null;
+    c.G.stage.currentFrameLabel = 'loading'; c.frame();
+    c.G.stage.currentFrameLabel = 'gaming'; c.frame();
+    assert.equal(session.editorDoc(), doc, 'same text: same document');
+    assert.equal(session.pendingCount(), 0);
+
+    // Multiplayer: the match's map text is never touched; no reload.
+    c.setMP(true);
+    const mpText = c.G[c.N.mapText];
+    session.select(door);
+    assert.deepEqual(quiet('editor set h 50'), ['#door_a: h = "50", not live in multiplayer (kept for "editor save")']);
+    assert.equal(c.G[c.N.mapText], mpText);
+    assert.match(errorsOf(c.run('editor reload'))[0], /multiplayer: the server decides/);
+
+    // Save goes to the wrapper (none in tests).
+    c.log.printed.length = 0;
+    c.G.pb2dev.run('editor save my map');
+    await new Promise((r) => setTimeout(r, 10));
+    assert.ok(c.log.printed.some((l) => /could not save \(no desktop wrapper in tests\)/.test(l)), c.log.printed.join(' | '));
+    assert.match(errorsOf(c.run('editor save'))[0], /usage: editor save <name>/);
+  } finally {
+    c.setMP(true);
+    session.setEditor(false);
+    c.G[c.N.mapText] = original;
   }
 });

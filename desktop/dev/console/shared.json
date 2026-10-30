@@ -8,6 +8,7 @@
     "kv": "kv",
     "maps": "maps",
     "saveMap": "savemap",
+    "saveEdited": "saveedited",
     "mapFile": "mapfile",
     "screenshot": "screenshot"
   },

@@ -23,7 +23,7 @@ const targetOf = new WeakMap(); // proxy -> trigger object
 const indexOf = new WeakMap(); // trigger object -> index
 let hookedArr = null;
 let hookedCount = -1;
-let mapOfRuns = null; // the map text the runs belong to
+let levelRunning = false; // runs are kept from one level start to the next
 let frameNo = 0;
 
 export const triggerRuns = () => runs;
@@ -91,11 +91,14 @@ function unhookAll() {
 
 // Called every frame: wraps new triggers (a new map), unwraps when recording is off.
 export function syncTriggerHooks() {
-  const mapText = game.mapText();
-  if (mapText !== mapOfRuns) { mapOfRuns = mapText; clearTriggerRuns(); }
+  // A level start (a new map, a restart) starts the history over. Not the map text: the
+  // editor changes that while the level runs.
+  const active = isActive();
+  if (active && !levelRunning) clearTriggerRuns();
+  levelRunning = active;
   const arr = game.triggers();
   const n = game.triggerCount();
-  if (!(settings.effective(KEY.TRIGGER_HISTORY) && isActive() && Array.isArray(arr) && typeof n === 'number')) {
+  if (!(settings.effective(KEY.TRIGGER_HISTORY) && active && Array.isArray(arr) && typeof n === 'number')) {
     unhookAll();
     return;
   }

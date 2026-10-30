@@ -163,6 +163,25 @@ async function saveMap(id, raw) {
   return SHARED.saveResult.saved;
 }
 
+// A map from the dev console's editor: desktop/maps/<name>.xml, played as local-<name>.
+// An existing file is only replaced when asked. Returns { file, id }; throws with
+// .status 409 when the file exists.
+const EDITED_NAME = /^[A-Za-z0-9 _.-]{1,60}$/;
+async function saveEditedMap(name, text, overwrite) {
+  if (!EDITED_NAME.test(name || '') || name.startsWith('.')) throw Object.assign(new Error('bad map name'), { status: 400 });
+  if (!text.startsWith('<')) throw Object.assign(new Error('not map XML'), { status: 400 });
+  const file = path.join(MAPS_DIR, `${name}.xml`);
+  await fs.mkdir(MAPS_DIR, { recursive: true });
+  try {
+    await fs.writeFile(file, beautifyMap(text), { flag: overwrite ? 'w' : 'wx' });
+  } catch (e) {
+    if (e.code === 'EEXIST') throw Object.assign(new Error(`desktop/maps/${name}.xml exists`), { status: 409 });
+    throw e;
+  }
+  console.log(`Saved edited map to ${file}`);
+  return { file: path.relative(path.join(__dirname, '..'), file), id: LOCAL_MAP_PREFIX + name };
+}
+
 // Saved map for a server map ID, or null.
 async function readSavedMap(id) {
   try {
@@ -321,6 +340,14 @@ async function serveDev(request, url) {
       return new Response(await saveMap(url.searchParams.get('id'), await request.text()));
     } catch (e) {
       return new Response(e.message, { status: 400 });
+    }
+  }
+  if (name === ROUTE.saveEdited && request.method === 'POST') {
+    try {
+      const saved = await saveEditedMap(url.searchParams.get('name'), await request.text(), url.searchParams.get('overwrite') === '1');
+      return new Response(JSON.stringify(saved), { headers: { 'Content-Type': 'application/json' } });
+    } catch (e) {
+      return new Response(e.message, { status: e.status || 500 });
     }
   }
   if (name === ROUTE.mapFile) {
