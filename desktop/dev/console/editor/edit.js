@@ -10,6 +10,7 @@ import { kindOf, SHAPE, DEFAULTS, newUid } from './kinds.js';
 import { applyLive } from './apply.js';
 import { addLive, removeLive, restoreLive } from './rebuild.js';
 import { forgetGuns } from './guns.js';
+import { forgetLamps } from './lamps.js';
 import { MapDoc, newElement } from './doc.js';
 import { record, takeUndo, takeRedo, clearHistory } from './history.js';
 import { editorDoc, notify, markPending, onChange, select, selected } from './session.js';
@@ -165,8 +166,8 @@ function replayEdits() {
 }
 
 onChange((what) => {
-  if (what === 'doc') { clearHistory(); takenOut.clear(); forgetGuns(); } // another map: its own history
-  if (what === 'reloaded') { forgetGuns(); replayEdits(); }
+  if (what === 'doc') { clearHistory(); takenOut.clear(); forgetGuns(); forgetLamps(); } // another map: its own history
+  if (what === 'reloaded') { forgetGuns(); forgetLamps(); replayEdits(); }
 });
 
 // desktop/maps/<name>.xml, played as local-<name>. Resolves to the file it wrote.

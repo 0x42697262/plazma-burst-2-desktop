@@ -1,10 +1,10 @@
 // Objects of the running level made, made again and taken out, with the game's own
 // loader (loader.js) wherever it can.
 // Built again, for edits nothing finer can put in: a region's activation (its USE switch is drawn
-// or taken away), a decoration's model, a movable's settings, a lamp, a pusher, a
-// trigger's or timer's uid. The element's branch runs with the kind's counter at its
-// index, so the game's arrays get a new object in its place; what the old one put on
-// screen is taken off first.
+// or taken away), a decoration's model, a movable's settings, a pusher, a trigger's or
+// timer's uid (lamps have lamps.js). The element's branch runs with the kind's counter
+// at its index, so the game's arrays get a new object in its place; what the old one put
+// on screen is taken off first.
 import { game } from '../game/bindings.js';
 import { F } from '../game/fields.js';
 import { canRebuild, canBuild, buildElement, builtCount, loaderProblem } from './loader.js';
@@ -13,6 +13,7 @@ import { findRect, moveRect } from '../game/layers.js';
 import { boundsOf } from './kinds.js';
 import { unwrap } from '../triggers/log.js';
 import { claimNewestGun, removeGun, remakeGun } from './guns.js';
+import { placeLamp, removeLamp } from './lamps.js';
 
 const detach = (shown) => { if (shown && shown.parent && shown.parent.removeChild) shown.parent.removeChild(shown); };
 
@@ -26,7 +27,6 @@ const IN_PLACE = Object.freeze({
   door: { old: (i) => game.doors()?.[i], drop: detach },
   trigger: { old: () => null, drop: () => {} },
   timer: { old: () => null, drop: () => {} },
-  lamp: { old: () => null, drop: () => {} },
   pushf: { old: () => null, drop: () => {} },
 });
 
@@ -90,6 +90,7 @@ const NOT_ADDED = Object.freeze({
 export function addLive(e) {
   if (NOT_ADDED[e.tag]) throw new Error(NOT_ADDED[e.tag]);
   if (e.tag === 'box') return { index: addWall(boundsOf(e), e.attrs.m ?? '0') };
+  if (e.tag === 'lamp') { const index = builtCount('lamp'); placeLamp(e); return { index }; }
   if (!canBuild(e.tag)) throw new Error(loaderProblem() || `the game's loader has no ${e.tag}`);
   const index = builtCount(e.tag);
   buildElement(e.tag, e.attrs, index ?? 0);
@@ -128,6 +129,7 @@ const REMOVE = Object.freeze({
   water: (i) => { const w = game.waters(); hide(w.shown?.[i]); w.w[i] = 0; w.h[i] = 0; },
   pushf: (i) => { const p = game.pushers(); p.x2[i] = p.x1[i]; p.y2[i] = p.y1[i]; },
   gun: (i, e) => removeGun(e),
+  lamp: (i, e) => removeLamp(e),
 });
 
 // Takes element e out of the running level, or throws why it cannot.
@@ -141,6 +143,7 @@ export function removeLive(e) {
 // game's loader can, or throws why not.
 export function restoreLive(e) {
   if (e.tag === 'gun' && e.live) { remakeGun(e); return; } // a new one where the old one lies
+  if (e.tag === 'lamp' && e.live) { placeLamp(e); return; }
   if (!e.live || e.live.index === undefined) throw new Error('it is not in the running level');
   if (rebuildable(e.tag)) { rebuildLive(e); return; }
   throw new Error(`a deleted ${e.tag} only comes back when the level loads again`);

@@ -13,6 +13,7 @@ import { findRect, moveRect } from '../game/layers.js';
 import { boundsOf } from './kinds.js';
 import { rebuildable, rebuildLive } from './rebuild.js';
 import { moveGun, remakeGun } from './guns.js';
+import { placeLamp } from './lamps.js';
 
 // Activation modes the loader rewrites: hidden use keys become the plain ones.
 const LOADER_USE_ON = Object.freeze({ 8: 1, 11: 9, 12: 10, 15: 1 });
@@ -197,6 +198,11 @@ const LIVE = Object.freeze({
       ...each(['x', 'y', 'w', 'h'], (o, v, attrs) => placeWater(o.index, attrs)),
       damage: (o, v) => { if (!finite(v)) return false; game.waters().damage[o.index] = parseFloat(v); return true; },
     },
+  },
+  // A lamp: its light built and drawn again in its slot (lamps.js).
+  lamp: {
+    of: () => ({}),
+    attrs: each(['x', 'y', 'power', 'flare'], (o, v, attrs, e) => { placeLamp(e); return true; }),
   },
   timer: {
     of: (i) => (i < game.timerCount() ? game.timers()?.[i] : null),

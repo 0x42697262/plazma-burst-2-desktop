@@ -22,13 +22,15 @@ const COUNTER = /(\$[^\s;=[\]().,+\-*/!&|<>?:{}"'`]+)\+\+;/g;
 const SCRATCH = Object.freeze(['a', 'b', 'mc', 'i', 'i2', 'n']);
 
 let loader = null; // { first: { tag: { code, counter } }, second: { ... } }
+let source = null; // the game's file, for other code read from it (lamps.js)
 let problem = 'the game\'s loader has not been read yet';
 
 export const loaderReady = () => !!loader;
+export const loaderSource = () => source;
 export const loaderProblem = () => problem;
 
 // The end of the block that opens at src[open] ("{"), skipping strings and comments.
-function blockEnd(src, open) {
+export function blockEnd(src, open) {
   let depth = 0;
   for (let k = open; k < src.length; k++) {
     const ch = src[k];
@@ -123,10 +125,13 @@ export async function readLoader(fetchFn = globalThis.fetch) {
   try {
     const r = await fetchFn(FRAME_URL, { cache: 'force-cache' });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    loader = parseLoader(await r.text());
+    const text = await r.text();
+    loader = parseLoader(text);
+    source = text;
     problem = '';
   } catch (err) {
     loader = null;
+    source = null;
     problem = `the game's loader could not be read (${err.message})`;
   }
   return loaderReady();
@@ -147,6 +152,7 @@ function run(code, name) {
 // Runs a branch of `pass` for one element, at `index` of its kind: in place when there
 // is one, added at the end when index is the count. The game's scratch globals and the
 // counter are as they were afterwards (except a counter that grew by the addition).
+// Returns whether the branch kept the element (advanced its counter past index).
 function runBranch(pass, tag, attrs, index) {
   const branch = loader[pass][tag];
   if (!branch) return false;
@@ -154,23 +160,46 @@ function runBranch(pass, tag, attrs, index) {
   const saved = Object.fromEntries(SCRATCH.map((k) => [k, g[k]]));
   const counter = branch.counter;
   const before = counter ? g[counter] : undefined;
+  let kept = false;
   try {
     g.a = tag;
     g.b = Object.fromEntries(Object.entries(attrs).map(([k, v]) => [`#${k}`, v]));
     if (counter) g[counter] = index;
     run(branch.code, `${pass}-${tag}`);
+    kept = !counter || g[counter] > index;
   } finally {
     if (counter && index < before) g[counter] = before;
     for (const k of SCRATCH) g[k] = saved[k];
   }
-  return true;
+  return kept;
 }
 
 // Builds element (tag, attrs) as the game's loader would, at `index`: its first-pass
-// branch, then its second-pass one (uid references to indexes).
+// branch, then its second-pass one (uid references to indexes). Returns whether the
+// loader kept it (a lamp without a flare outside every background is not kept).
 export function buildElement(tag, attrs, index) {
   if (!loader) throw new Error(problem);
   if (!loader.first[tag]) throw new Error(`the game's loader has no "${tag}" branch`);
-  runBranch('first', tag, attrs, index);
-  if (loader.second[tag]) runBranch('second', tag, attrs, index);
+  const kept = runBranch('first', tag, attrs, index);
+  if (kept && loader.second[tag]) runBranch('second', tag, attrs, index);
+  return kept;
+}
+
+// The kind's branch as the loader has it ({ code, counter }), for code that reads it.
+export const branchOf = (tag) => loader?.first[tag] || null;
+// A block of the game's code run like the loader's, with some of its names set first
+// (set: { name: value }) and others only kept (keep), all put back afterwards like the
+// scratch globals. The names are set by the code itself, so a "let" of the game's
+// scripts is reached as well as a global.
+export function runGameCode(code, name, { set = {}, keep = [] } = {}) {
+  const g = globalThis;
+  const saved = Object.fromEntries(SCRATCH.map((k) => [k, g[k]]));
+  const names = [...new Set([...Object.keys(set), ...keep])];
+  const head = names.map((k, n) => `const pb2devKept${n}=typeof ${k}==='undefined'?undefined:${k};${k in set ? `${k}=${JSON.stringify(set[k])};` : ''}`).join('');
+  const tail = names.map((k, n) => `${k}=pb2devKept${n};`).join('');
+  try {
+    run(`{${head}try${code}finally{${tail}}}`, name);
+  } finally {
+    for (const k of SCRATCH) g[k] = saved[k];
+  }
 }

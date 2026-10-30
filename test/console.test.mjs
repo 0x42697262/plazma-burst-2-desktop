@@ -1795,3 +1795,118 @@ test('editor: decoration models and character skins are offered as the editor of
     delete table.values.char;
   }
 });
+
+test('editor: a lamp is found by its place, built again in its slot, its light and flare drawn with the game\'s code', async () => {
+  const session = await consoleModule('editor/session.js');
+  const loader = await consoleModule('editor/loader.js');
+  const vm = await import('node:vm');
+  const G = c.G, N = c.N;
+  const original = G[N.mapText];
+  const level = (on) => { G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; c.frame(); };
+  const quiet = (line) => c.run(line).filter((l) => !l.startsWith('Note:'));
+  // Like the game's: tags and attribute names through its string table, the light loop
+  // counting with a script-level "let", the lightmap drawn by a function of its own.
+  G.$tagBox = 'box'; G.$tagLamp = 'lamp'; G.$strX = '#x';
+  vm.runInThisContext('let $lampLoop = 0;');
+  const frame2 = `
+for(var $el of $doc.children())
+{
+if(a==$tagBox)
+{
+$wallsBuilt++;
+}
+if(a==$tagLamp)
+{
+$lampX[$lampN]=parseFloat(b[$strX]);
+$lampY[$lampN]=parseFloat(b["#y"]);
+$lampP[$lampN]=Math.min(parseFloat(b["#power"]),100);
+$lampS[$lampN]=2;
+if(b["#flare"]=="true"||parseFloat(b["#flare"])>0)
+{
+}
+else
+$lampS[$lampN]=-1;
+if($lampS[$lampN]==2||$inBg($lampX[$lampN],$lampY[$lampN]))
+{
+$lampN++;
+}
+}
+}
+for(i2=0;i2<$lampN;i2++)
+{
+if($lampS[i2]===2)
+{
+$flares[$flareN]=graphics_3d_front.addChildAt(new lens_flare,graphics_3d_front.numChildren);
+$flares[$flareN]["x"]=$lampX[i2];
+$flares[$flareN]["y"]=$lampY[i2];
+$flareN++;
+}
+}
+for($lampLoop=0;$lampLoop<$lampN;$lampLoop++)
+{
+var g={ createRadialGradientAndBeginFill() {} };
+g.createRadialGradientAndBeginFill($lampX[$lampLoop],$lampY[$lampLoop]);
+$shapes[$lampLoop]={ x: $lampX[$lampLoop], power: $lampP[$lampLoop] };
+}
+function $drawLights(full)
+{
+$drawn=[];
+for(var k=0;k<$lampN;k++)
+if($lampS[k]!=0)
+{
+$lightmap.drawWithQuality($shapes[k]);
+$drawn.push($shapes[k]);
+}
+}
+`;
+  // Slot 0: a light of the game's own (along a wall); slot 1: the map's lamp.
+  Object.assign(G, {
+    $wallsBuilt: 0, $lampX: [7, 100], $lampY: [7, 50], $lampP: [0.45, 0.4], $lampS: [-1, 2], $lampN: 2,
+    $shapes: ['fill', 'lamp shape'], $flares: [{ x: 100, y: 50, visible: true, scaleX: 1, scaleY: 1 }], $flareN: 1, $drawn: [],
+    $inBg: (x) => x < 200, $lightmap: { drawWithQuality() {} }, g: 'the game\'s g',
+    graphics_3d_front: { numChildren: 0, addChildAt(o) { this.numChildren++; return o; } },
+    lens_flare: class { constructor() { Object.assign(this, { visible: true, scaleX: 1, scaleY: 1 }); } },
+  });
+  G.$drawLights = vm.runInThisContext('(function $drawLights(){ $drawn=[]; for(var k=0;k<$lampN;k++) if($lampS[k]!=0) $drawn.push($shapes[k]); })');
+  await loader.readLoader(async () => ({ ok: true, status: 200, text: async () => frame2 }));
+  assert.ok(loader.loaderReady(), loader.loaderProblem());
+  try {
+    G[N.mapText] = '<lamp uid="#l1" x="100" y="50" power="0.4" flare="1" />';
+    c.run('editor on');
+    level(false); level(true);
+    const doc = session.editorDoc();
+    session.select(doc.byUid('#l1'));
+    // Moved: its own slot (1, not its place in the map), the old flare out, a new one, its light drawn.
+    assert.deepEqual(quiet('editor set x 120'), ['#l1: x = "120", live now']);
+    assert.deepEqual([G.$lampX, G.$lampN, G.$flares[0].visible], [[7, 120], 2, false]);
+    assert.deepEqual([G.$flares[1].x, G.$flares[1].visible], [120, true]);
+    assert.deepEqual(G.$shapes[1], { x: 120, power: 0.4 });
+    assert.deepEqual(G.$drawn, ['fill', G.$shapes[1]], 'the lightmap drawn again');
+    assert.equal(vm.runInThisContext('$lampLoop'), 0, 'the game\'s loop variable as it was');
+    assert.equal(G.g, 'the game\'s g');
+    // No flare: kept inside a background.
+    quiet('editor set flare 0');
+    assert.deepEqual([G.$lampS[1], G.$flares[1].visible], [-1, false]);
+    // Out of every background without a flare: the loader does not keep it, it is put out.
+    quiet('editor set x 300');
+    assert.deepEqual([G.$lampS[1], G.$lampN], [0, 2]);
+    assert.deepEqual(G.$drawn, ['fill']);
+    quiet('editor set x 150');
+    assert.deepEqual([G.$lampX[1], G.$lampS[1], G.$lampN], [150, -1, 2], 'back in its slot');
+    // Added: a new slot at the end, with its light and flare.
+    c.run('editor add lamp 50 60');
+    const added = session.selected();
+    assert.deepEqual([G.$lampN, G.$lampX[2], G.$lampS[2], G.$shapes[2].x, G.$flares.at(-1).x], [3, 50, 2, 50, 50]);
+    assert.equal(session.pendingCount(), 0, 'in the running level');
+    c.press('Delete');
+    assert.deepEqual([G.$lampS[2], G.$flares.at(-1).visible], [0, false]);
+    c.run('editor undo');
+    assert.equal(G.$lampS[2], 2, 'lit again');
+    assert.equal(added.live.index, 2);
+  } finally {
+    session.setEditor(false); session.forgetDocument();
+    G[N.mapText] = original;
+    for (const k of ['$tagBox', '$tagLamp', '$strX', '$wallsBuilt', '$lampX', '$lampY', '$lampP', '$lampS', '$lampN', '$shapes',
+      '$flares', '$flareN', '$drawn', '$inBg', '$lightmap', 'g', 'graphics_3d_front', 'lens_flare', '$drawLights']) delete G[k];
+  }
+});
