@@ -1,15 +1,18 @@
-// The editor's mouse: a see-through layer over the whole game that takes the clicks, so
-// the game never shoots or locks the pointer while you edit. Pointer moves still reach
-// the game (aiming, and the crosshair the labels follow), and the keyboard is the
-// game's as always: you walk around while editing.
+// The editor's mouse. While the editor is shown it hears pointer presses on the window
+// before anything else does (capture), the game canvas included, and keeps the ones it
+// uses from the game: no shooting, no pointer lock. Presses on the console or on the
+// editor's own panels are left to them. Pointer moves still reach the game (aiming, and
+// the crosshair the labels follow), and the keyboard is the game's as always: you walk
+// around while editing.
+// Pointer events, not mouse events: the game's graphics library cancels pointerdown on
+// its canvas, and then the browser sends no mousedown or mouseup at all.
 //
 // Select tool: a click selects (again on the same spot: the one below). Pressing on the
 // selection and moving drags it: from inside it moves, from an edge or a corner of a
 // rectangle it resizes. Place tool: a click adds an element of the current layer there;
 // a rectangle can be dragged out instead. Positions snap to SNAP units; with Alt held
 // they do not. A drag is one step for undo.
-import { el } from '../ui/dom.js';
-import { swallow } from '../ui/theme.js';
+import { isUi } from '../ui/theme.js';
 import { game, GAME_WIDTH, GAME_HEIGHT } from '../game/bindings.js';
 import { currentTransform, toWorld } from '../ui/overlay.js';
 import { kindOf, anchorOf, SHAPE } from './kinds.js';
@@ -20,16 +23,15 @@ import {
 import { setPlace, addElement } from './edit.js';
 import { beginAction, endAction } from './history.js';
 
-const Z_INDEX = '40'; // under the editor panels (45) and the console (50)
 const SNAP = 10; // world units, like the map editor's grid
 const EDGE = 3; // screen units around a rectangle's edge that resize it
 const DRAG_START = 2; // screen units the mouse moves before a press becomes a drag
 
-let layer = null;
-let press = null;
+let listening = false;
+let press = null; // { at (world), screen, target, mode, start, dragging } while pressed
 // For "editor status": the last press the window saw (whatever it landed on) and the
-// last one the click layer handled.
-const lastPress = { window: null, layer: null }; // { at (world), screen, target, mode, start, dragging }
+// last one the editor handled.
+const lastPress = { window: null, layer: null };
 let onError = () => {};
 
 // A mouse event's point on screen (game units) and in the world, or null without a
@@ -85,13 +87,27 @@ function describe(node) {
   return `${node.tagName.toLowerCase()}${node.id ? '#' + node.id : ''}${cls} z-index ${css.zIndex || 'auto'}, cursor ${css.cursor || 'auto'}`;
 }
 
-function onWindowPress(e) {
-  lastPress.window = { target: describe(e.target), onLayer: e.target === layer, x: Math.round(e.clientX), y: Math.round(e.clientY) };
+// A press over the world (not on the console, a panel or outside the game) is the
+// editor's: the game never sees it, nor the release that ends it.
+const inGame = (p) => p.screen.x >= 0 && p.screen.x <= GAME_WIDTH && p.screen.y >= 0 && p.screen.y <= GAME_HEIGHT;
+function take(e) { e.preventDefault(); e.stopImmediatePropagation(); }
+
+function onPointerDown(e) {
+  const p = e.button === 0 && !isUi(e.target) ? pointOfEvent(e) : null;
+  lastPress.window = { target: describe(e.target), taken: !!(p && inGame(p)), x: Math.round(e.clientX), y: Math.round(e.clientY) };
+  if (!p || !inGame(p)) return;
+  take(e);
+  onMouseDown(e, p);
 }
 
-function onMouseDown(e) {
+function onPointerUp(e) {
+  if (!press) return;
+  take(e);
+  onMouseUp();
+}
+
+function onMouseDown(e, p = pointOfEvent(e)) {
   if (e.button !== 0) return;
-  const p = pointOfEvent(e);
   lastPress.layer = { world: p && { x: Math.round(p.world.x), y: Math.round(p.world.y) }, picked: null };
   if (!p) return;
   if (currentTool() === TOOL.PLACE) {
@@ -147,42 +163,34 @@ function finishPlace(tag, at, end, free) {
   } catch (err) { onError(err); }
 }
 
+// The game's mouse handlers listen for these too: they are taken from them while a press
+// is the editor's.
+const BLOCKED_DURING_PRESS = ['mousedown', 'mouseup', 'click'];
+function blockWhilePressed(e) { if (press) take(e); }
+
 // errors: called with an Error a drag could not apply.
 export function captureMouse(on, errors) {
+  const listen = on ? globalThis.addEventListener : globalThis.removeEventListener;
+  if (on === listening || !listen) return;
+  listening = on;
   if (!on) {
-    if (layer) layer.remove();
-    layer = null;
     if (press && press.dragging && press.target) endAction();
     press = null;
     setPreview(null);
-    globalThis.removeEventListener?.('mouseup', onMouseUp, true);
-    globalThis.removeEventListener?.('mousedown', onWindowPress, true);
-    return;
+  } else {
+    if (errors) onError = errors;
+    if (document.pointerLockElement) document.exitPointerLock();
   }
-  if (layer) return;
-  if (errors) onError = errors;
-  if (document.pointerLockElement) document.exitPointerLock();
-  layer = el('div', {
-    position: 'absolute', left: '0', top: '0', width: `${GAME_WIDTH}px`, height: `${GAME_HEIGHT}px`,
-    zIndex: Z_INDEX, cursor: 'crosshair', pointerEvents: 'auto', background: 'transparent',
-  });
-  swallow(layer);
-  layer.addEventListener('mousedown', onMouseDown);
-  layer.addEventListener('pointermove', onMouseMove);
-  // The release ends a click or a drag wherever it happens: over the layer, a panel or
-  // outside the window. Heard on the window before anything else (capture), because the
-  // layer and the panels keep mouse events from bubbling up to the game.
-  globalThis.addEventListener?.('mouseup', onMouseUp, true);
-  globalThis.addEventListener?.('mousedown', onWindowPress, true);
-  game.overlay().append(layer);
+  listen.call(globalThis, 'pointerdown', onPointerDown, true);
+  listen.call(globalThis, 'pointermove', onMouseMove, true);
+  listen.call(globalThis, 'pointerup', onPointerUp, true);
+  for (const type of BLOCKED_DURING_PRESS) listen.call(globalThis, type, blockWhilePressed, true);
 }
 
 // What "editor status" reports about the mouse.
 export function inputStatus() {
-  const r = layer && layer.getBoundingClientRect ? layer.getBoundingClientRect() : null;
   return {
-    layer: !layer ? 'none' : layer.isConnected === false ? 'made, but not on the page' : 'on the page',
-    layerRect: r && `${Math.round(r.left)}, ${Math.round(r.top)}, ${Math.round(r.width)} x ${Math.round(r.height)}`,
+    listening,
     pointerLocked: !!globalThis.document?.pointerLockElement,
     lastPress,
   };

@@ -1,7 +1,7 @@
 // The console window, styled after the game's "View logs" panel (800x400 game units),
 // and the keys it reacts to: Shift+` toggles it, Esc closes it, binds run in levels.
 import { el } from './dom.js';
-import { THEME, swallow } from './theme.js';
+import { THEME, swallow, markUi } from './theme.js';
 import { print, attachLog, clearLog } from './log.js';
 import { complete } from './complete.js';
 import { COLOR } from '../core/colors.js';
@@ -120,6 +120,7 @@ export function buildPanel() {
     userSelect: 'text', pointerEvents: 'auto',
   });
   root.id = 'pb2dev';
+  markUi(root);
 
   root.append(el('div', {
     position: 'absolute', left: '0', top: '4px', width: '100%', textAlign: 'center',

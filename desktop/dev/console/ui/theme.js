@@ -17,3 +17,12 @@ export const SWALLOWED_EVENTS = Object.freeze(['keydown', 'keypress', 'mousedown
 export function swallow(node) {
   for (const type of SWALLOWED_EVENTS) node.addEventListener(type, (e) => e.stopPropagation());
 }
+
+// The console's and the editor's own elements are marked, so the editor can tell a press
+// on them from a press on the game.
+const UI_MARK = 'pb2devUi';
+export function markUi(node) { node[UI_MARK] = true; return node; }
+export function isUi(target) {
+  for (let n = target; n; n = n.parentElement || n.parent) if (n[UI_MARK]) return true;
+  return false;
+}

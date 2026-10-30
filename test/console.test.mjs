@@ -1115,17 +1115,24 @@ test('editor tools: place, copy, delete and undo; live edits still reach the rig
     const walls = () => doc.byTag('box').length;
     const before = walls();
 
-    // Through the page, the way a real click arrives: on the click layer, which keeps
-    // it from the game. The release is what selects.
-    const overlay = c.G[c.N.uiOverlay].overlay;
-    const clickLayer = overlay.childNodes.find((n) => n.style && n.style.cursor === 'crosshair');
+    // Through the page, the way a real click arrives: pointer events on the game canvas,
+    // whose own pointerdown listener (the game's graphics library) cancels them, so no
+    // mouse event follows. The editor hears them first and keeps them from the game.
+    const canvas = c.G.game_canvas;
     const shown = (p) => { const s = toScreen(currentTransform(), p); return { clientX: s.x, clientY: s.y }; };
-    let reachedGame = false;
-    c.G.addEventListener('mousedown', () => { reachedGame = true; });
-    c.dispatch(clickLayer, 'mousedown', shown({ x: 215, y: 50 }));
-    c.dispatch(clickLayer, 'mouseup', shown({ x: 215, y: 50 }));
+    let reachedGame = 0;
+    canvas.addEventListener('pointerdown', () => { reachedGame++; });
+    c.G.addEventListener('mousedown', () => { reachedGame++; });
+    const down = c.dispatch(canvas, 'pointerdown', shown({ x: 215, y: 50 }));
+    c.dispatch(canvas, 'pointerup', shown({ x: 215, y: 50 }));
     assert.equal(session.selected(), doc.byUid('#door_a'), 'a real click selects');
-    assert.ok(!reachedGame, 'the game never sees the click');
+    assert.ok(down.defaultPrevented && reachedGame === 0, 'the game never sees the click');
+    // A press on the editor's own panels is theirs, not a click in the world.
+    const panel = c.G[c.N.uiOverlay].overlay.childNodes.find((n) => n.pb2devUi);
+    c.dispatch(panel, 'pointerdown', shown({ x: 215, y: 50 }));
+    c.dispatch(panel, 'pointerup', shown({ x: 215, y: 50 }));
+    assert.equal(session.selected(), doc.byUid('#door_a'), 'unchanged');
+    assert.match(c.run('editor status').join('\n'), /last press the window saw: .* left alone/);
     session.select(null);
 
     // Place tool: drag out a wall (snapped), click for a default-sized one.
@@ -1227,6 +1234,11 @@ test('logic: old maps without uids link by number, as the game reads them', asyn
   assert.equal(findNode(g, 'REGION#1').uid, 'region#1');
   assert.equal(findNode(g, '1'), g.byIndex.get('trigger')[1], 'a trigger by index');
   assert.equal(g.byIndex.get('character')[1].tag, 'enemy', 'players and enemies share the characters');
+  // Triggers and timers without a place sit in a row above the map's top left corner.
+  const spot = (n) => [n.x, n.y];
+  assert.deepEqual(spot(g.byIndex.get('trigger')[0]), [0, -60]);
+  assert.deepEqual(spot(g.byIndex.get('trigger')[1]), [40, -60]);
+  assert.deepEqual(spot(g.byIndex.get('timer')[0]), [80, -60]);
 
   // The editor draws them too.
   const session = await consoleModule('editor/session.js');
@@ -1238,6 +1250,7 @@ test('logic: old maps without uids link by number, as the game reads them', asyn
     c.G.stage.currentFrameLabel = 'menu'; c.frame();
     c.G.stage.currentFrameLabel = 'gaming'; c.frame();
     const doc = session.editorDoc();
+    assert.deepEqual(doc.byTag('timer')[0].spot, { x: 80, y: -60 }, 'where "logic show" draws it');
     session.select(doc.byTag('trigger')[0]);
     assert.equal(drawEditorFrame().links, 4, 'a region runs it; it moves a door to a region, disables a timer');
     assert.deepEqual(errorsOf(c.run('editor status')), []);

@@ -170,10 +170,16 @@ export async function bootConsole({ mapFile = path.join(REPO, 'test/fixtures/map
   };
   const dispatch = (target, type, props = {}) => {
     let stopped = false;
-    const e = { type, target, button: 0, ...props, stopPropagation() { stopped = true; }, preventDefault() {} };
-    for (const fn of [...(windowOn.capture[type] || [])]) fn(e);
-    for (let n = target; n && !stopped; n = n.parent) for (const fn of [...(n.on[type] || [])]) fn(e);
-    if (!stopped) for (const fn of [...(windowOn.bubble[type] || [])]) fn(e);
+    let now = false; // stopImmediatePropagation: not even the next listener on this node
+    const e = {
+      type, target, button: 0, defaultPrevented: false, ...props,
+      stopPropagation() { stopped = true; }, stopImmediatePropagation() { stopped = now = true; },
+      preventDefault() { this.defaultPrevented = true; },
+    };
+    const run = (list) => { for (const fn of [...(list || [])]) { if (now) return; fn(e); } };
+    run(windowOn.capture[type]);
+    for (let n = target; n && !stopped; n = n.parent) run(n.on[type]);
+    if (!stopped) run(windowOn.bubble[type]);
     return e;
   };
   const listeners = {};

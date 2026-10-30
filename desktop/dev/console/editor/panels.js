@@ -7,7 +7,7 @@
 // - The top line: how the mouse works, edits waiting for a reload, messages.
 // They are drawn from the session and drawn again when it changes.
 import { el } from '../ui/dom.js';
-import { THEME, swallow } from '../ui/theme.js';
+import { THEME, swallow, markUi } from '../ui/theme.js';
 import { COLOR } from '../core/colors.js';
 import { game } from '../game/bindings.js';
 import { KINDS, KIND_TAGS, kindOf, nameOf } from './kinds.js';
@@ -40,13 +40,14 @@ const box = (place) => {
     cursor: 'default', userSelect: 'none',
   });
   swallow(b);
-  return b;
+  return markUi(b);
 };
 const title = (text) => el('div', { color: COLOR.title, lineHeight: '9px', whiteSpace: 'nowrap' }, text);
 const row = (style, text) => el('div', {
   lineHeight: ROW_HEIGHT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...style,
 }, text);
-const onClick = (node, fn) => node.addEventListener('mousedown', (e) => { if (e.button === 0) fn(e); });
+// "click": it fires even where the game cancels the press itself.
+const onClick = (node, fn) => node.addEventListener('click', (e) => { if (!e.button) fn(e); });
 
 let nodes = null; // { tools, layers, objects, params, status }
 let unsubscribe = null;
@@ -177,7 +178,7 @@ function drawStatus() {
     s.append(el('span', { color: COLOR.notice }, what));
     if (!game.isMP()) {
       const button = el('span', { color: COLOR.bright, textDecoration: 'underline', cursor: 'pointer', pointerEvents: 'auto', marginLeft: '4px' }, 'reload level');
-      swallow(button);
+      swallow(markUi(button));
       onClick(button, () => { try { reloadLevel(); } catch (err) { say(`error: ${err.message}`, COLOR.error); } });
       s.append(button);
     }

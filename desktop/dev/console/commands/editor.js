@@ -149,9 +149,9 @@ function status() {
   print('Editor status', COLOR.title);
   print(`  on: ${editorOn() ? 'yes' : 'no'}, shown: ${editorShown() ? 'yes' : 'no (no level running)'}`);
   print(`  map: ${doc ? `${doc.elements.length} elements, ${doc.elements.filter((e) => e.attrs.uid).length} with a uid` : 'none'}`);
-  print(`  outlines layer: ${hasLayer('editor') ? 'drawing' : 'off'}; panels: ${panelsOnPage()}; click layer: ${input.layer}${input.layerRect ? ` at ${input.layerRect}` : ''}`);
+  print(`  outlines layer: ${hasLayer('editor') ? 'drawing' : 'off'}; panels: ${panelsOnPage()}; listening for presses: ${input.listening ? 'yes' : 'no'}`);
   print(`  pointer locked: ${input.pointerLocked ? 'yes (clicks go to the game, not the editor)' : 'no'}`);
-  print(`  last press the window saw: ${w ? `at ${w.x}, ${w.y} on ${w.target}${w.onLayer ? ' (the click layer)' : ''}` : 'none since the editor came on'}`);
+  print(`  last press the window saw: ${w ? `at ${w.x}, ${w.y} on ${w.target}, ${w.taken ? 'taken by the editor' : 'left alone (a panel, the console, or outside the game)'}` : 'none since the app started'}`);
   print(`  last press the editor handled: ${l ? `world ${l.world ? `${l.world.x}, ${l.world.y}` : '(no camera)'}, picked ${l.picked ?? '(not released yet)'}` : 'none'}`);
   print(`  selected: ${sel ? nameOf(doc, sel) : 'nothing'}`);
 }

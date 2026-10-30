@@ -5,6 +5,7 @@
 // have none, and deleting one does not move the others in the game.
 // Untouched elements keep their exact text; toText() gives the map back.
 import { MAP } from '../core/shared.js';
+import { unplacedSpots } from '../logic/graph.js';
 
 // <tag a="..." b="..." />. Values hold no quotes (the editor escapes them), so ">"
 // inside one is fine.
@@ -21,11 +22,6 @@ function element(tag, attrs, raw, before) {
 
 // A new element, not in any document yet.
 export const newElement = (tag, attrs) => element(tag, { ...attrs }, null, LINE);
-
-// Kinds old maps write without a place, and where the editor shows them instead.
-const UNPLACED_TAGS = new Set(['trigger', 'timer', 'inf']);
-const UNPLACED_STEP = 40;
-const UNPLACED_ABOVE = 60;
 
 // Players and enemies share the game's characters array, in map order.
 const CHAR_TAGS = new Set(['player', 'enemy']);
@@ -56,25 +52,10 @@ export class MapDoc {
     this.placeUnplaced();
   }
 
-  // Old maps leave out x and y of triggers, timers and engine marks. Like the map editor
-  // (lib_classes.js, SourceLost), they are shown in a row above the map's top left
-  // corner: e.spot, which is not written to the map until the element is moved.
+  // Old maps leave out x and y of triggers, timers and engine marks: they get e.spot,
+  // where the editor (and "logic show") shows them, written to the map only once moved.
   placeUnplaced() {
-    let left = Infinity;
-    let top = Infinity;
-    for (const e of this.elements) {
-      const x = Number(e.attrs.x), y = Number(e.attrs.y);
-      if (e.attrs.x !== undefined && Number.isFinite(x)) left = Math.min(left, x);
-      if (e.attrs.y !== undefined && Number.isFinite(y)) top = Math.min(top, y);
-    }
-    if (!Number.isFinite(left)) left = 0;
-    if (!Number.isFinite(top)) top = 0;
-    let k = 0;
-    for (const e of this.elements) {
-      if (UNPLACED_TAGS.has(e.tag) && (e.attrs.x === undefined || e.attrs.y === undefined)) {
-        e.spot = { x: left + UNPLACED_STEP * k++, y: top - UNPLACED_ABOVE };
-      }
-    }
+    for (const [e, spot] of unplacedSpots(this.elements)) e.spot = spot;
   }
 
   // The game has just loaded this text: every element is where the document has it.

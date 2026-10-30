@@ -53,6 +53,31 @@ const WHOLE = /^\d+$/;
 
 export const nameless = (tag, index) => `${tag}#${index}`;
 
+// Old maps leave out x and y of triggers, timers and engine marks. Like the map editor
+// (lib_classes.js, SourceLost), they are shown in a row above the map's top left
+// corner. items: [{ tag, attrs }] in map order; returns Map(item -> { x, y }) for the
+// ones without a place. Used by the graph and the editor, so both put them in one spot.
+const UNPLACED_TAGS = new Set(['trigger', 'timer', 'inf']);
+const UNPLACED_STEP = 40;
+const UNPLACED_ABOVE = 60;
+export function unplacedSpots(items) {
+  let left = Infinity;
+  let top = Infinity;
+  for (const { attrs } of items) {
+    if (attrs.x !== undefined && Number.isFinite(Number(attrs.x))) left = Math.min(left, Number(attrs.x));
+    if (attrs.y !== undefined && Number.isFinite(Number(attrs.y))) top = Math.min(top, Number(attrs.y));
+  }
+  if (!Number.isFinite(left)) left = 0;
+  if (!Number.isFinite(top)) top = 0;
+  const spots = new Map();
+  for (const item of items) {
+    if (UNPLACED_TAGS.has(item.tag) && (item.attrs.x === undefined || item.attrs.y === undefined)) {
+      spots.set(item, { x: left + UNPLACED_STEP * spots.size, y: top - UNPLACED_ABOVE });
+    }
+  }
+  return spots;
+}
+
 const linkKindOfAttr = (attr) => (STARTING_ATTRS.has(attr) ? LINK.START : attr === ATTACH_ATTR ? LINK.ATTACH : LINK.REF);
 const linkKindOfAction = (type) => (STARTS.has(type) ? LINK.START : CONTROLS.has(type) ? LINK.CONTROL : LINK.ACT);
 export const actionLabel = (n, type) => `action ${n}: ${type}${ACTION_NAMES[type] ? ` ${ACTION_NAMES[type]}` : ''}`;
@@ -60,6 +85,7 @@ export const actionLabel = (n, type) => `action ${n}: ${type}${ACTION_NAMES[type
 // The graph of a map text. logicGraph() is the running map's, read once per map.
 export function buildGraph(text) {
   const nodes = [];
+  const elements = []; // every element, for unplacedSpots
   const byUid = new Map(); // a uid used twice names the first, as the game resolves it
   const byIndex = new Map(); // kind ('trigger', ..., 'character') -> [node by game index]
   const perTag = {};
@@ -71,15 +97,19 @@ export function buildGraph(text) {
     const tag = m[1];
     const index = perTag[tag] = (perTag[tag] ?? -1) + 1; // the game numbers each kind in map order
     const character = CHARACTER_TAGS.has(tag) ? characters++ : undefined;
+    const item = { tag, attrs, node: null };
+    elements.push(item);
     if (!attrs.uid && !NUMBERED.has(tag)) continue;
     const num = (k) => (attrs[k] === undefined ? undefined : Number(attrs[k]));
     const uid = attrs.uid || nameless(tag, index);
     const node = { uid, named: !!attrs.uid, tag, index, character, x: num('x'), y: num('y'), w: num('w'), h: num('h'), attrs };
     nodes.push(node);
+    item.node = node;
     if (!byUid.has(uid)) byUid.set(uid, node);
     indexed(tag)[index] = node;
     if (character !== undefined) indexed('character')[character] = node;
   }
+  for (const [item, spot] of unplacedSpots(elements)) if (item.node) Object.assign(item.node, spot);
   // The element a value names: a uid, or a number of the kind given.
   const target = (value, kind) => {
     if (byUid.has(value) && value.startsWith('#')) return byUid.get(value);
