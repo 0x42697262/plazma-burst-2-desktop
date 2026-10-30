@@ -9,14 +9,13 @@ import { game } from '../game/bindings.js';
 import { editorOn, setEditorOn } from '../editor/index.js';
 import { editorDoc, editorShown, selected, pendingCount, setTool, showLayer, TOOL } from '../editor/session.js';
 import {
-  setAttr, reloadLevel, saveMap, addElement, deleteElement, duplicateElement, undo, redo,
+  setAttr, saveMap, addElement, deleteElement, duplicateElement, undo, redo,
 } from '../editor/edit.js';
 import { nameOf, kindOf, KINDS, KIND_TAGS, SHAPE } from '../editor/kinds.js';
 import { player } from '../game/level.js';
 import { inputStatus } from '../editor/input.js';
 import { panelsOnPage } from '../editor/panels.js';
 import { hasLayer } from '../ui/overlay.js';
-import { liveWallsOn, setLiveWalls } from '../editor/unsafe.js';
 
 const ON_WORDS = ['on', '1', 'true', 'yes'];
 const OFF_WORDS = ['off', '0', 'false', 'no'];
@@ -50,17 +49,8 @@ function setOne(args, { rest }) {
   const { changed, live, why } = setAttr(sel, attr, value);
   const name = nameOf(editorDoc(), sel);
   if (!changed) { print(`${name}: ${attr} is already "${value}"`, COLOR.notice); return; }
-  const where = live ? 'live now' : `shows after "editor reload" (${why})`;
+  const where = live ? 'live now' : `not in the running level: ${why} (kept for "editor save")`;
   print(`${name}: ${attr} = "${value}", ${where}`, live ? COLOR.ok : COLOR.notice);
-}
-
-// ----- editor reload -----
-
-function reload() {
-  requireShown();
-  const n = pendingCount();
-  reloadLevel();
-  print(`Reloading the level from the edited map${n ? ` (${n} object${n === 1 ? '' : 's'} not live until now)` : ''}`, COLOR.ok);
 }
 
 // ----- editor save -----
@@ -96,7 +86,7 @@ function add(args) {
   const [x, y, w, h] = nums.length ? nums : [Math.round(p.tarx), Math.round(p.tary)];
   const e = addElement(tag, { x, y, ...(w !== undefined ? { w, h } : {}) });
   showLayer(tag);
-  print(`Added ${nameOf(editorDoc(), e)} at ${x}, ${y}${kindOf(tag).shape === SHAPE.RECT ? ` (${e.attrs.w} x ${e.attrs.h})` : ''}; in the game after "editor reload"`, COLOR.ok);
+  print(`Added ${nameOf(editorDoc(), e)} at ${x}, ${y}${kindOf(tag).shape === SHAPE.RECT ? ` (${e.attrs.w} x ${e.attrs.h})` : ''}; not in the running level (kept for "editor save")`, COLOR.ok);
 }
 
 function needSelection() {
@@ -110,7 +100,7 @@ function del() {
   const sel = needSelection();
   const name = nameOf(editorDoc(), sel);
   deleteElement(sel);
-  print(`Deleted ${name}; gone from the game after "editor reload"`, COLOR.ok);
+  print(`Deleted ${name} from the map; still in the running level (kept for "editor save")`, COLOR.ok);
 }
 
 function copy() {
@@ -157,19 +147,6 @@ function status() {
   print(`  selected: ${sel ? nameOf(doc, sel) : 'nothing'}`);
 }
 
-// ----- editor livewalls -----
-
-function liveWalls(args) {
-  const usage = 'usage: editor livewalls [on | off]';
-  const word = (args[0] || '').toLowerCase();
-  if (args.length > 1) throw new Error(usage);
-  if (!word) { print(`Live walls: ${liveWallsOn() ? 'on' : 'off'}`); return; }
-  if (OFF_WORDS.includes(word)) { setLiveWalls(false); print('Live walls off: walls change on a reload again', COLOR.ok); return; }
-  if (!ON_WORDS.includes(word)) throw new Error(usage);
-  setLiveWalls(true);
-  print('Live walls on for this session. The game\'s integrity check watches the wall arrays: expect it to report the client and reload the page.', COLOR.warn);
-}
-
 export const editorCommand = {
   name: 'editor',
   aliases: ['edit', 'mapedit'],
@@ -198,18 +175,19 @@ export const editorCommand = {
       ['editor_key f7', 'F7 turns it on and off (F8 is the default)'],
     ],
     notes: [
-      'Live edits: a region\'s place, size and activation; trigger and timer settings',
-      'and trigger actions; a decoration\'s place, rotation and scale; a movable\'s',
-      'place, size and destination. Everything else (walls, water, backgrounds, ...)',
-      'moves in the editor at once and in the game after "editor reload"',
-      '(single-player), which puts you back where you stood. "editor_autoreload on"',
-      'reloads by itself after such an edit.',
-      'Single-player: the game plays the edited map from then on, so dying or',
-      'restarting keeps the edits.',
+      'Edits go into the running level: walls (with their trims), backgrounds, water,',
+      'pushers, movables, regions, decorations, triggers and timers. Walls, water and',
+      'pushers live in arrays the game\'s integrity check watches: it reports the',
+      'client and reloads the page when it sees them change.',
+      'Not in the running level (kept for "editor save"): added and deleted objects,',
+      'materials, and what only counts at spawn (players, enemies, vehicles, guns,',
+      'barrels, lamps). The top line says why an edit was not live.',
+      'The same in every mode. When the level starts again on the same map (dying, a',
+      'restart, a new round), the edits are put into it again.',
       'It needs a level, hides while none runs and comes back with the next one.',
       'Esc clears the selection. Regions and characters are drawn where they are now.',
     ],
-    see: ['editor set', 'editor add', 'editor tool', 'editor undo', 'editor reload', 'editor save', 'editor_autoreload', 'editor_key', 'logic'],
+    see: ['editor set', 'editor add', 'editor tool', 'editor undo', 'editor save', 'editor_key', 'logic'],
   },
   run: editor,
   subcommands: [
@@ -235,13 +213,11 @@ export const editorCommand = {
       help: {
         about: [
           'Changes one attribute of the selected object, the way editing it in Params',
-          'does. What the running game can take is live at once (a region\'s place and',
-          'size, its activation, trigger and timer settings and actions); the rest shows',
-          'after "editor reload" in single-player.',
+          'does, and puts it into the running level. When it cannot, it says why.',
         ],
         args: [['<attribute>', 'as Params lists it, e.g. x, use_on, actions_2_targetA'], ['<value>', 'the new value; "" for empty']],
         examples: [['editor set w 200', 'make it 200 wide'], ['editor set enabled false', 'a disabled trigger']],
-        see: ['editor', 'editor reload'],
+        see: ['editor'],
       },
       run: setOne,
     },
@@ -259,8 +235,8 @@ export const editorCommand = {
         ],
         args: [['<kind>', kindWords], ['x y', 'its place'], ['w h', 'a rectangle\'s size']],
         examples: [['editor add wall', 'a wall at your crosshair'], ['editor add region 100 200 50 50', 'a region there']],
-        notes: ['New objects are in the game after "editor reload" (single-player).'],
-        see: ['editor tool', 'editor reload'],
+        notes: ['New objects are in the map, not in the running level yet ("editor save" keeps them).'],
+        see: ['editor tool', 'editor save'],
       },
       run: add,
     },
@@ -271,7 +247,7 @@ export const editorCommand = {
       desc: 'Delete the selected object (Del)',
       help: {
         about: ['Takes the selected object out of the map. Other objects that refer to it keep', 'the reference, as in the map editor.'],
-        see: ['editor undo', 'editor reload'],
+        see: ['editor undo', 'editor save'],
       },
       run: del,
     },
@@ -311,43 +287,6 @@ export const editorCommand = {
         see: ['editor add'],
       },
       run: tool,
-    },
-    {
-      name: 'livewalls',
-      usage: 'editor livewalls [on | off]',
-      desc: 'Move walls in the running level as you edit them; the game\'s integrity check reports and reloads',
-      help: {
-        about: [
-          'Moves walls in the running level as you edit them, instead of on a reload: the',
-          'wall arrays, the collision grid and the wall\'s body. The arrays are ones the',
-          'game\'s integrity check snapshots and nothing hides the write, so expect it to',
-          'report the client and reload the page. This session only (not saved).',
-          'Walls outside the area the level was built with still wait for a reload; their',
-          'edge trims (tops, grass, shading) stay where they were until one.',
-        ],
-        args: [['on | off', 'turn it on or off'], ['(nothing)', 'whether it is on']],
-        see: ['editor reload', 'editor_autoreload'],
-      },
-      run: liveWalls,
-    },
-    {
-      name: 'reload',
-      aliases: ['apply', 'restart'],
-      usage: 'editor reload',
-      desc: 'Single-player: play the level again from the edited map, so every edit is in it',
-      help: {
-        about: [
-          'Restarts the level the way the game does, from the edited map: walls, lights,',
-          'everything is built again. Everything in the level starts over (enemies,',
-          'variables, your HP); you are put back where you stood. The editor stays on.',
-        ],
-        notes: [
-          'In single-player the game always plays the edited map: dying or restarting',
-          'loads it too.',
-        ],
-        see: ['editor', 'editor save'],
-      },
-      run: reload,
     },
     {
       name: 'save',

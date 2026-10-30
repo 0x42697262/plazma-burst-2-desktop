@@ -1,22 +1,20 @@
 // Edits reaching the running game. Some attributes can be written straight into the
 // game's object, the way the map loader would have set them (frame2.js, the map
-// loader): those changes are live. Anything else waits for the level to load the map
-// again (single-player: "editor reload").
-// Walls, backgrounds, water and pushers are not written live: the game keeps their
-// geometry in arrays its integrity check snapshots, and a change there makes the game
-// report the client and reload. The game's own loader builds them from the edited map
-// on a reload instead ("editor_autoreload" does that by itself). Walls only go live
-// when "editor livewalls" was turned on, which says so first (unsafe.js).
+// loader): those changes are live. What a running level cannot take (an element it does
+// not have, an attribute only read at load) says why, and stays in the map.
+// Walls, water and pushers keep their geometry in arrays the game's integrity check
+// snapshots: writing them makes the game report the client and reload the page. They
+// are written like everything else; nothing hides it.
 import { game } from '../game/bindings.js';
 import { F } from '../game/fields.js';
 import { unwrap } from '../triggers/log.js';
 import { moveWall, textureAt } from '../game/walls.js';
+import { findRect, moveRect } from '../game/layers.js';
 import { boundsOf } from './kinds.js';
-import { liveWallsOn } from './unsafe.js';
 
 // Activation modes the loader rewrites: hidden use keys become the plain ones.
 const LOADER_USE_ON = Object.freeze({ 8: 1, 11: 9, 12: 10, 15: 1 });
-// Modes that draw a switch at load: changing to or from one needs a reload.
+// Modes that draw a switch at load: changing to or from one is not live (the switch is not drawn).
 const SWITCH_MODES = new Set([1, 9, 10]);
 const ACTION_ATTR = /^actions_\d+_(type|targetA|targetB)$/;
 const TRIGGER_ACTIONS_LIMIT = 100; // the loader reads actions_1 .. actions_100
@@ -76,7 +74,7 @@ const counted = {
 };
 
 // A decoration is a display object: place, rotation and scale can change at once. One
-// attached to a movable is placed by it, so that waits for a reload.
+// attached to a movable is placed by it.
 const attached = (attrs) => attrs.attach !== undefined && attrs.attach !== '' && attrs.attach !== '-1';
 const decorNumber = (prop, fallback) => (mc, v, attrs) => {
   if (attached(attrs)) return false;
@@ -109,15 +107,57 @@ const door = {
   tary: (mc, v) => { if (!finite(v)) return false; mc.tary = parseFloat(v); return true; },
 };
 
-// Walls: only with "editor livewalls" on, inside the level's grid. The reasons they are
-// not live are errors, so the editor can say them.
+// A rectangle kind's new place, from all its attributes (the one that changed included).
+const rectOf = (tag, attrs) => boundsOf({ tag, attrs });
+
+// Walls: arrays, collision grid, body and trims (game/walls.js).
 const wallPlace = (i) => (v, attrs) => {
-  if (!liveWallsOn()) throw new Error('walls change on a reload ("editor livewalls on" moves them live)');
-  const r = boundsOf({ tag: 'box', attrs });
+  const r = rectOf('box', attrs);
   if (!r) return false;
   moveWall(i, r);
   return true;
 };
+
+// A background: its arrays, and the rectangle drawn for it. One attached to a movable
+// is drawn in a sprite of its own the movable carries.
+function placeBg(i, attrs) {
+  if (attrs.a !== undefined && attrs.a !== '' && attrs.a !== '-1') throw new Error('a background attached to a movable moves with it');
+  const r = rectOf('bg', attrs);
+  const bg = game.backgrounds();
+  if (!r) return false;
+  const drawn = findRect({ x: bg.x[i], y: bg.y[i], w: bg.w[i], h: bg.h[i] });
+  if (!drawn) throw new Error('its drawing was not found in the level\'s layers');
+  moveRect(drawn, r);
+  bg.x[i] = r.x; bg.y[i] = r.y; bg.w[i] = r.w; bg.h[i] = r.h;
+  return true;
+}
+
+// A pusher: corners and settings, as the loader stores them.
+function placePusher(i, attrs) {
+  if (attached(attrs)) throw new Error('a pusher attached to a movable moves with it');
+  const r = rectOf('pushf', attrs);
+  if (!r) return false;
+  const p = game.pushers();
+  p.x1[i] = r.x; p.y1[i] = r.y; p.x2[i] = r.x + r.w; p.y2[i] = r.y + r.h;
+  return true;
+}
+const pusherNumber = (key) => (o, v) => { if (!finite(v)) return false; game.pushers()[key][o.index] = parseFloat(v); return true; };
+
+// Water: the display object at the map's place, and the area it acts on, which the
+// loader widens by 10 on each side and lowers by 10 (frame2.js).
+const WATER_SIDE = 10, WATER_BELOW = 10;
+function placeWater(i, attrs) {
+  if (attached(attrs)) throw new Error('water attached to a movable moves with it');
+  const r = rectOf('water', attrs);
+  if (!r) return false;
+  const w = game.waters();
+  const shown = w.shown?.[i];
+  if (shown) Object.assign(shown, { x: r.x, y: r.y, scaleX: r.w / 100, scaleY: r.h / 100 });
+  w.x[i] = r.x - WATER_SIDE; w.y[i] = r.y; w.w[i] = r.w + 2 * WATER_SIDE; w.h[i] = r.h + WATER_BELOW;
+  return true;
+}
+
+const each = (attrs, fn) => Object.fromEntries(attrs.map((a) => [a, fn]));
 
 const LIVE = Object.freeze({
   region: { of: (i) => (i < game.regionCount() ? game.regions()?.[i] : null), attrs: region },
@@ -129,8 +169,26 @@ const LIVE = Object.freeze({
   decor: { of: (i) => game.decors()?.[i], attrs: decor },
   door: { of: (i) => (i < game.doorCount() ? game.doors()?.[i] : null), attrs: door },
   box: {
-    of: (i) => (i < game.walls().count ? { wall: i } : null),
-    attrs: Object.fromEntries(['x', 'y', 'w', 'h'].map((a) => [a, (o, v, attrs) => wallPlace(o.wall)(v, attrs)])),
+    of: (i) => (i < game.walls().count ? { index: i } : null),
+    attrs: each(['x', 'y', 'w', 'h'], (o, v, attrs) => wallPlace(o.index)(v, attrs)),
+  },
+  bg: {
+    of: (i) => (i < game.backgrounds().count ? { index: i } : null),
+    attrs: each(['x', 'y', 'w', 'h'], (o, v, attrs) => placeBg(o.index, attrs)),
+  },
+  pushf: {
+    of: (i) => (i < game.pushers().count ? { index: i } : null),
+    attrs: {
+      ...each(['x', 'y', 'w', 'h'], (o, v, attrs) => placePusher(o.index, attrs)),
+      tox: pusherNumber('tox'), toy: pusherNumber('toy'), stab: pusherNumber('stab'), damage: pusherNumber('damage'),
+    },
+  },
+  water: {
+    of: (i) => (i < game.waters().count ? { index: i } : null),
+    attrs: {
+      ...each(['x', 'y', 'w', 'h'], (o, v, attrs) => placeWater(o.index, attrs)),
+      damage: (o, v) => { if (!finite(v)) return false; game.waters().damage[o.index] = parseFloat(v); return true; },
+    },
   },
   timer: {
     of: (i) => (i < game.timerCount() ? game.timers()?.[i] : null),

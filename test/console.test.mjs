@@ -995,7 +995,7 @@ test('editor: on and off by its key, outlines every object, selects by click and
   }
 });
 
-test('editor: edits go live where the game can take them, the rest on a reload; drag moves and resizes', async () => {
+test('editor: edits go into the running level, in any mode, and again after a restart; drag moves and resizes', async () => {
   const session = await consoleModule('editor/session.js');
   const { mouse, grabOf, dragPlace } = await consoleModule('editor/input.js');
   const { currentTransform, toScreen } = await consoleModule('ui/overlay.js');
@@ -1004,17 +1004,17 @@ test('editor: edits go live where the game can take them, the rest on a reload; 
   // A mouse event at a world point, through the screen the way a real one comes in.
   const at = (p, extra = {}) => { const s = toScreen(currentTransform(), p); return { button: 0, clientX: s.x, clientY: s.y, ...extra }; };
   try {
-    c.setMP(false);
+    // In a match (the fake game is one): the editor does not care which mode it is.
     c.run('editor on');
     const doc = session.editorDoc();
     const region = doc.byUid('#red_use'); // region #1: 400, 0, 20 x 20
     const live = c.G[c.N.regions][1];
 
-    // Live: the game's region moves at once; the map text follows (single-player).
+    // Live: the game's region moves at once. The game's map text is never written.
     session.select(region);
     assert.deepEqual(quiet('editor set x 450'), ['#red_use: x = "450", live now']);
     assert.equal(live.x, 450);
-    assert.match(c.G[c.N.mapText], /<region uid="#red_use" x="450" y="0" w="20" h="20" use_on="9" use_target="#open_door" \/>/);
+    assert.equal(c.G[c.N.mapText], original);
     assert.equal(session.editorDoc(), doc, 'the editor keeps its document');
     quiet('editor set use_on 12');
     assert.equal(live[c.N.regionUseOn], 10, 'stored as the loader stores it');
@@ -1038,12 +1038,12 @@ test('editor: edits go live where the game can take them, the rest on a reload; 
     quiet('editor set r 45');
     assert.equal(c.G[c.N.decors][1].rotation, 45);
     session.select(doc.byUid('#sign'));
-    assert.match(quiet('editor set x 230')[0], /shows after "editor reload"/);
+    assert.match(quiet('editor set x 230')[0], /not in the running level: a decoration attached|not in the running level: the running level cannot take it/);
 
-    // Not live: kept, and the status says a reload brings it.
+    // Not live: kept for "editor save", and it says why.
     const door = doc.byUid('#door_a');
     session.select(door);
-    assert.match(quiet('editor set w 60')[0], /^#door_a: w = "60", shows after "editor reload" \(/);
+    assert.match(quiet('editor set w 60')[0], /^#door_a: w = "60", not in the running level: .* \(kept for "editor save"\)/);
     assert.equal(session.pendingCount(), 2);
     assert.match(errorsOf(c.run('editor set x abc'))[0], /x must be a number/);
     assert.match(errorsOf(c.run('editor set c "a"b"'))[0], /cannot contain a double quote/);
@@ -1077,29 +1077,18 @@ test('editor: edits go live where the game can take them, the rest on a reload; 
     mouse.up();
     assert.equal(session.selected(), region);
 
-    // Reload: the game's own restart, from the edited text; then nothing is pending.
-    c.G[c.N.fadeOverlay] = { alpha: 0, visible: false };
-    const ref = c.player[c.N.refPoint];
-    const spot = { x: c.G[c.N.ptX][ref], y: c.G[c.N.ptY][ref] };
-    assert.match(c.run('editor reload')[0], /^Reloading the level from the edited map \(2 objects not live until now\)/);
-    assert.equal(c.G[c.N.levelState], 'restart');
-    assert.deepEqual(c.G[c.N.fadeOverlay], { alpha: 1, visible: true });
-    c.G[c.N.levelState] = '';
-    c.G[c.N.fadeOverlay] = null;
+    // The level starts again on the same map (dying, a new round): the game builds it
+    // from its map text, without the edits, and the editor puts them in again.
+    live.x = 400;
+    live[c.N.regionUseOn] = 9;
     c.G.stage.currentFrameLabel = 'loading'; c.frame();
-    c.G[c.N.ptX][ref] = c.player.x = spot.x - 300; // the level starts you at its spawn
     c.G.stage.currentFrameLabel = 'gaming'; c.frame();
-    assert.equal(c.G[c.N.ptX][ref], spot.x, 'back where you stood');
-    assert.equal(session.editorDoc(), doc, 'same text: same document');
-    assert.equal(session.pendingCount(), 0);
-
-    // Multiplayer: the match's map text is never touched; no reload.
-    c.setMP(true);
-    const mpText = c.G[c.N.mapText];
-    session.select(door);
-    assert.match(quiet('editor set h 50')[0], /^#door_a: h = "50", shows after "editor reload"/);
-    assert.equal(c.G[c.N.mapText], mpText);
-    assert.match(errorsOf(c.run('editor reload'))[0], /a match cannot be reloaded from here/);
+    assert.equal(session.editorDoc(), doc, 'same map: same document');
+    assert.equal(live.x, 450, 'the edit is back');
+    assert.equal(live[c.N.regionUseOn], 10);
+    assert.equal(c.G[c.N.decors][1].rotation, 45);
+    assert.equal(c.G[c.N.mapText], original);
+    assert.equal(c.run('editor reload')[0].startsWith('error: '), true, 'no reload command');
 
     // Save goes to the wrapper (none in tests).
     c.log.printed.length = 0;
@@ -1108,7 +1097,6 @@ test('editor: edits go live where the game can take them, the rest on a reload; 
     assert.ok(c.log.printed.some((l) => /could not save \(no desktop wrapper in tests\)/.test(l)), c.log.printed.join(' | '));
     assert.match(errorsOf(c.run('editor save'))[0], /usage: editor save <name>/);
   } finally {
-    c.setMP(true);
     session.setEditor(false);
     c.G[c.N.mapText] = original;
   }
@@ -1122,7 +1110,6 @@ test('editor tools: place, copy, delete and undo; live edits still reach the rig
   const quiet = (line) => c.run(line).filter((l) => !l.startsWith('Note:'));
   const at = (p, extra = {}) => { const s = toScreen(currentTransform(), p); return { button: 0, clientX: s.x, clientY: s.y, ...extra }; };
   try {
-    c.setMP(false);
     c.run('editor on');
     const doc = session.editorDoc();
     const walls = () => doc.byTag('box').length;
@@ -1162,7 +1149,7 @@ test('editor tools: place, copy, delete and undo; live edits still reach the rig
     mouse.down(at({ x: 2000, y: 0 }));
     mouse.up();
     assert.deepEqual([session.selected().attrs.w, session.selected().attrs.h], ['100', '100']);
-    assert.match(c.G[c.N.mapText], /<box x="2000" y="0" w="100" h="100" m="0" \/>/, 'in the map text, for a reload');
+    assert.match(doc.toText(), /<box x="2000" y="0" w="100" h="100" m="0" \/>/, 'in the map, for "editor save"');
     assert.deepEqual(c.press('Escape'), []);
     assert.equal(session.currentTool(), 'select', 'Esc: back to select');
 
@@ -1184,7 +1171,7 @@ test('editor tools: place, copy, delete and undo; live edits still reach the rig
     assert.equal(c.G[c.N.regions][0].y, 20, 'the deleted one untouched');
     // New elements are not in the game: never live.
     session.select(doc.byUid('#region*1'));
-    assert.match(quiet('editor set x 150')[0], /shows after "editor reload"/);
+    assert.match(quiet('editor set x 150')[0], /not in the running level: it is not in the running level yet/);
 
     // Undo: one step per action; a whole drag is one.
     session.select(wall);
@@ -1213,7 +1200,6 @@ test('editor tools: place, copy, delete and undo; live edits still reach the rig
     session.select(null);
     assert.match(errorsOf(c.run('editor delete'))[0], /select an object first/);
   } finally {
-    c.setMP(true);
     session.setTool('select');
     session.setEditor(false);
     c.G[c.N.mapText] = original;
@@ -1274,32 +1260,52 @@ test('logic: old maps without uids link by number, as the game reads them', asyn
   }
 });
 
-test('editor: movables go live; walls only with "editor livewalls"; editor_autoreload reloads by itself', async () => {
+test('editor: walls (with trims), backgrounds, water, pushers and movables move in the running level', async () => {
   const session = await consoleModule('editor/session.js');
   const original = c.G[c.N.mapText];
   const G = c.G, N = c.N;
   const quiet = (line) => c.run(line).filter((l) => !l.startsWith('Note:'));
   const level = (on) => { G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; c.frame(); };
-  // A level with two walls and a movable, as the game holds them after loading.
+  // A level as the game holds it after loading: two walls, a background, water, a
+  // pusher and a movable.
   G[N.mapText] = [
     '<box x="0" y="0" w="200" h="20" m="0" />',
-    '<box x="300" y="0" w="100" h="20" m="0" />',
+    '<box x="300" y="0" w="100" h="40" m="0" />',
+    '<bg x="0" y="100" w="50" h="50" m="0" />',
+    '<water uid="#pool" x="600" y="0" w="100" h="50" damage="0" friction="true" />',
+    '<pushf uid="#fan" x="800" y="0" w="40" h="40" tox="0" toy="-1" stab="0" damage="0" attach="-1" />',
     '<door uid="#lift" x="500" y="0" w="40" h="10" moving="false" tarx="500" tary="-100" maxspeed="10" vis="true" attach="-1" />',
   ].join('\n');
-  G[N.wallX] = [0, 300]; G[N.wallY] = [0, 0]; G[N.wallW] = [200, 100]; G[N.wallH] = [20, 20]; G[N.wallCount] = 2;
+  G[N.wallX] = [0, 300]; G[N.wallY] = [0, 0]; G[N.wallW] = [200, 100]; G[N.wallH] = [20, 40]; G[N.wallCount] = 2;
   // The loader's grid: 100-unit cells, from 200 left of and above the walls.
-  Object.assign(G, { [N.gridCell]: 100, [N.gridMinX]: -200, [N.gridMinY]: -200, [N.gridCols]: 9, [N.gridRows]: 5 });
-  G[N.grid] = Array.from({ length: 9 }, () => Array.from({ length: 5 }, () => []));
+  Object.assign(G, { [N.gridCell]: 100, [N.gridMinX]: -200, [N.gridMinY]: -200, [N.gridCols]: 12, [N.gridRows]: 6 });
+  G[N.grid] = Array.from({ length: 12 }, () => Array.from({ length: 6 }, () => []));
   G[N.gridAddWall] = (i) => {
     const x0 = Math.floor((G[N.wallX][i] - 100 + 200) / 100), x1 = Math.ceil((G[N.wallX][i] + G[N.wallW][i] + 100 + 200) / 100);
     const y0 = Math.floor((G[N.wallY][i] - 100 + 200) / 100), y1 = Math.ceil((G[N.wallY][i] + G[N.wallH][i] + 100 + 200) / 100);
     for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) G[N.grid][x][y].push(i);
   };
   G[N.gridAddWall](0); G[N.gridAddWall](1);
+  // The drawn layers: a wall body each, and one shared sprite with a background's
+  // rectangle and wall #1's top and bottom trims, as the loader records the calls.
   G.texture_front0 = class {};
-  const body = Object.assign(new G.texture_front0(), { x: 300, y: 0, scaleX: 1, scaleY: 0.2 });
-  const liftBody = Object.assign(new G.texture_front0(), { x: 500, y: 0, scaleX: 0.4, scaleY: 0.1 });
-  G.graphics_3d = { children: [liftBody, body] };
+  const body = Object.assign(new G.texture_front0(), { x: 300, y: 0, scaleX: 1, scaleY: 0.4 });
+  const fill = (ty, tx = 0) => ['beginBitmapFill', [{}, { tx, ty }, true, true]];
+  const quad = (x1, y1, x2, y2) => [['moveTo', [x1, y1]], ['lineTo', [x2, y1]], ['lineTo', [x2, y2]], ['lineTo', [x1, y2]], ['endFill', []]];
+  let scheduled = 0;
+  const shared = { graphics: { bounds: { x1: 0, y1: 0, x2: 0, y2: 0 }, ScheduleBitmapUpdate() { scheduled++; }, draw_operations: [
+    fill(100), ...quad(0, 100, 50, 150), // the background
+    fill(0), ...quad(300, 0, 400, 16), // wall #1, top
+    fill(24), ...quad(300, 24, 400, 40), // wall #1, bottom (40 - 16)
+    fill(0), ...quad(0, 0, 200, 16), // wall #0, top: not wall #1's
+  ] } };
+  G.graphics_3d = { children: [body, shared] };
+  const pool = { x: 600, y: 0, scaleX: 1, scaleY: 0.5 };
+  G[N.waters] = [pool]; G[N.waterCount] = 1;
+  G[N.waterX] = [590]; G[N.waterY] = [0]; G[N.waterW] = [120]; G[N.waterH] = [60]; G[N.waterDamage] = [0];
+  G[N.bgX] = [0]; G[N.bgY] = [100]; G[N.bgW] = [50]; G[N.bgH] = [50]; G[N.bgCount] = 1;
+  Object.assign(G, { [N.pushX1]: [800], [N.pushY1]: [0], [N.pushX2]: [840], [N.pushY2]: [40], [N.pushCount]: 1,
+    [N.pushToX]: [0], [N.pushToY]: [-1], [N.pushStab]: [0], [N.pushDamage]: [0] });
   const lift = { x: 500, y: 0, w: 40, h: 10, scaleX: 0.4, scaleY: 0.1, tarx: 500, tary: -100 };
   G[N.doors] = [lift]; G[N.doorCount] = 1;
   // The cells wall i is in, against the cells the game's own function would put it in.
@@ -1312,67 +1318,80 @@ test('editor: movables go live; walls only with "editor livewalls"; editor_autor
     G[N.grid] = real;
     return want;
   };
+  const ops = () => shared.graphics.draw_operations;
+  const points = (from, n = 4) => ops().slice(from, from + n).map((op) => op[1].slice(0, 2));
   try {
-    c.setMP(false);
     c.run('editor on');
     level(false); level(true);
     const doc = session.editorDoc();
 
-    // A movable: place, size and its texture at once.
-    session.select(doc.byUid('#lift'));
-    assert.deepEqual(quiet('editor set x 520'), ['#lift: x = "520", live now']);
-    quiet('editor set w 80');
-    assert.deepEqual([lift.x, lift.w, lift.scaleX, liftBody.x, liftBody.scaleX], [520, 80, 0.8, 520, 0.8]);
-    quiet('editor set tary -200');
-    assert.equal(lift.tary, -200);
-
-    // Walls: on a reload, unless live walls are on.
+    // A wall, in a match: arrays, grid, body, trims. Its height: the top stays, the bottom
+    // trim follows the bottom edge.
     const wall = doc.byTag('box')[1];
     session.select(wall);
-    assert.match(quiet('editor set x 310')[0], /shows after "editor reload" \(walls change on a reload \("editor livewalls on" moves them live\)\)/);
-    assert.equal(G[N.wallX][1], 300);
-    assert.match(c.run('editor livewalls on')[0], /^Live walls on for this session\. The game's integrity check watches the wall arrays: expect it to report the client and reload the page\./);
-    c.setMP(true);
-    assert.deepEqual(quiet('editor set x 340'), ['wall #1: x = "340", live now'], 'in a match too');
-    c.setMP(false);
-    assert.deepEqual(quiet('editor set x 350'), ['wall #1: x = "350", live now']);
-    assert.equal(G[N.wallX][1], 350);
-    assert.deepEqual([body.x, body.scaleX], [350, 1]);
-    assert.deepEqual(cellsOf(G[N.grid], 1), freshCells(1), 'in exactly the cells the game lists it in now');
+    assert.deepEqual(quiet('editor set h 60'), ['wall #1: h = "60", live now']);
+    assert.equal(G[N.wallH][1], 60);
+    assert.equal(body.scaleY, 0.6);
+    assert.deepEqual(points(7), [[300, 0], [400, 0], [400, 16], [300, 16]], 'top trim stays');
+    assert.deepEqual(points(13), [[300, 44], [400, 44], [400, 60], [300, 60]], 'bottom trim moves down 20');
+    assert.equal(ops()[12][1][1].ty, 44, 'its texture with it');
+    // Moved: everything of it goes along; wall #0's trim stays.
+    quiet('editor set x 350');
+    assert.deepEqual([G[N.wallX][1], body.x], [350, 350]);
+    assert.deepEqual(points(7)[0], [350, 0]);
+    assert.deepEqual(points(13)[0], [350, 44]);
+    assert.deepEqual(points(19)[0], [0, 0], 'the other wall\'s trim untouched');
+    assert.deepEqual(cellsOf(G[N.grid], 1), freshCells(1), 'in exactly the cells the game lists it in');
     assert.deepEqual(cellsOf(G[N.grid], 0), freshCells(0), 'the other wall untouched');
-    quiet('editor set w 50');
-    assert.equal(body.scaleX, 0.5);
-    quiet('editor set y -150');
-    assert.deepEqual(cellsOf(G[N.grid], 1), freshCells(1), 'smaller and higher: out of the cells it left');
-    assert.match(quiet('editor set x 5000')[0], /\(that is outside the walls the level was built with/, 'outside the grid: not live, and why');
+    // Wider: trims stretch with it.
+    quiet('editor set w 200');
+    assert.deepEqual(points(7), [[350, 0], [550, 0], [550, 16], [350, 16]]);
+    assert.ok(scheduled > 0, 'the layer is redrawn');
+    assert.match(quiet('editor set x 5000')[0], /not in the running level: that is outside the area the level's walls were built for/);
     assert.equal(G[N.wallX][1], 350);
-    quiet('editor livewalls off');
-    assert.match(quiet('editor set x 360')[0], /shows after "editor reload"/);
+    quiet('editor undo');
 
-    // editor_autoreload: a non-live edit reloads by itself once the edits stop.
-    G[N.fadeOverlay] = { alpha: 0, visible: false };
-    quiet('editor_autoreload on');
-    quiet('editor set y 20');
-    assert.equal(G[N.levelState], '', 'not at once');
-    await new Promise((r) => setTimeout(r, 800));
-    assert.equal(G[N.levelState], 'restart');
-    G[N.levelState] = '';
-    // Not while the mouse is down.
-    session.setPressing(true);
-    quiet('editor set y 30');
-    await new Promise((r) => setTimeout(r, 800));
-    assert.equal(G[N.levelState], '', 'waits for the drag to end');
-    session.setPressing(false);
-    await new Promise((r) => setTimeout(r, 800));
-    assert.equal(G[N.levelState], 'restart');
+    // A background: its arrays and its drawn rectangle.
+    session.select(doc.byTag('bg')[0]);
+    assert.deepEqual(quiet('editor set y 120'), ['background #0: y = "120", live now']);
+    assert.deepEqual(points(1), [[0, 120], [50, 120], [50, 170], [0, 170]]);
+    assert.equal(G[N.bgY][0], 120);
+
+    // Water: shown at the map's place, acting on a wider area, as the loader does.
+    session.select(doc.byUid('#pool'));
+    quiet('editor set w 200');
+    assert.deepEqual([pool.scaleX, G[N.waterX][0], G[N.waterW][0], G[N.waterH][0]], [2, 590, 220, 60]);
+    quiet('editor set damage 5');
+    assert.equal(G[N.waterDamage][0], 5);
+
+    // A pusher: its corners and its push.
+    session.select(doc.byUid('#fan'));
+    quiet('editor set x 820');
+    assert.deepEqual([G[N.pushX1][0], G[N.pushX2][0]], [820, 860]);
+    quiet('editor set toy -3');
+    assert.equal(G[N.pushToY][0], -3);
+
+    // A movable: place, size and destination.
+    session.select(doc.byUid('#lift'));
+    quiet('editor set w 80');
+    quiet('editor set tary -200');
+    assert.deepEqual([lift.w, lift.scaleX, lift.tary], [80, 0.8, -200]);
+
+    // The level starts again on the same map: the game rebuilds it without the edits,
+    // and the editor puts them in again.
+    G[N.wallX] = [0, 300]; G[N.wallW] = [200, 100]; G[N.wallH] = [20, 40];
+    G[N.grid] = Array.from({ length: 12 }, () => Array.from({ length: 6 }, () => []));
+    G[N.gridAddWall](0); G[N.gridAddWall](1);
+    Object.assign(body, { x: 300, scaleX: 1, scaleY: 0.4 });
+    lift.w = 40; G[N.pushToY][0] = -1;
+    level(false); level(true);
+    assert.deepEqual([G[N.wallX][1], G[N.wallW][1], G[N.wallH][1], body.x], [350, 200, 60, 350], 'the wall again');
+    assert.deepEqual(cellsOf(G[N.grid], 1), freshCells(1));
+    assert.deepEqual([lift.w, G[N.pushToY][0]], [80, -3]);
   } finally {
-    G[N.levelState] = '';
-    G[N.fadeOverlay] = null;
-    quiet('editor_autoreload off');
-    c.run('editor livewalls off');
-    c.setMP(true);
     session.setEditor(false);
     G[N.mapText] = original;
-    for (const k of ['doors', 'doorCount', 'wallCount']) delete G[N[k]];
+    for (const k of ['doors', 'doorCount', 'wallCount', 'waters', 'waterCount', 'bgCount', 'pushCount']) delete G[N[k]];
+    delete G.graphics_3d;
   }
 });

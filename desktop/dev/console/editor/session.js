@@ -22,7 +22,6 @@ const state = {
   hidden: new Set(), // tags not drawn and not picked
   tool: 'select', // TOOL: what a click in the world does
   preview: null, // { tag, x, y, w, h }: the rectangle being dragged out with the place tool
-  pressing: false, // the mouse is down on the world (a drag may be going on)
   lastPick: null, // { at, ids, k }: the stack under the last click, for cycling
 };
 
@@ -32,7 +31,7 @@ export const TOOL = Object.freeze({ SELECT: 'select', PLACE: 'place' });
 
 export const onChange = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
 // what: 'shown' (on/off or level start/end), 'doc', 'reloaded' (the level started again
-// from the document), 'selection', 'layer', 'layers', 'tool', 'edit'.
+// on the same map), 'selection', 'layer', 'layers', 'tool', 'edit'.
 export const notify = (what) => { for (const fn of listeners) fn(what); };
 const changed = notify;
 
@@ -54,8 +53,6 @@ export function setTool(tool) {
 }
 
 export function setPreview(rect) { state.preview = rect; }
-export const isPressing = () => state.pressing;
-export function setPressing(on) { state.pressing = on; }
 export const selected = () => (state.doc && state.selectedId !== null ? state.doc.byId(state.selectedId) : null);
 
 // The map text the game is playing, as a document. Throws when there is none yet.
@@ -158,9 +155,8 @@ export function pickAt(p) {
 }
 
 // Once per frame. The editor hides while no level runs and shows again with the next
-// one. A level that starts on the map text the document wrote (a reload, a restart,
-// dying in single-player) has every edit, so nothing is pending any more; any other map
-// text (another map) starts a new document.
+// one. A level that starts on the same map (a restart, dying, a new round) gets the
+// edits again; any other map starts a new document.
 export function editorTick() {
   if (!state.on) return;
   const active = isActive();
@@ -172,9 +168,7 @@ export function editorTick() {
       if (!doc) return; // not readable yet: try next frame
       takeDoc(doc);
     } else {
-      state.doc.markLoaded();
-      state.pending.clear();
-      changed('reloaded');
+      changed('reloaded'); // the same map again: edit.js puts the edits back in
     }
   }
   setShown(active);

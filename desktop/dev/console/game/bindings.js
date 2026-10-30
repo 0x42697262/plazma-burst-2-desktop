@@ -151,7 +151,7 @@ export const game = {
   doors: () => read('doors'), // movables: display objects, in map order
   doorCount: () => read('doorCount'),
   // Walls: parallel arrays by wall index, and the collision grid built from them. The
-  // arrays are ones the game's integrity check snapshots (see editor/walls-live).
+  // arrays are ones the game's integrity check snapshots (editor/apply.js).
   walls: () => ({ x: read('wallX'), y: read('wallY'), w: read('wallW'), h: read('wallH'), count: read('wallCount') }),
   wallGrid: () => ({
     cells: read('grid'), cell: read('gridCell'), cols: read('gridCols'), rows: read('gridRows'),
@@ -161,6 +161,17 @@ export const game = {
   // The 3D layer every wall body is drawn in, one texture_front0 per wall (frame2.js).
   wallLayer: () => (typeof graphics_3d === 'undefined' ? null : graphics_3d),
   wallTexture: () => (typeof texture_front0 === 'undefined' ? null : texture_front0),
+  frontLayer: () => (typeof graphics_3d_front === 'undefined' ? null : graphics_3d_front), // drawn over characters
+  // Backgrounds, pushers and water: parallel arrays by index, as the loader keeps them.
+  backgrounds: () => ({ x: read('bgX'), y: read('bgY'), w: read('bgW'), h: read('bgH'), count: read('bgCount') }),
+  pushers: () => ({
+    x1: read('pushX1'), y1: read('pushY1'), x2: read('pushX2'), y2: read('pushY2'), count: read('pushCount'),
+    tox: read('pushToX'), toy: read('pushToY'), stab: read('pushStab'), damage: read('pushDamage'),
+  }),
+  waters: () => ({
+    shown: read('waters'), x: read('waterX'), y: read('waterY'), w: read('waterW'), h: read('waterH'),
+    damage: read('waterDamage'), count: read('waterCount'),
+  }),
   timerCount: () => read('timerCount'),
   sayTrigger: () => read('sayTrigger'), // the map's "player says" trigger (-1/undefined = none)
   setSayTrigger: (v) => write('sayTrigger', v),

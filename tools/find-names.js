@@ -176,6 +176,23 @@ const RULES = [
   // Each <door> (movable) of the map: a display object in the 3D layer, in map order.
   { file: 'frame2', keys: ['doors', 'doorCount'], what: ['map movables array (display objects, in map order)', 'number of movables'],
     re: String.raw`⟨ID⟩\[⟨ID⟩\]=mc;\s*mc\.w=parseFloat\(b\["#w"\]\);\s*mc\.h=parseFloat\(b\["#h"\]\);` },
+  // Backgrounds: drawn once into a shared layer; their rectangles also kept in arrays.
+  { file: 'frame2', keys: ['bgX', 'bgCount', 'bgY', 'bgW', 'bgH', 'bgShadow'],
+    what: ['background x array', 'number of backgrounds', 'background y array', 'background width array',
+      'background height array', 'background "spawn shadow" array'],
+    re: String.raw`⟨ID⟩\[⟨ID⟩\]=x;\s*⟨ID⟩\[⟨_⟩\]=y;\s*⟨ID⟩\[⟨_⟩\]=w;\s*⟨ID⟩\[⟨_⟩\]=h;\s*⟨ID⟩\[⟨_⟩\]=\(b\["#s"\]!=="false"\);` },
+  // Pushers (gravitator fields): corners and settings in parallel arrays.
+  { file: 'frame2', keys: ['pushX1', 'pushCount', 'pushY1', 'pushX2', 'pushY2', 'pushToX', 'pushToY', 'pushStab', 'pushDamage'],
+    what: ['pusher left array', 'number of pushers', 'pusher top array', 'pusher right array (x + w)', 'pusher bottom array (y + h)',
+      'pusher acceleration x array', 'pusher acceleration y array', 'pusher stability damage array', 'pusher damage array'],
+    re: String.raw`⟨ID⟩\[⟨ID⟩\]=parseFloat\(b\["#x"\]\);\s*⟨ID⟩\[⟨_⟩\]=parseFloat\(b\["#y"\]\);\s*⟨ID⟩\[⟨_⟩\]=parseFloat\(b\["#w"\]\)\+⟨_⟩\[⟨_⟩\];\s*⟨ID⟩\[⟨_⟩\]=parseFloat\(b\["#h"\]\)\+⟨_⟩\[⟨_⟩\];\s*⟨ID⟩\[⟨_⟩\]=parseFloat\(b\["#tox"\]\);\s*⟨ID⟩\[⟨_⟩\]=parseFloat\(b\["#toy"\]\);\s*⟨ID⟩\[⟨_⟩\]=parseFloat\(b\["#stab"\]\);\s*⟨ID⟩\[⟨_⟩\]=parseFloat\(b\["#damage"\]\);` },
+  // Water: a display object each, and the area it acts on in parallel arrays.
+  { file: 'frame2', keys: ['waters', 'waterCount'], what: ['water display objects array', 'number of waters'],
+    re: String.raw`⟨ID⟩\[⟨ID⟩\]=new water\(\);` },
+  { file: 'frame2', keys: ['waterX', 'waterY', 'waterW', 'waterH', 'waterDamage'],
+    what: ['water area x array (map x - 10 after load)', 'water area y array', 'water area width array (map w + 20)',
+      'water area height array (map h + 10)', 'water damage array'],
+    re: String.raw`⟨ID⟩\[⟨_⟩\]=parseFloat\(b\["#x"\]\);\s*⟨ID⟩\[⟨_⟩\]=parseFloat\(b\["#y"\]\);\s*⟨ID⟩\[⟨_⟩\]=parseFloat\(b\["#w"\]\);\s*⟨ID⟩\[⟨_⟩\]=parseFloat\(b\["#h"\]\);\s*⟨ID⟩\[⟨_⟩\]=parseFloat\(b\["#damage"\]\);` },
   // The same shot, in multiplayer: tells the server so every other client runs it too.
   { file: 'frame2', keys: ['net', 'netNum'],
     what: ['multiplayer network class (.Event(type, ...parts) sends to the server)',

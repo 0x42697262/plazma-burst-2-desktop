@@ -1,10 +1,11 @@
 // Moving a wall in the running level, the way the map loader places one (frame2.js):
-// its x, y, w, h arrays, the collision grid cells it is listed in, and its body sprite.
-// The trims along its edges (panel tops, grass, shading) are drawn into shared layers at
-// load and stay where they were until the level loads again.
+// its x, y, w, h arrays, the collision grid cells it is listed in, its body sprite, and
+// the trims along its edges (layers.js). Trims stretch with the wall; the loader would
+// have cut them around other walls the new place now touches.
 // The wall arrays are snapshotted by the game's integrity check: writing them makes the
-// game report the client and reload. Only "editor livewalls" calls this, after saying so.
+// game report the client and reload the page. Nothing here hides that.
 import { game } from './bindings.js';
+import { trimsOf, moveTrims } from './layers.js';
 
 const GRID_MARGIN = 100; // the loader lists a wall in every cell this close to it
 
@@ -18,7 +19,7 @@ function cellsOf(grid, r) {
   };
 }
 
-// The level's grid is sized for the map as it loaded; a wall outside it needs a reload.
+// The level's grid is sized for the map as it loaded: a wall cannot go outside it.
 export function fitsGrid(r) {
   const grid = game.wallGrid();
   const c = cellsOf(grid, r);
@@ -45,9 +46,10 @@ export function textureAt(r) {
 export function moveWall(i, to) {
   const walls = game.walls();
   if (!(i >= 0 && i < walls.count)) throw new Error(`no wall #${i} in the running level`);
-  if (!fitsGrid(to)) throw new Error('that is outside the walls the level was built with; "editor reload" builds them again');
+  if (!fitsGrid(to)) throw new Error('that is outside the area the level\'s walls were built for');
   const from = { x: walls.x[i], y: walls.y[i], w: walls.w[i], h: walls.h[i] };
   const body = textureAt(from);
+  const trims = trimsOf(from);
   const grid = game.wallGrid();
   forCells(grid, from, (list) => { for (let k = list.indexOf(i); k !== -1; k = list.indexOf(i)) list.splice(k, 1); });
   walls.x[i] = to.x;
@@ -56,4 +58,5 @@ export function moveWall(i, to) {
   walls.h[i] = to.h;
   game.addWallToGrid(i);
   if (body) Object.assign(body, { x: to.x, y: to.y, scaleX: to.w / 100, scaleY: to.h / 100 });
+  moveTrims(trims, from, to);
 }

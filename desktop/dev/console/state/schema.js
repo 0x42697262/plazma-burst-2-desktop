@@ -86,14 +86,6 @@ export const SCHEMA = Object.freeze({
       'open too. F11 is not the default: the window menu uses it for fullscreen.'],
     example: 'f7',
   },
-  editor_autoreload: {
-    type: 'bool', group: GROUP.console, default: false,
-    desc: 'Editor, single-player: reload the level by itself after an edit the game cannot take live',
-    about: ['After an edit the running level cannot take live (a wall, water, a background,',
-      'a new or deleted object), the editor reloads the level a moment later, from the',
-      'edited map, and puts you back where you stood. Everything in the level starts over',
-      'each time. Multiplayer never reloads.'],
-  },
   save_maps: {
     type: 'bool', group: GROUP.maps, default: true,
     desc: 'Save every map the game downloads to desktop/maps/<map id>.xml, uncompressed and one tag per line',
@@ -124,7 +116,7 @@ export const ALIASES = Object.freeze({
   rate: KEY.FIRE_RATE, firerate: KEY.FIRE_RATE, accuracy: KEY.SPREAD, jumps: KEY.JUMP,
   sword: KEY.SWORDS, melee: KEY.SWORDS,
   screenshotkey: KEY.SCREENSHOT_KEY, shot_key: KEY.SCREENSHOT_KEY, sskey: KEY.SCREENSHOT_KEY,
-  editorkey: KEY.EDITOR_KEY, edit_key: KEY.EDITOR_KEY, autoreload: KEY.EDITOR_AUTORELOAD,
+  editorkey: KEY.EDITOR_KEY, edit_key: KEY.EDITOR_KEY,
   savemaps: KEY.SAVE_MAPS, mapsave: KEY.SAVE_MAPS, fastmaps: KEY.FAST_MAPS, fastload: KEY.FAST_MAPS,
   fast_load: KEY.FAST_MAPS, fastloadmaps: KEY.FAST_MAPS, fast_load_maps: KEY.FAST_MAPS,
 });

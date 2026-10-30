@@ -4,7 +4,7 @@
 //   Objects; clicking its colour square hides or shows it in the world.
 // - Objects (right, top): the elements of that layer; clicking one selects it.
 // - Params (right, below): the selected element's attributes; click a value to edit it.
-// - The top line: how the mouse works, edits waiting for a reload, messages.
+// - The top line: how the mouse works, edits the running level does not have, messages.
 // They are drawn from the session and drawn again when it changes.
 import { el } from '../ui/dom.js';
 import { THEME, IN_OVERLAY, swallow, markUi } from '../ui/theme.js';
@@ -15,10 +15,8 @@ import {
   editorDoc, selected, select, currentLayer, showLayer, isHidden, setHidden, countByTag, onChange, pendingCount,
   currentTool, setTool, TOOL,
 } from './session.js';
-import { setAttr, reloadLevel, deleteElement, duplicateElement, undo, redo } from './edit.js';
+import { setAttr, deleteElement, duplicateElement, undo, redo, notLiveReason } from './edit.js';
 import { canUndo, canRedo } from './history.js';
-import { KEY } from '../state/schema.js';
-import { settings } from '../state/store.js';
 
 const Z_INDEX = '45'; // over the editor's click layer, under the console (50)
 const FONT_SIZE = '6px';
@@ -130,7 +128,7 @@ function editValue(span, sel, attr) {
     if (e.key === 'Enter') {
       try {
         const { live, why } = setAttr(sel, attr, input.value);
-        if (!live) say(`${attr}: shows after a reload (${why})`, COLOR.notice);
+        if (!live) say(`${attr}: not in the running level (${why})`, COLOR.notice);
       } catch (err) { say(`error: ${err.message}`, COLOR.error); }
       drawParams();
     } else if (e.key === 'Escape') drawParams();
@@ -156,7 +154,8 @@ function drawParams() {
   }
 }
 
-// The top line: what the mouse does, edits waiting for a reload, and a short message.
+// The top line: what the mouse does, edits the running level does not have, the last
+// reason an edit was not live, and a short message.
 let keyShown = '';
 let message = null; // { text, color, until }
 const MESSAGE_MS = 4000;
@@ -175,17 +174,9 @@ function drawStatus() {
     : 'click: select, again: the one below  ·  drag the selection: move, its edge: resize (Alt: no snap)  ·  Del, Ctrl+D copy, Ctrl+Z / Ctrl+Y';
   s.append(el('span', {}, `EDITOR${keyShown ? ` (${keyShown} closes)` : ''}  ·  ${how}`));
   const n = pendingCount();
-  if (n) {
-    const what = `  ·  ${n} edited object${n === 1 ? '' : 's'} not live yet`;
-    s.append(el('span', { color: COLOR.notice }, what));
-    if (!game.isMP() && settings.effective(KEY.EDITOR_AUTORELOAD)) s.append(el('span', { color: COLOR.muted }, ' (auto-reload on)'));
-    else if (!game.isMP()) {
-      const button = el('span', { color: COLOR.bright, textDecoration: 'underline', cursor: 'pointer', pointerEvents: 'auto', marginLeft: '4px' }, 'reload level');
-      swallow(markUi(button));
-      onClick(button, () => { try { reloadLevel(); } catch (err) { say(`error: ${err.message}`, COLOR.error); } });
-      s.append(button);
-    }
-  }
+  if (n) s.append(el('span', { color: COLOR.notice }, `  ·  ${n} edited object${n === 1 ? ' is' : 's are'} not in the running level (kept for "editor save")`));
+  const why = notLiveReason();
+  if (why) s.append(el('div', { color: COLOR.notice }, `last edit not live: ${why}`));
   if (message && performance.now() < message.until) s.append(el('div', { color: message.color }, message.text));
 }
 
