@@ -136,7 +136,7 @@ export function captureMouse(on, errors) {
     if (press && press.dragging && press.target) endAction();
     press = null;
     setPreview(null);
-    globalThis.removeEventListener?.('mouseup', onMouseUp);
+    globalThis.removeEventListener?.('mouseup', onMouseUp, true);
     return;
   }
   if (layer) return;
@@ -149,8 +149,10 @@ export function captureMouse(on, errors) {
   swallow(layer);
   layer.addEventListener('mousedown', onMouseDown);
   layer.addEventListener('pointermove', onMouseMove);
-  // Let go outside the layer (over a panel, outside the window): the drag still ends.
-  globalThis.addEventListener?.('mouseup', onMouseUp);
+  // The release ends a click or a drag wherever it happens: over the layer, a panel or
+  // outside the window. Heard on the window before anything else (capture), because the
+  // layer and the panels keep mouse events from bubbling up to the game.
+  globalThis.addEventListener?.('mouseup', onMouseUp, true);
   game.overlay().append(layer);
 }
 

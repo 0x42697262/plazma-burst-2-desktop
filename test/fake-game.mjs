@@ -156,8 +156,26 @@ export async function bootConsole({ mapFile = path.join(REPO, 'test/fixtures/map
     get firstChild() { return this.childNodes[0]; },
     append(c) { if (c && typeof c === 'object') c.parent = this; this.childNodes.push(c); },
     remove() { if (this.parent) this.parent.childNodes.splice(this.parent.childNodes.indexOf(this), 1); },
-    addEventListener() {}, contains(t) { return t === this || this.childNodes.includes(t); }, focus() {}, blur() {},
+    on: {},
+    addEventListener(type, fn) { (this.on[type] ||= []).push(fn); },
+    contains(t) { return t === this || this.childNodes.includes(t); }, focus() {}, blur() {},
   });
+  // Events the way a browser delivers them: the window's capture listeners, then the
+  // target and its parents (bubbling) until one stops it, then the window's own.
+  const windowOn = { capture: {}, bubble: {} };
+  G.addEventListener = (type, fn, capture) => { (windowOn[capture ? 'capture' : 'bubble'][type] ||= []).push(fn); };
+  G.removeEventListener = (type, fn, capture) => {
+    const list = windowOn[capture ? 'capture' : 'bubble'][type] || [];
+    if (list.includes(fn)) list.splice(list.indexOf(fn), 1);
+  };
+  const dispatch = (target, type, props = {}) => {
+    let stopped = false;
+    const e = { type, target, button: 0, ...props, stopPropagation() { stopped = true; }, preventDefault() {} };
+    for (const fn of [...(windowOn.capture[type] || [])]) fn(e);
+    for (let n = target; n && !stopped; n = n.parent) for (const fn of [...(n.on[type] || [])]) fn(e);
+    if (!stopped) for (const fn of [...(windowOn.bubble[type] || [])]) fn(e);
+    return e;
+  };
   const listeners = {};
   set('uiOverlay', { overlay: node() });
   G.document = { createElement: (tag) => (tag === 'canvas' ? canvasNode(0, 0) : node()), addEventListener: (t, f) => { listeners[t] = f; }, pointerLockElement: null };
@@ -216,5 +234,7 @@ export async function bootConsole({ mapFile = path.join(REPO, 'test/fixtures/map
       return log.printed.slice();
     },
     setMP(on) { G[N.mp] = on; },
+    // A DOM event on a fake node, delivered like the browser does (see dispatch).
+    dispatch,
   };
 }

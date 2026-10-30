@@ -1115,6 +1115,19 @@ test('editor tools: place, copy, delete and undo; live edits still reach the rig
     const walls = () => doc.byTag('box').length;
     const before = walls();
 
+    // Through the page, the way a real click arrives: on the click layer, which keeps
+    // it from the game. The release is what selects.
+    const overlay = c.G[c.N.uiOverlay].overlay;
+    const clickLayer = overlay.childNodes.find((n) => n.style && n.style.cursor === 'crosshair');
+    const shown = (p) => { const s = toScreen(currentTransform(), p); return { clientX: s.x, clientY: s.y }; };
+    let reachedGame = false;
+    c.G.addEventListener('mousedown', () => { reachedGame = true; });
+    c.dispatch(clickLayer, 'mousedown', shown({ x: 215, y: 50 }));
+    c.dispatch(clickLayer, 'mouseup', shown({ x: 215, y: 50 }));
+    assert.equal(session.selected(), doc.byUid('#door_a'), 'a real click selects');
+    assert.ok(!reachedGame, 'the game never sees the click');
+    session.select(null);
+
     // Place tool: drag out a wall (snapped), click for a default-sized one.
     quiet('editor tool place wall');
     mouse.down(at({ x: 1003, y: 498 }));
