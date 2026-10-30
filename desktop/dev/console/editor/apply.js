@@ -11,6 +11,7 @@ import { unwrap } from '../triggers/log.js';
 import { moveWall, textureAt } from '../game/walls.js';
 import { findRect, moveRect } from '../game/layers.js';
 import { boundsOf } from './kinds.js';
+import { rebuildable, rebuildLive } from './rebuild.js';
 
 // Activation modes the loader rewrites: hidden use keys become the plain ones.
 const LOADER_USE_ON = Object.freeze({ 8: 1, 11: 9, 12: 10, 15: 1 });
@@ -200,18 +201,29 @@ const NOT_IN_GAME = 'it is not in the running level yet';
 const NOT_LIVE = 'the running level cannot take it';
 
 // Writes one changed attribute of element e into the running game, at the index the
-// game has it (e.live). Returns { live: true }, or { live: false, why } when it needs
-// the map loaded again: an element the game does not have yet, an attribute it cannot
-// take, or an error (a game name missing from an older names.js says so).
+// game has it (e.live): straight into the game's object when this file knows how,
+// otherwise by building the object again with the game's own loader (rebuild.js).
+// Returns { live: true }, or { live: false, why }: an element the game does not have,
+// an attribute nothing takes, or an error (a game name missing from an older names.js
+// says so).
 export function applyLive(e, attr) {
   const kind = LIVE[e.tag];
-  if (!kind) return { live: false, why: NOT_LIVE };
+  let finer = { live: false, why: NOT_LIVE };
   try {
-    const obj = e.live && kind.of(e.live.index);
-    if (!obj) return { live: false, why: NOT_IN_GAME };
+    const obj = kind && e.live && kind.of(e.live.index);
+    if (kind && e.live && !obj) return { live: false, why: NOT_IN_GAME };
     const v = e.attrs[attr];
-    const fn = kind.attrs[attr] || (kind.other && ((o, val, attrs) => kind.other(o, attr, val, attrs)));
-    return fn && fn(obj, v, e.attrs) ? { live: true } : { live: false, why: NOT_LIVE };
+    const fn = obj && (kind.attrs[attr] || (kind.other && ((o, val, attrs) => kind.other(o, attr, val, attrs))));
+    if (fn && fn(obj, v, e.attrs)) return { live: true };
+  } catch (err) {
+    finer = { live: false, why: err.message };
+  }
+  // Nothing finer took it: the game's loader builds the object again (rebuild.js).
+  if (!e.live) return { live: false, why: NOT_IN_GAME };
+  if (!rebuildable(e.tag)) return finer;
+  try {
+    rebuildLive(e);
+    return { live: true };
   } catch (err) {
     return { live: false, why: err.message };
   }

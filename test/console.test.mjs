@@ -1067,7 +1067,7 @@ test('editor: edits go into the running level, in any mode, and again after a re
     quiet('editor set r 45');
     assert.equal(c.G[c.N.decors][1].rotation, 45);
     session.select(doc.byUid('#sign'));
-    assert.match(quiet('editor set x 230')[0], /not in the running level: a decoration attached|not in the running level: the running level cannot take it/);
+    assert.match(quiet('editor set x 230')[0], /not in the running level: /, 'carried by a movable, and no game loader to build it again here');
 
     // Not live: kept for "editor save", and it says why.
     const door = doc.byUid('#door_a');
@@ -1599,5 +1599,78 @@ test('editor: the selection\'s connections are dashed lines as in the map editor
   } finally {
     session.setEditor(false);
     c.G[c.N.mapText] = original;
+  }
+});
+
+test('editor: an edit nothing finer takes rebuilds the object with the game\'s own loader code', async () => {
+  const session = await consoleModule('editor/session.js');
+  const loader = await consoleModule('editor/loader.js');
+  const G = c.G, N = c.N;
+  // A frame2.js shaped like the game's: tags through its string table, a loop that
+  // builds (a branch per kind, a counter each), a loop that resolves uids.
+  G.$tagBox = 'box'; G.$tagRegion = 'region'; G.$tagDecor = 'decor';
+  const frame2 = `
+var a,b,c;
+for(var $el of $doc.children())
+{
+if(a==$tagBox)
+{
+$wallsBuilt++;
+}
+if(a==$tagRegion)
+{
+${N.regions}[$regionN]=new Object();
+${N.regions}[$regionN]["x"]=parseFloat(b["#x"]);
+${N.regions}[$regionN]["y"]=parseFloat(b["#y"]);
+${N.regions}[$regionN].w=parseFloat(b["#w"]);
+${N.regions}[$regionN].h=parseFloat(b["#h"]);
+${N.regions}[$regionN].${N.regionTrigger}=b["#use_target"];
+${N.regions}[$regionN].${N.regionUseOn}=parseInt(b["#use_on"]);
+if(${N.regions}[$regionN].${N.regionUseOn}==1)
+{
+mc={ kind: "switch", parent: { removeChild(x) { x.gone = true; } } };
+${N.regions}[$regionN].mc=mc;
+}
+$regionN++;
+}
+}
+for(var $el of $doc.children())
+{
+if(a==$tagRegion)
+{
+${N.regions}[$regionR].${N.regionTrigger}="resolved " + ${N.regions}[$regionR].${N.regionTrigger};
+$regionR++;
+}
+}
+`;
+  const regions = G[N.regions];
+  G.$regionN = regions.length; G.$regionR = regions.length; G.$wallsBuilt = 0;
+  G.a = 'the game\'s a'; G.mc = 'the game\'s mc';
+  await loader.readLoader(async (url) => ({ ok: url === 'scripts/frame2.js', status: 200, text: async () => frame2 }));
+  assert.ok(loader.loaderReady(), loader.loaderProblem());
+  assert.ok(loader.canRebuild('region') && !loader.canRebuild('gun'));
+  try {
+    c.run('editor on');
+    const doc = session.editorDoc();
+    const region = doc.byUid('#clock_switch'); // region #2 of 4, a use key
+    session.select(region);
+    c.run('editor set use_on 0'); // switch -> none: nothing finer can take it
+    const before = regions[2];
+    // Activation 0 -> 1: the game's region branch draws a USE switch.
+    assert.deepEqual(c.run('editor set use_on 1').filter((l) => !l.startsWith('Note:')), ['#clock_switch: use_on = "1", live now']);
+    assert.notEqual(regions[2], before, 'a new region object from the game\'s code');
+    assert.equal(regions[2].mc.kind, 'switch');
+    assert.equal(regions[2].x, 440);
+    assert.equal(regions[2][N.regionTrigger], 'resolved #timer*2', 'the second loop ran too');
+    assert.deepEqual([G.$regionN, G.$regionR], [regions.length, regions.length], 'counters as they were');
+    assert.deepEqual([G.a, G.mc], ['the game\'s a', 'the game\'s mc'], 'its scratch globals as they were');
+    // And back: the old switch comes off the screen.
+    const sw = regions[2].mc;
+    c.run('editor set use_on 0');
+    assert.ok(sw.gone);
+    assert.equal(regions[2].mc, undefined);
+  } finally {
+    session.setEditor(false);
+    for (const k of ['$tagBox', '$tagRegion', '$tagDecor', '$regionN', '$regionR', '$wallsBuilt']) delete G[k];
   }
 });

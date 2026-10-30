@@ -7,6 +7,7 @@ import { isActive, requireLevel } from '../game/level.js';
 import { MapDoc } from './doc.js';
 import { KIND_TAGS, kindOf } from './kinds.js';
 import { liveBounds } from './live.js';
+import { readLoader, loaderReady } from './loader.js';
 
 const PICK_SLOP = 2; // world units around a thin element that still hit it
 const SAME_SPOT = 3; // world units: a click this close to the last one cycles the stack
@@ -111,6 +112,7 @@ export function setEditor(on) {
   if (on) {
     requireLevel();
     takeDoc(readDoc());
+    if (!loaderReady()) readLoader(); // the game's loader, for rebuilding objects
   }
   state.on = on;
   setShown(on);
