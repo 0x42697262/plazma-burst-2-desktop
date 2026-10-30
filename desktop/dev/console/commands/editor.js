@@ -7,9 +7,12 @@ import { settings } from '../state/store.js';
 import { takeOptions } from '../core/args.js';
 import { game } from '../game/bindings.js';
 import { editorOn, setEditorOn } from '../editor/index.js';
-import { editorDoc, editorShown, selected, pendingCount } from '../editor/session.js';
-import { setAttr, reloadLevel, saveMap } from '../editor/edit.js';
-import { nameOf } from '../editor/kinds.js';
+import { editorDoc, editorShown, selected, pendingCount, setTool, showLayer, TOOL } from '../editor/session.js';
+import {
+  setAttr, reloadLevel, saveMap, addElement, deleteElement, duplicateElement, undo, redo,
+} from '../editor/edit.js';
+import { nameOf, kindOf, KINDS, KIND_TAGS, SHAPE } from '../editor/kinds.js';
+import { player } from '../game/level.js';
 
 const ON_WORDS = ['on', '1', 'true', 'yes'];
 const OFF_WORDS = ['off', '0', 'false', 'no'];
@@ -69,6 +72,70 @@ function save(rawArgs) {
   );
 }
 
+// ----- editor add / delete / copy / undo / redo / tool -----
+
+// A kind by its tag or its title: "box", "wall", "region", "movable", ...
+function kindWord(word) {
+  const w = String(word || '').toLowerCase();
+  return KIND_TAGS.find((t) => t === w || KINDS[t].title === w) || null;
+}
+const kindWords = KIND_TAGS.map((t) => KINDS[t].title).join(', ');
+
+function add(args) {
+  requireShown();
+  const usage = `usage: editor add <kind> [x y [w h]]  (kinds: ${kindWords}; default place: your crosshair)`;
+  const tag = kindWord(args[0]);
+  if (!tag || ![1, 3, 5].includes(args.length)) throw new Error(usage);
+  const nums = args.slice(1).map(Number);
+  if (!nums.every(Number.isFinite)) throw new Error(usage);
+  const p = player();
+  const [x, y, w, h] = nums.length ? nums : [Math.round(p.tarx), Math.round(p.tary)];
+  const e = addElement(tag, { x, y, ...(w !== undefined ? { w, h } : {}) });
+  showLayer(tag);
+  print(`Added ${nameOf(editorDoc(), e)} at ${x}, ${y}${kindOf(tag).shape === SHAPE.RECT ? ` (${e.attrs.w} x ${e.attrs.h})` : ''}${game.isMP() ? '' : '; in the game after "editor reload"'}`, COLOR.ok);
+}
+
+function needSelection() {
+  const sel = selected();
+  if (!sel) throw new Error('select an object first (click it, or pick it in Objects)');
+  return sel;
+}
+
+function del() {
+  requireShown();
+  const sel = needSelection();
+  const name = nameOf(editorDoc(), sel);
+  deleteElement(sel);
+  print(`Deleted ${name}${game.isMP() ? '' : '; gone from the game after "editor reload"'}`, COLOR.ok);
+}
+
+function copy() {
+  requireShown();
+  const e = duplicateElement(needSelection());
+  print(`Copied to ${nameOf(editorDoc(), e)}`, COLOR.ok);
+}
+
+const undoRedo = (fn, verb) => () => {
+  requireShown();
+  if (fn()) print(`${verb === 'undo' ? 'Undone' : 'Redone'}`, COLOR.ok);
+  else print(`Nothing to ${verb}`, COLOR.notice);
+};
+
+function tool(args) {
+  requireShown();
+  const usage = `usage: editor tool select  |  editor tool place [kind]  (kinds: ${kindWords})`;
+  const word = (args[0] || '').toLowerCase();
+  if (word === 'select' && args.length === 1) { setTool(TOOL.SELECT); print('Tool: select', COLOR.ok); return; }
+  if (word !== 'place' || args.length > 2) throw new Error(usage);
+  if (args[1]) {
+    const tag = kindWord(args[1]);
+    if (!tag) throw new Error(usage);
+    showLayer(tag);
+  }
+  setTool(TOOL.PLACE);
+  print('Tool: place (click in the world; Esc goes back to select)', COLOR.ok);
+}
+
 export const editorCommand = {
   name: 'editor',
   aliases: ['edit', 'mapedit'],
@@ -81,7 +148,8 @@ export const editorCommand = {
       'below it. The game keeps running and the keyboard is still yours: walk around',
       'while you look.',
       'Drag the selection to move it, its edge or corner to resize it (snaps to 10;',
-      'hold Alt for no snap).',
+      'hold Alt for no snap). Tools (left): select or place new objects, copy,',
+      'delete, undo, redo; keys Del, Ctrl+D, Ctrl+Z, Ctrl+Y.',
       'Layers (left): click a name to list that layer in Objects, its colour square to',
       'hide or show it. Objects (right): click one to select it. Params: the selected',
       'object\'s attributes; click a value to change it. Its logic links are drawn like',
@@ -107,7 +175,7 @@ export const editorCommand = {
       'It needs a level, hides while none runs and comes back with the next one.',
       'Esc clears the selection. Regions and characters are drawn where they are now.',
     ],
-    see: ['editor set', 'editor reload', 'editor save', 'editor_key', 'logic'],
+    see: ['editor set', 'editor add', 'editor tool', 'editor undo', 'editor reload', 'editor save', 'editor_key', 'logic'],
   },
   run: editor,
   subcommands: [
@@ -127,6 +195,73 @@ export const editorCommand = {
         see: ['editor', 'editor reload'],
       },
       run: setOne,
+    },
+    {
+      name: 'add',
+      aliases: ['new', 'place'],
+      usage: 'editor add <kind> [x y [w h]]',
+      desc: 'Add an object (wall, region, movable, trigger, ...) at your crosshair or at x y',
+      help: {
+        about: [
+          'Adds an object with the map editor\'s defaults and a new uid, and selects it.',
+          'Without a place it goes where your crosshair is. A rectangle (wall, region,',
+          'movable, background, water, pusher) is 100 x 100 unless you give w h.',
+          'The "place" tool does the same with the mouse.',
+        ],
+        args: [['<kind>', kindWords], ['x y', 'its place'], ['w h', 'a rectangle\'s size']],
+        examples: [['editor add wall', 'a wall at your crosshair'], ['editor add region 100 200 50 50', 'a region there']],
+        notes: ['New objects are in the game after "editor reload" (single-player).'],
+        see: ['editor tool', 'editor reload'],
+      },
+      run: add,
+    },
+    {
+      name: 'delete',
+      aliases: ['del', 'remove', 'rm'],
+      usage: 'editor delete',
+      desc: 'Delete the selected object (Del)',
+      help: {
+        about: ['Takes the selected object out of the map. Other objects that refer to it keep', 'the reference, as in the map editor.'],
+        see: ['editor undo', 'editor reload'],
+      },
+      run: del,
+    },
+    {
+      name: 'copy',
+      aliases: ['duplicate', 'dup'],
+      usage: 'editor copy',
+      desc: 'Copy the selected object, a little to the side, with a new uid (Ctrl+D)',
+      help: { about: ['A copy of the selected object, 20 right and 20 down, with a uid of its own.'], see: ['editor delete'] },
+      run: copy,
+    },
+    {
+      name: 'undo',
+      usage: 'editor undo',
+      desc: 'Undo the last edit (Ctrl+Z): a drag, a value, an add or a delete',
+      help: { about: ['Undoes the last edit: one drag, one value, one add or delete.'], see: ['editor redo'] },
+      run: undoRedo(undo, 'undo'),
+    },
+    {
+      name: 'redo',
+      usage: 'editor redo',
+      desc: 'Redo what was undone (Ctrl+Y)',
+      help: { about: ['Does again what "editor undo" undid.'], see: ['editor undo'] },
+      run: undoRedo(redo, 'redo'),
+    },
+    {
+      name: 'tool',
+      usage: 'editor tool select | place [kind]',
+      desc: 'What a click in the world does: select (and drag), or place a new object',
+      help: {
+        about: [
+          'select: a click selects, a drag moves or resizes the selection.',
+          'place: a click adds an object of the layer Objects shows (give a kind to',
+          'switch layer); a rectangle can be dragged out. Esc goes back to select.',
+        ],
+        examples: [['editor tool place wall', 'click or drag to add walls'], ['editor tool select', 'back to selecting']],
+        see: ['editor add'],
+      },
+      run: tool,
     },
     {
       name: 'reload',

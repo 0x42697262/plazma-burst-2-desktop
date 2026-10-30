@@ -20,12 +20,18 @@ const state = {
   selectedId: null,
   layer: 'region', // the layer the objects list shows
   hidden: new Set(), // tags not drawn and not picked
+  tool: 'select', // TOOL: what a click in the world does
+  preview: null, // { tag, x, y, w, h }: the rectangle being dragged out with the place tool
   lastPick: null, // { at, ids, k }: the stack under the last click, for cycling
 };
 
+// select: a click selects, a drag moves or resizes the selection. place: a click (or
+// for a rectangle, a drag) adds an element of the layer the objects list shows.
+export const TOOL = Object.freeze({ SELECT: 'select', PLACE: 'place' });
+
 export const onChange = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
 // what: 'shown' (on/off or level start/end), 'doc', 'reloaded' (the level started again
-// from the document), 'selection', 'layer', 'layers', 'edit'.
+// from the document), 'selection', 'layer', 'layers', 'tool', 'edit'.
 export const notify = (what) => { for (const fn of listeners) fn(what); };
 const changed = notify;
 
@@ -36,6 +42,17 @@ export const markPending = (e) => { state.pending.add(e.id); };
 export const editorDoc = () => state.doc;
 export const currentLayer = () => state.layer;
 export const isHidden = (tag) => state.hidden.has(tag);
+export const currentTool = () => state.tool;
+export const placePreview = () => state.preview;
+
+export function setTool(tool) {
+  if (tool === state.tool) return;
+  state.tool = tool;
+  state.preview = null;
+  changed('tool');
+}
+
+export function setPreview(rect) { state.preview = rect; }
 export const selected = () => (state.doc && state.selectedId !== null ? state.doc.byId(state.selectedId) : null);
 
 // The map text the game is playing, as a document. Throws when there is none yet.
@@ -63,11 +80,14 @@ function setShown(shown) {
   changed('shown');
 }
 
+// A new document: nothing selected, pending or undoable (edit.js clears its history on
+// 'doc').
 function takeDoc(doc) {
   state.doc = doc;
   state.selectedId = null;
   state.lastPick = null;
   state.pending.clear();
+  changed('doc');
 }
 
 export function select(e) {
@@ -139,8 +159,8 @@ export function editorTick() {
       const doc = MapDoc.of(text);
       if (!doc) return; // not readable yet: try next frame
       takeDoc(doc);
-      changed('doc');
     } else {
+      state.doc.markLoaded();
       state.pending.clear();
       changed('reloaded');
     }

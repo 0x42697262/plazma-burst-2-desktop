@@ -1,6 +1,6 @@
 // The editor over the game: an outline for every element on a shown layer, in its
-// layer's colour, the selection highlighted, and the selection's logic links drawn the
-// way "logic show" draws them, with the uids at both ends.
+// layer's colour, the selection highlighted, the selection's logic links drawn the way
+// "logic show" draws them (uids at both ends), and the rectangle being placed.
 import { GAME_WIDTH, GAME_HEIGHT } from '../game/bindings.js';
 import { setLayer, drawOverlay, toScreen, crosshair } from '../ui/overlay.js';
 import { drawLabels } from '../ui/labels.js';
@@ -8,7 +8,7 @@ import { buildGraph } from '../logic/graph.js';
 import { drawLink } from '../logic/view.js';
 import { kindOf } from './kinds.js';
 import { liveBounds } from './live.js';
-import { editorDoc, selected, visibleElements } from './session.js';
+import { editorDoc, selected, visibleElements, placePreview } from './session.js';
 
 const LAYER = 'editor';
 const LINE_WIDTH = 0.4; // screen units
@@ -16,6 +16,7 @@ const SELECTED_WIDTH = 1.2;
 const OUTLINE_ALPHA = '99'; // hex alpha on the layer colour
 const SELECTED_FILL = '22';
 const BOUNDS = Object.freeze({ w: GAME_WIDTH, h: GAME_HEIGHT });
+const PREVIEW_DASH = Object.freeze([2, 2]);
 
 const centre = (b) => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 });
 const onScreenRect = (r) => r.x + r.w >= 0 && r.x <= GAME_WIDTH && r.y + r.h >= 0 && r.y <= GAME_HEIGHT;
@@ -79,6 +80,16 @@ function drawEditor(ctx, m) {
       for (const end of [l.from, l.to]) if (end.uid !== sel.attrs.uid) labels.push({ ...end.point, text: end.uid });
       links++;
     }
+  }
+  const preview = placePreview();
+  if (preview) {
+    const r = screenRect(m, preview);
+    ctx.setLineDash(PREVIEW_DASH);
+    ctx.lineWidth = SELECTED_WIDTH;
+    ctx.strokeStyle = kindOf(preview.tag).color;
+    ctx.strokeRect(r.x, r.y, r.w, r.h);
+    ctx.setLineDash([]);
+    labels.push({ x: r.x + r.w, y: r.y + r.h, text: `${Math.round(preview.w)} x ${Math.round(preview.h)}` });
   }
   drawLabels(ctx, labels, crosshair(m), BOUNDS);
   return { outlines, selected: sel ? sel.id : null, links };

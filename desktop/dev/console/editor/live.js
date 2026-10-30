@@ -4,33 +4,17 @@
 import { game } from '../game/bindings.js';
 import { kindOf, boundsOf } from './kinds.js';
 
-// Players and enemies share the game's characters array, in map order.
-const CHAR_TAGS = new Set(['player', 'enemy']);
-
-let indexedDoc = null;
-let indexedVersion = -1;
-let charIndex = new Map(); // element id -> character index
-
-function charOf(doc, e) {
-  if (indexedDoc !== doc || indexedVersion !== doc.version) {
-    indexedDoc = doc;
-    indexedVersion = doc.version;
-    charIndex = new Map();
-    let i = 0;
-    for (const el of doc.elements) if (CHAR_TAGS.has(el.tag)) charIndex.set(el.id, i++);
-  }
-  return game.chars()?.[charIndex.get(e.id)];
-}
-
+// Elements added since the level loaded are not in the game yet: drawn where the map
+// puts them.
 export function liveBounds(doc, e) {
   const map = boundsOf(e);
-  if (!map) return null;
+  if (!map || !e.live) return map;
   if (e.tag === 'region') {
-    const r = game.regions()?.[doc.ordinal(e)];
+    const r = e.live.index < game.regionCount() ? game.regions()?.[e.live.index] : null;
     if (r && Number.isFinite(r.x)) return { x: r.x, y: r.y, w: map.w, h: map.h };
   }
-  if (CHAR_TAGS.has(e.tag)) {
-    const c = charOf(doc, e);
+  if (e.live.char !== undefined) {
+    const c = e.live.char < game.charCount() ? game.chars()?.[e.live.char] : null;
     const box = kindOf(e.tag).box;
     if (c && c.io && Number.isFinite(c.x)) return { x: c.x + box.x, y: c.y + box.y, w: box.w, h: box.h };
   }

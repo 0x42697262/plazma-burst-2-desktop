@@ -1,6 +1,8 @@
 // The map being edited, as the map text lists it: one element per tag, in map order,
 // each with its attributes. The game numbers each kind in that order (the third <region>
-// is region #2), so an element's ordinal among its tag is its index in the running game.
+// is region #2). An element's ordinal is its place in the document now; `live` is where
+// the running game has it, from when the level loaded this text: elements added since
+// have none, and deleting one does not move the others in the game.
 // Untouched elements keep their exact text; toText() gives the map back.
 import { MAP } from '../core/shared.js';
 
@@ -11,9 +13,17 @@ const ATTR = /([A-Za-z0-9_]+)="([^"]*)"/g;
 
 let nextId = 1;
 
+const LINE = '\n'; // what goes in front of an added element
+
 function element(tag, attrs, raw, before) {
-  return { id: nextId++, tag, attrs, raw, before };
+  return { id: nextId++, tag, attrs, raw, before, live: null };
 }
+
+// A new element, not in any document yet.
+export const newElement = (tag, attrs) => element(tag, { ...attrs }, null, LINE);
+
+// Players and enemies share the game's characters array, in map order.
+const CHAR_TAGS = new Set(['player', 'enemy']);
 
 export function parseMap(text) {
   const elements = [];
@@ -37,6 +47,18 @@ export class MapDoc {
     this.tail = tail;
     this.version = 0; // goes up with every change, so views redraw what changed
     this.ordinals = null;
+    this.markLoaded();
+  }
+
+  // The game has just loaded this text: every element is where the document has it.
+  // live.index: its index among its kind; live.char: its character, for players.
+  markLoaded() {
+    const count = {};
+    let chars = 0;
+    for (const e of this.elements) {
+      count[e.tag] = (count[e.tag] ?? -1) + 1;
+      e.live = { index: count[e.tag], char: CHAR_TAGS.has(e.tag) ? chars++ : undefined };
+    }
   }
 
   // null for map text the editor cannot read (compressed until the level starts).
@@ -73,12 +95,37 @@ export class MapDoc {
     return this.ordinals.get(e.id);
   }
 
-  // Changes one attribute; the element is written out again from its attributes.
+  // Changes one attribute (undefined removes it); the element is written out again from
+  // its attributes.
   set(e, attr, value) {
-    if (e.attrs[attr] === String(value)) return false;
-    e.attrs[attr] = String(value);
+    if (value === undefined) {
+      if (!(attr in e.attrs)) return false;
+      delete e.attrs[attr];
+    } else {
+      if (e.attrs[attr] === String(value)) return false;
+      e.attrs[attr] = String(value);
+    }
     e.raw = null;
     this.version++;
     return true;
+  }
+
+  // Adds an element at position `at` (default: the end, so no other element of its
+  // kind changes its number). Returns where it went.
+  insert(e, at = this.elements.length) {
+    this.elements.splice(at, 0, e);
+    this.ordinals = null;
+    this.version++;
+    return at;
+  }
+
+  // Takes an element out; returns where it was, for putting it back.
+  remove(e) {
+    const at = this.elements.indexOf(e);
+    if (at < 0) return -1;
+    this.elements.splice(at, 1);
+    this.ordinals = null;
+    this.version++;
+    return at;
   }
 }

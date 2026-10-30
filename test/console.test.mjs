@@ -1100,3 +1100,88 @@ test('editor: edits go live where the game can take them, the rest on a reload; 
     c.G[c.N.mapText] = original;
   }
 });
+
+test('editor tools: place, copy, delete and undo; live edits still reach the right game object', async () => {
+  const session = await consoleModule('editor/session.js');
+  const { mouse } = await consoleModule('editor/input.js');
+  const { currentTransform, toScreen } = await consoleModule('ui/overlay.js');
+  const original = c.G[c.N.mapText];
+  const quiet = (line) => c.run(line).filter((l) => !l.startsWith('Note:'));
+  const at = (p, extra = {}) => { const s = toScreen(currentTransform(), p); return { button: 0, clientX: s.x, clientY: s.y, ...extra }; };
+  try {
+    c.setMP(false);
+    c.run('editor on');
+    const doc = session.editorDoc();
+    const walls = () => doc.byTag('box').length;
+    const before = walls();
+
+    // Place tool: drag out a wall (snapped), click for a default-sized one.
+    quiet('editor tool place wall');
+    mouse.down(at({ x: 1003, y: 498 }));
+    mouse.move(at({ x: 1150, y: 560 }));
+    assert.deepEqual(session.placePreview(), { tag: 'box', x: 1000, y: 500, w: 150, h: 60 });
+    mouse.up();
+    assert.equal(walls(), before + 1);
+    const wall = session.selected();
+    assert.deepEqual(wall.attrs, { x: '1000', y: '500', w: '150', h: '60', m: '0' });
+    assert.equal(session.placePreview(), null);
+    mouse.down(at({ x: 2000, y: 0 }));
+    mouse.up();
+    assert.deepEqual([session.selected().attrs.w, session.selected().attrs.h], ['100', '100']);
+    assert.match(c.G[c.N.mapText], /<box x="2000" y="0" w="100" h="100" m="0" \/>/, 'in the map text, for a reload');
+    assert.deepEqual(c.press('Escape'), []);
+    assert.equal(session.currentTool(), 'select', 'Esc: back to select');
+
+    // Add by command, with a uid numbered like the map editor's; copy gets the next one.
+    assert.match(quiet('editor add region 100 200 50 50')[0], /^Added #region\*1 at 100, 200 \(50 x 50\)/);
+    c.press('KeyD', { ctrlKey: true });
+    assert.equal(session.selected().attrs.uid, '#region*2');
+    assert.deepEqual([session.selected().attrs.x, session.selected().attrs.y], ['120', '220']);
+
+    // Deleting a region does not shift the others in the game: the game still has it.
+    session.select(doc.byUid('#button')); // region #0
+    c.press('Delete');
+    assert.equal(doc.byUid('#button'), null);
+    const redUse = doc.byUid('#red_use');
+    assert.equal(doc.ordinal(redUse), 0, 'first region of the map now');
+    session.select(redUse);
+    quiet('editor set y 30');
+    assert.equal(c.G[c.N.regions][1].y, 30, 'still the game\'s region #1');
+    assert.equal(c.G[c.N.regions][0].y, 20, 'the deleted one untouched');
+    // New elements are not in the game: never live.
+    session.select(doc.byUid('#region*1'));
+    assert.match(quiet('editor set x 150')[0], /shows after "editor reload"/);
+
+    // Undo: one step per action; a whole drag is one.
+    session.select(wall);
+    mouse.down(at({ x: 1075, y: 530 }));
+    mouse.move(at({ x: 1100, y: 530 }));
+    mouse.move(at({ x: 1125, y: 530 }));
+    mouse.up();
+    assert.equal(wall.attrs.x, '1050');
+    c.press('KeyZ', { ctrlKey: true });
+    assert.equal(wall.attrs.x, '1000', 'the drag, at once');
+    c.press('KeyY', { ctrlKey: true });
+    assert.equal(wall.attrs.x, '1050');
+    quiet('editor undo'); // the drag
+    quiet('editor undo'); // x 150 of #region*1
+    quiet('editor undo'); // y 30
+    assert.equal(c.G[c.N.regions][1].y, 0, 'undo goes live too');
+    quiet('editor undo'); // the delete
+    assert.equal(doc.ordinal(doc.byUid('#button')), 0, 'back where it was');
+    assert.equal(session.selected(), doc.byUid('#button'));
+    while (session.editorDoc().byTag('box').length > before) quiet('editor undo');
+    assert.equal(doc.byUid('#region*1'), null);
+    assert.equal(c.run('editor undo')[0], 'Nothing to undo');
+    assert.equal(doc.toText(), original, 'the map as it was');
+
+    assert.match(errorsOf(c.run('editor add nonsense'))[0], /usage: editor add <kind>/);
+    session.select(null);
+    assert.match(errorsOf(c.run('editor delete'))[0], /select an object first/);
+  } finally {
+    c.setMP(true);
+    session.setTool('select');
+    session.setEditor(false);
+    c.G[c.N.mapText] = original;
+  }
+});

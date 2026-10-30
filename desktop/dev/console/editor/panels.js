@@ -1,4 +1,5 @@
 // The editor's panels, small and at the screen edges so the game stays in view:
+// - Tools (left, top): select or place, duplicate, delete, undo, redo.
 // - Layers (left): every kind with its count. Clicking a name lists that layer in
 //   Objects; clicking its colour square hides or shows it in the world.
 // - Objects (right, top): the elements of that layer; clicking one selects it.
@@ -12,8 +13,10 @@ import { game } from '../game/bindings.js';
 import { KINDS, KIND_TAGS, kindOf, nameOf } from './kinds.js';
 import {
   editorDoc, selected, select, currentLayer, showLayer, isHidden, setHidden, countByTag, onChange, pendingCount,
+  currentTool, setTool, TOOL,
 } from './session.js';
-import { setAttr, reloadLevel } from './edit.js';
+import { setAttr, reloadLevel, deleteElement, duplicateElement, undo, redo } from './edit.js';
+import { canUndo, canRedo } from './history.js';
 
 const Z_INDEX = '45'; // over the editor's click layer, under the console (50)
 const FONT_SIZE = '6px';
@@ -22,7 +25,8 @@ const OBJECTS_SHOWN = 400; // rows in the objects list; a long layer says how ma
 const HIDDEN_ALPHA = '0.35';
 
 const PLACE = Object.freeze({
-  layers: { left: '4px', top: '24px', width: '96px', height: '300px' },
+  tools: { left: '4px', top: '24px', width: '96px', height: '50px' },
+  layers: { left: '4px', top: '78px', width: '96px', height: '250px' },
   objects: { left: '696px', top: '24px', width: '100px', height: '150px' },
   params: { left: '696px', top: '178px', width: '100px', height: '200px' },
   status: { left: '0', top: '2px', width: '800px', height: '18px' },
@@ -44,8 +48,39 @@ const row = (style, text) => el('div', {
 }, text);
 const onClick = (node, fn) => node.addEventListener('mousedown', (e) => { if (e.button === 0) fn(e); });
 
-let nodes = null; // { layers, objects, params, status }
+let nodes = null; // { tools, layers, objects, params, status }
 let unsubscribe = null;
+
+// A word that does something when clicked; dim when it cannot now.
+function button(text, enabled, fn, active = false) {
+  const b = el('span', {
+    display: 'inline-block', padding: '0 2px', marginRight: '2px', lineHeight: ROW_HEIGHT,
+    color: !enabled ? COLOR.muted : active ? COLOR.bright : COLOR.plain,
+    background: active ? '#3C9DFF44' : 'none', border: THEME.inputBorder, cursor: enabled ? 'pointer' : 'default',
+  }, text);
+  if (enabled) onClick(b, () => { try { fn(); } catch (err) { say(`error: ${err.message}`, COLOR.error); } });
+  return b;
+}
+
+function drawTools() {
+  const sel = selected();
+  const tool = currentTool();
+  nodes.tools.textContent = '';
+  nodes.tools.append(title('Tools'));
+  const modes = row({ whiteSpace: 'normal' });
+  modes.append(
+    button('select', true, () => setTool(TOOL.SELECT), tool === TOOL.SELECT),
+    button(`place ${KINDS[currentLayer()].title}`, true, () => setTool(TOOL.PLACE), tool === TOOL.PLACE),
+  );
+  const acts = row({ whiteSpace: 'normal', marginTop: '1px' });
+  acts.append(
+    button('copy', !!sel, () => duplicateElement(sel)),
+    button('del', !!sel, () => deleteElement(sel)),
+    button('undo', canUndo(), undo),
+    button('redo', canRedo(), redo),
+  );
+  nodes.tools.append(modes, acts);
+}
 
 function drawLayers() {
   const counts = countByTag();
@@ -132,7 +167,10 @@ export function say(text, color = COLOR.plain) {
 function drawStatus() {
   const s = nodes.status;
   s.textContent = '';
-  s.append(el('span', {}, `EDITOR${keyShown ? ` (${keyShown} closes)` : ''}  ·  click: select, again: the one below  ·  drag the selection: move, its edge: resize (Alt: no snap)  ·  Esc: deselect`));
+  const how = currentTool() === TOOL.PLACE
+    ? `click: add a ${KINDS[currentLayer()].title}${KINDS[currentLayer()].shape === 'rect' ? ', or drag one out' : ''} (Alt: no snap)  ·  Esc: back to select`
+    : 'click: select, again: the one below  ·  drag the selection: move, its edge: resize (Alt: no snap)  ·  Del, Ctrl+D copy, Ctrl+Z / Ctrl+Y';
+  s.append(el('span', {}, `EDITOR${keyShown ? ` (${keyShown} closes)` : ''}  ·  ${how}`));
   const n = pendingCount();
   if (n) {
     const what = `  ·  ${n} edited object${n === 1 ? '' : 's'} not live yet`;
@@ -148,10 +186,11 @@ function drawStatus() {
 }
 
 const REDRAW = Object.freeze({
-  doc: ['layers', 'objects', 'params', 'status'], layer: ['layers', 'objects'],
-  layers: ['layers', 'objects', 'params'], selection: ['objects', 'params'], edit: ['objects', 'params', 'status'],
+  doc: ['tools', 'layers', 'objects', 'params', 'status'], layer: ['tools', 'layers', 'objects', 'status'],
+  layers: ['layers', 'objects', 'params'], selection: ['tools', 'objects', 'params'],
+  edit: ['tools', 'layers', 'objects', 'params', 'status'], tool: ['tools', 'status'], reloaded: ['status'],
 });
-const DRAW = Object.freeze({ layers: drawLayers, objects: drawObjects, params: drawParams, status: drawStatus });
+const DRAW = Object.freeze({ tools: drawTools, layers: drawLayers, objects: drawObjects, params: drawParams, status: drawStatus });
 
 export function showPanels(on, keyName) {
   if (!on) {
@@ -164,7 +203,7 @@ export function showPanels(on, keyName) {
   if (nodes) return;
   keyShown = keyName;
   nodes = {
-    layers: box(PLACE.layers), objects: box(PLACE.objects), params: box(PLACE.params),
+    tools: box(PLACE.tools), layers: box(PLACE.layers), objects: box(PLACE.objects), params: box(PLACE.params),
     status: el('div', {
       position: 'absolute', ...PLACE.status, zIndex: Z_INDEX, textAlign: 'center', pointerEvents: 'none',
       fontFamily: THEME.font, fontSize: FONT_SIZE, color: COLOR.title,

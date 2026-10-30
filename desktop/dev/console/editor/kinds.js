@@ -76,3 +76,40 @@ export const anchorOf = (e) => ({ x: num(e.attrs.x), y: num(e.attrs.y) });
 // How an element is called in lists: its uid, or the kind and index for the many walls
 // and backgrounds without one.
 export const nameOf = (doc, e) => e.attrs.uid || `${kindOf(e.tag)?.title || e.tag} #${doc.ordinal(e)}`;
+
+// What a new element starts with, after its place: the map editor's defaults for each
+// kind (level_editor/editor_scripts/lib_classes.js), so the game reads it like one the
+// map editor made. Rectangles also get w and h; uid comes from newUid.
+export const DEFAULTS = Object.freeze({
+  box: { m: '0' },
+  door: { moving: 'false', tarx: '0', tary: '0', maxspeed: '10', vis: 'true', attach: '-1' },
+  region: { use_target: '-1', use_on: '0', attach: '-1' },
+  bg: { m: '0', c: '', a: '-1', u: '0', v: '0', f: '0', s: 'true' },
+  water: { damage: '0', friction: 'true' },
+  pushf: { tox: '0', toy: '0', stab: '0', damage: '0', attach: '-1' },
+  player: { tox: '0', toy: '0', hea: '130', hmax: '130', team: '0', side: '1', char: '1', incar: '-1', botaction: '0', ondeath: '-1' },
+  enemy: { tox: '0', toy: '0', hea: '130', hmax: '130', team: '1', side: '1', char: '1', incar: '-1', botaction: '0', ondeath: '-1' },
+  vehicle: { side: '1', model: 'veh_jeep', tox: '0', toy: '0', hpp: '100' },
+  barrel: { model: 'bar_orange', tox: '0', toy: '0' },
+  gun: { model: 'gun_rifle', command: '-1', upg: '0' },
+  decor: { model: 'stone', attach: '-1', u: '0', v: '0', f: '0', r: '0', sx: '1', sy: '1' },
+  lamp: { power: '0.4', flare: '1' },
+  trigger: { enabled: 'true', maxcalls: '1' },
+  timer: { enabled: 'true', maxcalls: '1', target: '-1', delay: '30' },
+  song: { url: '', volume: '1', loop: 'true', callback: '-1' },
+  inf: { mark: 'hero1_guns', forteam: '0' },
+});
+// Kinds whose elements have no uid in the map editor either.
+const NO_UID = new Set(['box', 'bg', 'inf']);
+
+// A uid no element has yet, numbered like the map editor's: "#region*12".
+export function newUid(doc, tag) {
+  if (NO_UID.has(tag)) return undefined;
+  const prefix = `#${tag}*`;
+  let n = 0;
+  for (const e of doc.elements) {
+    const uid = e.attrs.uid;
+    if (uid && uid.startsWith(prefix)) n = Math.max(n, parseInt(uid.slice(prefix.length), 10) || 0);
+  }
+  return prefix + (n + 1);
+}

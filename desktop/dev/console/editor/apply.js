@@ -87,24 +87,25 @@ const decor = {
 };
 
 const LIVE = Object.freeze({
-  region: { of: (i) => game.regions()?.[i], attrs: region },
+  region: { of: (i) => (i < game.regionCount() ? game.regions()?.[i] : null), attrs: region },
   trigger: {
-    of: (i) => unwrap(game.triggers()?.[i]),
+    of: (i) => (i < game.triggerCount() ? unwrap(game.triggers()?.[i]) : null),
     attrs: counted,
     other: (t, attr, v, attrs) => ACTION_ATTR.test(attr) && loadActions(t, attrs),
   },
   decor: { of: (i) => game.decors()?.[i], attrs: decor },
   timer: {
-    of: (i) => game.timers()?.[i],
+    of: (i) => (i < game.timerCount() ? game.timers()?.[i] : null),
     attrs: { ...counted, target: (t, v) => { t[F.TIMER_TARGET] = game.resolveTarget(v); return true; } },
   },
 });
 
-// Writes one changed attribute of element e (index i in the game) into the running
-// game. True when it is live now; false when it needs the map loaded again.
-export function applyLive(e, i, attr) {
+// Writes one changed attribute of element e into the running game, at the index the
+// game has it (e.live). True when it is live now; false when it needs the map loaded
+// again, which is also the case for an element the game does not have yet.
+export function applyLive(e, attr) {
   const kind = LIVE[e.tag];
-  const obj = kind && kind.of(i);
+  const obj = kind && e.live && kind.of(e.live.index);
   if (!obj) return false;
   const v = e.attrs[attr];
   const fn = kind.attrs[attr];
