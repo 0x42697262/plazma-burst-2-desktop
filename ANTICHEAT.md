@@ -1,7 +1,7 @@
 # Client Anti-Cheat: How It Works
 
 > Status: **broken / bypassable**. This document explains the obfuscated client-side anti-cheat. It does not change any code.
-> All line numbers refer to the current files in this folder (`scripts/…`).
+> All line numbers refer to the current files in `game/scripts/…`; a bare name like `frame2.js:123` is relative to that folder. `_strings.js` is the exception: it is `game/_strings.js`.
 
 ---
 
@@ -42,11 +42,11 @@ The obfuscator swaps Latin letters for look-alike Cyrillic ones (`М`, `О`, `А
 String constants live in `_strings.js` as `globalThis.$xxx = "..."`. To resolve one:
 
 ```bash
-node -e 'const vm=require("vm"),c={};c.globalThis=c;vm.createContext(c);vm.runInContext(require("fs").readFileSync("_strings.js","utf8"),c);console.log(c[process.argv[1]])' '$сpcрo'
+node -e 'const vm=require("vm"),c={};c.globalThis=c;vm.createContext(c);vm.runInContext(require("fs").readFileSync("game/_strings.js","utf8"),c);console.log(c[process.argv[1]])' '$сpcрo'
 # -> at <anonymous>:
 ```
 
-### 2.1 Core guard (`scripts/frame2.js`)
+### 2.1 Core guard (`game/scripts/frame2.js`)
 
 | Obfuscated | Readable name | Line | What it is |
 |---|---|---|---|
@@ -80,7 +80,7 @@ node -e 'const vm=require("vm"),c={};c.globalThis=c;vm.createContext(c);vm.runIn
 | `$ММ.$ceTOI` | `MP.serverConnection` | `libs/flash.js:154` | Connection used for reports |
 | `$ММ.$T0еcр` | `MP.isServerSide` (likely) | `libs/flash.js:9` | When true, the network tick skips the guard |
 
-### 2.3 Integrity scan (`scripts/main.js`, `scripts/libs/tools.js`)
+### 2.3 Integrity scan (`game/scripts/main.js`, `game/scripts/libs/tools.js`)
 
 | Obfuscated | Readable name | Location |
 |---|---|---|
@@ -420,7 +420,7 @@ This section explains **why** each check in [§8](#8-when-it-triggers-cheat-shee
 | approved: stack check | [9.9 The stack check](#99-the-stack-check-at-anonymous) | Low (easy to dodge) |
 | approved: type change | [9.10 The type check](#910-the-type-check-only-in-approved-matches) | Low |
 | function `toString()` changed | [9.11 The function scan](#911-the-function-integrity-scan) | High |
-| registered array changed | [9.12 Locked arrays](#912-locked-arrays) | Medium |
+| registered array changed (caught only before the next unlock/lock pair) | [9.12 Locked arrays](#912-locked-arrays) | Medium |
 | `$МОеIe` canary changed | [9.13 The string canary](#913-the-string-canary-моеie) | Low |
 | (the punishment itself) | [9.14 Replacing the guard or punishment](#914-replacing-the-guard-or-the-punishment) | High |
 | (reporting) | [9.15 The error-reporting kill switch](#915-the-error-reporting-kill-switch-еl1нсi) | High (no evidence) |
@@ -439,8 +439,8 @@ This section explains **why** each check in [§8](#8-when-it-triggers-cheat-shee
 
 | What | File:line |
 |---|---|
-| `globalThis.currentFrame` getter → `stage.currentFrame` | `scripts/flash.js:3564` |
-| `setGetterSetter` uses `configurable: true` | `scripts/libs/tools.js` (`setGetterSetter`) |
+| `globalThis.currentFrame` getter → `stage.currentFrame` | `game/scripts/flash.js:3564` |
+| `setGetterSetter` uses `configurable: true` | `game/scripts/libs/tools.js` (`setGetterSetter`) |
 | Read by the guard | `frame2.js:38017`, `frame2.js:38151` |
 
 **How the guard uses it:**
@@ -767,7 +767,7 @@ if ($IHТcc && $pMМ1)                               // only in approved MP matc
 3. **Object methods are skipped.** It only walks the own properties of `globalThis` and `$ММ`. Methods on other objects (`stage.addEventListener`, `$ММ.$ceTOI.$OMeTо`) are never checked.
 4. **Static class methods are skipped.** `$ММ` is a `class` (`libs/flash.js:5`). `for…in` doesn't list static methods, so `$ММ.$AОAcc` (the network tick that runs the guard) and the other `$ММ` methods are not scanned.
 5. **The checker checks itself.** `$сMlcА1` is in the list. If it is replaced, nothing is left to run the check.
-6. **It is gated.** It only runs if `isCompiled` (URL has no `/game/`), or on the `/h5/` path for any login except `"Eric Gurt"`. It also needs `isCompiled || isMultiplayer`.
+6. **It is gated.** It only runs if `isCompiled` (URL has no `/game/`), or on the `/h5/` path for any login except `"Eric Gurt"`. It also needs `isCompiled || isMultiplayer`. So under the real `/h5/versions/…/` URL (the live site, and the desktop wrapper) it runs in every mode, single-player and campaign included; under a `/game/` URL it runs only in multiplayer, and only when the URL also has `/h5/` and the login is not `"Eric Gurt"` ([§7.2](#72-editing-the-level-live-the-dev-consoles-map-editor)).
 7. **It is slow.** Every 300 ms it checks targets one by one for about 1 ms. With hundreds of targets, a change can go unseen for seconds.
 8. **It only fires once.** After the first hit it sets `$1eoAНl = Infinity` and reloads after 300 ms.
 9. **The report can be dropped.** It sends through `MP.serverConnection.$OMeTо`, a method that point 3 says is never checked.
@@ -782,9 +782,22 @@ if ($IHТcc && $pMМ1)                               // only in approved MP matc
 
 1. `$oITOo()` (unlock) and `$oIeeol()` (lock + re-snapshot) are globals. Their only protection is the Chrome-console stack check ([9.9](#99-the-stack-check-at-anonymous)).
 2. Unlock, change the array, and the next `verifyNextArray` (`$ррОM1I`) calls `lock` first. Lock re-snapshots, so the change becomes the new baseline.
-3. `$T0OMое(arr, i)` copies one index into the baseline **without** needing an unlock.
-4. `$ррОM1I` is only called from `$сMlcА1`, so every gap in [9.11](#911-the-function-integrity-scan) (gating, replacing the checker) also turns this check off.
-5. Array **identity** checks (code `1`, `main.js:1112–1134`) only catch a replaced array, not edited contents.
+3. The game does that unlock itself, far more often than the two unlock screens: **every trigger run** ends with `$oITOo()` (`actions.js:6501`), and so do map load and quicksave restore ([§7.1](#71-when-the-baseline-is-taken-again)). The next `lock` (from `$oеeес` or from the scan) then takes whatever the arrays hold as the new baseline, without comparing. So no call is needed at all: a change made before the next trigger run, timer, region or death is accepted silently. On a map whose timers run triggers every frame, almost no change is ever compared.
+4. The stack checks in `lock` / `unlock` only run when the lock state actually changes (`tools.js:119`, `142`). Calling `unlock` while already unlocked, or `lock` while already locked, does nothing and checks nothing. `$T0OMое` only checks for a registered array.
+5. `$T0OMое(arr, i)` copies one index into the baseline **without** needing an unlock.
+6. Only one array is compared per `$ррОM1I` call, round robin, at most ~1 ms of scan work every 300 ms ([§7.2](#72-editing-the-level-live-the-dev-consoles-map-editor)). With the gun scripts registered, a full cycle can take several seconds, which leaves that much time for a trigger to re-baseline the change first.
+7. `$ррОM1I` is only called from `$сMlcА1`, so every gap in [9.11](#911-the-function-integrity-scan) (gating, replacing the checker) also turns this check off.
+8. Array **identity** checks (code `1`, `main.js:1112–1134`) only catch a replaced array, not edited contents.
+9. The report is only sent when `MP.serverConnection` (`$ММ.$ceTOI`) exists (`main.js:1046`). Outside multiplayer a hit is a reload and nothing else; the server never hears about it.
+
+**Why nothing catches it:**
+
+| Layer | Catches it? | Why |
+|---|---|---|
+| Locked arrays | Only if compared first | Any unlock/lock pair (every trigger run) re-baselines without a check |
+| Stack check | No | It only runs on a lock state change, and only matches Chrome console frames ([9.9](#99-the-stack-check-at-anonymous)) |
+| Function scan | No | Writing array contents changes no function |
+| Server | Only in MP, only on a hit | The report needs `MP.serverConnection` and a mismatch the scan saw before any re-baseline |
 
 ---
 
@@ -884,6 +897,8 @@ What the guard never looks at:
 | `gunChecksum` is a plain sum | `$O0рo1I` (`frame2.js:38124`) adds 10 gun fields with `+`. Raising one field and lowering another by the same amount keeps the same checksum. |
 | Guns past `$cс0Hс` | Only guns with index `< $cс0Hс` are summed. `$cс0Hс` is guarded (slot 24), so it can't change on its own, but it can change through [9.5](#95-the-grace-flag-vcfresh--раipн) / [9.6](#96-re-baselining-the-snapshot-feeding-fake-values). |
 | Server-side host (`$ММ.$T0еcр`) | The network tick skips the guard when this is `true` (`libs/flash.js:392`). Normally `false`. |
+| Unregistered level data | Only wall x/y/w/h, pusher and water arrays are locked ([§7](#7-layer-e-locked-array-snapshots-toolsjs)). The wall material (`$I10Ор`), the wall collision grid (`$АТHМрM`), backgrounds, movables, regions, decorations, triggers, timers and the water display objects are never compared, so they can be changed freely in every mode ([§7.2](#72-editing-the-level-live-the-dev-consoles-map-editor)). |
+| Collision grid vs. wall arrays | The grid (`frame2.js:10342`, looked up at `10407`) lists, per cell, which wall indices to test; the locked arrays only hold each wall's rectangle. A wall missing from a cell's list is never tested there, so it stops blocking while its locked rectangle is unchanged. Nothing compares the grid with the arrays. |
 
 ---
 
@@ -897,6 +912,12 @@ What the guard never looks at:
 2. So they can try one change at a time and quickly map out what is checked and what is not (this is how 9.5–9.8 are found).
 3. The server has no record of the attempts: no logs, no counts, no patterns, no bans.
 4. An honest player who hits a false positive ([§12.2](#122-known-false-positive-risk)) sees the same crash, so crashes on their own can't be used as evidence either.
+
+The scan (Layers D/E) teaches the same way, and says more:
+
+5. A hit reloads the page a few hundred milliseconds to a few seconds after the change ([§7.2](#72-editing-the-level-live-the-dev-consoles-map-editor)), and the three reload causes can be told apart ([§7.3](#73-telling-which-check-reloaded-the-page)): a `RELIABLE_PING` frame before the reload means the scan, none means a stack check or the canary.
+6. That frame is readable in DevTools (Network → WS → Messages) and carries the failure **code** and, for code `3`, the **index of the array** that failed. `$pAТAMI.indexOf(arr)` maps it back to a named array. So each reload tells the tester exactly which check fired and on what.
+7. A change that was *not* reloaded shows what the scan missed: an unregistered array ([9.16](#916-coverage-gaps)), or a change that a trigger run re-baselined first ([9.12](#912-locked-arrays)).
 
 ---
 
@@ -992,8 +1013,8 @@ Any **legit** code path that changes a guarded value **outside** a `$pМоcT`/`$
 ### 12.3 Useful searches
 
 ```bash
-grep -n '\$pМоcT()\|\$oеeес()' scripts -r   # guarded entry points
-grep -n '\$еHоНH=' scripts -r               # where the custom-map flag is set
-grep -n 'stack.indexOf' scripts -r          # stack checks
-grep -n '\$MеOHОe()' scripts -r             # every punishment call
+grep -n '\$pМоcT()\|\$oеeес()' game/scripts -r   # guarded entry points
+grep -n '\$еHоНH=' game/scripts -r               # where the custom-map flag is set
+grep -n 'stack.indexOf' game/scripts -r          # stack checks
+grep -n '\$MеOHОe()' game/scripts -r             # every punishment call
 ```
