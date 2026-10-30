@@ -194,6 +194,12 @@ const RULES = [
     what: ['water area x array (map x - 10 after load)', 'water area y array', 'water area width array (map w + 20)',
       'water area height array (map h + 10)', 'water damage array'],
     re: String.raw`⟨ID⟩\[⟨_⟩\]=parseFloat\(b\["#x"\]\);\s*⟨ID⟩\[⟨_⟩\]=parseFloat\(b\["#y"\]\);\s*⟨ID⟩\[⟨_⟩\]=parseFloat\(b\["#w"\]\);\s*⟨ID⟩\[⟨_⟩\]=parseFloat\(b\["#h"\]\);\s*⟨ID⟩\[⟨_⟩\]=parseFloat\(b\["#damage"\]\);` },
+  // A visible movable's texture, made after the map is read: a texture_front0 in the 3D
+  // layer, made inert to the mouse, then tied to the movable's index so it follows it.
+  { file: 'frame2', keys: ['displayInit', 'textureFollows'],
+    what: ['function(display object): makes it ignore the mouse (every object the loader puts on screen)',
+      'function(texture, movable index): the texture follows that movable'],
+    re: String.raw`⟨_⟩=graphics_3d\.addChildAt\(new texture_front0,graphics_3d\.numChildren\);\s*⟨ID⟩\(⟨_⟩\);\s*⟨_⟩\["x"\]=⟨doors⟩\[i\]\["x"\];[^;]*;[^;]*;[^;]*;\s*⟨ID⟩\(⟨_⟩,i\);` },
   // The same shot, in multiplayer: tells the server so every other client runs it too.
   { file: 'frame2', keys: ['net', 'netNum'],
     what: ['multiplayer network class (.Event(type, ...parts) sends to the server)',

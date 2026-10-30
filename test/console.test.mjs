@@ -1197,7 +1197,7 @@ test('editor tools: place, copy, delete and undo; live edits still reach the rig
     session.select(redUse);
     quiet('editor set y 30');
     assert.equal(c.G[c.N.regions][1].y, 30, 'still the game\'s region #1');
-    assert.equal(c.G[c.N.regions][0].y, 20, 'the deleted one untouched');
+    assert.deepEqual([c.G[c.N.regions][0].x, c.G[c.N.regions][0][c.N.regionUseOn]], [1e7, 0], 'the deleted one out of play, the others where they were');
     // New elements are not in the game: never live.
     session.select(doc.byUid('#region*1'));
     assert.match(quiet('editor set x 150')[0], /not in the running level: it is not in the running level yet/);
@@ -1405,6 +1405,26 @@ test('editor: walls (with trims), backgrounds, water, pushers and movables move 
     quiet('editor set w 80');
     quiet('editor set tary -200');
     assert.deepEqual([lift.w, lift.scaleX, lift.tary], [80, 0.8, -200]);
+
+    // A new wall: its arrays, its grid cells and a body, as the loader makes one.
+    G.graphics_3d.numChildren = G.graphics_3d.children.length;
+    G.graphics_3d.addChildAt = function addChildAt(child) { this.children.push(child); child.parent = this; return child; };
+    G.graphics_3d.removeChild = function removeChild(child) { this.children.splice(this.children.indexOf(child), 1); };
+    G[N.displayInit] = (shown) => { shown.mouseEnabled = false; };
+    G[N.wallMaterial] = ['0', '0'];
+    c.run('editor add wall 100 100 50 20');
+    const newWall = session.selected();
+    assert.equal(newWall.live.index, 2);
+    assert.deepEqual([G[N.wallCount], G[N.wallX][2], G[N.wallW][2]], [3, 100, 50]);
+    assert.deepEqual(cellsOf(G[N.grid], 2), freshCells(2), 'in the grid');
+    const newBody = G.graphics_3d.children.at(-1);
+    assert.deepEqual([newBody.x, newBody.scaleX, newBody.mouseEnabled], [100, 0.5, false]);
+    // Deleted: out of the grid, no size, its body gone.
+    c.press('Delete');
+    assert.deepEqual(cellsOf(G[N.grid], 2), []);
+    assert.equal(G[N.wallW][2], 0);
+    assert.ok(!G.graphics_3d.children.includes(newBody));
+    c.run('editor undo'); c.run('editor undo');
 
     // The level starts again on the same map: the game rebuilds it without the edits,
     // and the editor puts them in again.
@@ -1669,6 +1689,39 @@ $regionR++;
     c.run('editor set use_on 0');
     assert.ok(sw.gone);
     assert.equal(regions[2].mc, undefined);
+
+    // Adding one: the game's branch at the end of the regions, its counters moved on.
+    const n = regions.length;
+    c.run('editor add region 600 0 40 40');
+    const added = session.selected();
+    assert.equal(added.live.index, n);
+    assert.equal(regions.length, n + 1);
+    assert.deepEqual([regions[n].x, regions[n].w, G.$regionN, G.$regionR], [600, 40, n + 1, n + 1]);
+    assert.equal(session.pendingCount(), 0, 'in the running level');
+    // Deleting it: out of play, the others where they were; undo builds it again.
+    c.press('Delete');
+    assert.deepEqual([regions[n].x, regions.length], [1e7, n + 1]);
+    c.run('editor undo');
+    assert.equal(regions[n].x, 600, 'built again in its place');
+    assert.equal(regions.length, n + 1);
+    // The level starts over on the same map: the game builds its regions from the map
+    // (no added one), and the editor adds it again.
+    regions.length = n; G.$regionN = n; G.$regionR = n;
+    c.G.stage.currentFrameLabel = 'menu'; c.frame();
+    c.G.stage.currentFrameLabel = 'gaming'; c.frame();
+    assert.deepEqual([regions.length, regions[n].x], [n + 1, 600], 'added again after the restart');
+    // A deleted map region is taken out again after a restart too.
+    session.select(doc.byUid('#spawn_spot'));
+    c.press('Delete');
+    regions[3].x = 480; // the game builds the level again from the map
+    regions.length = n; G.$regionN = n; G.$regionR = n;
+    c.G.stage.currentFrameLabel = 'menu'; c.frame();
+    c.G.stage.currentFrameLabel = 'gaming'; c.frame();
+    assert.equal(regions[3].x, 1e7, 'still out of play');
+    assert.equal(regions[n].x, 600, 'and the added one added again');
+    c.run('editor undo');
+    c.run('editor undo'); // the add
+    assert.equal(regions[n].x, 1e7);
   } finally {
     session.setEditor(false);
     for (const k of ['$tagBox', '$tagRegion', '$tagDecor', '$regionN', '$regionR', '$wallsBuilt']) delete G[k];

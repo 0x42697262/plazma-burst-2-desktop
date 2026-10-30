@@ -8,6 +8,7 @@
 import { ROUTE } from '../core/shared.js';
 import { kindOf, SHAPE, DEFAULTS, newUid } from './kinds.js';
 import { applyLive } from './apply.js';
+import { addLive, removeLive, restoreLive } from './rebuild.js';
 import { MapDoc, newElement } from './doc.js';
 import { record, takeUndo, takeRedo, clearHistory } from './history.js';
 import { editorDoc, notify, markPending, onChange, select, selected } from './session.js';
@@ -54,20 +55,30 @@ function change(e, values, { recorded = true } = {}) {
 let lastWhy = '';
 export const notLiveReason = () => lastWhy;
 
-// Adding and taking out: the running level has neither.
+// Adding and taking out, in the running level too (rebuild.js): a new object is made
+// with the game's loader, a deleted one is taken out of play, and an undone delete is
+// built again. What the level cannot take is kept for "editor save" and says why.
 function insert(e, at, { recorded = true } = {}) {
   const doc = editorDoc();
   const where = doc.insert(e, at);
-  markPending(e);
+  try {
+    if (e.live) { restoreLive(e); takenOut.delete(e); } else e.live = addLive(e);
+    lastWhy = '';
+  } catch (err) { markPending(e); lastWhy = err.message; }
   if (recorded) record({ kind: 'insert', e, at: where });
   notify('edit');
 }
+
+// Objects taken out of the running level, to take out again when it starts over.
+const takenOut = new Set();
 
 function remove(e, { recorded = true } = {}) {
   const doc = editorDoc();
   const at = doc.remove(e);
   if (at < 0) return;
-  if (e.live) markPending(e);
+  if (e.live) {
+    try { removeLive(e); takenOut.add(e); lastWhy = ''; } catch (err) { markPending(e); lastWhy = err.message; }
+  }
   if (selected() === e) select(null);
   if (recorded) record({ kind: 'remove', e, at });
   notify('edit');
@@ -129,24 +140,31 @@ export function redo() { const entry = takeRedo(); if (entry) play(entry, false)
 
 // The level started again from the map text: it is the map as it loaded, without the
 // edits. Every attribute of an element the game has that differs from the map is put in
-// again, the way the edit put it in the first time.
+// again, the way the edit put it in the first time; what was taken out is taken out
+// again, and what was added is added again, in the order it was added.
 function replayEdits() {
   const doc = editorDoc();
   const original = MapDoc.of(doc.source);
   if (!original) return;
   const byIndex = new Map(); // "tag#index" -> the element as the map has it
   for (const e of original.elements) byIndex.set(`${e.tag}#${e.live.index}`, e);
+  const added = [];
   for (const e of doc.elements) {
-    const was = e.live && byIndex.get(`${e.tag}#${e.live.index}`);
-    if (!was) continue;
+    if (!e.live || e.live.index === undefined) continue;
+    const was = byIndex.get(`${e.tag}#${e.live.index}`);
+    if (!was) { added.push(e); continue; }
     for (const attr of new Set([...Object.keys(e.attrs), ...Object.keys(was.attrs)])) {
       if (e.attrs[attr] !== was.attrs[attr] && !applyLive(e, attr).live) markPending(e);
     }
   }
+  for (const e of takenOut) { try { removeLive(e); } catch { markPending(e); } }
+  for (const e of added.sort((x, y) => x.live.index - y.live.index)) {
+    try { e.live = addLive(e); } catch { markPending(e); }
+  }
 }
 
 onChange((what) => {
-  if (what === 'doc') clearHistory(); // another map: its own history
+  if (what === 'doc') { clearHistory(); takenOut.clear(); } // another map: its own history
   if (what === 'reloaded') replayEdits();
 });
 

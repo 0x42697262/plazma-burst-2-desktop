@@ -60,3 +60,38 @@ export function moveWall(i, to) {
   if (body) Object.assign(body, { x: to.x, y: to.y, scaleX: to.w / 100, scaleY: to.h / 100 });
   moveTrims(trims, from, to);
 }
+
+// A new wall at the end of the level's walls, as the loader would have made it: its
+// arrays, its grid cells (the game's own function) and its body. It has no trims: the
+// loader draws those for the whole level at once. Returns its index.
+export function addWall(r, material) {
+  const walls = game.walls();
+  if (!fitsGrid(r)) throw new Error('that is outside the area the level\'s walls were built for');
+  const i = walls.count;
+  walls.x[i] = r.x; walls.y[i] = r.y; walls.w[i] = r.w; walls.h[i] = r.h;
+  const m = game.wallMaterials();
+  if (m) m[i] = material;
+  game.setWallCount(i + 1);
+  game.addWallToGrid(i);
+  const layer = game.wallLayer();
+  const Texture = game.wallTexture();
+  if (layer && Texture) {
+    const body = layer.addChildAt(new Texture(), layer.numChildren);
+    game.initDisplay(body);
+    Object.assign(body, { x: r.x, y: r.y, scaleX: r.w / 100, scaleY: r.h / 100 });
+  }
+  return i;
+}
+
+// Takes wall i out of play without moving the others: out of its grid cells, no size,
+// its body off the screen, its trims squeezed to nothing.
+export function removeWall(i) {
+  const walls = game.walls();
+  const from = { x: walls.x[i], y: walls.y[i], w: walls.w[i], h: walls.h[i] };
+  const body = textureAt(from);
+  const trims = trimsOf(from);
+  forCells(game.wallGrid(), from, (list) => { for (let k = list.indexOf(i); k !== -1; k = list.indexOf(i)) list.splice(k, 1); });
+  walls.w[i] = 0; walls.h[i] = 0;
+  if (body && body.parent && body.parent.removeChild) body.parent.removeChild(body);
+  moveTrims(trims, from, { x: from.x, y: from.y, w: 0, h: 0 });
+}

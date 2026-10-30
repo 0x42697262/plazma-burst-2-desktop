@@ -163,6 +163,12 @@ export const game = {
     minX: read('gridMinX'), minY: read('gridMinY'),
   }),
   addWallToGrid: (i) => call('gridAddWall', i),
+  wallMaterials: () => read('wallMaterial'),
+  setWallCount: (n) => write('wallCount', n),
+  // A display object the loader puts on screen ignores the mouse; a visible movable's
+  // texture follows the movable by index.
+  initDisplay: (shown) => call('displayInit', shown),
+  textureFollows: (texture, door) => call('textureFollows', texture, door),
   // The 3D layer every wall body is drawn in, one texture_front0 per wall (frame2.js).
   wallLayer: () => (typeof graphics_3d === 'undefined' ? null : graphics_3d),
   wallTexture: () => (typeof texture_front0 === 'undefined' ? null : texture_front0),

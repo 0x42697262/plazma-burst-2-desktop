@@ -135,6 +135,10 @@ export async function readLoader(fetchFn = globalThis.fetch) {
 // Whether this kind can be built by the game's loader in place: a branch of its own
 // that keeps a counter.
 export const canRebuild = (tag) => !!loader?.first[tag]?.counter;
+// Whether the loader has a branch for this kind at all (to add one at the end).
+export const canBuild = (tag) => !!loader?.first[tag];
+// How many of a kind the level has, by the loader's counter (null for a kind without).
+export const builtCount = (tag) => { const c = loader?.first[tag]?.counter; return c ? globalThis[c] : null; };
 
 function run(code, name) {
   (0, eval)(`${code}\n//# sourceURL=${SOURCE_PREFIX}-${name}.js`);
