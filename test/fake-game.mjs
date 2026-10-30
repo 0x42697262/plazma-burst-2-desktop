@@ -220,7 +220,7 @@ export async function bootConsole({ mapFile = path.join(REPO, 'test/fixtures/map
   const drawn = [];
   const recorder = () => new Proxy({}, {
     get: (t, k) => (k in t ? t[k] : (...args) => drawn.push([k, ...args])),
-    set: (t, k, v) => { t[k] = v; return true; },
+    set: (t, k, v) => { t[k] = v; drawn.push(['set', k, v]); return true; },
   });
   const canvasNode = (w, h) => ({ ...node(), width: w, height: h, getContext: () => recorder(),
     getBoundingClientRect: () => ({ left: 0, top: 0, width: w / 2, height: h / 2 }), after() {}, remove() {} });

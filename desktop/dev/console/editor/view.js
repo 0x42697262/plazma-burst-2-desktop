@@ -1,14 +1,15 @@
-// The editor over the game: an outline for every element on a shown layer, in its
-// layer's colour, the selection highlighted, the selection's logic links drawn the way
-// "logic show" draws them (uids at both ends), and the rectangle being placed.
+// The editor over the game: an outline for every element, in its layer's colour (faint
+// off the active layers), the selection highlighted, the selection's connections drawn
+// the way the map editor draws them (dashed: green to what it points at, white from
+// what points at it; uids at the far ends), the rectangle being placed, and quick-pick
+// markers.
 import { GAME_WIDTH, GAME_HEIGHT } from '../game/bindings.js';
 import { setLayer, drawOverlay, toScreen, crosshair } from '../ui/overlay.js';
 import { drawLabels } from '../ui/labels.js';
 import { buildGraph, nameless } from '../logic/graph.js';
-import { drawLink } from '../logic/view.js';
 import { kindOf } from './kinds.js';
 import { liveBounds } from './live.js';
-import { editorDoc, selected, visibleElements, placePreview, currentPick } from './session.js';
+import { editorDoc, selected, visibleElements, placePreview, currentPick, isSelectable } from './session.js';
 
 const LAYER = 'editor';
 const LINE_WIDTH = 0.4; // screen units
@@ -18,6 +19,9 @@ const INACTIVE_ALPHA = '2e'; // a layer that is not active: faint, as the map ed
 const SELECTED_FILL = '22';
 const BOUNDS = Object.freeze({ w: GAME_WIDTH, h: GAME_HEIGHT });
 const PREVIEW_DASH = Object.freeze([2, 2]);
+// The map editor's connection lines (lib_render.js): 1 px, dashed 4/4, green to what the
+// selection points at, white from what points at it; screen units here.
+const LINK = Object.freeze({ width: 0.5, dash: Object.freeze([1.8, 1.8]), out: '#66ff66', in: '#ffffff', inactiveAlpha: 0.3 });
 
 const centre = (b) => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 });
 const onScreenRect = (r) => r.x + r.w >= 0 && r.x <= GAME_WIDTH && r.y + r.h >= 0 && r.y <= GAME_HEIGHT;
@@ -41,17 +45,32 @@ function docGraph(doc) {
   return graphOf;
 }
 
-// The selection's links, both ways: [{ from, to, kind }] with screen points and names.
+// The selection's connections, both ways: [{ from, to, out }] with screen points, uids
+// and whether the far end is on an active layer. out: the selection points at it.
 function selectionLinks(m, doc, sel) {
   const { graph: g, elements } = docGraph(doc);
   const key = keyOf(doc, sel);
-  const links = [...(g.outOf.get(key) || []), ...(g.into.get(key) || [])];
   const at = (node) => {
     const e = elements.get(node.uid);
     const b = e && liveBounds(doc, e);
-    return b ? { point: toScreen(m, centre(b)), uid: node.uid } : null;
+    return b ? { point: toScreen(m, centre(b)), uid: node.uid, active: isSelectable(e.tag) } : null;
   };
-  return links.map((l) => ({ from: at(l.from), to: at(l.to), kind: l.kind })).filter((l) => l.from && l.to);
+  const out = (g.outOf.get(key) || []).map((l) => ({ from: at(l.from), to: at(l.to), out: true }));
+  const into = (g.into.get(key) || []).map((l) => ({ from: at(l.to), to: at(l.from), out: false }));
+  return [...out, ...into].filter((l) => l.from && l.to);
+}
+
+function drawConnection(ctx, l) {
+  ctx.save();
+  ctx.globalAlpha = l.to.active ? 1 : LINK.inactiveAlpha;
+  ctx.strokeStyle = l.out ? LINK.out : LINK.in;
+  ctx.lineWidth = LINK.width;
+  ctx.setLineDash(LINK.dash);
+  ctx.beginPath();
+  ctx.moveTo(l.from.point.x, l.from.point.y);
+  ctx.lineTo(l.to.point.x, l.to.point.y);
+  ctx.stroke();
+  ctx.restore();
 }
 
 // The map editor's quick-pick markers (level_editor/quickpick.png, quickpick2.png on the
@@ -124,8 +143,8 @@ function drawEditor(ctx, m) {
       labels.push({ ...centre(r), text: keyOf(doc, sel) });
     }
     for (const l of selectionLinks(m, doc, sel)) {
-      drawLink(ctx, l.from.point, l.to.point, l.kind);
-      for (const end of [l.from, l.to]) if (end.uid !== keyOf(doc, sel)) labels.push({ ...end.point, text: end.uid });
+      drawConnection(ctx, l);
+      labels.push({ ...l.to.point, text: l.to.uid });
       links++;
     }
   }

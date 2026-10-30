@@ -1557,3 +1557,40 @@ test('editor: an object parameter is picked by clicking the object in the world,
     session.setEditor(false);
   }
 });
+
+test('editor: the selection\'s connections are dashed lines as in the map editor: green out, white in', async () => {
+  const session = await consoleModule('editor/session.js');
+  const { drawEditorFrame } = await consoleModule('editor/view.js');
+  const original = c.G[c.N.mapText];
+  const level = (on) => { c.G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; c.frame(); };
+  // The stroke colour and dash in force at each line drawn.
+  const strokes = () => {
+    const out = [];
+    let color = null;
+    let dash = [];
+    for (const d of c.log.drawn) {
+      if (d[0] === 'set' && d[1] === 'strokeStyle') color = d[2];
+      if (d[0] === 'setLineDash') dash = d[1];
+      if (d[0] === 'lineTo') out.push({ color, dash: dash.length > 0 });
+    }
+    return out;
+  };
+  try {
+    c.run('editor on');
+    c.G[c.N.mapText] = [
+      '<trigger uid="#t" x="0" y="0" enabled="true" maxcalls="1" actions_1_type="26" actions_1_targetA="#clock" actions_1_targetB="0" />',
+      '<timer uid="#clock" x="100" y="0" enabled="true" maxcalls="-1" target="#t" delay="30" />',
+    ].join('\n');
+    level(false); level(true);
+    session.select(session.editorDoc().byUid('#t'));
+    c.log.drawn.length = 0;
+    assert.equal(drawEditorFrame().links, 2, 'it disables the timer; the timer runs it');
+    const lines = strokes();
+    assert.ok(lines.some((l) => l.color === '#66ff66' && l.dash), 'green, dashed: what it points at');
+    assert.ok(lines.some((l) => l.color === '#ffffff' && l.dash), 'white, dashed: what points at it');
+    assert.ok(!c.log.drawn.some((d) => d[0] === 'closePath'), 'no arrowheads');
+  } finally {
+    session.setEditor(false);
+    c.G[c.N.mapText] = original;
+  }
+});
