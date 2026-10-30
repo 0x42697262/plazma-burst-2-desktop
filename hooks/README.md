@@ -79,13 +79,46 @@ original runs and the error goes to the terminal.
 |---|---|
 | `Game.levelStart` | The game function with that readable name in `desktop/dev/names.js` |
 | `Game.fn('$ееААT')` | A game function by its obfuscated name (breaks when the game updates) |
+| `Game.method(object, 'name')` | A function on a game object, made while the game runs. Only inside callbacks; see below |
 
-**Targets must be fixed in the code**, like the lines above. The loader reads your file
-**before the game loads**, to know which functions to prepare. So `Game[someVariable]`
-decided while the game runs does not work.
+**`Game.<name>` and `Game.fn(...)` must be fixed in the code**, like the lines above.
+The loader reads your file **before the game loads**, to know which functions to prepare.
+So `Game[someVariable]` decided while the game runs does not work.
 
-Interceptor works on functions declared as `function name(...) { ... }`. For anything else
-(class methods, arrow functions), use `Script.patch`.
+Those two work on functions declared as `function name(...) { ... }`. For class methods
+and arrow functions in the game's files, use `Script.patch`.
+
+### Functions made while the game runs: `Game.method(object, 'name')`
+
+Some functions don't exist when the game loads. Gun scripts, for example, are stored as
+text and turned into functions later. The loader never sees them. Wait until the game has
+made the function, then hook it on the object that holds it:
+
+```js
+Interceptor.attach(Game.levelStart, {
+  onLeave() {                                   // the level, and its objects, exist now
+    const gun = Game.read('guns')[0];           // the object that holds the function
+    Interceptor.attach(Game.method(gun, 'someMethod'), {
+      onEnter(args) { send(`someMethod(${args[0]})`); },
+    });
+  },
+});
+```
+
+- Same `onEnter` / `onLeave` / `retval.replace` / `Interceptor.replace` / `revert` as above.
+- It changes `object[name]` right away. Undo with `listener.detach()` or
+  `Interceptor.revert(...)`.
+- One object at a time. To hook every object of a kind, use the prototype they share:
+  `Game.method(Object.getPrototypeOf(gun), 'someMethod')`.
+- **It runs on every level start.** Attach once (keep the listener and check it), or
+  attach again when the game makes new objects.
+- **Game code that kept a reference to the function earlier still calls the original.**
+  Hook as early as possible after the function is made.
+- **Not on `globalThis` or the network class.** The anti-tamper scan compares the source
+  of the functions there (`ANTICHEAT.md` §6), so swapping one while the game runs gets
+  reported. Those are refused with an error; hook them by name (`Game.<name>`) instead.
+- `Game.method` only works inside callbacks. At the top level of a hook file the game
+  doesn't exist yet.
 
 Readable names for the game's functions and values are found by `npm run find-names` and
 listed in `desktop/dev/names.js`. To add one, add a rule to `tools/find-names.js`.

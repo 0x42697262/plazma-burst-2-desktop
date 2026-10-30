@@ -48,7 +48,7 @@ function play(plan, gameJs = GAME_JS) {
   const errors = [];
   const ctx = {
     console: { log() {}, warn() {}, error: (...a) => errors.push(a.join(' ')) },
-    setTimeout: (fn) => { fn(); return 1; },
+    setTimeout: (fn) => { Promise.resolve().then(fn); return 1; }, // async, like the real one
     fetch: async (url, opts) => { sent.push(...JSON.parse(opts.body)); return { ok: true }; },
   };
   ctx.globalThis = ctx;
@@ -214,6 +214,85 @@ test('the runtime global is invisible to for...in over globalThis (quicksave, an
     const p = play(t.plan);
     assert.equal(p.run('Object.keys(globalThis).includes("PB2Hooks")'), false);
     assert.equal(p.run('typeof PB2Hooks.c'), 'function');
+  } finally { t.cleanup(); }
+});
+
+// A gun made while the game runs: its method exists only after levelStart.
+const LATE_GAME_JS = GAME_JS + `
+function Gun() {}
+Gun.prototype.fire = function (n) { return 'pew' + n; };
+var gun = null;
+var $НAlНc2 = 0;
+`;
+
+test('Game.method: attach to a function made while the game runs, from another hook\'s onLeave', () => {
+  const t = setup({
+    'late.js': `
+      let listener = null;
+      Interceptor.attach(Game.levelStart, {
+        onLeave() {
+          if (listener) return;
+          listener = Interceptor.attach(Game.method(globalThis.gun, 'fire'), {
+            onEnter(args) { args[0] = args[0] * 10; },
+            onLeave(retval) { retval.replace(retval.value + '!'); },
+          });
+          globalThis.detachLate = () => listener.detach();
+        },
+      });`,
+  }, LATE_GAME_JS);
+  try {
+    const p = play(t.plan, LATE_GAME_JS);
+    p.run('gun = new Gun()');
+    assert.equal(p.run('gun.fire(1)'), 'pew1');            // not hooked yet
+    p.run('$еАT1ее("dm1")');                              // the hook attaches now
+    assert.equal(p.run('gun.fire(2)'), 'pew20!');
+    assert.equal(p.run('new Gun().fire(3)'), 'pew3');       // only that object
+    p.run('detachLate()');                                  // back to the prototype's own
+    assert.equal(p.run('gun.fire(4)'), 'pew4');
+    assert.equal(p.run('Object.prototype.hasOwnProperty.call(gun, "fire")'), false);
+    assert.deepEqual(p.errors, []);
+  } finally { t.cleanup(); }
+});
+
+test('Game.method: replace on a prototype changes every object; revert puts it back', () => {
+  const t = setup({
+    'proto.js': `
+      Interceptor.attach(Game.levelStart, {
+        onLeave() {
+          Interceptor.replace(Game.method(Gun.prototype, 'fire'), function (n) { return 'click' + this.original(n); });
+          globalThis.revertGun = () => Interceptor.revert(Game.method(Gun.prototype, 'fire'));
+        },
+      });`,
+  }, LATE_GAME_JS);
+  try {
+    const p = play(t.plan, LATE_GAME_JS);
+    p.run('$еАT1ее("dm1")');
+    assert.equal(p.run('new Gun().fire(1)'), 'clickpew1');
+    p.run('revertGun()');
+    assert.equal(p.run('new Gun().fire(1)'), 'pew1');
+  } finally { t.cleanup(); }
+});
+
+test('Game.method: refused on globalThis (anti-tamper scan), clear errors for missing ones and the top level', async () => {
+  const t = setup({
+    'glob.js': `
+      Interceptor.attach(Game.levelStart, {
+        onLeave() {
+          try { Game.method(globalThis, 'other'); } catch (e) { send(e.message); }
+          try { Interceptor.attach(Game.method({}, 'nope'), {}); } catch (e) { send(e.message); }
+        },
+      });`,
+    'top.js': `Interceptor.attach(Game.method({}, 'x'), {});`,
+  });
+  try {
+    assert.match(t.plan.hooks.find((h) => h.name === 'top').error, /Game\.method\(\) only works inside handlers/);
+    const p = play(t.plan);
+    const sent = [];
+    p.ctx.fetch = async (u, o) => { sent.push(...JSON.parse(o.body).map((m) => m.msg)); return {}; };
+    p.run('$еАT1ее("x")');
+    await new Promise((r) => setImmediate(r));
+    assert.match(sent[0], /globalThis are checked by the anti-tamper scan/);
+    assert.match(sent[1], /method "nope" is not a function on that object \(not made yet\?/);
   } finally { t.cleanup(); }
 });
 

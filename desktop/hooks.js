@@ -93,7 +93,7 @@ function dryRun(file, code, names) {
       if (typeof key !== 'string') return undefined;
       if (key === 'fn') return (name) => target(null, String(name));
       if (key === 'names') return { ...names };
-      if (key === 'read' || key === 'write' || key === 'isMP') return pageOnly(`Game.${key}()`);
+      if (key === 'read' || key === 'write' || key === 'isMP' || key === 'method') return pageOnly(`Game.${key}()`);
       if (!names[key]) throw new Error(`Game.${key}: no such name in desktop/dev/names.js (run "npm run find-names", or add a rule to tools/find-names.js)`);
       return target(key, names[key]);
     },
