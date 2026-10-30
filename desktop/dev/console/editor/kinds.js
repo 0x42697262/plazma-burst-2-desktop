@@ -56,8 +56,7 @@ const num = (v) => (v === undefined || v === '' ? NaN : Number(v));
 export function boundsOf(e) {
   const kind = kindOf(e.tag);
   if (!kind) return null;
-  const x = num(e.attrs.x);
-  const y = num(e.attrs.y);
+  const { x, y } = anchorOf(e);
   if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
   if (kind.shape === SHAPE.RECT) {
     const w = num(e.attrs.w);
@@ -70,8 +69,9 @@ export function boundsOf(e) {
   return { x: x + left, y: y + box.y, w: box.w, h: box.h };
 }
 
-// Its anchor: the corner the map stores for a rectangle, the point itself otherwise.
-export const anchorOf = (e) => ({ x: num(e.attrs.x), y: num(e.attrs.y) });
+// Its anchor: the corner the map stores for a rectangle, the point itself otherwise. An
+// element an old map gives no place has the spot the document picked for it (doc.js).
+export const anchorOf = (e) => (e.attrs.x === undefined && e.spot ? { ...e.spot } : { x: num(e.attrs.x), y: num(e.attrs.y) });
 
 // How an element is called in lists: its uid, or the kind and index for the many walls
 // and backgrounds without one.

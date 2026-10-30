@@ -192,6 +192,9 @@ const REDRAW = Object.freeze({
 });
 const DRAW = Object.freeze({ tools: drawTools, layers: drawLayers, objects: drawObjects, params: drawParams, status: drawStatus });
 
+// For "editor status".
+export const panelsOnPage = () => (!nodes ? 'none' : nodes.layers.isConnected === false ? 'made, but not on the page' : 'on the page');
+
 export function showPanels(on, keyName) {
   if (!on) {
     if (unsubscribe) unsubscribe();

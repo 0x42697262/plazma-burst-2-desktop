@@ -1198,3 +1198,51 @@ test('editor tools: place, copy, delete and undo; live edits still reach the rig
     c.G[c.N.mapText] = original;
   }
 });
+
+test('logic: old maps without uids link by number, as the game reads them', async () => {
+  const { buildGraph, findNode } = await consoleModule('logic/graph.js');
+  const old = [
+    '<player x="0" y="0" ondeath="1" />',
+    '<enemy x="50" y="0" ondeath="-1" />',
+    '<door x="100" y="0" w="20" h="20" />',
+    '<region x="0" y="0" w="20" h="20" use_target="0" use_on="1" />',
+    '<region x="40" y="0" w="20" h="20" use_target="0" use_on="1" uses_timer="true" />',
+    '<region x="80" y="0" w="20" h="20" use_target="-1" use_on="0" attach="0" />',
+    '<trigger enabled="true" maxcalls="1" actions_1_type="0" actions_1_targetA="0" actions_1_targetB="2" actions_2_type="26" actions_2_targetA="0" actions_2_targetB="0" actions_3_type="100" actions_3_targetA="0" actions_3_targetB="1" />',
+    '<trigger enabled="true" maxcalls="1" />',
+    '<timer enabled="true" maxcalls="1" target="1" delay="30" />',
+  ].join('\n');
+  const g = buildGraph(old);
+  const links = g.links.map((l) => `${l.from.uid} -> ${l.to.uid} (${l.kind}, ${l.label})`).sort();
+  assert.deepEqual(links, [
+    'player#0 -> trigger#1 (start, ondeath)',
+    'region#0 -> trigger#0 (start, use_target)',
+    'region#1 -> timer#0 (start, use_target)',
+    'region#2 -> door#0 (attach, attach)',
+    'timer#0 -> trigger#1 (start, target)',
+    'trigger#0 -> door#0 (act, action 1: 0)',
+    'trigger#0 -> region#2 (act, action 1: 0)',
+    'trigger#0 -> timer#0 (control, action 2: 26 disable timer A)',
+  ], 'variable names (type 100) are text, not references; -1 is none');
+  assert.equal(findNode(g, 'REGION#1').uid, 'region#1');
+  assert.equal(findNode(g, '1'), g.byIndex.get('trigger')[1], 'a trigger by index');
+  assert.equal(g.byIndex.get('character')[1].tag, 'enemy', 'players and enemies share the characters');
+
+  // The editor draws them too.
+  const session = await consoleModule('editor/session.js');
+  const { drawEditorFrame } = await consoleModule('editor/view.js');
+  const original = c.G[c.N.mapText];
+  try {
+    c.run('editor on');
+    c.G[c.N.mapText] = old;
+    c.G.stage.currentFrameLabel = 'menu'; c.frame();
+    c.G.stage.currentFrameLabel = 'gaming'; c.frame();
+    const doc = session.editorDoc();
+    session.select(doc.byTag('trigger')[0]);
+    assert.equal(drawEditorFrame().links, 4, 'a region runs it; it moves a door to a region, disables a timer');
+    assert.deepEqual(errorsOf(c.run('editor status')), []);
+  } finally {
+    session.setEditor(false);
+    c.G[c.N.mapText] = original;
+  }
+});

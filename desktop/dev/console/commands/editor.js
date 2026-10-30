@@ -13,6 +13,9 @@ import {
 } from '../editor/edit.js';
 import { nameOf, kindOf, KINDS, KIND_TAGS, SHAPE } from '../editor/kinds.js';
 import { player } from '../game/level.js';
+import { inputStatus } from '../editor/input.js';
+import { panelsOnPage } from '../editor/panels.js';
+import { hasLayer } from '../ui/overlay.js';
 
 const ON_WORDS = ['on', '1', 'true', 'yes'];
 const OFF_WORDS = ['off', '0', 'false', 'no'];
@@ -136,6 +139,23 @@ function tool(args) {
   print('Tool: place (click in the world; Esc goes back to select)', COLOR.ok);
 }
 
+// ----- editor status -----
+
+function status() {
+  const doc = editorDoc();
+  const sel = selected();
+  const input = inputStatus();
+  const { window: w, layer: l } = input.lastPress;
+  print('Editor status', COLOR.title);
+  print(`  on: ${editorOn() ? 'yes' : 'no'}, shown: ${editorShown() ? 'yes' : 'no (no level running)'}`);
+  print(`  map: ${doc ? `${doc.elements.length} elements, ${doc.elements.filter((e) => e.attrs.uid).length} with a uid` : 'none'}`);
+  print(`  outlines layer: ${hasLayer('editor') ? 'drawing' : 'off'}; panels: ${panelsOnPage()}; click layer: ${input.layer}${input.layerRect ? ` at ${input.layerRect}` : ''}`);
+  print(`  pointer locked: ${input.pointerLocked ? 'yes (clicks go to the game, not the editor)' : 'no'}`);
+  print(`  last press the window saw: ${w ? `at ${w.x}, ${w.y} on ${w.target}${w.onLayer ? ' (the click layer)' : ''}` : 'none since the editor came on'}`);
+  print(`  last press the editor handled: ${l ? `world ${l.world ? `${l.world.x}, ${l.world.y}` : '(no camera)'}, picked ${l.picked ?? '(not released yet)'}` : 'none'}`);
+  print(`  selected: ${sel ? nameOf(doc, sel) : 'nothing'}`);
+}
+
 export const editorCommand = {
   name: 'editor',
   aliases: ['edit', 'mapedit'],
@@ -179,6 +199,21 @@ export const editorCommand = {
   },
   run: editor,
   subcommands: [
+    {
+      name: 'status',
+      aliases: ['info', 'debug'],
+      usage: 'editor status',
+      desc: 'What the editor sees: its panels and click layer, and where your last click landed',
+      help: {
+        about: [
+          'For when clicks do nothing: whether the outlines, panels and click layer are on',
+          'the page, whether the pointer is locked, what element the last press landed on,',
+          'and what the editor picked with it. Click in the world, then run this.',
+        ],
+        see: ['editor'],
+      },
+      run: status,
+    },
     {
       name: 'set',
       usage: 'editor set <attribute> <value>',

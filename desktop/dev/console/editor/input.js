@@ -26,7 +26,10 @@ const EDGE = 3; // screen units around a rectangle's edge that resize it
 const DRAG_START = 2; // screen units the mouse moves before a press becomes a drag
 
 let layer = null;
-let press = null; // { at (world), screen, target, mode, start, dragging }
+let press = null;
+// For "editor status": the last press the window saw (whatever it landed on) and the
+// last one the click layer handled.
+const lastPress = { window: null, layer: null }; // { at (world), screen, target, mode, start, dragging }
 let onError = () => {};
 
 // A mouse event's point on screen (game units) and in the world, or null without a
@@ -74,9 +77,22 @@ function spanOf(a, b, free) {
   return { x: Math.min(x1, x2), y: Math.min(y1, y2), w: Math.abs(x2 - x1), h: Math.abs(y2 - y1) };
 }
 
+// An element in a few words: tag, id, class, z-index, cursor.
+function describe(node) {
+  if (!node || !node.tagName) return String(node);
+  const css = globalThis.getComputedStyle ? getComputedStyle(node) : node.style;
+  const cls = typeof node.className === 'string' && node.className ? `.${node.className.split(/\s+/).join('.')}` : '';
+  return `${node.tagName.toLowerCase()}${node.id ? '#' + node.id : ''}${cls} z-index ${css.zIndex || 'auto'}, cursor ${css.cursor || 'auto'}`;
+}
+
+function onWindowPress(e) {
+  lastPress.window = { target: describe(e.target), onLayer: e.target === layer, x: Math.round(e.clientX), y: Math.round(e.clientY) };
+}
+
 function onMouseDown(e) {
   if (e.button !== 0) return;
   const p = pointOfEvent(e);
+  lastPress.layer = { world: p && { x: Math.round(p.world.x), y: Math.round(p.world.y) }, picked: null };
   if (!p) return;
   if (currentTool() === TOOL.PLACE) {
     press = { at: p.world, screen: p.screen, place: currentLayer(), dragging: false, free: e.altKey };
@@ -114,7 +130,10 @@ function onMouseUp() {
   press = null;
   if (place) { finishPlace(place, at, dragging ? end : null, free); return; }
   if (dragging) endAction();
-  else pickAt(at);
+  else {
+    const e = pickAt(at);
+    if (lastPress.layer) lastPress.layer.picked = e ? `${e.tag} #${editorDoc().ordinal(e)}${e.attrs.uid ? ' ' + e.attrs.uid : ''}` : 'nothing';
+  }
 }
 
 // A click places a point, or a rectangle of the default size with its corner there; a
@@ -137,6 +156,7 @@ export function captureMouse(on, errors) {
     press = null;
     setPreview(null);
     globalThis.removeEventListener?.('mouseup', onMouseUp, true);
+    globalThis.removeEventListener?.('mousedown', onWindowPress, true);
     return;
   }
   if (layer) return;
@@ -153,7 +173,19 @@ export function captureMouse(on, errors) {
   // outside the window. Heard on the window before anything else (capture), because the
   // layer and the panels keep mouse events from bubbling up to the game.
   globalThis.addEventListener?.('mouseup', onMouseUp, true);
+  globalThis.addEventListener?.('mousedown', onWindowPress, true);
   game.overlay().append(layer);
+}
+
+// What "editor status" reports about the mouse.
+export function inputStatus() {
+  const r = layer && layer.getBoundingClientRect ? layer.getBoundingClientRect() : null;
+  return {
+    layer: !layer ? 'none' : layer.isConnected === false ? 'made, but not on the page' : 'on the page',
+    layerRect: r && `${Math.round(r.left)}, ${Math.round(r.top)}, ${Math.round(r.width)} x ${Math.round(r.height)}`,
+    pointerLocked: !!globalThis.document?.pointerLockElement,
+    lastPress,
+  };
 }
 
 // For tests: the same steps a real press, move and release take.

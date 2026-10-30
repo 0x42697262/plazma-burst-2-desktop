@@ -4,7 +4,7 @@
 import { GAME_WIDTH, GAME_HEIGHT } from '../game/bindings.js';
 import { setLayer, drawOverlay, toScreen, crosshair } from '../ui/overlay.js';
 import { drawLabels } from '../ui/labels.js';
-import { buildGraph } from '../logic/graph.js';
+import { buildGraph, nameless } from '../logic/graph.js';
 import { drawLink } from '../logic/view.js';
 import { kindOf } from './kinds.js';
 import { liveBounds } from './live.js';
@@ -27,20 +27,26 @@ function screenRect(m, b) {
   return { x: Math.min(tl.x, br.x), y: Math.min(tl.y, br.y), w: Math.abs(br.x - tl.x), h: Math.abs(br.y - tl.y) };
 }
 
-// The logic graph of the document as it is now, built again only after a change.
-let graphOf = { doc: null, version: -1, graph: null };
+// The logic graph of the document as it is now, built again only after a change, and
+// which element each node is. A node is named by uid, or "<tag>#<index>" without one.
+let graphOf = { doc: null, version: -1, graph: null, elements: null };
+const keyOf = (doc, e) => e.attrs.uid || nameless(e.tag, doc.ordinal(e));
 function docGraph(doc) {
-  if (graphOf.doc !== doc || graphOf.version !== doc.version) graphOf = { doc, version: doc.version, graph: buildGraph(doc.toText()) };
-  return graphOf.graph;
+  if (graphOf.doc !== doc || graphOf.version !== doc.version) {
+    const elements = new Map();
+    for (const e of doc.elements) { const k = keyOf(doc, e); if (!elements.has(k)) elements.set(k, e); }
+    graphOf = { doc, version: doc.version, graph: buildGraph(doc.toText()), elements };
+  }
+  return graphOf;
 }
 
-// The selection's links, both ways: [{ from, to, kind }] with screen points.
+// The selection's links, both ways: [{ from, to, kind }] with screen points and names.
 function selectionLinks(m, doc, sel) {
-  if (!sel.attrs.uid) return [];
-  const g = docGraph(doc);
-  const links = [...(g.outOf.get(sel.attrs.uid) || []), ...(g.into.get(sel.attrs.uid) || [])];
+  const { graph: g, elements } = docGraph(doc);
+  const key = keyOf(doc, sel);
+  const links = [...(g.outOf.get(key) || []), ...(g.into.get(key) || [])];
   const at = (node) => {
-    const e = doc.byUid(node.uid);
+    const e = elements.get(node.uid);
     const b = e && liveBounds(doc, e);
     return b ? { point: toScreen(m, centre(b)), uid: node.uid } : null;
   };
@@ -73,11 +79,11 @@ function drawEditor(ctx, m) {
       ctx.lineWidth = SELECTED_WIDTH;
       ctx.strokeStyle = color;
       ctx.strokeRect(r.x, r.y, r.w, r.h);
-      if (sel.attrs.uid) labels.push({ ...centre(r), text: sel.attrs.uid });
+      labels.push({ ...centre(r), text: keyOf(doc, sel) });
     }
     for (const l of selectionLinks(m, doc, sel)) {
       drawLink(ctx, l.from.point, l.to.point, l.kind);
-      for (const end of [l.from, l.to]) if (end.uid !== sel.attrs.uid) labels.push({ ...end.point, text: end.uid });
+      for (const end of [l.from, l.to]) if (end.uid !== keyOf(doc, sel)) labels.push({ ...end.point, text: end.uid });
       links++;
     }
   }
