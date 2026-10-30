@@ -53,3 +53,47 @@ const PICKS = Object.freeze({
   'song+none': ['song'],
 });
 export const pickKindsOf = (valueKind) => PICKS[valueKind] || null;
+
+// The rows of the map editor's drop-down for a kind of value, in its order (its
+// special_values_table[kind], walked like the editor walks it):
+//   { value, label }                         a value it offers
+//   { custom: true, label, negative }        "# calls": type a number ("-[val]": it is stored negative)
+//   { value, label, icon }                   an object of the map, named as a parameter names it
+//   { value, label, category, color }        a trigger action (kind "trigger_type")
+// A kind like "team+any" also offers its base kind's values ("team"). [] when the kind
+// offers nothing to pick from.
+export function dropdownItems(valueKind, doc, referenceTo, nameOf) {
+  if (!valueKind) return [];
+  if (valueKind === 'trigger_type') return actionItems();
+  const values = TABLE?.values || {};
+  const base = valueKind.split('+')[0];
+  const merged = { ...(base !== valueKind ? values[base] : null), ...values[valueKind] };
+  const items = [];
+  for (const [value, label] of Object.entries(merged)) {
+    if (value.includes('[val]')) items.push({ custom: true, label, negative: value.startsWith('-') });
+    else items.push({ value, label });
+  }
+  const kinds = pickKindsOf(valueKind);
+  if (kinds && doc) {
+    for (const e of doc.elements) if (kinds.includes(e.tag)) items.push({ value: referenceTo(doc, e), label: nameOf(doc, e), icon: e.tag });
+  }
+  return items;
+}
+
+// Every trigger action, by number, as "Category › what it does" in its category's colour.
+function actionItems() {
+  if (!TABLE?.actions) return [];
+  const colors = new Map((TABLE.categories || []).map((c) => [c.name, c.color]));
+  return Object.entries(TABLE.actions)
+    .map(([type, a]) => ({ type: Number(type), a }))
+    .filter(({ type }) => type >= 0)
+    .sort((x, y) => x.type - y.type)
+    .map(({ type, a }) => {
+      const [category, ...rest] = a.desc.split(' › ');
+      const text = rest.length ? rest.join(' › ') : category;
+      return { value: String(type), label: a.desc, category: rest.length ? category : '', text, color: colors.get(category) || '#ffffff' };
+    });
+}
+
+// The categories of trigger actions, in the editor's order, with their colours.
+export const actionCategories = () => TABLE?.categories || [];

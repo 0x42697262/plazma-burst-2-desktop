@@ -1556,7 +1556,7 @@ test('editor: an object parameter is picked by clicking the object in the world,
     assert.equal(trigger.attrs.actions_2_targetB, '#spawn_spot');
     // A pick with nothing there keeps waiting.
     c.dispatch(valueCell('A (door)'), 'click', {});
-    click({ x: 5000, y: 5000 });
+    click({ x: 330, y: 150 }); // on screen, nothing there
     assert.ok(session.currentPick(), 'still waiting');
     c.press('Escape');
     c.run('editor undo'); c.run('editor undo');

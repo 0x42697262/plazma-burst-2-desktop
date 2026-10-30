@@ -20,6 +20,7 @@ import {
 import { deleteElement, duplicateElement, undo, redo } from './edit.js';
 import { showEditorView } from './view.js';
 import { showPanels, say } from './panels.js';
+import { dropdownOpen, closeDropdown } from './dropdown.js';
 import { captureMouse } from './input.js';
 
 export { editorOn, editorTick };
@@ -40,6 +41,7 @@ export const setEditorOn = (on) => setEditor(on);
 // Each returns whether it did something; a key that did nothing goes on to the game.
 const KEYS = Object.freeze({
   escape: () => {
+    if (dropdownOpen()) { closeDropdown(); return true; }
     if (cancelPick()) return true;
     if (currentTool() !== TOOL.SELECT) { setTool(TOOL.SELECT); return true; }
     if (selected()) { select(null); return true; }

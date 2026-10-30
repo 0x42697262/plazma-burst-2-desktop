@@ -4,13 +4,14 @@
 // (the format "triggers exec" reads), applied in one go.
 import { el } from '../ui/dom.js';
 import { COLOR } from '../core/colors.js';
-import { actionInfo, opcodeName, opcodeNames, opcodeType } from '../triggers/script.js';
+import { actionInfo, opcodeName, opcodeType } from '../triggers/script.js';
 import { actionsOf, actionValues, triggerText, valuesFromText } from './actions.js';
 import { setAttrs } from './edit.js';
 import { editField } from './fields.js';
-import { choicesOf, shownValue, pickKindsOf } from './params.js';
-import { referenceTo } from './kinds.js';
-import { editorDoc, startPick, cancelPick } from './session.js';
+import { shownValue, pickKindsOf, dropdownItems } from './params.js';
+import { referenceTo, nameOf } from './kinds.js';
+import { editorDoc, startPick, cancelPick, currentPick } from './session.js';
+import { openDropdown, closeDropdown } from './dropdown.js';
 import { PALETTE, FONT, FONT_SIZE, caption, button, paramRow, onClick, scrolling } from './style.js';
 
 const NEW_ACTION_TYPE = 100; // "set variable A to value B": an action that does something harmless
@@ -33,12 +34,16 @@ export function drawTriggerActions(box, trigger, { redraw, say }) {
     const info = actionInfo(Number(a.type));
     const name = el('span', {}, `${i + 1}. ${opcodeName(Number(a.type))}`);
     const { row, value } = paramRow(`type ${a.type}`, name, { hint: info?.desc || '' });
-    onClick(value, () => editField(name, {
-      initial: opcodeName(Number(a.type)), choices: opcodeNames(), onDone: redraw,
-      onCommit: (text) => {
-        const type = /^-?\d+$/.test(text.trim()) ? Number(text) : opcodeType(text.trim());
+    // The editor's action list: every action by category, searchable. Typing a name or
+    // a number there works too.
+    onClick(value, () => openDropdown(value, {
+      actions: true, items: dropdownItems('trigger_type'), current: String(a.type),
+      onPick: (text) => {
+        const t = String(text).trim();
+        const type = /^-?\d+$/.test(t) ? Number(t) : opcodeType(t);
         if (type === null) { say(`error: unknown action "${text}"`, COLOR.error); return; }
-        run(actionValues(trigger.attrs, list.map((b, k) => (k === i ? { ...b, type } : b))), `action ${i + 1}`);
+        const next = type === -1 ? list.filter((_, k) => k !== i) : list.map((b, k) => (k === i ? { ...b, type } : b));
+        run(actionValues(trigger.attrs, next), `action ${i + 1}`);
       },
     }));
     const remove = button('×', { title: 'Remove this action', style: { width: '8px', height: '8px', flex: 'none' },
@@ -51,11 +56,22 @@ export function drawTriggerActions(box, trigger, { redraw, say }) {
       const { row: r, value: v } = paramRow(`${side}${kind && kind !== 'nochange' ? ` (${kind})` : ''}`, span);
       if (kind === 'nochange') v.style.opacity = '0.5';
       const setSide = (text) => run(actionValues(trigger.attrs, list.map((b, k) => (k === i ? { ...b, [side]: text } : b))), `action ${i + 1} ${side}`);
+      const what = `action ${i + 1} ${side}`;
       onClick(v, () => {
-        // A target that is an object can be clicked in the world (the map editor's quick pick).
+        // A target that is an object can be clicked in the world (the map editor's quick
+        // pick); one with choices opens the drop-down; anything else is typed.
         const kinds = pickKindsOf(kind);
-        if (kinds) startPick(kinds, `action ${i + 1} ${side}`, (target) => setSide(referenceTo(editorDoc(), target)));
-        editField(span, { initial: a[side], onDone: () => { cancelPick(); redraw(); }, choices: choicesOf(kind), onCommit: setSide });
+        const items = dropdownItems(kind, editorDoc(), referenceTo, nameOf);
+        // The drop-down first: opening it closes any other, and with it that one's pick.
+        if (items.length) {
+          openDropdown(v, {
+            items, current: a[side], onPick: (value) => { cancelPick(); setSide(value); },
+            onClose: () => { if (currentPick()?.what === what) cancelPick(); },
+          });
+        }
+        if (kinds) startPick(kinds, what, (target) => { closeDropdown(); setSide(referenceTo(editorDoc(), target)); });
+        if (items.length) return;
+        editField(span, { initial: a[side], onDone: () => { cancelPick(); redraw(); }, onCommit: setSide });
       });
       box.append(r);
     }

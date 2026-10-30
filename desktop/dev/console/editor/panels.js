@@ -27,7 +27,8 @@ import {
 import { drawTriggerActions } from './trigger-panel.js';
 import { isActionAttr } from './actions.js';
 import { editField } from './fields.js';
-import { paramsOf, paramInfo, defaultOf, choicesOf, shownValue, pickKindsOf } from './params.js';
+import { paramsOf, paramInfo, defaultOf, shownValue, pickKindsOf, dropdownItems } from './params.js';
+import { openDropdown, closeDropdown } from './dropdown.js';
 import { referenceTo } from './kinds.js';
 
 const OBJECTS_SHOWN = 400; // rows in the object box; a long list says how many more
@@ -114,19 +115,31 @@ function drawObjects() {
   nodes.objectsCaption.textContent = `Objects (${list.length}):`;
 }
 
-// A value turns into a text box when clicked (fields.js), offering the values the
-// parameter's kind has. One that names an object can also take it from the world: the
-// pick waits for a click on one (the map editor's quick pick).
-function editValue(span, sel, attr, choices, pickKinds) {
+// A value is edited as in the map editor: a parameter whose kind offers choices opens
+// its drop-down (dropdown.js), one that names an object can also be clicked in the
+// world (the quick pick), and any other turns into a text box (fields.js).
+function editValue(cell, span, sel, attr, valueKind) {
   const set = (text) => {
     try {
       const { live, why } = setAttr(sel, attr, text);
       if (!live) say(`${attr}: not in the running level (${why})`, COLOR.notice);
     } catch (err) { say(`error: ${err.message}`, COLOR.error); }
   };
-  if (pickKinds) startPick(pickKinds, attr, (target) => { set(referenceTo(editorDoc(), target)); drawParams(); });
+  const doc = editorDoc();
+  const kinds = pickKindsOf(valueKind);
+  const items = dropdownItems(valueKind, doc, referenceTo, nameOf);
+  // The drop-down first: opening it closes any other, and with it that one's pick.
+  if (items.length) {
+    openDropdown(cell, {
+      items, current: sel.attrs[attr] ?? defaultOf(sel.tag, attr),
+      onPick: (value) => { cancelPick(); set(value); drawParams(); },
+      onClose: () => { if (currentPick()?.what === attr) cancelPick(); },
+    });
+  }
+  if (kinds) startPick(kinds, attr, (target) => { closeDropdown(); set(referenceTo(doc, target)); drawParams(); });
+  if (items.length) return;
   editField(span, {
-    initial: sel.attrs[attr] ?? defaultOf(sel.tag, attr) ?? '', choices,
+    initial: sel.attrs[attr] ?? defaultOf(sel.tag, attr) ?? '',
     onDone: () => { cancelPick(); drawParams(); }, // typed instead, or left: no pick
     onCommit: set,
   });
@@ -153,7 +166,7 @@ function drawParams() {
     const span = el('span', {}, shownValue(info?.kind, value));
     const { row, value: cell } = paramRow(info?.title || attr, span, { hint: `${attr}${info?.desc ? `: ${info.desc}` : ''}${set ? '' : ' (not in the map: the default)'}` });
     if (!set) cell.style.opacity = '0.55';
-    onClick(cell, () => editValue(span, sel, attr, choicesOf(info?.kind), pickKindsOf(info?.kind)));
+    onClick(cell, () => editValue(cell, span, sel, attr, info?.kind));
     box.append(row);
   }
   if (sel.tag === 'trigger') drawTriggerActions(box, sel, { redraw: drawParams, say });

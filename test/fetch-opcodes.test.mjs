@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
-const { parseParams, parseParamTable, check } = createRequire(import.meta.url)('../tools/fetch-opcodes.js');
+const { parseParams, parseParamTable, parseCategories, check } = createRequire(import.meta.url)('../tools/fetch-opcodes.js');
 
 const SRC = `
 function addTrigger(trigger_type_id, description, paramA, paramB ) { /* the editor's own */ }
@@ -44,5 +44,21 @@ special_values_table['maxcalls']['[val]']='# calls';
   const { params, values } = parseParamTable(src);
   assert.deepEqual(params.map((p) => p.name), ['uid', 'use_on'], 'not the commented one, not the loop');
   assert.equal(params[1].desc, 'Determines when trigger which is defined by "Activation Trigger" parameter runs');
-  assert.deepEqual(values, { side: { '-1': '◄ Left' }, bool: { true: 'Yes' }, region_activation: { 1: "''USE'' key (with button)" } });
+  assert.deepEqual(values, {
+    side: { '-1': '◄ Left' }, bool: { true: 'Yes' }, region_activation: { 1: "''USE'' key (with button)" },
+    maxcalls: { '[val]': '# calls' }, // "type a number"
+  });
+});
+
+test('fetch-opcodes gives the action categories the editor\'s colours, in the order it meets them', () => {
+  const src = String.raw`
+var rainbow=['#5f6887',
+'#94a4c1', '#efefef'];
+addTrigger(-1, 'Do nothing', 'nochange', 'nochange');
+addTrigger(0, "Movable &#8250; Force Movable 'A' move to region 'B'", 'door', 'region');
+//addTrigger(5, "Ghost &#8250; commented", 'x', 'y');
+addTrigger(2, "Region &#8250; Quickly move Region", 'region', 'region');
+addTrigger(1, "Movable &#8250; Change Speed", 'door', 'value');
+`;
+  assert.deepEqual(parseCategories(src), [{ name: 'Movable', color: '#5f6887' }, { name: 'Region', color: '#94a4c1' }]);
 });
