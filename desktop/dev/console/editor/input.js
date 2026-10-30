@@ -7,9 +7,9 @@
 // Pointer events, not mouse events: the game's graphics library cancels pointerdown on
 // its canvas, and then the browser sends no mousedown or mouseup at all.
 //
-// Select tool: a click selects (again on the same spot: the one below). Pressing on the
-// selection and moving drags it: from inside it moves, from an edge or a corner of a
-// rectangle it resizes. Place tool: a click adds an element of the current layer there;
+// Select tool: a press selects what is under it and can drag it right away: from inside
+// it moves, from an edge or a corner of a rectangle it resizes. A click on the selection
+// without moving takes the one below it instead. Place tool: a click adds an element of the current layer there;
 // a rectangle can be dragged out instead. Positions snap to SNAP units; with Alt held
 // they do not. A drag is one step for undo.
 import { isUi } from '../ui/theme.js';
@@ -18,7 +18,7 @@ import { currentTransform, toWorld } from '../ui/overlay.js';
 import { kindOf, anchorOf, SHAPE } from './kinds.js';
 import { liveBounds } from './live.js';
 import {
-  editorDoc, pickAt, selected, currentTool, currentLayer, setPreview, setPressing, TOOL,
+  editorDoc, pickAt, elementAt, select, selected, currentTool, currentLayer, setPreview, setPressing, TOOL,
 } from './session.js';
 import { setPlace, addElement } from './edit.js';
 import { beginAction, endAction } from './history.js';
@@ -116,12 +116,26 @@ function onMouseDown(e, p = pointOfEvent(e)) {
     press = { at: p.world, screen: p.screen, place: currentLayer(), dragging: false, free: e.altKey };
     return;
   }
-  const sel = selected();
-  const b = sel && liveBounds(editorDoc(), sel);
-  const mode = b ? grabOf(sel, b, p.world, EDGE * p.perScreenUnit) : null;
+  // On the selection: grab it (inside moves, an edge resizes). Anywhere else: select
+  // what is under the press at once, so it can be dragged in the same press.
+  const slop = EDGE * p.perScreenUnit;
+  let sel = selected();
+  let b = sel && liveBounds(editorDoc(), sel);
+  let mode = b ? grabOf(sel, b, p.world, slop) : null;
+  let fresh = false;
+  if (!mode) {
+    const under = elementAt(p.world);
+    if (under) {
+      select(under);
+      sel = under;
+      b = liveBounds(editorDoc(), sel);
+      mode = grabOf(sel, b, p.world, slop) || 'move';
+      fresh = true;
+    }
+  }
   // A rectangle drags by its bounds, a point by the spot the map stores.
   const start = mode && (kindOf(sel.tag).shape === SHAPE.RECT ? b : { ...anchorOf(sel), w: b.w, h: b.h });
-  press = { at: p.world, screen: p.screen, target: mode ? sel : null, mode, start, dragging: false };
+  press = { at: p.world, screen: p.screen, target: mode ? sel : null, mode, start, dragging: false, fresh };
 }
 
 function onMouseMove(e) {
@@ -144,11 +158,14 @@ function onMouseMove(e) {
 
 function onMouseUp() {
   if (!press) return;
-  const { dragging, at, place, end, free } = press;
+  const { dragging, at, place, end, free, fresh, target } = press;
   press = null;
   if (place) { finishPlace(place, at, dragging ? end : null, free); return; }
   if (dragging) endAction();
-  else {
+  else if (fresh) {
+    // This press selected it: it stays selected (the next click on the spot cycles).
+    if (lastPress.layer) lastPress.layer.picked = `${target.tag} #${editorDoc().ordinal(target)}${target.attrs.uid ? ' ' + target.attrs.uid : ''}`;
+  } else {
     const e = pickAt(at);
     if (lastPress.layer) lastPress.layer.picked = e ? `${e.tag} #${editorDoc().ordinal(e)}${e.attrs.uid ? ' ' + e.attrs.uid : ''}` : 'nothing';
   }

@@ -109,12 +109,14 @@ const door = {
   tary: (mc, v) => { if (!finite(v)) return false; mc.tary = parseFloat(v); return true; },
 };
 
-// Walls: only with "editor livewalls" on, in single-player, inside the level's grid.
+// Walls: only with "editor livewalls" on, inside the level's grid. The reasons they are
+// not live are errors, so the editor can say them.
 const wallPlace = (i) => (v, attrs) => {
-  if (!liveWallsOn() || game.isMP()) return false;
+  if (!liveWallsOn()) throw new Error('walls change on a reload ("editor livewalls on" moves them live)');
   const r = boundsOf({ tag: 'box', attrs });
   if (!r) return false;
-  try { moveWall(i, r); return true; } catch { return false; }
+  moveWall(i, r);
+  return true;
 };
 
 const LIVE = Object.freeze({
@@ -136,17 +138,23 @@ const LIVE = Object.freeze({
   },
 });
 
+const NOT_IN_GAME = 'it is not in the running level yet';
+const NOT_LIVE = 'the running level cannot take it';
+
 // Writes one changed attribute of element e into the running game, at the index the
-// game has it (e.live). True when it is live now; false when it needs the map loaded
-// again, which is also the case for an element the game does not have yet.
+// game has it (e.live). Returns { live: true }, or { live: false, why } when it needs
+// the map loaded again: an element the game does not have yet, an attribute it cannot
+// take, or an error (a game name missing from an older names.js says so).
 export function applyLive(e, attr) {
   const kind = LIVE[e.tag];
-  let obj = null;
-  // A name missing from names.js (an older one) only means it is not live.
-  try { obj = kind && e.live && kind.of(e.live.index); } catch { return false; }
-  if (!obj) return false;
-  const v = e.attrs[attr];
-  const fn = kind.attrs[attr];
-  if (fn) return !!fn(obj, v, e.attrs);
-  return kind.other ? !!kind.other(obj, attr, v, e.attrs) : false;
+  if (!kind) return { live: false, why: NOT_LIVE };
+  try {
+    const obj = e.live && kind.of(e.live.index);
+    if (!obj) return { live: false, why: NOT_IN_GAME };
+    const v = e.attrs[attr];
+    const fn = kind.attrs[attr] || (kind.other && ((o, val, attrs) => kind.other(o, attr, val, attrs)));
+    return fn && fn(obj, v, e.attrs) ? { live: true } : { live: false, why: NOT_LIVE };
+  } catch (err) {
+    return { live: false, why: err.message };
+  }
 }

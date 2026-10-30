@@ -1043,7 +1043,7 @@ test('editor: edits go live where the game can take them, the rest on a reload; 
     // Not live: kept, and the status says a reload brings it.
     const door = doc.byUid('#door_a');
     session.select(door);
-    assert.deepEqual(quiet('editor set w 60'), ['#door_a: w = "60", shows after "editor reload"']);
+    assert.match(quiet('editor set w 60')[0], /^#door_a: w = "60", shows after "editor reload" \(/);
     assert.equal(session.pendingCount(), 2);
     assert.match(errorsOf(c.run('editor set x abc'))[0], /x must be a number/);
     assert.match(errorsOf(c.run('editor set c "a"b"'))[0], /cannot contain a double quote/);
@@ -1061,6 +1061,17 @@ test('editor: edits go live where the game can take them, the rest on a reload; 
     mouse.up();
     assert.deepEqual([door.attrs.x, door.attrs.w], ['220', '82.5']);
     assert.deepEqual(dragPlace({ x: 0, y: 0, w: 10, h: 10 }, 'l', 30, 0, false), { x: 10, y: 0, w: 20, h: 10 }, 'dragged past the far edge: flips');
+    // An object that is not selected: the press selects it and the same press drags it.
+    session.select(null);
+    mouse.down(at({ x: 240, y: 60 }));
+    assert.equal(session.selected(), door, 'selected on the press');
+    mouse.move(at({ x: 260, y: 60 }));
+    mouse.up();
+    assert.equal(door.attrs.x, '240', 'and moved by the same press');
+    mouse.down(at({ x: 250, y: 60 }));
+    mouse.up();
+    assert.equal(session.selected(), door, 'a click on the selection with nothing below it keeps it');
+    quiet('editor undo');
     // A click without moving selects what is under it instead.
     mouse.down(at({ x: 400 + 50, y: 10 }));
     mouse.up();
@@ -1086,9 +1097,9 @@ test('editor: edits go live where the game can take them, the rest on a reload; 
     c.setMP(true);
     const mpText = c.G[c.N.mapText];
     session.select(door);
-    assert.deepEqual(quiet('editor set h 50'), ['#door_a: h = "50", not live in multiplayer (kept for "editor save")']);
+    assert.match(quiet('editor set h 50')[0], /^#door_a: h = "50", shows after "editor reload"/);
     assert.equal(c.G[c.N.mapText], mpText);
-    assert.match(errorsOf(c.run('editor reload'))[0], /multiplayer: the server decides/);
+    assert.match(errorsOf(c.run('editor reload'))[0], /a match cannot be reloaded from here/);
 
     // Save goes to the wrapper (none in tests).
     c.log.printed.length = 0;
@@ -1318,15 +1329,12 @@ test('editor: movables go live; walls only with "editor livewalls"; editor_autor
     // Walls: on a reload, unless live walls are on.
     const wall = doc.byTag('box')[1];
     session.select(wall);
-    assert.match(quiet('editor set x 310')[0], /shows after "editor reload"/);
+    assert.match(quiet('editor set x 310')[0], /shows after "editor reload" \(walls change on a reload \("editor livewalls on" moves them live\)\)/);
     assert.equal(G[N.wallX][1], 300);
-    let out = c.run('editor livewalls on');
-    assert.ok(out.some((l) => /REPORTS YOUR CLIENT TO THE SERVER/.test(l)));
-    assert.match(out[out.length - 1], /Not turned on\. If you accept that: "editor livewalls on --i-understand"/);
+    assert.match(c.run('editor livewalls on')[0], /^Live walls on for this session\. The game's integrity check watches the wall arrays: expect it to report the client and reload the page\./);
     c.setMP(true);
-    assert.match(errorsOf(c.run('editor livewalls on --i-understand'))[0], /not in multiplayer/);
+    assert.deepEqual(quiet('editor set x 340'), ['wall #1: x = "340", live now'], 'in a match too');
     c.setMP(false);
-    quiet('editor livewalls on --i-understand');
     assert.deepEqual(quiet('editor set x 350'), ['wall #1: x = "350", live now']);
     assert.equal(G[N.wallX][1], 350);
     assert.deepEqual([body.x, body.scaleX], [350, 1]);
@@ -1336,7 +1344,7 @@ test('editor: movables go live; walls only with "editor livewalls"; editor_autor
     assert.equal(body.scaleX, 0.5);
     quiet('editor set y -150');
     assert.deepEqual(cellsOf(G[N.grid], 1), freshCells(1), 'smaller and higher: out of the cells it left');
-    assert.match(quiet('editor set x 5000')[0], /shows after "editor reload"/, 'outside the grid: not live');
+    assert.match(quiet('editor set x 5000')[0], /\(that is outside the walls the level was built with/, 'outside the grid: not live, and why');
     assert.equal(G[N.wallX][1], 350);
     quiet('editor livewalls off');
     assert.match(quiet('editor set x 360')[0], /shows after "editor reload"/);

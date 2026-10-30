@@ -131,13 +131,22 @@ export const countByTag = () => {
 
 const contains = (b, p, slop) => p.x >= b.x - slop && p.x <= b.x + b.w + slop && p.y >= b.y - slop && p.y <= b.y + b.h + slop;
 
+// The elements under world point p, smallest first, so a region on a wall comes before
+// the wall.
+function hitsAt(p) {
+  return [...visibleElements()].filter(({ b }) => contains(b, p, PICK_SLOP))
+    .sort((a, z) => a.b.w * a.b.h - z.b.w * z.b.h)
+    .map(({ e }) => e);
+}
+
+// The element a press at p grabs: the smallest one under it, or null. Nothing changes.
+export const elementAt = (p) => hitsAt(p)[0] || null;
+
 // What a click at world point p selects: the smallest element under it, so a region on
 // a wall wins over the wall. Clicking the same spot again takes the next one down the
 // stack. Returns the element, or null (which clears the selection).
 export function pickAt(p) {
-  const hits = [...visibleElements()].filter(({ b }) => contains(b, p, PICK_SLOP))
-    .sort((a, z) => a.b.w * a.b.h - z.b.w * z.b.h)
-    .map(({ e }) => e.id);
+  const hits = hitsAt(p).map((e) => e.id);
   const last = state.lastPick;
   const again = last && Math.hypot(last.at.x - p.x, last.at.y - p.y) <= SAME_SPOT
     && last.ids.length === hits.length && last.ids.every((id, i) => id === hits[i]);

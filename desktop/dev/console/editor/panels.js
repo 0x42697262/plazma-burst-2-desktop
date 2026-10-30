@@ -129,8 +129,8 @@ function editValue(span, sel, attr) {
     e.stopPropagation();
     if (e.key === 'Enter') {
       try {
-        const { live } = setAttr(sel, attr, input.value);
-        if (!live) say(game.isMP() ? `${attr}: not live in multiplayer; kept for "editor save"` : `${attr}: shows after a reload`, COLOR.notice);
+        const { live, why } = setAttr(sel, attr, input.value);
+        if (!live) say(`${attr}: shows after a reload (${why})`, COLOR.notice);
       } catch (err) { say(`error: ${err.message}`, COLOR.error); }
       drawParams();
     } else if (e.key === 'Escape') drawParams();

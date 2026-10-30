@@ -47,10 +47,10 @@ function setOne(args, { rest }) {
   if (!sel) throw new Error('select an object first (click it, or pick it in Objects)');
   const attr = args[0];
   const value = rest.replace(/^\S+\s+\S+\s*/, '').replace(/^"(.*)"$/, '$1');
-  const { changed, live } = setAttr(sel, attr, value);
+  const { changed, live, why } = setAttr(sel, attr, value);
   const name = nameOf(editorDoc(), sel);
   if (!changed) { print(`${name}: ${attr} is already "${value}"`, COLOR.notice); return; }
-  const where = live ? 'live now' : game.isMP() ? 'not live in multiplayer (kept for "editor save")' : 'shows after "editor reload"';
+  const where = live ? 'live now' : `shows after "editor reload" (${why})`;
   print(`${name}: ${attr} = "${value}", ${where}`, live ? COLOR.ok : COLOR.notice);
 }
 
@@ -96,7 +96,7 @@ function add(args) {
   const [x, y, w, h] = nums.length ? nums : [Math.round(p.tarx), Math.round(p.tary)];
   const e = addElement(tag, { x, y, ...(w !== undefined ? { w, h } : {}) });
   showLayer(tag);
-  print(`Added ${nameOf(editorDoc(), e)} at ${x}, ${y}${kindOf(tag).shape === SHAPE.RECT ? ` (${e.attrs.w} x ${e.attrs.h})` : ''}${game.isMP() ? '' : '; in the game after "editor reload"'}`, COLOR.ok);
+  print(`Added ${nameOf(editorDoc(), e)} at ${x}, ${y}${kindOf(tag).shape === SHAPE.RECT ? ` (${e.attrs.w} x ${e.attrs.h})` : ''}; in the game after "editor reload"`, COLOR.ok);
 }
 
 function needSelection() {
@@ -110,7 +110,7 @@ function del() {
   const sel = needSelection();
   const name = nameOf(editorDoc(), sel);
   deleteElement(sel);
-  print(`Deleted ${name}${game.isMP() ? '' : '; gone from the game after "editor reload"'}`, COLOR.ok);
+  print(`Deleted ${name}; gone from the game after "editor reload"`, COLOR.ok);
 }
 
 function copy() {
@@ -159,29 +159,15 @@ function status() {
 
 // ----- editor livewalls -----
 
-const CONFIRM = 'i-understand';
-const LIVE_WALLS_WARNING = [
-  'WARNING: live walls write the wall arrays the game\'s integrity check watches.',
-  '  The check is on in this app, single-player included. When it sees the change it',
-  '  REPORTS YOUR CLIENT TO THE SERVER (tied to your login) and RELOADS THE PAGE, most',
-  '  likely within a second or two of the first move. Unsaved edits are lost then.',
-  '  Nothing hides the change; this is not a way around the check. Single-player only.',
-  '  "editor reload" or editor_autoreload give the same walls with no report at all.',
-];
-
-function liveWalls(rawArgs) {
-  const { options, rest } = takeOptions(rawArgs, [CONFIRM]);
-  const usage = `usage: editor livewalls [on --${CONFIRM} | off]`;
-  const word = (rest[0] || '').toLowerCase();
-  if (rest.length > 1) throw new Error(usage);
-  if (!word) { print(`Live walls: ${liveWallsOn() ? 'ON (unsafe)' : 'off'}`, liveWallsOn() ? COLOR.warn : COLOR.plain); return; }
+function liveWalls(args) {
+  const usage = 'usage: editor livewalls [on | off]';
+  const word = (args[0] || '').toLowerCase();
+  if (args.length > 1) throw new Error(usage);
+  if (!word) { print(`Live walls: ${liveWallsOn() ? 'on' : 'off'}`); return; }
   if (OFF_WORDS.includes(word)) { setLiveWalls(false); print('Live walls off: walls change on a reload again', COLOR.ok); return; }
   if (!ON_WORDS.includes(word)) throw new Error(usage);
-  for (const line of LIVE_WALLS_WARNING) print(line, COLOR.error);
-  if (!options.has(CONFIRM)) { print(`Not turned on. If you accept that: "editor livewalls on --${CONFIRM}".`, COLOR.warn); return; }
-  if (game.isMP()) throw new Error('not in multiplayer: moving walls in a match is not something the editor does');
   setLiveWalls(true);
-  print('Live walls ON for this session (not saved). "editor livewalls off" stops it.', COLOR.warn);
+  print('Live walls on for this session. The game\'s integrity check watches the wall arrays: expect it to report the client and reload the page.', COLOR.warn);
 }
 
 export const editorCommand = {
@@ -219,8 +205,7 @@ export const editorCommand = {
       '(single-player), which puts you back where you stood. "editor_autoreload on"',
       'reloads by itself after such an edit.',
       'Single-player: the game plays the edited map from then on, so dying or',
-      'restarting keeps the edits. Multiplayer: only live edits reach your game (not',
-      'the other players\'), and the next round starts from the server\'s map.',
+      'restarting keeps the edits.',
       'It needs a level, hides while none runs and comes back with the next one.',
       'Esc clears the selection. Regions and characters are drawn where they are now.',
     ],
@@ -329,19 +314,18 @@ export const editorCommand = {
     },
     {
       name: 'livewalls',
-      usage: `editor livewalls [on --${CONFIRM} | off]`,
-      desc: 'UNSAFE, single-player: move walls in the running level; the game will likely report your client and reload',
+      usage: 'editor livewalls [on | off]',
+      desc: 'Move walls in the running level as you edit them; the game\'s integrity check reports and reloads',
       help: {
         about: [
-          'Moves walls in the running level as you edit them, instead of on a reload. It',
-          'writes the arrays the game\'s integrity check snapshots, and nothing hides that:',
-          'expect the game to report your client to the server and reload the page soon',
-          'after the first move. Single-player only, this session only, off by default.',
+          'Moves walls in the running level as you edit them, instead of on a reload: the',
+          'wall arrays, the collision grid and the wall\'s body. The arrays are ones the',
+          'game\'s integrity check snapshots and nothing hides the write, so expect it to',
+          'report the client and reload the page. This session only (not saved).',
           'Walls outside the area the level was built with still wait for a reload; their',
           'edge trims (tops, grass, shading) stay where they were until one.',
         ],
-        args: [['on --i-understand', 'turn it on, accepting the report and the reload'], ['off', 'back to walls on a reload']],
-        notes: ['"editor reload", or editor_autoreload on, rebuilds the walls with the game\'s own loader and no report.'],
+        args: [['on | off', 'turn it on or off'], ['(nothing)', 'whether it is on']],
         see: ['editor reload', 'editor_autoreload'],
       },
       run: liveWalls,
@@ -359,7 +343,7 @@ export const editorCommand = {
         ],
         notes: [
           'In single-player the game always plays the edited map: dying or restarting',
-          'loads it too. Multiplayer cannot reload: the server decides that.',
+          'loads it too.',
         ],
         see: ['editor', 'editor save'],
       },

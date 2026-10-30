@@ -3,9 +3,8 @@
 // game where it can (apply.js); everything else is pending until a reload. Every change
 // is recorded for undo (history.js).
 // Single-player: the game's map text follows the document, so a reload, a restart or
-// dying plays the edited map. Multiplayer: the match's map text is left alone (the
-// server restarts rounds from its own copy); what is not live stays in the document,
-// for "editor save".
+// dying plays the edited map. In a match the map text is the server's and is left
+// alone (the map cache saves it).
 import { game } from '../game/bindings.js';
 import { ROUTE } from '../core/shared.js';
 import { kindOf, SHAPE, DEFAULTS, newUid } from './kinds.js';
@@ -67,6 +66,7 @@ function change(e, values, { recorded = true } = {}) {
   const doc = editorDoc();
   for (const [attr, raw] of Object.entries(values)) if (raw !== undefined) checkValue(attr, String(raw));
   let live = true;
+  let why = '';
   const before = {};
   const after = {};
   for (const [attr, raw] of Object.entries(values)) {
@@ -74,14 +74,20 @@ function change(e, values, { recorded = true } = {}) {
     if (!doc.set(e, attr, raw === undefined ? undefined : String(raw))) continue;
     before[attr] = old;
     after[attr] = e.attrs[attr];
-    if (!applyLive(e, attr)) { live = false; markPending(e); }
+    const applied = applyLive(e, attr);
+    if (!applied.live) { live = false; why ||= applied.why; markPending(e); }
   }
   if (!Object.keys(after).length && !Object.keys(before).length) return { changed: false, live: true };
   if (recorded) record({ kind: 'attrs', e, before, after });
+  lastWhy = live ? '' : why;
   syncMapText(doc);
   notify('edit');
-  return { changed: true, live };
+  return { changed: true, live, why };
 }
+
+// Why the last edit was not live, for the status line ('' when it was).
+let lastWhy = '';
+export const notLiveReason = () => lastWhy;
 
 // Adding and taking out: the running game has neither until a reload.
 function insert(e, at, { recorded = true } = {}) {
@@ -179,7 +185,7 @@ onChange((what) => {
 // Single-player: plays the level again from the edited map, the way the game restarts
 // it. Everything in the level starts over, and you are put back where you stood.
 export function reloadLevel() {
-  if (game.isMP()) throw new Error('multiplayer: the server decides when the level loads; edits that are not live stay in the editor for "editor save"');
+  if (game.isMP()) throw new Error('a match cannot be reloaded from here');
   returnTo = yourSpot();
   syncMapText(editorDoc());
   game.setLevelState(LEVEL_RESTART);
