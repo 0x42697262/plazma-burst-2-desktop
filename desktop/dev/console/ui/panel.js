@@ -1,7 +1,7 @@
 // The console window, styled after the game's "View logs" panel (800x400 game units),
 // and the keys it reacts to: Shift+` toggles it, Esc closes it, binds run in levels.
 import { el } from './dom.js';
-import { THEME, swallow, markUi } from './theme.js';
+import { THEME, IN_OVERLAY, swallow, markUi } from './theme.js';
 import { print, attachLog, clearLog } from './log.js';
 import { complete } from './complete.js';
 import { COLOR } from '../core/colors.js';
@@ -115,7 +115,7 @@ function onPaste(e) {
 export function buildPanel() {
   root = el('div', {
     position: 'absolute', left: '10px', top: '40px', width: '780px', height: '320px',
-    background: THEME.background, visibility: 'visible', display: 'none', zIndex: Z_INDEX,
+    background: THEME.background, ...IN_OVERLAY, display: 'none', zIndex: Z_INDEX,
     cursor: 'default', boxSizing: 'border-box', fontFamily: THEME.font, color: COLOR.plain,
     userSelect: 'text', pointerEvents: 'auto',
   });
@@ -147,7 +147,7 @@ export function buildPanel() {
   Object.assign(inputEl.style, {
     position: 'absolute', left: '10px', top: '270px', width: '760px', height: '16px',
     fontSize: '7px', padding: '2px 4px', background: THEME.inputBackground,
-    border: THEME.inputBorder, visibility: 'visible',
+    border: THEME.inputBorder, ...IN_OVERLAY,
   });
   root.append(inputEl);
 

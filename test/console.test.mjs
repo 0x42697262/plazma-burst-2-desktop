@@ -930,6 +930,8 @@ test('editor: on and off by its key, outlines every object, selects by click and
     const first = drawEditorFrame();
     assert.ok(first.outlines > 5, JSON.stringify(first));
     assert.ok(textsOf(overlay).includes('Layers'));
+    // The game's CSS hides its overlay container; everything put in it must show itself.
+    for (const n of overlay.childNodes) if (n.style) assert.equal(n.style.visibility, 'visible', `hidden: ${textsOf(n).slice(0, 2).join(' ')}`);
     assert.match(c.press('F8')[0], /^\[key f8\] > editor/);
     assert.ok(!session.editorOn(), 'the key turns it off');
     assert.equal(drawEditorFrame(), null);
@@ -1122,11 +1124,12 @@ test('editor tools: place, copy, delete and undo; live edits still reach the rig
     const shown = (p) => { const s = toScreen(currentTransform(), p); return { clientX: s.x, clientY: s.y }; };
     let reachedGame = 0;
     canvas.addEventListener('pointerdown', () => { reachedGame++; });
-    c.G.addEventListener('mousedown', () => { reachedGame++; });
+    c.G.onpointerdown = () => { reachedGame++; };
     const down = c.dispatch(canvas, 'pointerdown', shown({ x: 215, y: 50 }));
     c.dispatch(canvas, 'pointerup', shown({ x: 215, y: 50 }));
     assert.equal(session.selected(), doc.byUid('#door_a'), 'a real click selects');
     assert.ok(down.defaultPrevented && reachedGame === 0, 'the game never sees the click');
+    delete c.G.onpointerdown;
     // A press on the editor's own panels is theirs, not a click in the world.
     const panel = c.G[c.N.uiOverlay].overlay.childNodes.find((n) => n.pb2devUi);
     c.dispatch(panel, 'pointerdown', shown({ x: 215, y: 50 }));

@@ -9,6 +9,12 @@ export const THEME = Object.freeze({
   titleFont: 'EuropeExt',
 });
 
+// Style every element put straight into the game's UI overlay needs. The overlay is a
+// <pb2Container>, which the game's page CSS hides (index.html: "pb2Container {
+// visibility: hidden }"), and children inherit that: without this they are on the page
+// but neither seen nor clickable.
+export const IN_OVERLAY = Object.freeze({ visibility: 'visible' });
+
 // Keep the game's handlers (on window and document, bubble phase) from seeing input
 // meant for a panel. Pointer moves still reach the game, so aiming keeps working.
 export const SWALLOWED_EVENTS = Object.freeze(['keydown', 'keypress', 'mousedown', 'mouseup', 'click', 'dblclick',

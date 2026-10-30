@@ -1,5 +1,5 @@
-// The editor's mouse. While the editor is shown it hears pointer presses on the window
-// before anything else does (capture), the game canvas included, and keeps the ones it
+// The editor's mouse. While the editor is shown it hears pointer presses on the document
+// before the page's elements do (capture), the game canvas included, and keeps the ones it
 // uses from the game: no shooting, no pointer lock. Presses on the console or on the
 // editor's own panels are left to them. Pointer moves still reach the game (aiming, and
 // the crosshair the labels follow), and the keyboard is the game's as always: you walk
@@ -170,7 +170,10 @@ function blockWhilePressed(e) { if (press) take(e); }
 
 // errors: called with an Error a drag could not apply.
 export function captureMouse(on, errors) {
-  const listen = on ? globalThis.addEventListener : globalThis.removeEventListener;
+  // document, not window: the game replaces window.addEventListener with one that
+  // registers on its graphics stage (scripts/flash.js), which sends no DOM events.
+  const doc = globalThis.document;
+  const listen = doc && (on ? doc.addEventListener : doc.removeEventListener);
   if (on === listening || !listen) return;
   listening = on;
   if (!on) {
@@ -181,10 +184,10 @@ export function captureMouse(on, errors) {
     if (errors) onError = errors;
     if (document.pointerLockElement) document.exitPointerLock();
   }
-  listen.call(globalThis, 'pointerdown', onPointerDown, true);
-  listen.call(globalThis, 'pointermove', onMouseMove, true);
-  listen.call(globalThis, 'pointerup', onPointerUp, true);
-  for (const type of BLOCKED_DURING_PRESS) listen.call(globalThis, type, blockWhilePressed, true);
+  listen.call(doc, 'pointerdown', onPointerDown, true);
+  listen.call(doc, 'pointermove', onMouseMove, true);
+  listen.call(doc, 'pointerup', onPointerUp, true);
+  for (const type of BLOCKED_DURING_PRESS) listen.call(doc, type, blockWhilePressed, true);
 }
 
 // What "editor status" reports about the mouse.

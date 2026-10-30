@@ -2,6 +2,7 @@
 import { print } from '../ui/log.js';
 import { setPanelHidden } from '../ui/panel.js';
 import { el } from '../ui/dom.js';
+import { IN_OVERLAY } from '../ui/theme.js';
 import { game } from '../game/bindings.js';
 import { COLOR } from '../core/colors.js';
 import { ROUTE } from '../core/shared.js';
@@ -12,7 +13,7 @@ const SETTLE_FRAMES = 2; // frames drawn without the console before the capture
 
 const NOTICE_MS = 2500;
 const NOTICE_STYLE = Object.freeze({
-  position: 'absolute', right: '10px', bottom: '10px', padding: '3px 8px', zIndex: '51',
+  ...IN_OVERLAY, position: 'absolute', right: '10px', bottom: '10px', padding: '3px 8px', zIndex: '51',
   background: '#0E2236e5', fontFamily: 'DejaVuSansMono', fontSize: '12px', pointerEvents: 'none',
 });
 

@@ -7,7 +7,7 @@
 // - The top line: how the mouse works, edits waiting for a reload, messages.
 // They are drawn from the session and drawn again when it changes.
 import { el } from '../ui/dom.js';
-import { THEME, swallow, markUi } from '../ui/theme.js';
+import { THEME, IN_OVERLAY, swallow, markUi } from '../ui/theme.js';
 import { COLOR } from '../core/colors.js';
 import { game } from '../game/bindings.js';
 import { KINDS, KIND_TAGS, kindOf, nameOf } from './kinds.js';
@@ -34,7 +34,7 @@ const PLACE = Object.freeze({
 
 const box = (place) => {
   const b = el('div', {
-    position: 'absolute', ...place, background: THEME.background, zIndex: Z_INDEX, boxSizing: 'border-box',
+    ...IN_OVERLAY, position: 'absolute', ...place, background: THEME.background, zIndex: Z_INDEX, boxSizing: 'border-box',
     padding: '2px 3px', fontFamily: THEME.font, fontSize: FONT_SIZE, color: COLOR.plain, overflowY: 'auto',
     scrollbarWidth: 'thin', scrollbarColor: `${THEME.scrollThumb} ${THEME.scrollTrack}`, pointerEvents: 'auto',
     cursor: 'default', userSelect: 'none',
@@ -209,7 +209,7 @@ export function showPanels(on, keyName) {
   nodes = {
     tools: box(PLACE.tools), layers: box(PLACE.layers), objects: box(PLACE.objects), params: box(PLACE.params),
     status: el('div', {
-      position: 'absolute', ...PLACE.status, zIndex: Z_INDEX, textAlign: 'center', pointerEvents: 'none',
+      ...IN_OVERLAY, position: 'absolute', ...PLACE.status, zIndex: Z_INDEX, textAlign: 'center', pointerEvents: 'none',
       fontFamily: THEME.font, fontSize: FONT_SIZE, color: COLOR.title,
     }),
   };

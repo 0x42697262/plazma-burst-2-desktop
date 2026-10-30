@@ -162,12 +162,17 @@ export async function bootConsole({ mapFile = path.join(REPO, 'test/fixtures/map
   });
   // Events the way a browser delivers them: the window's capture listeners, then the
   // target and its parents (bubbling) until one stops it, then the window's own.
-  const windowOn = { capture: {}, bubble: {} };
-  G.addEventListener = (type, fn, capture) => { (windowOn[capture ? 'capture' : 'bubble'][type] ||= []).push(fn); };
-  G.removeEventListener = (type, fn, capture) => {
-    const list = windowOn[capture ? 'capture' : 'bubble'][type] || [];
+  // The document's listeners. The window has none: like the game (scripts/flash.js,
+  // "var addEventListener = ... stage.addEventListener"), window.addEventListener goes to
+  // the graphics stage, which sends no DOM events. Its on<type> handlers still run.
+  const docOn = { capture: {}, bubble: {} };
+  const docAdd = (type, fn, capture) => { (docOn[capture ? 'capture' : 'bubble'][type] ||= []).push(fn); };
+  const docRemove = (type, fn, capture) => {
+    const list = docOn[capture ? 'capture' : 'bubble'][type] || [];
     if (list.includes(fn)) list.splice(list.indexOf(fn), 1);
   };
+  G.addEventListener = () => {};
+  G.removeEventListener = () => {};
   const dispatch = (target, type, props = {}) => {
     let stopped = false;
     let now = false; // stopImmediatePropagation: not even the next listener on this node
@@ -177,14 +182,21 @@ export async function bootConsole({ mapFile = path.join(REPO, 'test/fixtures/map
       preventDefault() { this.defaultPrevented = true; },
     };
     const run = (list) => { for (const fn of [...(list || [])]) { if (now) return; fn(e); } };
-    run(windowOn.capture[type]);
+    run(docOn.capture[type]);
     for (let n = target; n && !stopped; n = n.parent) run(n.on[type]);
-    if (!stopped) run(windowOn.bubble[type]);
+    if (!stopped) run(docOn.bubble[type]);
+    if (!stopped && typeof G[`on${type}`] === 'function') G[`on${type}`](e);
     return e;
   };
   const listeners = {};
   set('uiOverlay', { overlay: node() });
-  G.document = { createElement: (tag) => (tag === 'canvas' ? canvasNode(0, 0) : node()), addEventListener: (t, f) => { listeners[t] = f; }, pointerLockElement: null };
+  G.document = {
+    createElement: (tag) => (tag === 'canvas' ? canvasNode(0, 0) : node()),
+    // Keys go straight to the console's handler (press); pointer events through dispatch.
+    addEventListener: (t, f, capture) => { listeners[t] = f; docAdd(t, f, capture); },
+    removeEventListener: docRemove,
+    pointerLockElement: null,
+  };
   G.stage = { currentFrameLabel: 'gaming', addEventListener: (t, f) => { listeners.frame = f; }, runEvents() {} };
   G.Event = { ENTER_FRAME: 'enterFrame' };
   G.KeyboardEvent = { KEY_DOWN: 'keyDown', KEY_UP: 'keyUp' };
