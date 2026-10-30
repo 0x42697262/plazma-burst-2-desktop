@@ -18,3 +18,8 @@ desktop/dev/opcodes.js
 desktop/credentials.json*
 desktop/dev-overrides.json
 desktop/maps/*
+
+# Your hooks (see hooks/README.md). The guide and the *.example.js templates are tracked.
+/hooks/*
+!/hooks/README.md
+!/hooks/*.example.js

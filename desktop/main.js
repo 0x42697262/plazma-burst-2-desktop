@@ -10,6 +10,7 @@ const vm = require('vm');
 const { loadCredentials, applyLogin } = require('./login');
 const { createKvFile } = require('./kv-file');
 const { parseLogLevel, createLogger } = require('./log');
+const hooks = require('./hooks');
 
 // The terminal log: --verbose / --log-level=<error|warn|info|debug> / PB2_LOG_LEVEL.
 const logLevel = parseLogLevel();
@@ -21,6 +22,14 @@ const HOST = 'www.plazmaburst2.com';
 const VERSION = readGameVersion();
 const PREFIX = `/h5/versions/${VERSION}/`;
 const START_URL = `https://${HOST}${PREFIX}`;
+
+// Hooks: hooks/*.js change the game's scripts as they are served (guide: hooks/README.md).
+// Disable with PB2_HOOKS=0. The plan is rebuilt on every page load, so editing a hook
+// and reloading (Ctrl+R) is enough.
+const HOOKS_ENABLED = process.env.PB2_HOOKS !== '0';
+const HOOKS_DIR = path.join(__dirname, '..', 'hooks');
+const HOOKS_PREFIX = PREFIX + hooks.ROUTE_DIR;
+let hookPlan = null;
 
 // Dev console (Shift+` key). Disable with PB2_DEV=0.
 const DEV_ENABLED = process.env.PB2_DEV !== '0';
@@ -395,21 +404,70 @@ async function serveDev(request, url) {
   return new Response('Not found', { status: 404 });
 }
 
+// A new hook plan for this page load; prints what loaded and what did not.
+function buildHookPlan() {
+  const names = hooks.loadNames(DEV_NAMES);
+  try {
+    hookPlan = hooks.build({ gameDir: ROOT, hooksDir: HOOKS_DIR, names });
+  } catch (e) {
+    log.error(`Hooks: not loaded: ${e.message}`);
+    hookPlan = null;
+    return;
+  }
+  hookPlan.names = names;
+  for (const [level, text] of hooks.describe(hookPlan)) log[level](text);
+}
+
+// hooks/... requests: the runtime, one hook file, or send() messages for this terminal.
+async function serveHooks(request, url) {
+  const name = decodeURIComponent(url.pathname.slice(HOOKS_PREFIX.length));
+  const js = (text) => new Response(text, { headers: { 'Content-Type': types['.js'], 'Cache-Control': 'no-store' } });
+  if (!hookPlan) return new Response('No hooks loaded', { status: 404 });
+  if (name === hooks.ROUTES.runtime) return js(hooks.runtimeScript(hookPlan, hookPlan.names));
+  if (name.startsWith(hooks.ROUTES.hook) && name.endsWith('.js')) {
+    const text = hooks.hookScript(hookPlan, name.slice(hooks.ROUTES.hook.length, -'.js'.length));
+    return text ? js(text) : new Response('Not found', { status: 404 });
+  }
+  if (name === hooks.ROUTES.send && request.method === 'POST') {
+    let batch = [];
+    try { batch = JSON.parse(await request.text()); } catch {}
+    for (const { hook, msg } of Array.isArray(batch) ? batch : []) {
+      log.info(`[hook ${hook}] ${typeof msg === 'string' ? msg : JSON.stringify(msg)}`);
+    }
+    return new Response('ok');
+  }
+  return new Response('Not found', { status: 404 });
+}
+
 async function serveLocal(url) {
   let rel = decodeURIComponent(url.pathname.slice(PREFIX.length));
   if (rel === '' || rel.endsWith('/')) rel += 'index.html';
-  if (DEV_ENABLED && rel === 'index.html') {
+  if ((DEV_ENABLED || HOOKS_ENABLED) && rel === 'index.html') {
     const html = await fs.readFile(path.join(ROOT, 'index.html'), 'utf8');
-    // After the game's own scripts; fall back to the end of <body> if the tag changed.
-    let out = html.includes(MAIN_SCRIPT_TAG)
-      ? html.replace(MAIN_SCRIPT_TAG, MAIN_SCRIPT_TAG + DEV_SCRIPT_TAG)
-      : html.replace(/<\/body>/i, DEV_SCRIPT_TAG + '</body>');
-    if (out === html) log.error('Dev console: could not inject into index.html');
+    let out = html;
+    if (HOOKS_ENABLED) {
+      buildHookPlan();
+      // Before the game's first script, so handlers exist before any game code runs.
+      if (hookPlan) out = hooks.injectTags(out, hookPlan);
+      if (hookPlan && hookPlan.hooks.length && out === html) log.error('Hooks: could not inject into index.html (no <script> tag)');
+    }
+    if (DEV_ENABLED) {
+      // After the game's own scripts; fall back to the end of <body> if the tag changed.
+      const before = out;
+      out = out.includes(MAIN_SCRIPT_TAG)
+        ? out.replace(MAIN_SCRIPT_TAG, MAIN_SCRIPT_TAG + DEV_SCRIPT_TAG)
+        : out.replace(/<\/body>/i, DEV_SCRIPT_TAG + '</body>');
+      if (out === before) log.error('Dev console: could not inject into index.html');
+    }
     if (log.on('debug')) {
       if (out.includes(FLASH_SCRIPT_TAG)) out = out.replace(FLASH_SCRIPT_TAG, FLASH_SCRIPT_TAG + TRACE_SCRIPT_TAG);
       else log.warn('Verbose: scripts/flash.js not found in index.html; the game\'s trace() stays silent');
     }
     return new Response(out, { headers: { 'Content-Type': types['.html'] } });
+  }
+  // A game script some hook changed: served from the plan (the file on disk is untouched).
+  if (hookPlan && hookPlan.files.has(rel)) {
+    return new Response(hookPlan.files.get(rel), { headers: { 'Content-Type': types['.js'], 'Cache-Control': 'no-store' } });
   }
   const file = path.join(ROOT, path.normalize(rel));
   if (!file.startsWith(ROOT + path.sep)) {
@@ -457,6 +515,7 @@ app.whenReady().then(async () => {
     }
     if (url.hostname === HOST && url.pathname.startsWith(PREFIX)) {
       if (DEV_ENABLED && url.pathname.startsWith(DEV_PREFIX)) return serveDev(request, url);
+      if (HOOKS_ENABLED && url.pathname.startsWith(HOOKS_PREFIX)) return serveHooks(request, url);
       return serveLocal(url);
     }
     return net.fetch(request, { bypassCustomProtocolHandlers: true });

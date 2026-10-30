@@ -223,6 +223,12 @@ const RULES = [
     what: ['globalThis property: map XML of the level being loaded (compressed "<q." until the level starts)',
       'net property: multiplayer map chunks received so far (null = none)'],
     re: String.raw`root\.⟨ID⟩=⟨net⟩\.⟨ID⟩\.join\(""\);` },
+  // The function that builds a level (frame18.js calls it once per level start). Its
+  // first lines: unlock the locked arrays, set a quicksave flag, clear a list. Its body
+  // (past a nested empty debug function) unpacks a "<q." map. Used by hooks (Game.levelStart).
+  { file: 'frame2', keys: ['levelStart'],
+    what: ['function(): builds the level from the map text (once per level start)'],
+    re: String.raw`function ⟨ID⟩\(\)\s*\{\s*⟨_⟩\(\);\s*⟨_⟩\.⟨_⟩=true;\s*⟨_⟩\.length=0;\s*⟨_⟩=\[-1,-1\];[\s\S]{0,6000}?root\.⟨mapText⟩\.slice\(0,3\)=="<q\."` },
   { file: 'frame2', keys: ['charOnDeath'], what: ['character property: trigger run when it dies (-1 = none)'],
     re: String.raw`if\(b\["#ondeath"\]\.charAt\(0\)=="#"\)\s*mc\.⟨ID⟩=b\["#ondeath"\];` },
   { file: 'frame2', keys: ['timerTarget'], what: ['timer property: trigger it calls'],

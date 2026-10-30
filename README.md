@@ -41,6 +41,8 @@ In the game, press Shift+`` ` `` (`~`) for the dev console and type `help`.
 | `desktop/credentials.json` | Your login (copy `credentials.example.json`) | no |
 | `desktop/dev-overrides.json` | Dev console settings, binds and profiles (per-map settings, `profile` in the console). Editing it while the game runs reloads it | no |
 | `desktop/kv-file.js` | Shares `dev-overrides.json` between the console and your edits | yes |
+| `hooks/` | Your hooks: Frida-style scripts that change the game's code as it loads. Guide: `hooks/README.md` | only `README.md` and `*.example.js` |
+| `desktop/hooks.js`, `desktop/hooks-runtime.js` | The hooks loader (dry run, patches, trampolines) and its in-page runtime | yes |
 | `screenshots/` | Screenshots from the dev console: F12 (console key `screenshot_key`) or `screenshot` | no |
 | `tools/fetch-game.js` | Downloads the game | yes |
 | `tools/find-names.js` | Generates `desktop/dev/names.js` | yes |
@@ -188,6 +190,7 @@ If names are missing, the dev console still opens and lists them in red. Only co
 | Variable | Default | What |
 |---|---|---|
 | `PB2_DEV=0` | on | Turn the dev console off. |
+| `PB2_HOOKS=0` | on | Turn the hooks in `hooks/` off (see `hooks/README.md`). |
 | `PB2_GAME_DIR` | `game/` | Play a different game copy |
 | `PB2_VERSION` | from `pb2-version.json` | Version folder used in the URL |
 | `PB2_LOGIN`, `PB2_PASSWORD`, `PB2_UID` | `desktop/credentials.json` | Login cookies |
