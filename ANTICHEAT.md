@@ -286,6 +286,9 @@ For arrays registered with `$IeTlO([], undefined)` (`tools.js:193`):
 | `4499–4502` | **walls**: x, y, w, h (`$сАоОo`, `$o1О00`, `$с0МAр`, `$MМрTТ`). The material array `$I10Ор` (4503) is not registered |
 | `4512–4522` | **pushers**: left, top, acceleration x/y, stability damage, damage, right (x + w), bottom (y + h) |
 | `4528–4533` | **water**: area x, y, w, h (the loader widens them, `frame2.js:13054–13056`), damage, "acts as water" |
+| `guns.js:6805–6809`, `6827` | gun class scripts: the table, each class and its frames, and (later, on first use) each class's cache |
+
+They are compared in the order they were registered (`$pAТAMI`, `tools.js:112`), round robin, one per `$ррОM1I()` call. The order depends on when `guns.js` registers its entries, so an array's number in that list is not fixed.
 
 Not registered (plain arrays or objects, never compared): backgrounds (`$0eM1p`…, set at `frame2.js:11063`), movables (`$АAHОе`), regions (`$HсTНe`), decorations (`$AAрlТ`), triggers, timers, the wall collision grid (`$АТHМрM`), and the water display objects (`$НсОТе`).
 
@@ -335,7 +338,29 @@ The scan runs in **every mode** here, single-player and campaign included: it ne
 
 An edit can also make the game throw (for example a wall moved where other code does not expect one). `window.onerror` and `ReportCaughtError` (`errors.js:137–146`) then POST the error, with its stack, to `/h5/index.php?action=report_error`, unless error reporting was turned off ([§9.15](#915-the-error-reporting-kill-switch-еl1нсi)).
 
-### 7.3 Leaving to the campaign screen is not the anti-cheat
+Moving a wall in single-player reloads the **whole page**, not the level: it is `location.reload()` (`main.js:1053`), so the game boots again from its first screen. A level restart instead goes through the level state and the fade ([§7.4](#74-leaving-to-the-campaign-screen-is-not-the-anti-cheat)) and keeps the page.
+
+How long it takes: the scan works at most ~1 ms every 300 ms, alternating functions and arrays ([§6.2](#62-tick-сmlcа1-called-every-frame-from-mainjs165)). With the gun scripts in the list a full array cycle can span several ticks, so the reload comes a few hundred milliseconds to a few seconds after the edit, plus the 300 ms delay.
+
+### 7.3 Telling which check reloaded the page
+
+Three things call `location.reload()`:
+
+| Reload | Report first | Where |
+|---|---|---|
+| scan failure: code `1` (array replaced), `2` (function changed), `3` (locked array changed) | `RELIABLE_PING` `[…, undefined, code, detail]` | `main.js:1047`, reload `main.js:1053` (300 ms later) |
+| stack check in `lock` / `unlock` / `acceptArrayIndex` (an `at <anonymous>:` frame, e.g. calling them from the DevTools console) | none | `tools.js:117–154`, at once |
+| canary changed | none (punish + reload) | `main.js:1057–1065` |
+
+To see which one it was:
+
+1. DevTools (Ctrl+Shift+I) → Console → ⚙ → **Preserve log**, and Network → **Preserve log**, so the reload does not clear them.
+2. Network → filter **WS** → the game's socket → **Messages**. A scan failure leaves the `RELIABLE_PING` frame just before the reload, with the code and the detail. No such frame: it was a stack check (or the canary).
+3. For code `3`, the detail is the index into `$pAТAMI`. In the Console, `$pAТAMI.indexOf(<array>)` gives an array's index, e.g. with the wall x array (`$сАоОo`, copied from `frame2.js:4499`; do not retype the look-alike letters). Only **read** there: calling `$oITOo`, `$oIeeol` or `$T0OMое` from the Console is itself a stack-check reload.
+
+The desktop wrapper's `--verbose` log does not show the report: it goes over the game's socket connection, and once that is a WebSocket its messages do not pass through the wrapper's request handler (only the HTTP requests do). What the log shows is the page starting again: the game's files requested from the top, then `[window] page loaded`.
+
+### 7.4 Leaving to the campaign screen is not the anti-cheat
 
 No check above sends you to the campaign screen. Only the level state `$AAсAр` does, through the black fade (`frame2.js:42165–42250`: when the fade is shown and the state is not `""`, the fade rises; at full black the state is acted on):
 
