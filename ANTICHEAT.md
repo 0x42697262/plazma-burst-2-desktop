@@ -404,7 +404,7 @@ The **scan** (Layers D/E) has no such exceptions: when the game is served under 
 
 ## 9. How It Was Bypassed
 
-This section explains **why** each check in [§8](#8-when-it-triggers-cheat-sheet) can be avoided. It describes the weaknesses and does not include exploit code. How to fix them is decided separately (see [§10](#10-how-to-prevent-it) for options).
+This section explains **why** each check in [§8](#8-when-it-triggers-cheat-sheet) can be avoided. It describes the weaknesses and may include exploit code. How to fix them is decided separately (see [§10](#10-how-to-prevent-it) for options).
 
 ### 9.0 Map: §8 condition → bypass
 
@@ -426,6 +426,7 @@ This section explains **why** each check in [§8](#8-when-it-triggers-cheat-shee
 | (reporting) | [9.15 The error-reporting kill switch](#915-the-error-reporting-kill-switch-еl1нсi) | High (no evidence) |
 | (what is not checked) | [9.16 Coverage gaps](#916-coverage-gaps) | Medium |
 | (how it reacts) | [9.17 The reaction teaches the cheater](#917-the-reaction-teaches-the-cheater) | High (speeds up all of the above) |
+| (one gap, worked end to end) | [9.18 Proof of concept: a wall you can walk through, by difficulty to fix](#918-proof-of-concept-a-wall-you-can-walk-through-by-difficulty-to-fix) | — |
 
 **One rule explains most of this section:** every flag, function and stored value is a **writable global**. The scripts are classic `<script>` files, not modules, so every top-level `var` and `function` becomes a property of `window`, and any code running in the tab can read or change it.
 
@@ -918,6 +919,35 @@ The scan (Layers D/E) teaches the same way, and says more:
 5. A hit reloads the page a few hundred milliseconds to a few seconds after the change ([§7.2](#72-editing-the-level-live-the-dev-consoles-map-editor)), and the three reload causes can be told apart ([§7.3](#73-telling-which-check-reloaded-the-page)): a `RELIABLE_PING` frame before the reload means the scan, none means a stack check or the canary.
 6. That frame is readable in DevTools (Network → WS → Messages) and carries the failure **code** and, for code `3`, the **index of the array** that failed. `$pAТAMI.indexOf(arr)` maps it back to a named array. So each reload tells the tester exactly which check fired and on what.
 7. A change that was *not* reloaded shows what the scan missed: an unregistered array ([9.16](#916-coverage-gaps)), or a change that a trigger run re-baselined first ([9.12](#912-locked-arrays)).
+
+---
+
+### 9.18 Proof of concept: a wall you can walk through, by difficulty to fix
+
+This takes one coverage gap from [§9.16](#916-coverage-gaps) — the **collision grid** that the locked arrays do not cover — and walks it from the version that is nearly already caught to the version that no client-side check can catch. Each level is a goal plus **why it is hard or easy to fix**, so the list doubles as a fix-priority order. As with the rest of [§9](#9-how-it-was-bypassed), it describes mechanism, not a ready-to-run script.
+
+**The target.** A solid wall blocks movement and bullets. Whether a wall blocks at a point is decided only on the client: collision reads the grid cell (`$АТHМрM`, `frame2.js:10407`), gets the list of wall indices parked in that cell, and tests each one's rectangle. The locked arrays hold the rectangles ([§7](#7-layer-e-locked-array-snapshots-toolsjs)); nothing holds or re-derives the grid. So "make this wall non-solid" has several routes, and they differ only in what the anti-cheat would have to do to notice.
+
+| Level | What is changed | Caught today? | Fix | Fix difficulty |
+|---|---|---|---|---|
+| **L1** | The wall's own rectangle in a **locked** array (zero its width) | Yes, by code `3` — unless a trigger re-baselines it first ([§7.1](#71-when-the-baseline-is-taken-again)) | Report instead of reload, and stop auto-re-baselining on every trigger run | **Easy** |
+| **L2** | Only the **grid** cell lists, leaving every locked rectangle intact | No — the grid is not registered | Register the grid too, or re-derive it from the wall arrays and compare | **Moderate** |
+| **L3** | The grid, on a map whose triggers **move walls** during play | No, and a naive grid snapshot can't catch it either | A grid check must recompute the expected grid from the wall arrays every time, not snapshot it | **Hard** |
+| **L4** | Anything above, plus the check or its report replaced/silenced | No | Server/host authority over collision outcomes | **Very hard** |
+
+**L1 — change the locked rectangle (easy to fix).**
+The direct move: set a wall's width to `0` in the wall-width array. This is exactly what Layer E watches, so on most maps it reloads with code `3`. The only reason it is a "bypass" at all is the re-baseline timing in [§7.1](#71-when-the-baseline-is-taken-again): on a map whose timers fire a trigger every frame, the unlock/lock around that trigger folds the change into the baseline before the scan reaches the array. The fix is small and already listed: **report, don't reload** ([§10.4](#104-detection--response-fixes-days)), and remove the automatic re-baseline so a change must survive a real comparison. Nothing structural changes.
+
+**L2 — change only the grid (moderate).**
+Leave every locked rectangle alone and edit the grid instead: drop the wall's index out of the cells it sits in. Collision now never tests that wall, so it is non-solid, yet the wall-geometry arrays are byte-for-byte what they were, so code `3` never fires. The gap is simply that the grid is not one of the registered arrays. The fix is to bring it under Layer E — either register it like the others, or, better, recompute it from the wall arrays and compare — but the grid is a 2-D array of per-cell lists and far larger than the geometry arrays, so a full deep-compare every cycle is costly; it needs a cheaper incremental or hashed check. Doable, but more than a one-line registration.
+
+**L3 — change the grid on a map that moves walls (hard).**
+This is the grid's version of [§7.1](#71-when-the-baseline-is-taken-again). Maps legitimately move walls through triggers, which rebuild grid cells as they go, so the grid is *supposed* to change during play. A check that snapshots the grid and compares it to the snapshot would false-positive on every honest moving-wall map — so it would have to re-baseline, and re-baselining is the very hole being exploited. The only honest check is to **derive** the grid that the current wall arrays imply and compare against the live grid each time, which is both expensive and still only covers walls (movables, water, pushers each need their own derivation). At this point the client-side check is large, slow, and maintenance-heavy for one class of edit.
+
+**L4 — the check itself is client-side (very hard to fix).**
+Every level above is still caught, if at all, by code that runs in the same tab as the cheat. That code is a writable global ([§9.11](#911-the-function-integrity-scan), [§9.14](#914-replacing-the-guard-or-the-punishment)) and its one report rides the game socket, which can be silenced ([§9.15](#915-the-error-reporting-kill-switch-еl1нсi)). So a perfect grid check just becomes one more thing to replace with an empty function. Collision is computed and consumed entirely on the client; the server is never asked "did this wall block this move?" The only fix that holds is the one in [§10.5](#105-the-real-fix-serverhost-authority): the **host peer or server** owns collision outcomes and rejects impossible movement. For PB2's relay/P2P model that is a large change, which is why it sits last.
+
+**Reading the ladder.** L1 is worth fixing because the fix is cheap and also closes a real hole. L2 is the honest next step. L3 and L4 show the ceiling: past a point, every added client check buys less than it costs, and only server authority changes the game. This is the same conclusion as [§10.5](#105-the-real-fix-serverhost-authority), reached from one concrete edit.
 
 ---
 
