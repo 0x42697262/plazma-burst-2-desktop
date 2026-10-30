@@ -156,7 +156,7 @@ export async function bootConsole({ mapFile = path.join(REPO, 'test/fixtures/map
     get textContent() { return ''; },
     set textContent(v) { this.childNodes = []; this.text = v; },
     get firstChild() { return this.childNodes[0]; },
-    append(c) { if (c && typeof c === 'object') c.parent = this; this.childNodes.push(c); },
+    append(...cs) { for (const c of cs) { if (c && typeof c === 'object') c.parent = this; this.childNodes.push(c); } },
     remove() { if (this.parent) this.parent.childNodes.splice(this.parent.childNodes.indexOf(this), 1); },
     on: {},
     addEventListener(type, fn) { (this.on[type] ||= []).push(fn); },

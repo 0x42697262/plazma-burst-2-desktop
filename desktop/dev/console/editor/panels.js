@@ -1,13 +1,15 @@
-// The editor's panels, small and at the screen edges so the game stays in view:
-// - Tools (left, top): select or place, duplicate, delete, undo, redo.
-// - Layers (left): every kind with its count. Clicking a name lists that layer in
-//   Objects; clicking its colour square hides or shows it in the world.
-// - Objects (right, top): the elements of that layer; clicking one selects it.
-// - Params (right, below): the selected element's attributes; click a value to edit it.
-// - The top line: how the mouse works, edits the running level does not have, messages.
-// They are drawn from the session and drawn again when it changes.
+// The editor's panels, laid out like the browser map editor's: a panel down each side
+// of the game, so the level stays in view between them.
+// - Left: Tools (select, then one place tool per kind, as the editor's icons; copy,
+//   delete, undo, redo), and Layers: clicking a kind lists it in the object box,
+//   clicking its icon hides or shows it in the world.
+// - Right: the object box (the listed layer's objects), then the selection's params as
+//   title / value rows; click a value to edit it.
+// - The top line, between them: how the mouse works, edits the running level does not
+//   have, messages.
+// They are drawn from the session and drawn again when it changes. The look is style.js.
 import { el } from '../ui/dom.js';
-import { THEME, IN_OVERLAY, swallow, markUi } from '../ui/theme.js';
+import { IN_OVERLAY } from '../ui/theme.js';
 import { COLOR } from '../core/colors.js';
 import { game } from '../game/bindings.js';
 import { KINDS, KIND_TAGS, kindOf, nameOf } from './kinds.js';
@@ -17,85 +19,68 @@ import {
 } from './session.js';
 import { setAttr, deleteElement, duplicateElement, undo, redo, notLiveReason } from './edit.js';
 import { canUndo, canRedo } from './history.js';
+import { PALETTE, FONT, FONT_SIZE, panel, caption, icon, button, listRow, paramRow, onClick } from './style.js';
 
-const Z_INDEX = '45'; // over the editor's click layer, under the console (50)
-const FONT_SIZE = '6px';
-const ROW_HEIGHT = '8px';
-const OBJECTS_SHOWN = 400; // rows in the objects list; a long layer says how many more
+const OBJECTS_SHOWN = 400; // rows in the object box; a long layer says how many more
 const HIDDEN_ALPHA = '0.35';
+const TOOL_SIZE = 22; // a tool button, square (.tool_sm)
+const LEFT_W = 52;
+const RIGHT_W = 124;
+const OBJECTS_H = 110;
 
 const PLACE = Object.freeze({
-  tools: { left: '4px', top: '24px', width: '96px', height: '50px' },
-  layers: { left: '4px', top: '78px', width: '96px', height: '250px' },
-  objects: { left: '696px', top: '24px', width: '100px', height: '150px' },
-  params: { left: '696px', top: '178px', width: '100px', height: '200px' },
-  status: { left: '0', top: '2px', width: '800px', height: '18px' },
+  left: { left: '0', top: '0', width: `${LEFT_W}px`, height: '400px', borderRight: `0.5px solid ${PALETTE.panelEdge}` },
+  right: { left: `${800 - RIGHT_W}px`, top: '0', width: `${RIGHT_W}px`, height: '400px', borderLeft: `0.5px solid ${PALETTE.panelEdge}` },
+  status: { left: `${LEFT_W}px`, top: '2px', width: `${800 - LEFT_W - RIGHT_W}px` },
 });
 
-const box = (place) => {
-  const b = el('div', {
-    ...IN_OVERLAY, position: 'absolute', ...place, background: THEME.background, zIndex: Z_INDEX, boxSizing: 'border-box',
-    padding: '2px 3px', fontFamily: THEME.font, fontSize: FONT_SIZE, color: COLOR.plain, overflowY: 'auto',
-    scrollbarWidth: 'thin', scrollbarColor: `${THEME.scrollThumb} ${THEME.scrollTrack}`, pointerEvents: 'auto',
-    cursor: 'default', userSelect: 'none',
-  });
-  swallow(b);
-  return markUi(b);
-};
-const title = (text) => el('div', { color: COLOR.title, lineHeight: '9px', whiteSpace: 'nowrap' }, text);
-const row = (style, text) => el('div', {
-  lineHeight: ROW_HEIGHT, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...style,
-}, text);
-// "click": it fires even where the game cancels the press itself.
-const onClick = (node, fn) => node.addEventListener('click', (e) => { if (!e.button) fn(e); });
-
-let nodes = null; // { tools, layers, objects, params, status }
+let nodes = null; // { left: { tools, layers }, right: { objects, params }, status }
 let unsubscribe = null;
 
-// A word that does something when clicked; dim when it cannot now.
-function button(text, enabled, fn, active = false) {
-  const b = el('span', {
-    display: 'inline-block', padding: '0 2px', marginRight: '2px', lineHeight: ROW_HEIGHT,
-    color: !enabled ? COLOR.muted : active ? COLOR.bright : COLOR.plain,
-    background: active ? '#3C9DFF44' : 'none', border: THEME.inputBorder, cursor: enabled ? 'pointer' : 'default',
-  }, text);
-  if (enabled) onClick(b, () => { try { fn(); } catch (err) { say(`error: ${err.message}`, COLOR.error); } });
-  return b;
-}
+const tryIt = (fn) => () => { try { fn(); } catch (err) { say(`error: ${err.message}`, COLOR.error); } };
 
 function drawTools() {
   const sel = selected();
   const tool = currentTool();
-  nodes.tools.textContent = '';
-  nodes.tools.append(title('Tools'));
-  const modes = row({ whiteSpace: 'normal' });
-  modes.append(
-    button('select', true, () => setTool(TOOL.SELECT), tool === TOOL.SELECT),
-    button(`place ${KINDS[currentLayer()].title}`, true, () => setTool(TOOL.PLACE), tool === TOOL.PLACE),
-  );
-  const acts = row({ whiteSpace: 'normal', marginTop: '1px' });
+  const box = nodes.tools;
+  box.textContent = '';
+  box.append(caption('Tools:'));
+  const grid = el('div', { display: 'grid', gridTemplateColumns: `repeat(2, ${TOOL_SIZE}px)`, justifyContent: 'center' });
+  const square = { width: `${TOOL_SIZE}px`, height: `${TOOL_SIZE}px` };
+  grid.append(button(icon('edit'), { active: tool === TOOL.SELECT, title: 'Select, move and resize', style: square, onPress: () => setTool(TOOL.SELECT) }));
+  for (const tag of KIND_TAGS) {
+    const active = tool === TOOL.PLACE && currentLayer() === tag;
+    grid.append(button(icon(tag), {
+      active, title: `Place ${KINDS[tag].title}`, style: square, onPress: () => { showLayer(tag); setTool(TOOL.PLACE); },
+    }));
+  }
+  box.append(grid);
+  const acts = el('div', { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', marginTop: '2px' });
+  const small = { width: `${TOOL_SIZE}px`, height: '8px' };
   acts.append(
-    button('copy', !!sel, () => duplicateElement(sel)),
-    button('del', !!sel, () => deleteElement(sel)),
-    button('undo', canUndo(), undo),
-    button('redo', canRedo(), redo),
+    button('Copy', { enabled: !!sel, title: 'Copy the selection (Ctrl+D)', style: small, onPress: tryIt(() => duplicateElement(sel)) }),
+    button('Del', { enabled: !!sel, title: 'Delete the selection (Del)', style: small, onPress: tryIt(() => deleteElement(sel)) }),
+    button('Undo', { enabled: canUndo(), title: 'Ctrl+Z', style: small, onPress: tryIt(undo) }),
+    button('Redo', { enabled: canRedo(), title: 'Ctrl+Y', style: small, onPress: tryIt(redo) }),
   );
-  nodes.tools.append(modes, acts);
+  box.append(acts);
 }
 
 function drawLayers() {
   const counts = countByTag();
-  nodes.layers.textContent = '';
-  nodes.layers.append(title('Layers'));
+  const box = nodes.layers;
+  box.textContent = '';
+  box.append(caption('Layers:'));
   for (const tag of KIND_TAGS) {
-    const kind = KINDS[tag];
-    const r = row({ display: 'flex', gap: '3px', alignItems: 'center', color: tag === currentLayer() ? COLOR.bright : COLOR.plain });
-    if (isHidden(tag)) r.style.opacity = HIDDEN_ALPHA;
-    const swatch = el('div', { width: '5px', height: '5px', flex: 'none', background: kind.color });
-    onClick(swatch, (e) => { e.stopPropagation(); setHidden(tag, !isHidden(tag)); });
-    r.append(swatch, el('span', {}, `${kind.title} (${counts[tag]})`));
-    onClick(r, () => showLayer(tag));
-    nodes.layers.append(r);
+    const eye = icon(tag);
+    eye.title = isHidden(tag) ? 'Show in the world' : 'Hide in the world';
+    onClick(eye, (e) => { e.stopPropagation(); setHidden(tag, !isHidden(tag)); });
+    const b = button([eye, `${KINDS[tag].title} (${counts[tag]})`], {
+      active: tag === currentLayer(), title: 'List in the object box', onPress: () => showLayer(tag),
+      style: { width: `${LEFT_W - 4}px`, height: '9px', justifyContent: 'flex-start' },
+    });
+    if (isHidden(tag)) b.style.opacity = HIDDEN_ALPHA;
+    box.append(b);
   }
 }
 
@@ -104,22 +89,19 @@ function drawObjects() {
   const tag = currentLayer();
   const list = doc ? doc.byTag(tag) : [];
   const sel = selected();
-  nodes.objects.textContent = '';
-  nodes.objects.append(title(`${kindOf(tag).title} (${list.length})`));
-  for (const e of list.slice(0, OBJECTS_SHOWN)) {
-    const r = row({ color: e === sel ? COLOR.bright : COLOR.plain, background: e === sel ? '#3C9DFF44' : 'none' }, nameOf(doc, e));
-    onClick(r, () => select(e));
-    nodes.objects.append(r);
-  }
-  if (list.length > OBJECTS_SHOWN) nodes.objects.append(row({ color: COLOR.muted }, `+${list.length - OBJECTS_SHOWN} more`));
+  const box = nodes.objects;
+  box.textContent = '';
+  for (const e of list.slice(0, OBJECTS_SHOWN)) box.append(listRow(e.tag, nameOf(doc, e), e === sel, () => select(e)));
+  if (list.length > OBJECTS_SHOWN) box.append(el('div', { color: PALETTE.muted }, `+${list.length - OBJECTS_SHOWN} more`));
+  nodes.objectsCaption.textContent = `Objects: ${kindOf(tag).title} (${list.length})`;
 }
 
 // A value turns into a text box when clicked: Enter applies it, Esc or clicking
 // elsewhere leaves it as it was.
 function editValue(span, sel, attr) {
   const input = el('input', {
-    flex: '1', minWidth: '0', fontFamily: THEME.font, fontSize: FONT_SIZE, color: COLOR.bright,
-    background: THEME.inputBackground, border: THEME.inputBorder, padding: '0 1px', height: ROW_HEIGHT,
+    width: '100%', boxSizing: 'border-box', fontFamily: FONT, fontSize: `${FONT_SIZE}px`, color: PALETTE.title,
+    background: PALETTE.box, border: `0.5px solid ${PALETTE.activeEdge}`, padding: '0 1px', height: '9px',
   });
   input.value = sel.attrs[attr];
   input.spellcheck = false;
@@ -142,15 +124,17 @@ function editValue(span, sel, attr) {
 function drawParams() {
   const doc = editorDoc();
   const sel = selected();
-  nodes.params.textContent = '';
-  if (!sel) { nodes.params.append(title('Params'), row({ color: COLOR.muted }, 'click an object')); return; }
-  nodes.params.append(title(`${kindOf(sel.tag)?.title || sel.tag} #${doc.ordinal(sel)}`));
+  const box = nodes.params;
+  box.textContent = '';
+  if (!sel) { box.append(caption('Nothing selected')); return; }
+  const head = el('div', { display: 'flex', alignItems: 'center', gap: '2px', margin: '2px 2px 3px', color: PALETTE.title });
+  head.append(icon(sel.tag), el('span', {}, `1 ${kindOf(sel.tag)?.title || sel.tag} selected: ${nameOf(doc, sel)}`));
+  box.append(head);
   for (const [attr, value] of Object.entries(sel.attrs)) {
-    const r = row({ display: 'flex', gap: '3px' });
-    const span = el('span', { overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'text', flex: '1' }, value);
-    onClick(span, () => editValue(span, sel, attr));
-    r.append(el('span', { color: COLOR.muted, flex: 'none' }, attr), span);
-    nodes.params.append(r);
+    const span = el('span', {}, value);
+    const { row, value: cell } = paramRow(attr, span);
+    onClick(cell, () => editValue(span, sel, attr));
+    box.append(row);
   }
 }
 
@@ -188,26 +172,33 @@ const REDRAW = Object.freeze({
 const DRAW = Object.freeze({ tools: drawTools, layers: drawLayers, objects: drawObjects, params: drawParams, status: drawStatus });
 
 // For "editor status".
-export const panelsOnPage = () => (!nodes ? 'none' : nodes.layers.isConnected === false ? 'made, but not on the page' : 'on the page');
+export const panelsOnPage = () => (!nodes ? 'none' : nodes.left.isConnected === false ? 'made, but not on the page' : 'on the page');
 
 export function showPanels(on, keyName) {
   if (!on) {
     if (unsubscribe) unsubscribe();
     unsubscribe = null;
-    if (nodes) for (const n of Object.values(nodes)) n.remove();
+    if (nodes) for (const n of [nodes.left, nodes.right, nodes.status]) n.remove();
     nodes = null;
     return;
   }
   if (nodes) return;
   keyShown = keyName;
-  nodes = {
-    tools: box(PLACE.tools), layers: box(PLACE.layers), objects: box(PLACE.objects), params: box(PLACE.params),
-    status: el('div', {
-      ...IN_OVERLAY, position: 'absolute', ...PLACE.status, zIndex: Z_INDEX, textAlign: 'center', pointerEvents: 'none',
-      fontFamily: THEME.font, fontSize: FONT_SIZE, color: COLOR.title,
-    }),
-  };
-  for (const n of Object.values(nodes)) game.overlay().append(n);
+  const left = panel(PLACE.left);
+  const right = panel(PLACE.right);
+  const section = () => el('div', {});
+  nodes = { left, right, tools: section(), layers: section(), objectsCaption: caption(''), params: section() };
+  nodes.objects = el('div', {
+    height: `${OBJECTS_H}px`, overflowY: 'auto', margin: '0 2px', padding: '1px', background: PALETTE.box,
+    borderRadius: '2.5px', scrollbarWidth: 'thin',
+  });
+  left.append(nodes.tools, el('div', { height: '4px' }), nodes.layers);
+  right.append(nodes.objectsCaption, nodes.objects, el('div', { height: '4px' }), nodes.params);
+  nodes.status = el('div', {
+    ...IN_OVERLAY, position: 'absolute', ...PLACE.status, zIndex: '45', textAlign: 'center', pointerEvents: 'none',
+    fontFamily: FONT, fontSize: `${FONT_SIZE}px`, color: PALETTE.title, textShadow: '0 0 1px #000',
+  });
+  for (const n of [left, right, nodes.status]) game.overlay().append(n);
   for (const draw of Object.values(DRAW)) draw();
   unsubscribe = onChange((what) => { for (const part of REDRAW[what] || []) DRAW[part](); });
 }

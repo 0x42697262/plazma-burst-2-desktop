@@ -929,13 +929,16 @@ test('editor: on and off by its key, outlines every object, selects by click and
     assert.ok(session.editorOn());
     const first = drawEditorFrame();
     assert.ok(first.outlines > 5, JSON.stringify(first));
-    assert.ok(textsOf(overlay).includes('Layers'));
+    assert.ok(textsOf(overlay).includes('Layers:') && textsOf(overlay).includes('Tools:'));
+    // The map editor's own icons, from the site.
+    const imgs = (node) => [node.src, ...(node.childNodes || []).flatMap((n) => (typeof n === 'string' ? [] : imgs(n)))].filter(Boolean);
+    assert.ok(imgs(overlay).includes('/level_editor/icons16/edit.gif') && imgs(overlay).includes('/level_editor/icons16/box.gif'));
     // The game's CSS hides its overlay container; everything put in it must show itself.
     for (const n of overlay.childNodes) if (n.style) assert.equal(n.style.visibility, 'visible', `hidden: ${textsOf(n).slice(0, 2).join(' ')}`);
     assert.match(c.press('F8')[0], /^\[key f8\] > editor/);
     assert.ok(!session.editorOn(), 'the key turns it off');
     assert.equal(drawEditorFrame(), null);
-    assert.ok(!textsOf(overlay).includes('Layers'), 'panels gone');
+    assert.ok(!textsOf(overlay).includes('Layers:'), 'panels gone');
     c.press('F8');
     assert.ok(session.editorOn(), 'and on again');
 
@@ -973,7 +976,8 @@ test('editor: on and off by its key, outlines every object, selects by click and
     assert.equal(drawEditorFrame().links, 1, 'the timer that runs it');
     assert.equal(session.currentLayer(), 'trigger');
     const texts = textsOf(overlay);
-    assert.ok(texts.includes('trigger (1)') && texts.includes('#t') && texts.includes('actions_1_targetA'), texts.join(' | '));
+    assert.ok(texts.includes('Objects: trigger (1)') && texts.includes('#t') && texts.includes('actions_1_targetA'), texts.join(' | '));
+    assert.ok(texts.includes('1 trigger selected: #t'));
 
     // Esc clears the selection; a hidden layer is neither drawn nor picked.
     assert.deepEqual(c.press('Escape'), []);
