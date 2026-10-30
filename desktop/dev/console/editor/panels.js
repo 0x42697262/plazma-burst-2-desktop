@@ -1,9 +1,10 @@
 // The editor's panels, laid out like the browser map editor's: a panel down each side
 // of the game, so the level stays in view between them.
 // - Left: Tools (select, then one place tool per kind, as the editor's icons; copy,
-//   delete, undo, redo), and Layers: clicking a kind lists it in the object box,
-//   clicking its icon hides or shows it in the world.
-// - Right: the object box (the listed layer's objects), then the selection's params as
+//   delete, undo, redo), and Layers: what can be selected, as the editor's All,
+//   Nothing, Statics, Logics, Entities, or with More one kind at a time (Ctrl adds a
+//   kind, Alt takes it away). The rest is drawn faint.
+// - Right: the object box (the active layers' objects), then the selection's params as
 //   title / value rows; click a value to edit it.
 // - The top line, between them: how the mouse works, edits the running level does not
 //   have, messages.
@@ -14,8 +15,8 @@ import { COLOR } from '../core/colors.js';
 import { game } from '../game/bindings.js';
 import { KINDS, KIND_TAGS, kindOf, nameOf } from './kinds.js';
 import {
-  editorDoc, selected, select, currentLayer, showLayer, isHidden, setHidden, countByTag, onChange, pendingCount,
-  currentTool, setTool, TOOL,
+  editorDoc, selected, select, currentLayer, showLayer, countByTag, onChange, pendingCount,
+  currentTool, setTool, TOOL, isSelectable, selectableLayers, setSelectable, moreLayers, setMoreLayers, LAYER_GROUPS,
 } from './session.js';
 import { setAttr, deleteElement, duplicateElement, undo, redo, notLiveReason } from './edit.js';
 import { canUndo, canRedo } from './history.js';
@@ -25,8 +26,7 @@ import { isActionAttr } from './actions.js';
 import { editField } from './fields.js';
 import { paramsOf, paramInfo, defaultOf, choicesOf, shownValue } from './params.js';
 
-const OBJECTS_SHOWN = 400; // rows in the object box; a long layer says how many more
-const HIDDEN_ALPHA = '0.35';
+const OBJECTS_SHOWN = 400; // rows in the object box; a long list says how many more
 const TOOL_SIZE = 22; // a tool button, square (.tool_sm)
 const LEFT_W = 52;
 const RIGHT_W = 124;
@@ -70,34 +70,44 @@ function drawTools() {
   box.append(acts);
 }
 
+const sameSet = (a, b) => a.length === b.length && a.every((t) => b.includes(t));
+
 function drawLayers() {
   const counts = countByTag();
+  const active = selectableLayers();
   const box = nodes.layers;
   box.textContent = '';
   box.append(caption('Layers:'));
-  for (const tag of KIND_TAGS) {
-    const eye = icon(tag);
-    eye.title = isHidden(tag) ? 'Show in the world' : 'Hide in the world';
-    onClick(eye, (e) => { e.stopPropagation(); setHidden(tag, !isHidden(tag)); });
-    const b = button([eye, `${KINDS[tag].title} (${counts[tag]})`], {
-      active: tag === currentLayer(), title: 'List in the object box', onPress: () => showLayer(tag),
-      style: { width: `${LEFT_W - 4}px`, height: '9px', justifyContent: 'flex-start' },
-    });
-    if (isHidden(tag)) b.style.opacity = HIDDEN_ALPHA;
-    box.append(b);
+  const wide = { width: `${LEFT_W - 4}px`, height: '9px' };
+  const group = (label, tags) => button(label, { active: sameSet(active, tags), style: wide, onPress: () => setSelectable(tags) });
+  box.append(button(moreLayers() ? '[ Less ]' : '[ More ]', { style: wide, onPress: () => setMoreLayers(!moreLayers()) }));
+  if (moreLayers()) {
+    for (const tag of KIND_TAGS) {
+      box.append(button([icon(tag), `${KINDS[tag].title} (${counts[tag]})`], {
+        active: isSelectable(tag), title: 'Click: only this. Ctrl+click: add it. Alt+click: take it away.',
+        style: { ...wide, justifyContent: 'flex-start' },
+        onPress: (e) => {
+          if (e.ctrlKey && !e.altKey) setSelectable([...active, tag]);
+          else if (e.altKey && !e.ctrlKey) setSelectable(active.filter((t) => t !== tag));
+          else setSelectable([tag]);
+        },
+      }));
+    }
   }
+  box.append(group('All', KIND_TAGS), group('Nothing', []));
+  if (!moreLayers()) box.append(group('Statics', LAYER_GROUPS.statics), group('Logics', LAYER_GROUPS.logics), group('Entities', LAYER_GROUPS.entities));
 }
 
+// The objects of the active layers, in map order.
 function drawObjects() {
   const doc = editorDoc();
-  const tag = currentLayer();
-  const list = doc ? doc.byTag(tag) : [];
+  const list = doc ? doc.elements.filter((e) => kindOf(e.tag) && isSelectable(e.tag)) : [];
   const sel = selected();
   const box = nodes.objects;
   box.textContent = '';
   for (const e of list.slice(0, OBJECTS_SHOWN)) box.append(listRow(e.tag, nameOf(doc, e), e === sel, () => select(e)));
   if (list.length > OBJECTS_SHOWN) box.append(el('div', { color: PALETTE.muted }, `+${list.length - OBJECTS_SHOWN} more`));
-  nodes.objectsCaption.textContent = `Objects: ${kindOf(tag).title} (${list.length})`;
+  nodes.objectsCaption.textContent = `Objects (${list.length}):`;
 }
 
 // A value turns into a text box when clicked (fields.js), offering the values the

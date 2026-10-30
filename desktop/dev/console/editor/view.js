@@ -14,6 +14,7 @@ const LAYER = 'editor';
 const LINE_WIDTH = 0.4; // screen units
 const SELECTED_WIDTH = 1.2;
 const OUTLINE_ALPHA = '99'; // hex alpha on the layer colour
+const INACTIVE_ALPHA = '2e'; // a layer that is not active: faint, as the map editor draws it (0.3)
 const SELECTED_FILL = '22';
 const BOUNDS = Object.freeze({ w: GAME_WIDTH, h: GAME_HEIGHT });
 const PREVIEW_DASH = Object.freeze([2, 2]);
@@ -59,11 +60,11 @@ function drawEditor(ctx, m) {
   const sel = selected();
   let outlines = 0;
   ctx.lineWidth = LINE_WIDTH;
-  for (const { e, b } of visibleElements()) {
+  for (const { e, b, selectable } of visibleElements()) {
     if (e === sel) continue;
     const r = screenRect(m, b);
     if (!onScreenRect(r)) continue;
-    ctx.strokeStyle = kindOf(e.tag).color + OUTLINE_ALPHA;
+    ctx.strokeStyle = kindOf(e.tag).color + (selectable ? OUTLINE_ALPHA : INACTIVE_ALPHA);
     ctx.strokeRect(r.x, r.y, r.w, r.h);
     outlines++;
   }

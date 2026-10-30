@@ -65,7 +65,7 @@ export function button(content, { active = false, enabled = true, title = '', on
   });
   for (const c of [].concat(content)) b.append(typeof c === 'string' ? el('span', {}, c) : c);
   if (title) b.title = title;
-  if (enabled && onPress) onClick(b, onPress);
+  if (enabled && onPress) onClick(b, (e) => onPress(e));
   if (enabled && !active) {
     b.addEventListener('mouseenter', () => { b.style.background = PALETTE.buttonHover; });
     b.addEventListener('mouseleave', () => { b.style.background = PALETTE.button; });

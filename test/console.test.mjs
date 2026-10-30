@@ -976,16 +976,34 @@ test('editor: on and off by its key, outlines every object, selects by click and
     assert.equal(drawEditorFrame().links, 1, 'the timer that runs it');
     assert.equal(session.currentLayer(), 'trigger');
     const texts = textsOf(overlay);
-    assert.ok(texts.includes('Objects: trigger (1)') && texts.includes('#t') && texts.includes('1. SetVar') && texts.includes('A (string)'), 'the trigger\'s actions');
+    assert.ok(texts.includes('Objects (4):') && texts.includes('#t') && texts.includes('1. SetVar') && texts.includes('A (string)'), 'the trigger\'s actions');
     assert.ok(texts.includes('1 trigger selected: #t'));
 
     // Esc clears the selection; a hidden layer is neither drawn nor picked.
     assert.deepEqual(c.press('Escape'), []);
     assert.equal(session.selected(), null);
-    session.setHidden('box', true);
-    assert.equal(drawEditorFrame().outlines, 2);
-    assert.equal(session.pickAt(at), null);
-    session.setHidden('box', false);
+    // Layers, as the map editor's: what is not on an active layer is drawn faint and
+    // cannot be selected.
+    session.setSelectable(session.LAYER_GROUPS.logics);
+    assert.equal(drawEditorFrame().outlines, 4, 'still drawn');
+    assert.equal(session.pickAt(at), null, 'walls are statics');
+    assert.ok(textsOf(overlay).includes('Objects (2):'), 'the object box lists the active layers');
+    session.pickAt({ x: 500, y: 0 });
+    assert.equal(session.selected().attrs.uid, '#t');
+    session.setSelectable(['box']);
+    assert.equal(session.selected(), null, 'a selection off the active layers is let go');
+    assert.equal(doc.ordinal(session.pickAt(at)), 1);
+    const { KIND_TAGS } = await consoleModule('editor/kinds.js');
+    // The same from the console: a group, kinds, or + and - (the editor's Ctrl and Alt).
+    assert.match(c.run('editor layers entities')[0], /^Layers: player, enemy, vehicle, decoration, gun, barrel, engine mark/);
+    c.run('editor layers wall');
+    assert.deepEqual(session.selectableLayers(), ['box']);
+    c.run('editor layers +trigger');
+    c.run('editor layers -wall');
+    assert.deepEqual(session.selectableLayers(), ['trigger']);
+    assert.match(errorsOf(c.run('editor layers nonsense'))[0], /usage: editor layers/);
+    c.run('editor layers all');
+    assert.equal(session.selectableLayers().length, KIND_TAGS.length);
 
     // Off works without a level; on needs one.
     level(false);

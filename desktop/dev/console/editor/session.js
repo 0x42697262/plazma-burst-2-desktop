@@ -1,5 +1,5 @@
 // The editor's state: whether it is on, the map document, what is selected, which
-// layers are hidden, which edits wait for the level to load again. Views (overlay,
+// layers can be selected, which edits the running level does not have. Views (overlay,
 // panels) read it and redraw when it notifies them; nothing here touches the screen.
 // While no level runs (loading, menus) the editor stays on but is not shown.
 import { game } from '../game/bindings.js';
@@ -19,7 +19,8 @@ const state = {
   doc: null,
   selectedId: null,
   layer: 'region', // the layer the objects list shows
-  hidden: new Set(), // tags not drawn and not picked
+  selectable: new Set(KIND_TAGS), // the active layers: what a click can select (the rest is drawn faint)
+  moreLayers: false, // the Layers list shows every kind ("More"), not just the groups
   tool: 'select', // TOOL: what a click in the world does
   preview: null, // { tag, x, y, w, h }: the rectangle being dragged out with the place tool
   lastPick: null, // { at, ids, k }: the stack under the last click, for cycling
@@ -41,7 +42,9 @@ export const pendingCount = () => state.pending.size;
 export const markPending = (e) => { state.pending.add(e.id); };
 export const editorDoc = () => state.doc;
 export const currentLayer = () => state.layer;
-export const isHidden = (tag) => state.hidden.has(tag);
+export const isSelectable = (tag) => state.selectable.has(tag);
+export const selectableLayers = () => [...state.selectable];
+export const moreLayers = () => state.moreLayers;
 export const currentTool = () => state.tool;
 export const placePreview = () => state.preview;
 
@@ -104,19 +107,35 @@ export function showLayer(tag) {
   changed('layer');
 }
 
-export function setHidden(tag, hidden) {
-  if (hidden) state.hidden.add(tag); else state.hidden.delete(tag);
-  if (hidden && selected()?.tag === tag) state.selectedId = null;
+// The map editor's layer groups ("Layers:" in its left panel).
+export const LAYER_GROUPS = Object.freeze({
+  statics: ['bg', 'box', 'lamp', 'water', 'pushf'],
+  logics: ['trigger', 'timer', 'inf', 'region', 'door', 'pushf'],
+  entities: ['player', 'enemy', 'vehicle', 'decor', 'gun', 'barrel', 'inf'],
+});
+
+// The active layers: only these kinds can be selected. A selection on a layer that is
+// no longer active is let go, as in the map editor.
+export function setSelectable(tags) {
+  state.selectable = new Set(tags.filter((t) => kindOf(t)));
+  if (selected() && !state.selectable.has(selected().tag)) state.selectedId = null;
+  state.lastPick = null;
   changed('layers');
 }
 
-// Every element that is drawn: a kind the editor knows, on a shown layer, with a place.
+export function setMoreLayers(on) {
+  state.moreLayers = on;
+  changed('layers');
+}
+
+// Every element that is drawn: a kind the editor knows, with a place, and whether it is
+// on an active layer.
 export function* visibleElements() {
   if (!state.doc) return;
   for (const e of state.doc.elements) {
-    if (state.hidden.has(e.tag) || !kindOf(e.tag)) continue;
+    if (!kindOf(e.tag)) continue;
     const b = liveBounds(state.doc, e);
-    if (b) yield { e, b };
+    if (b) yield { e, b, selectable: state.selectable.has(e.tag) };
   }
 }
 
@@ -131,7 +150,7 @@ const contains = (b, p, slop) => p.x >= b.x - slop && p.x <= b.x + b.w + slop &&
 // The elements under world point p, smallest first, so a region on a wall comes before
 // the wall.
 function hitsAt(p) {
-  return [...visibleElements()].filter(({ b }) => contains(b, p, PICK_SLOP))
+  return [...visibleElements()].filter(({ b, selectable }) => selectable && contains(b, p, PICK_SLOP))
     .sort((a, z) => a.b.w * a.b.h - z.b.w * z.b.h)
     .map(({ e }) => e);
 }

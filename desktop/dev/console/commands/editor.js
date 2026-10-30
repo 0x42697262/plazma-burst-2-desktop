@@ -7,7 +7,10 @@ import { settings } from '../state/store.js';
 import { takeOptions } from '../core/args.js';
 import { game } from '../game/bindings.js';
 import { editorOn, setEditorOn } from '../editor/index.js';
-import { editorDoc, editorShown, selected, pendingCount, setTool, showLayer, TOOL } from '../editor/session.js';
+import {
+  editorDoc, editorShown, selected, pendingCount, setTool, showLayer, TOOL,
+  selectableLayers, setSelectable, LAYER_GROUPS,
+} from '../editor/session.js';
 import {
   setAttr, saveMap, addElement, deleteElement, duplicateElement, undo, redo,
 } from '../editor/edit.js';
@@ -147,6 +150,32 @@ function status() {
   print(`  selected: ${sel ? nameOf(doc, sel) : 'nothing'}`);
 }
 
+// ----- editor layers -----
+
+// What can be selected, as the map editor's Layers: a group, kinds, or +kind / -kind
+// (its Ctrl+click and Alt+click).
+function layers(args) {
+  requireShown();
+  const usage = `usage: editor layers all | nothing | statics | logics | entities | <kind>[,<kind>...] | +<kind> | -<kind>  (kinds: ${kindWords})`;
+  const word = args.join(',').toLowerCase();
+  if (!word) throw new Error(usage);
+  let tags;
+  if (word === 'all') tags = [...KIND_TAGS];
+  else if (word === 'nothing' || word === 'none') tags = [];
+  else if (LAYER_GROUPS[word]) tags = [...LAYER_GROUPS[word]];
+  else if (/^[+-]/.test(word)) {
+    const tag = kindWord(word.slice(1));
+    if (!tag) throw new Error(usage);
+    tags = word[0] === '+' ? [...new Set([...selectableLayers(), tag])] : selectableLayers().filter((t) => t !== tag);
+  } else {
+    tags = word.split(',').filter(Boolean).map(kindWord);
+    if (!tags.length || tags.includes(null)) throw new Error(usage);
+  }
+  setSelectable(tags);
+  const now = selectableLayers();
+  print(`Layers: ${now.length ? now.map((t) => KINDS[t].title).join(', ') : 'nothing'} (the rest cannot be selected)`, COLOR.ok);
+}
+
 export const editorCommand = {
   name: 'editor',
   aliases: ['edit', 'mapedit'],
@@ -205,6 +234,29 @@ export const editorCommand = {
         see: ['editor'],
       },
       run: status,
+    },
+    {
+      name: 'layers',
+      aliases: ['layer', 'filter'],
+      usage: 'editor layers all | nothing | statics | logics | entities | <kinds> | +<kind> | -<kind>',
+      desc: 'What can be selected, as the map editor\'s Layers; the rest is drawn faint',
+      help: {
+        about: [
+          'Only objects on an active layer can be selected (clicked, dragged, listed in the',
+          'object box); the others are drawn faint. The same as the Layers buttons.',
+        ],
+        args: [
+          ['all | nothing', 'every kind, or none'],
+          ['statics', 'backgrounds, walls, lamps, water, pushers'],
+          ['logics', 'triggers, timers, engine marks, regions, movables, pushers'],
+          ['entities', 'players, enemies, vehicles, decorations, guns, barrels, engine marks'],
+          ['<kind>,<kind>', 'only these'],
+          ['+<kind> | -<kind>', 'add one, or take one away (Ctrl / Alt + click in Layers)'],
+        ],
+        examples: [['editor layers statics', 'walls and the like only'], ['editor layers +region', 'regions too']],
+        see: ['editor'],
+      },
+      run: layers,
     },
     {
       name: 'set',

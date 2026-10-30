@@ -1,7 +1,7 @@
 // The in-game map editor: edit the level you are playing, from inside it. The game keeps
 // running; the editor draws over it and takes the mouse.
 //
-// session.js  state: on/off, the map document (doc.js), selection, hidden layers
+// session.js  state: on/off, the map document (doc.js), selection, active layers
 // kinds.js    every element kind: name, colour, shape
 // edit.js     changing the document; apply.js puts what it can into the running game
 // live.js     where elements are in the running game
