@@ -924,30 +924,144 @@ The scan (Layers D/E) teaches the same way, and says more:
 
 ### 9.18 Proof of concept: a wall you can walk through, by difficulty to fix
 
-This takes one coverage gap from [§9.16](#916-coverage-gaps) — the **collision grid** that the locked arrays do not cover — and walks it from the version that is nearly already caught to the version that no client-side check can catch. Each level is a goal plus **why it is hard or easy to fix**, so the list doubles as a fix-priority order. As with the rest of [§9](#9-how-it-was-bypassed), it describes mechanism, not a ready-to-run script.
+| | |
+|---|---|
+| **Component** | Wall collision grid `$АТHМрM` (`frame2.js:10287`) and its lookup `$о001lO` (`frame2.js:10348`) |
+| **Class** | Client-side integrity bypass: unprotected derived data ([§9.16](#916-coverage-gaps)) |
+| **Modes** | Every mode. The scan runs everywhere under the real `/h5/versions/…/` URL ([§7.2](#72-editing-the-level-live-the-dev-consoles-map-editor)) and never looks at the grid |
+| **Needs** | Script access to the page: DevTools console, userscript, extension, or an edited local copy ([§9.15](#915-the-error-reporting-kill-switch-еl1нсi)) |
+| **Result** | A chosen wall stops blocking characters and bullets on this client. No reload, no `RELIABLE_PING`, no error report |
 
-**The target.** A solid wall blocks movement and bullets. Whether a wall blocks at a point is decided only on the client: collision reads the grid cell (`$АТHМрM`, `frame2.js:10407`), gets the list of wall indices parked in that cell, and tests each one's rectangle. The locked arrays hold the rectangles ([§7](#7-layer-e-locked-array-snapshots-toolsjs)); nothing holds or re-derives the grid. So "make this wall non-solid" has several routes, and they differ only in what the anti-cheat would have to do to notice.
+This takes one gap from [§9.16](#916-coverage-gaps), the **collision grid** that the locked arrays do not cover, and works it at four levels, from the one that is already caught to the one no client-side check can catch. Each level has a PoC, what each check sees, and the fix, so the list is also a fix order.
 
-| Level | What is changed | Caught today? | Fix | Fix difficulty |
+Names below are copied from the source. The obfuscator uses look-alike Cyrillic letters ([§2](#2-name-map-obfuscated--readable)): copy them, do not retype them.
+
+#### Details: how a wall blocks
+
+1. **Load.** The map loader fills the wall arrays x/y/w/h (`$сАоОo`, `$o1О00`, `$с0МAр`, `$MМрTТ`, `frame2.js:10739–10742`); `$T0МММ` (`frame2.js:4714`) is the wall count. These four arrays are locked ([§7](#7-layer-e-locked-array-snapshots-toolsjs)).
+2. **Grid build.** After parsing, the loader makes a fresh grid (`$АТHМрM=[]`, `frame2.js:11470–11484`): `$1еНсН` columns × `$Ао1АlA` rows of cells, each cell `$оАlTeН` units wide (at least 100, sized so a side has at most 64 cells, `frame2.js:11446–11453`), offset by `$Hoс1M` / `$сlН1pe`. Then, for every wall, `$0cоAHo(i)` (`frame2.js:10299`, called at `11506`) pushes `i` into every cell within **100 units** of the wall (`frame2.js:10342`). Finally every cell is marked `.fixed=true` (`frame2.js:11596`).
+3. **Never again.** `$0cоAHo` has no other caller, the wall arrays have no other writer, and `actions.js` touches neither. Walls do not move during play (doors are movables, `$АAHОе`, tested separately). The grid is static from map load to the next map load. The only other writer is this repo's dev editor (`desktop/dev/console/game/walls.js`, `moveWall`), which rewrites the cells and reloads by the scan anyway ([§7.2](#72-editing-the-level-live-the-dev-consoles-map-editor)).
+4. **Every collision goes through the grid.** `$о001lO(x, y)` turns a point into a cell and returns that cell's list of wall indices (`frame2.js:10348–10407`; the shared empty `$ооlIOo` outside the grid). Callers then test only those walls' rectangles:
+
+| Caller | `frame2.js` | Does |
+|---|---|---|
+| `$рeHТрT(x, y)` | `19604` | "is this point free": `false` inside a wall, then checks movables |
+| character step | `25563` | ground/ceiling test for each character (`$Il[i]`, `$0OA[i]` = x, y) |
+| bullets | `29124` | bullet segment against walls |
+| effects | `33054–33198`, `36060` | particles, decals |
+
+So a wall blocks at a point **only if its index is in that point's cell list**. The locked arrays prove the rectangle is unchanged; nothing proves the rectangle is still listed.
+
+#### Shared setup
+
+Run in the DevTools console while a level is playing (`currentFrame === 18`). Nothing here calls `lock`/`unlock`/`$T0OMое`, so the stack check ([§9.9](#99-the-stack-check-at-anonymous)) never runs; plain reads and writes of globals have no stack check.
+
+```js
+// Walls listed near the local player, nearest first.
+const me = $НAlНc, px = $Il[me], py = $0OA[me];
+const gap = (i) => Math.hypot(
+  Math.max($сАоОo[i] - px, 0, px - ($сАоОo[i] + $с0МAр[i])),
+  Math.max($o1О00[i] - py, 0, py - ($o1О00[i] + $MМрTТ[i])));
+const near = [...$о001lO(px, py)].sort((a, b) => gap(a) - gap(b));
+const W = near[0];                                   // the wall to remove
+const cx = $сАоОo[W] + $с0МAр[W] / 2, cy = $o1О00[W] + $MМрTТ[W] / 2;
+const geometry = () => JSON.stringify([$сАоОo, $o1О00, $с0МAр, $MМрTТ]);
+const before = geometry();
+$рeHТрT(cx, cy);                                     // false: the wall's centre is solid
+```
+
+Pick a wall with no movable over its centre, or `$рeHТрT` stays `false` because of the movable, not the wall.
+
+#### L1: change the locked rectangle (easy to fix, mostly caught)
+
+```js
+$с0МAр[W] = 0;                                       // wall width → 0
+```
+
+**Expected:** within ~0.3 s to a few seconds the scan compares `$с0МAр`, sends `RELIABLE_PING` code `3` with its index in `$pAТAMI`, and reloads the page ([§7.2](#72-editing-the-level-live-the-dev-consoles-map-editor), [§7.3](#73-telling-which-check-reloaded-the-page)).
+
+**Why it can still pass:** if any trigger runs before the scan reaches `$с0МAр`, the trigger runner's `$oITOo()` (`actions.js:6501`) and the next `lock` take the zero width as the new baseline ([§7.1](#71-when-the-baseline-is-taken-again)). On a map whose timers run a trigger every frame, the edit survives.
+
+**Fix (easy):** stop re-baselining on every trigger run: the trigger runner has no reason to unlock arrays it never writes, so drop `$oITOo()` from `$pАTIТ` and keep unlock for the screens that write (`Campaign.js`, `Equipment.js`). Report instead of reload ([§10.4](#104-detection--response-fixes-days)). No new structure.
+
+#### L2: change only the grid (moderate to fix, not caught)
+
+```js
+let removed = 0;
+for (const col of $АТHМрM)
+  for (const cell of col)
+    for (let k = cell.indexOf(W); k !== -1; k = cell.indexOf(W)) { cell.splice(k, 1); removed++; }
+
+$рeHТрT(cx, cy);                                     // true: the centre is now free
+geometry() === before;                               // true: every locked array is untouched
+```
+
+This is the same splice `moveWall` uses before re-listing a wall (`desktop/dev/console/game/walls.js`), without the re-listing and without touching the arrays.
+
+**Expected:** the wall is still drawn, but characters fall through it, walk through it and shoot through it. Nothing reloads, no `RELIABLE_PING` is sent, and `$рeHТрT` agrees the wall is gone.
+
+**What each check sees:**
+
+| Check | Catches it? | Why |
+|---|---|---|
+| Value guard ([§3](#3-layer-a-per-tick-value-guard-pмоct)) | No | No guarded slot changed |
+| Locked arrays (code `3`) | No | `$АТHМрM` is not registered; the four wall arrays are byte-for-byte the same |
+| Array identity (code `1`) | No | Cell lists are edited in place, never replaced |
+| Function scan (code `2`) | No | No function changed |
+| Stack check | No | No lock/unlock call |
+| Server | No | Collision is never sent or checked |
+
+**Fix (moderate):** bind the grid to the locked arrays instead of trusting it.
+
+- **Registering it is not enough as-is.** `$IeTlO` tracks arrays by identity and only ever appends to `$pAТAMI` (`tools.js:193`), while the loader makes a **new** grid object every map (`frame2.js:11470`). The registry would need a remove/replace on map load, and the inner cell lists would need to be part of the deep compare.
+- **Derive and compare (better).** Since the grid is static after load and every cell is a pure function of the locked wall arrays (rule 2 above), the scan can rebuild one column at a time with the same arithmetic as `$0cоAHo` and compare it with the live column, round robin like `$ррОM1I`. At most 64 columns, so the cost is small. An attacker would then have to change the locked rectangle too, which falls back to L1.
+
+#### L3: leave the data alone, filter the lookup (hard to fix, not caught)
+
+```js
+const lookup = $о001lO, src = lookup.toString();
+const hidden = new Set([W]);
+$о001lO = function (x, y) { return lookup(x, y).filter((i) => !hidden.has(i)); };
+$о001lO.toString = () => src;                        // the function scan compares this text
+```
+
+Callers look `$о001lO` up by name each time ([§9.14](#914-replacing-the-guard-or-the-punishment) point 2), so the wrapper takes over at once. The wall arrays **and** the grid stay exactly as loaded, so the L2 fix (derive and compare) passes too. `filter` returns a new array, so the shared cells are never touched.
+
+**What each check sees:** the function scan does read `$о001lO`, but through `toString()` on the current value ([§9.11](#911-the-function-integrity-scan) point 1), which now returns the original source. Everything else is as in L2.
+
+**Fix (hard):** the scan has to stop asking the function what it is:
+
+- Save the **references** at `window.onload` and compare with `!==`, not the source text. That closes this wrapper, but `$ММ` statics and object methods ([§9.11](#911-the-function-integrity-scan) points 3–4) are still outside the list, and a cheat that runs before `onload` (userscript at `document_start`, edited local copy) is saved as the "original".
+- Make the collision path unreachable from outside: module-scoped functions instead of `window` properties. In a build where every function is a global declaration, that is a refactor of the whole engine, not a patch.
+
+#### L4: the check itself runs in the tab (very hard to fix)
+
+Every fix above is code in the same tab as the cheat. The scan is itself a global (`$сMlcА1`), it checks itself ([§9.11](#911-the-function-integrity-scan) point 5), and its one report goes through `$ММ.$ceTOI.$OMeTо`, which is never checked. So whatever L2/L3 add, the cheat adds one line first:
+
+```js
+$сMlcА1 = function () {};                            // no scan: no code 1/2/3, no canary, no reload
+```
+
+after which L1 needs no trigger timing and L2/L3 need no disguise.
+
+**Fix (very hard):** move the decision off the client ([§10.5](#105-the-real-fix-serverhost-authority)). The server or the host peer holds the level's walls and rejects a position or a hit that passes through one. PB2's relay/P2P model has no such authority today, so this is the largest change in the list.
+
+#### Impact
+
+- **Single-player and campaign:** walk through any wall, skip level geometry, shoot through cover. The scan is the only check here and it never sees L2/L3.
+- **Multiplayer:** the change is local, but your position and hits are sent as-is, so other players see you pass through walls and get hit through them. The per-tick value guard ([§3](#3-layer-a-per-tick-value-guard-pмоct)) covers 84 values; neither the grid nor `$о001lO` is one of them, and the custom-map flag ([§9.3](#93-the-sticky-custom-map-flag-iscustommapsession--еhонh)) is not needed.
+- **Detection:** none at L2 and above. No reload, so [§9.17](#917-the-reaction-teaches-the-cheater)'s feedback loop tells the tester the edit is safe.
+
+#### Summary
+
+| Level | Changes | Caught today? | Fix | Difficulty |
 |---|---|---|---|---|
-| **L1** | The wall's own rectangle in a **locked** array (zero its width) | Yes, by code `3` — unless a trigger re-baselines it first ([§7.1](#71-when-the-baseline-is-taken-again)) | Report instead of reload, and stop auto-re-baselining on every trigger run | **Easy** |
-| **L2** | Only the **grid** cell lists, leaving every locked rectangle intact | No — the grid is not registered | Register the grid too, or re-derive it from the wall arrays and compare | **Moderate** |
-| **L3** | The grid, on a map whose triggers **move walls** during play | No, and a naive grid snapshot can't catch it either | A grid check must recompute the expected grid from the wall arrays every time, not snapshot it | **Hard** |
-| **L4** | Anything above, plus the check or its report replaced/silenced | No | Server/host authority over collision outcomes | **Very hard** |
+| **L1** | locked wall width | Yes (code `3`), unless a trigger re-baselines first | Don't unlock in the trigger runner; report, don't reload | **Easy** |
+| **L2** | grid cell lists only | No | Rebuild grid columns from the locked arrays and compare | **Moderate** |
+| **L3** | the lookup function, `toString` spoofed | No | Compare references, not source; take the engine off `window` | **Hard** |
+| **L4** | the scan itself | No | Server/host authority over collision | **Very hard** |
 
-**L1 — change the locked rectangle (easy to fix).**
-The direct move: set a wall's width to `0` in the wall-width array. This is exactly what Layer E watches, so on most maps it reloads with code `3`. The only reason it is a "bypass" at all is the re-baseline timing in [§7.1](#71-when-the-baseline-is-taken-again): on a map whose timers fire a trigger every frame, the unlock/lock around that trigger folds the change into the baseline before the scan reaches the array. The fix is small and already listed: **report, don't reload** ([§10.4](#104-detection--response-fixes-days)), and remove the automatic re-baseline so a change must survive a real comparison. Nothing structural changes.
-
-**L2 — change only the grid (moderate).**
-Leave every locked rectangle alone and edit the grid instead: drop the wall's index out of the cells it sits in. Collision now never tests that wall, so it is non-solid, yet the wall-geometry arrays are byte-for-byte what they were, so code `3` never fires. The gap is simply that the grid is not one of the registered arrays. The fix is to bring it under Layer E — either register it like the others, or, better, recompute it from the wall arrays and compare — but the grid is a 2-D array of per-cell lists and far larger than the geometry arrays, so a full deep-compare every cycle is costly; it needs a cheaper incremental or hashed check. Doable, but more than a one-line registration.
-
-**L3 — change the grid on a map that moves walls (hard).**
-This is the grid's version of [§7.1](#71-when-the-baseline-is-taken-again). Maps legitimately move walls through triggers, which rebuild grid cells as they go, so the grid is *supposed* to change during play. A check that snapshots the grid and compares it to the snapshot would false-positive on every honest moving-wall map — so it would have to re-baseline, and re-baselining is the very hole being exploited. The only honest check is to **derive** the grid that the current wall arrays imply and compare against the live grid each time, which is both expensive and still only covers walls (movables, water, pushers each need their own derivation). At this point the client-side check is large, slow, and maintenance-heavy for one class of edit.
-
-**L4 — the check itself is client-side (very hard to fix).**
-Every level above is still caught, if at all, by code that runs in the same tab as the cheat. That code is a writable global ([§9.11](#911-the-function-integrity-scan), [§9.14](#914-replacing-the-guard-or-the-punishment)) and its one report rides the game socket, which can be silenced ([§9.15](#915-the-error-reporting-kill-switch-еl1нсi)). So a perfect grid check just becomes one more thing to replace with an empty function. Collision is computed and consumed entirely on the client; the server is never asked "did this wall block this move?" The only fix that holds is the one in [§10.5](#105-the-real-fix-serverhost-authority): the **host peer or server** owns collision outcomes and rejects impossible movement. For PB2's relay/P2P model that is a large change, which is why it sits last.
-
-**Reading the ladder.** L1 is worth fixing because the fix is cheap and also closes a real hole. L2 is the honest next step. L3 and L4 show the ceiling: past a point, every added client check buys less than it costs, and only server authority changes the game. This is the same conclusion as [§10.5](#105-the-real-fix-serverhost-authority), reached from one concrete edit.
+L1 is worth fixing because it is cheap and closes a real hole. L2 is the honest next step and binds the grid to data that is already locked. L3 and L4 show the ceiling: each client check becomes one more global to replace, and only server authority changes that ([§10.5](#105-the-real-fix-serverhost-authority)).
 
 ---
 
