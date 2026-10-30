@@ -44,6 +44,9 @@ export const KINDS = Object.freeze({
   timer: point('timer', '#ffd84d', BOX.marker),
   song: point('song', '#ff9ad5', BOX.marker),
   inf: point('engine mark', '#ffffff', BOX.marker),
+  // A custom image's size, for the backgrounds and decorations that use it: no place in
+  // the map, shown with the others an old map leaves unplaced; not added by hand.
+  image: point('image info', '#a0a0ff', BOX.marker),
 });
 
 export const KIND_TAGS = Object.freeze(Object.keys(KINDS));
@@ -88,7 +91,7 @@ export const DEFAULTS = Object.freeze({
   water: { damage: '0', friction: 'true' },
   pushf: { tox: '0', toy: '0', stab: '0', damage: '0', attach: '-1' },
   player: { tox: '0', toy: '0', hea: '130', hmax: '130', team: '0', side: '1', char: '1', incar: '-1', botaction: '0', ondeath: '-1' },
-  enemy: { tox: '0', toy: '0', hea: '130', hmax: '130', team: '1', side: '1', char: '1', incar: '-1', botaction: '0', ondeath: '-1' },
+  enemy: { tox: '0', toy: '0', hea: '130', hmax: '130', team: '0', side: '1', char: '1', incar: '-1', botaction: '0', ondeath: '-1' },
   vehicle: { side: '1', model: 'veh_jeep', tox: '0', toy: '0', hpp: '100' },
   barrel: { model: 'bar_orange', tox: '0', toy: '0' },
   gun: { model: 'gun_rifle', command: '-1', upg: '0' },
@@ -98,9 +101,12 @@ export const DEFAULTS = Object.freeze({
   timer: { enabled: 'true', maxcalls: '1', target: '-1', delay: '30' },
   song: { url: '', volume: '1', loop: 'true', callback: '-1' },
   inf: { mark: 'hero1_guns', forteam: '0' },
+  image: { id: '0', width: '100', height: '100' },
 });
 // Kinds whose elements have no uid in the map editor either.
-export const NO_UID = new Set(['box', 'bg', 'inf']);
+export const NO_UID = new Set(['box', 'bg', 'inf', 'image']);
+// Kinds the map editor only shows: made by uploading a custom image, not placed.
+export const NOT_PLACED = new Set(['image']);
 
 // A uid no element has yet, numbered like the map editor's: "#region*12".
 export function newUid(doc, tag) {

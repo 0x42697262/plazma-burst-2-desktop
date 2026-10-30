@@ -14,6 +14,8 @@ import { boundsOf } from './kinds.js';
 import { rebuildable, rebuildLive } from './rebuild.js';
 import { moveGun, remakeGun } from './guns.js';
 import { placeLamp } from './lamps.js';
+import { setStart } from './start.js';
+import { doorTexture, followMovable } from './later.js';
 
 // Activation modes the loader rewrites: hidden use keys become the plain ones.
 const LOADER_USE_ON = Object.freeze({ 8: 1, 11: 9, 12: 10, 15: 1 });
@@ -25,11 +27,12 @@ const TRIGGER_ACTIONS_LIMIT = 100; // the loader reads actions_1 .. actions_100
 const int = (v) => parseInt(v, 10);
 const finite = (v) => Number.isFinite(parseFloat(v));
 
+// One attached to a movable keeps its offset from it: built again to take a new one.
 const region = {
-  x: (r, v) => finite(v) && moveRegion(r, parseFloat(v), r.y),
-  y: (r, v) => finite(v) && moveRegion(r, r.x, parseFloat(v)),
-  w: (r, v) => finite(v) && sizeRegion(r, parseFloat(v), r.h),
-  h: (r, v) => finite(v) && sizeRegion(r, r.w, parseFloat(v)),
+  x: (r, v, attrs) => !attached(attrs) && finite(v) && moveRegion(r, parseFloat(v), r.y),
+  y: (r, v, attrs) => !attached(attrs) && finite(v) && moveRegion(r, r.x, parseFloat(v)),
+  w: (r, v, attrs) => !attached(attrs) && finite(v) && sizeRegion(r, parseFloat(v), r.h),
+  h: (r, v, attrs) => !attached(attrs) && finite(v) && sizeRegion(r, r.w, parseFloat(v)),
   use_target: (r, v) => { r[F.R_TRIGGER] = game.resolveTarget(v); return true; },
   use_on: (r, v) => {
     const mode = LOADER_USE_ON[int(v)] ?? int(v);
@@ -66,15 +69,16 @@ function loadActions(t, attrs) {
   return true;
 }
 
-// enabled and calls left are shared by triggers and timers.
-const counted = {
-  enabled: (t, v) => { t[F.T_ENABLED] = v === 'true'; return true; },
+// enabled and calls left are shared by triggers and timers; a new round puts back the
+// copies the loader keeps (start.js).
+const counted = (tag) => ({
+  enabled: (t, v) => { t[F.T_ENABLED] = v === 'true'; setStart(tag, t, 'enabled', v === 'true'); return true; },
   maxcalls: (t, v) => {
     if (!Number.isFinite(int(v))) return false;
     t[F.T_MAX_CALLS] = t[F.T_CALLS] = int(v);
     return true;
   },
-};
+});
 
 // A decoration is a display object: place, rotation and scale can change at once. One
 // attached to a movable is placed by it.
@@ -92,23 +96,29 @@ const decor = {
 };
 
 // A movable is a display object: its place, size and destination change at once, its
-// texture (a visible one has one in the 3D layer) with it. One attached to another
-// movable is placed by it.
-function placeDoor(mc, attrs) {
+// texture (a visible one has one in the 3D layer, that follows it) with it, and what is
+// attached to it. A new round puts it back where the map puts it (start.js). One
+// attached to another movable is placed by it. Its other settings build it again.
+function placeDoor(mc, attrs, i) {
   if (attached(attrs)) return false;
   const r = boundsOf({ tag: 'door', attrs });
   if (!r) return false;
-  const body = textureAt({ x: mc.x, y: mc.y, w: mc.w, h: mc.h });
+  const body = doorTexture(i) ?? textureAt({ x: mc.x, y: mc.y, w: mc.w, h: mc.h });
   Object.assign(mc, { x: r.x, y: r.y, w: r.w, h: r.h, scaleX: r.w / 100, scaleY: r.h / 100 });
   if (body) Object.assign(body, { x: r.x, y: r.y, scaleX: r.w / 100, scaleY: r.h / 100 });
+  setStart('door', mc, 'x', r.x);
+  setStart('door', mc, 'y', r.y);
+  followMovable(i);
   return true;
 }
-const doorPlace = (mc, v, attrs) => placeDoor(mc, attrs);
-const door = {
-  x: doorPlace, y: doorPlace, w: doorPlace, h: doorPlace,
-  tarx: (mc, v) => { if (!finite(v)) return false; mc.tarx = parseFloat(v); return true; },
-  tary: (mc, v) => { if (!finite(v)) return false; mc.tary = parseFloat(v); return true; },
+const doorPlace = (mc, v, attrs, e) => placeDoor(mc, attrs, e.live.index);
+const doorTarget = (key) => (mc, v) => {
+  if (!finite(v)) return false;
+  mc[key] = parseFloat(v);
+  setStart('door', mc, key, parseFloat(v));
+  return true;
 };
+const door = { x: doorPlace, y: doorPlace, w: doorPlace, h: doorPlace, tarx: doorTarget('tarx'), tary: doorTarget('tary') };
 
 // A rectangle kind's new place, from all its attributes (the one that changed included).
 const rectOf = (tag, attrs) => boundsOf({ tag, attrs });
@@ -161,12 +171,15 @@ function placeWater(i, attrs) {
 }
 
 const each = (attrs, fn) => Object.fromEntries(attrs.map((a) => [a, fn]));
+// Where the editor shows a trigger or timer: the game never reads it.
+const unread = each(['x', 'y'], () => true);
 
 const LIVE = Object.freeze({
   region: { of: (i) => (i < game.regionCount() ? game.regions()?.[i] : null), attrs: region },
   trigger: {
     of: (i) => (i < game.triggerCount() ? unwrap(game.triggers()?.[i]) : null),
-    attrs: counted,
+    // execute: run when the level starts (and when a match starts a new round).
+    attrs: { ...unread, ...counted('trigger'), execute: (t, v) => { t[F.T_AT_START] = v === 'true'; return true; } },
     other: (t, attr, v, attrs) => ACTION_ATTR.test(attr) && loadActions(t, attrs),
   },
   decor: { of: (i) => game.decors()?.[i], attrs: decor },
@@ -192,26 +205,53 @@ const LIVE = Object.freeze({
       tox: pusherNumber('tox'), toy: pusherNumber('toy'), stab: pusherNumber('stab'), damage: pusherNumber('damage'),
     },
   },
+  // Water: its place; its damage (water or acid, shown differently), friction (shown or
+  // not) and attachment build it again.
   water: {
     of: (i) => (i < game.waters().count ? { index: i } : null),
-    attrs: {
-      ...each(['x', 'y', 'w', 'h'], (o, v, attrs) => placeWater(o.index, attrs)),
-      damage: (o, v) => { if (!finite(v)) return false; game.waters().damage[o.index] = parseFloat(v); return true; },
-    },
+    attrs: each(['x', 'y', 'w', 'h'], (o, v, attrs) => placeWater(o.index, attrs)),
   },
   // A lamp: its light built and drawn again in its slot (lamps.js).
   lamp: {
     of: () => ({}),
-    attrs: each(['x', 'y', 'power', 'flare'], (o, v, attrs, e) => { placeLamp(e); return true; }),
+    attrs: each(['uid', 'x', 'y', 'power', 'flare'], (o, v, attrs, e) => { placeLamp(e); return true; }),
   },
   timer: {
     of: (i) => (i < game.timerCount() ? game.timers()?.[i] : null),
-    attrs: { ...counted, target: (t, v) => { t[F.TIMER_TARGET] = game.resolveTarget(v); return true; } },
+    attrs: { ...unread, ...counted('timer'), target: (t, v) => { t[F.TIMER_TARGET] = game.resolveTarget(v); return true; } },
   },
 });
 
 const NOT_IN_GAME = 'it is not in the running level yet';
 const NOT_LIVE = 'the running level cannot take it';
+
+// Why a parameter nothing above takes cannot change in a running level: per kind, by
+// attribute ('*': every other one). Each kind's parameters are either taken above, built
+// again (rebuild.js), or here.
+const CHARACTERS = 'characters are made when the level starts';
+const READ_AT_START = Object.freeze({
+  box: { m: 'a wall\'s material is drawn into the level\'s layers when it loads' },
+  bg: { '*': 'a background is drawn into the level\'s layers when it loads' },
+  player: { '*': CHARACTERS },
+  enemy: { '*': CHARACTERS },
+  vehicle: { '*': 'vehicles are made when the level starts' },
+  barrel: { '*': 'barrels are made when the level starts' },
+  gun: { uid: 'a gun\'s uid is only read when the level starts' },
+  song: { '*': 'songs are read when the level starts' },
+  inf: { '*': 'engine marks are read when the level starts' },
+  image: { '*': 'custom images are read when the level starts' },
+});
+const readAtStart = (tag, attr) => READ_AT_START[tag]?.[attr] ?? READ_AT_START[tag]?.['*'] ?? null;
+
+// How an edit of attr on a tag reaches a running level: 'direct' (written into the
+// game's object), 'rebuild' (the object built again), or why it does not.
+export function liveSupport(tag, attr) {
+  const kind = LIVE[tag];
+  if (kind && (kind.attrs[attr] || (kind.other && tag === 'trigger' && ACTION_ATTR.test(attr)))) return 'direct';
+  const why = readAtStart(tag, attr);
+  if (why) return why;
+  return rebuildable(tag) ? 'rebuild' : NOT_LIVE;
+}
 
 // Writes one changed attribute of element e into the running game, at the index the
 // game has it (e.live): straight into the game's object when this file knows how,
@@ -233,6 +273,8 @@ export function applyLive(e, attr) {
   }
   // Nothing finer took it: the game's loader builds the object again (rebuild.js).
   if (!e.live) return { live: false, why: NOT_IN_GAME };
+  const why = readAtStart(e.tag, attr);
+  if (why) return { live: false, why: finer.why !== NOT_LIVE ? finer.why : why };
   if (!rebuildable(e.tag)) return finer;
   try {
     rebuildLive(e);

@@ -57,7 +57,7 @@ export const nameless = (tag, index) => `${tag}#${index}`;
 // (lib_classes.js, SourceLost), they are shown in a row above the map's top left
 // corner. items: [{ tag, attrs }] in map order; returns Map(item -> { x, y }) for the
 // ones without a place. Used by the graph and the editor, so both put them in one spot.
-const UNPLACED_TAGS = new Set(['trigger', 'timer', 'inf']);
+const UNPLACED_TAGS = new Set(['trigger', 'timer', 'inf', 'image']);
 const UNPLACED_STEP = 40;
 const UNPLACED_ABOVE = 60;
 export function unplacedSpots(items) {

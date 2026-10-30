@@ -36,7 +36,9 @@ const stageOrNull = () => (typeof stage === 'undefined' || !stage ? null : stage
 
 export const game = {
   // ----- Names, for the js guide -----
-  typedName: (key) => escName(key), // a game name as \u escapes, which JavaScript accepts
+  typedName: (key) => escName(key),
+  // A game name as the game's own code writes it, for code that reads that code.
+  codeName: (key) => nameOf(key), // a game name as \u escapes, which JavaScript accepts
   namesVersion: () => N.version,
 
   // ----- Stage -----
@@ -173,6 +175,7 @@ export const game = {
   wallLayer: () => (typeof graphics_3d === 'undefined' ? null : graphics_3d),
   wallTexture: () => (typeof texture_front0 === 'undefined' ? null : texture_front0),
   frontLayer: () => (typeof graphics_3d_front === 'undefined' ? null : graphics_3d_front), // drawn over characters
+  worldLayer: () => globalThis.game || null, // characters, vehicles, the edges characters grab
   // Backgrounds, pushers and water: parallel arrays by index, as the loader keeps them.
   backgrounds: () => ({ x: read('bgX'), y: read('bgY'), w: read('bgW'), h: read('bgH'), count: read('bgCount') }),
   pushers: () => ({

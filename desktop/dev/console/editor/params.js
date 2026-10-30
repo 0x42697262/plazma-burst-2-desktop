@@ -9,19 +9,35 @@ import { kindOf, SHAPE, DEFAULTS, NO_UID } from './kinds.js';
 const TABLE = globalThis.PB2_OPCODES || null;
 const ANY_KIND = '*';
 
-// The attributes a kind has, in the editor's order of making them.
+// Attributes the game reads (frame2.js, the map loader) that the map editor does not
+// show: listed after the editor's, with the value the game takes when the map leaves
+// them out. New elements do not get them, as in the map editor.
+const GAME_ONLY = Object.freeze({
+  water: { attach: { kind: 'door+none', title: 'Attach to', desc: 'Attaches water to movable (read by the game, not shown by the map editor)', value: '-1' } },
+  door: { mute: { kind: 'bool', title: 'Mute', desc: 'No sound when it starts and stops moving (read by the game, not shown by the map editor)', value: 'false' } },
+  region: { uses_timer: { kind: 'bool', title: 'Uses timer', desc: 'Activation enables the timer "Activation Trigger" names instead of running a trigger (read by the game, not shown by the map editor)', value: 'false' } },
+  trigger: { execute: { kind: 'bool', title: 'Run at start', desc: 'Runs when the level starts, and when a match starts a new round (read by the game, not shown by the map editor)', value: 'false' } },
+  decor: { text: { kind: 'string', title: 'Text', desc: 'What a text decoration (models text, text2, text3) says (read by the game, not shown by the map editor)', value: '' } },
+});
+// Kinds the map does not place: no x and y (an <image> names a custom image's size).
+const NO_PLACE = new Set(['image']);
+
+// The attributes a kind has, in the editor's order of making them, then the ones only
+// the game reads.
 export function paramsOf(tag) {
   const kind = kindOf(tag);
   if (!kind) return [];
   return [
     ...(NO_UID.has(tag) ? [] : ['uid']),
-    'x', 'y', ...(kind.shape === SHAPE.RECT ? ['w', 'h'] : []),
+    ...(NO_PLACE.has(tag) ? [] : ['x', 'y']), ...(kind.shape === SHAPE.RECT ? ['w', 'h'] : []),
     ...Object.keys(DEFAULTS[tag] || {}),
+    ...Object.keys(GAME_ONLY[tag] || {}),
   ];
 }
 
-// The value a parameter has when the map leaves it out: the editor's default.
-export const defaultOf = (tag, attr) => DEFAULTS[tag]?.[attr];
+// The value a parameter has when the map leaves it out: the editor's default (or the
+// game's, for one only the game reads).
+export const defaultOf = (tag, attr) => DEFAULTS[tag]?.[attr] ?? GAME_ONLY[tag]?.[attr]?.value;
 
 // Parameters whose kind of value follows another parameter (the editor's mark_pairs,
 // lib_params.js): an engine mark's parameter is a sky for "sky", a count for
@@ -34,7 +50,8 @@ const UNPAIRED = 'nochange';
 // whose kind follows another one.
 export function paramInfo(tag, attr, attrs = {}) {
   const rows = TABLE?.params || [];
-  const row = rows.find((p) => p.name === attr && p.cls === tag) || rows.find((p) => p.name === attr && p.cls === ANY_KIND);
+  const row = rows.find((p) => p.name === attr && p.cls === tag) || GAME_ONLY[tag]?.[attr]
+    || rows.find((p) => p.name === attr && p.cls === ANY_KIND);
   if (!row) return null;
   const by = PAIRED[tag]?.[attr];
   const kind = by ? TABLE?.markPairs?.[attrs[by] ?? defaultOf(tag, by)] ?? UNPAIRED : row.kind;

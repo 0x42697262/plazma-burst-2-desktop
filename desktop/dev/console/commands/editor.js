@@ -8,11 +8,11 @@ import { takeOptions } from '../core/args.js';
 import { game } from '../game/bindings.js';
 import { editorOn, setEditorOn } from '../editor/index.js';
 import {
-  editorDoc, editorShown, selected, pendingCount, setTool, showLayer, TOOL,
+  editorDoc, editorShown, selected, pendingCount, isPending, setTool, showLayer, TOOL,
   selectableLayers, setSelectable, LAYER_GROUPS,
 } from '../editor/session.js';
 import {
-  setAttr, saveMap, addElement, deleteElement, duplicateElement, undo, redo,
+  setAttr, saveMap, addElement, deleteElement, duplicateElement, undo, redo, notLiveReason,
 } from '../editor/edit.js';
 import { nameOf, kindOf, KINDS, KIND_TAGS, SHAPE } from '../editor/kinds.js';
 import { player } from '../game/level.js';
@@ -89,7 +89,10 @@ function add(args) {
   const [x, y, w, h] = nums.length ? nums : [Math.round(p.tarx), Math.round(p.tary)];
   const e = addElement(tag, { x, y, ...(w !== undefined ? { w, h } : {}) });
   showLayer(tag);
-  print(`Added ${nameOf(editorDoc(), e)} at ${x}, ${y}${kindOf(tag).shape === SHAPE.RECT ? ` (${e.attrs.w} x ${e.attrs.h})` : ''}; not in the running level (kept for "editor save")`, COLOR.ok);
+  const why = notLiveReason();
+  const where = isPending(e) ? `not in the running level: ${why || 'it was not made'} (kept for "editor save")`
+    : why ? `in the running level, but ${why}` : 'in the running level';
+  print(`Added ${nameOf(editorDoc(), e)} at ${x}, ${y}${kindOf(tag).shape === SHAPE.RECT ? ` (${e.attrs.w} x ${e.attrs.h})` : ''}; ${where}`, COLOR.ok);
 }
 
 function needSelection() {
@@ -204,18 +207,23 @@ export const editorCommand = {
       ['editor_key f7', 'F7 turns it on and off (F8 is the default)'],
     ],
     notes: [
-      'Edits go into the running level: walls (with their trims), backgrounds, water,',
-      'pushers, movables, regions, decorations, triggers and timers. Walls, water and',
-      'pushers live in arrays the game\'s integrity check watches: it reports the',
-      'client and reloads the page when it sees them change.',
-      'Edits nothing finer takes (a region\'s activation, a decoration\'s model, ...)',
-      'build the object again with the game\'s own map loader code. Added objects are',
-      'made the same way, deleted ones taken out of play. Not in the running level',
-      '(kept for "editor save"): players, enemies, engine marks and songs, wall',
-      'materials, and later edits of added guns, barrels and vehicles. The top line',
+      'Edits go into the running level: walls (with their trims), backgrounds\' places,',
+      'water, pushers, movables, regions, decorations, lamps, guns, triggers and timers.',
+      'Walls, water and pushers live in arrays the game\'s integrity check watches: it',
+      'reports the client and reloads the page when it sees them change.',
+      'Edits nothing finer takes (a movable\'s settings, water\'s damage, what an object',
+      'is attached to, a decoration\'s model, ...) build the object again with the',
+      'game\'s own map loader code, and run its later steps for it (textures, the water',
+      'shown, attachments). Added objects are made the same way, deleted ones taken out',
+      'of play. Not in the running level (kept for "editor save"): players, enemies,',
+      'vehicles, barrels, engine marks, songs and custom images, wall materials and how',
+      'a background looks, and later edits of added barrels and vehicles. The top line',
       'says why an edit was not live.',
+      'The params panel also lists what the game reads that the map editor does not show',
+      '(water attach, movable mute, region uses_timer, trigger execute, decoration text).',
       'The same in every mode. When the level starts again on the same map (dying, a',
-      'restart, a new round), the edits are put into it again.',
+      'restart), the edits are put into it again. A new round of a match puts movables,',
+      'triggers and timers back as edited; guns and barrels go back to the map\'s.',
       'It needs a level, hides while none runs and comes back with the next one.',
       'Esc clears the selection. Regions and characters are drawn where they are now.',
     ],

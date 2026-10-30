@@ -1,10 +1,11 @@
 // Objects of the running level made, made again and taken out, with the game's own
 // loader (loader.js) wherever it can.
 // Built again, for edits nothing finer can put in: a region's activation (its USE switch is drawn
-// or taken away), a decoration's model, a movable's settings, a pusher, a trigger's or
-// timer's uid (lamps have lamps.js). The element's branch runs with the kind's counter
-// at its index, so the game's arrays get a new object in its place; what the old one put
-// on screen is taken off first.
+// or taken away), a decoration's model, a movable's settings, water's kind, what an
+// object is attached to, a trigger's or timer's uid (lamps have lamps.js). The element's
+// branch runs with the kind's counter at its index, so the game's arrays get a new
+// object in its place; what the old one put on screen is taken off first, and the
+// loader's later steps run for the new one (later.js).
 import { game } from '../game/bindings.js';
 import { F } from '../game/fields.js';
 import { canRebuild, canBuild, buildElement, builtCount, loaderProblem } from './loader.js';
@@ -14,21 +15,49 @@ import { boundsOf } from './kinds.js';
 import { unwrap } from '../triggers/log.js';
 import { claimNewestGun, removeGun, remakeGun } from './guns.js';
 import { placeLamp, removeLamp } from './lamps.js';
+import { setStart } from './start.js';
+import {
+  attachMark, dropAttachments, resolveAttachments, moveAttachments, followMovable,
+  showWater, doorTexture, makeDoorTexture, doorEdges, makeDoorEdges,
+} from './later.js';
 
 const detach = (shown) => { if (shown && shown.parent && shown.parent.removeChild) shown.parent.removeChild(shown); };
 
-// For each kind built in place: the old object, and what of it to take off the screen
-// before the new one is made. Kinds not here are not rebuilt (walls, backgrounds and
-// water draw into shared layers or later steps of the loader; barrels, vehicles and
-// guns have no place of their own to rebuild into).
+// For each kind built in place: the old object, what of it to take off the screen before
+// the new one is made, which entries of the game's attachments list are the old one's
+// (an attached object is tied to its movable once, after the map is read: the new one is
+// tied again, later.js), and the loader's later steps for the new one. Kinds not here are
+// not rebuilt (walls and backgrounds draw into shared layers; barrels, vehicles and guns
+// have no place of their own to rebuild into; lamps have lamps.js).
 const IN_PLACE = Object.freeze({
-  region: { old: (i) => game.regions()?.[i], drop: (r) => detach(r?.mc) },
-  decor: { old: (i) => game.decors()?.[i], drop: detach },
-  door: { old: (i) => game.doors()?.[i], drop: detach },
+  region: { old: (i) => game.regions()?.[i], drop: (r) => detach(r?.mc), tied: (a, r) => !!r && (a.child === r || (!!r.mc && a.child === r.mc)) },
+  decor: { old: (i) => game.decors()?.[i], drop: detach, tied: (a, mc) => !!mc && a.child === mc },
+  door: { old: (i) => game.doors()?.[i], drop: detach, tied: (a, mc) => !!mc && a.child === mc, after: doorAfter },
   trigger: { old: () => null, drop: () => {} },
   timer: { old: () => null, drop: () => {} },
-  pushf: { old: () => null, drop: () => {} },
+  pushf: { old: () => null, drop: () => {}, tied: (a, old, i) => a.type === PUSHER_TIE && a.child === i },
+  water: { old: (i) => game.waters().shown?.[i], drop: detach, tied: (a, old, i) => a.type === WATER_TIE && a.id === i, after: (i) => showWater(i) },
 });
+// The attachment types the loader gives pushers and water (frame2.js): tied by index.
+const PUSHER_TIE = 3, WATER_TIE = 5;
+
+// A movable made again (or added): what was tied to the old one is tied to it, a visible
+// one has its texture (the old one's, or one made as the loader makes it) and the two
+// edges characters grab, and what is attached to it is put where it is.
+function doorAfter(i, attrs, { old = null, texture = null, edges = [] } = {}) {
+  const now = game.doors()?.[i];
+  if (!now) return;
+  if (old) moveAttachments(old, now);
+  if (attrs.vis === 'true') {
+    if (texture) {
+      const layer = game.wallLayer();
+      if (!texture.parent && layer) layer.addChildAt(texture, layer.numChildren);
+      Object.assign(texture, { x: now.x, y: now.y, scaleX: now.scaleX, scaleY: now.scaleY });
+    } else makeDoorTexture(i);
+    if (!edges.length) makeDoorEdges(i);
+  } else if (texture) detach(texture);
+  followMovable(i);
+}
 
 export const rebuildable = (tag) => !!IN_PLACE[tag];
 
@@ -40,44 +69,16 @@ export function rebuildLive(e) {
   if (!canRebuild(e.tag)) throw new Error(loaderProblem() || `the game's loader cannot build a ${e.tag} again`);
   const i = e.live.index;
   const old = kind.old(i);
-  // A visible movable's texture follows it by index; its size is the old one's.
-  const body = e.tag === 'door' && old ? textureAt({ x: old.x, y: old.y, w: old.w, h: old.h }) : null;
+  const was = e.tag === 'door' ? { old, texture: doorTexture(i) ?? (old ? textureAt({ x: old.x, y: old.y, w: old.w, h: old.h }) : null), edges: doorEdges(i) } : { old };
   kind.drop(old);
+  if (kind.tied) dropAttachments((a) => kind.tied(a, old, i));
+  const mark = attachMark();
   buildElement(e.tag, e.attrs, i);
-  const now = e.tag === 'door' ? game.doors()?.[i] : null;
-  if (body && now) Object.assign(body, { scaleX: now.w / 100, scaleY: now.h / 100 });
+  resolveAttachments(mark);
+  kind.after?.(i, e.attrs, was);
 }
 
 // ----- adding -----
-
-// The loader's later steps for a kind, after its branch made the object at index i.
-const AFTER_BUILD = Object.freeze({
-  // A visible movable's texture, as the loader makes it once the map is read.
-  door: (i, attrs) => {
-    const door = game.doors()?.[i];
-    const layer = game.wallLayer();
-    const Texture = game.wallTexture();
-    if (!door || attrs.vis !== 'true' || !layer || !Texture) return;
-    const texture = layer.addChildAt(new Texture(), layer.numChildren);
-    game.initDisplay(texture);
-    Object.assign(texture, { x: door.x, y: door.y, scaleX: door.scaleX, scaleY: door.scaleY });
-    game.textureFollows(texture, i);
-  },
-  // Water is shown at the map's place and acts on an area 10 wider on each side and 10
-  // lower, as the loader sets them once the map is read.
-  water: (i, attrs) => {
-    const w = game.waters();
-    const shown = w.shown?.[i];
-    const front = game.frontLayer();
-    if (shown && front && attrs.friction !== 'false' && attrs.friction !== '0') {
-      front.addChildAt(shown, 0);
-      game.initDisplay(shown);
-      Object.assign(shown, { x: w.x[i], y: w.y[i], scaleX: w.w[i] / 100, scaleY: w.h[i] / 100 });
-      shown.gotoAndStop?.(Number(attrs.damage) > 0 ? 1 : 2);
-    }
-    w.x[i] -= 10; w.w[i] += 20; w.h[i] += 10;
-  },
-});
 
 // Kinds that cannot be added to a running level, and why.
 const NOT_ADDED = Object.freeze({
@@ -86,18 +87,27 @@ const NOT_ADDED = Object.freeze({
 });
 
 // Adds element e to the running level. Returns e.live for it ({ index } when its kind
-// keeps one, {} when it does not), or throws why it cannot be added.
+// keeps one, {} when it does not; problem: what of the loader's later steps failed), or
+// throws why it cannot be added.
 export function addLive(e) {
   if (NOT_ADDED[e.tag]) throw new Error(NOT_ADDED[e.tag]);
   if (e.tag === 'box') return { index: addWall(boundsOf(e), e.attrs.m ?? '0') };
   if (e.tag === 'lamp') { const index = builtCount('lamp'); placeLamp(e); return { index }; }
   if (!canBuild(e.tag)) throw new Error(loaderProblem() || `the game's loader has no ${e.tag}`);
   const index = builtCount(e.tag);
+  const mark = attachMark();
   buildElement(e.tag, e.attrs, index ?? 0);
-  if (e.tag === 'gun') { claimNewestGun(e); return {}; } // edited later through guns.js
-  if (index === null) return {}; // barrels, vehicles: made by the game's own helpers, no place of ours to edit later
-  AFTER_BUILD[e.tag]?.(index, e.attrs);
-  return { index };
+  // It is in the level now: a later step that fails is said (live.problem), not undone.
+  const live = {};
+  try {
+    resolveAttachments(mark);
+    if (e.tag === 'gun') claimNewestGun(e); // edited later through guns.js
+    // Barrels and vehicles (no index) are made by the game's own helpers: no place of ours to edit later.
+    else if (index !== null) { live.index = index; IN_PLACE[e.tag]?.after?.(index, e.attrs); }
+  } catch (err) {
+    live.problem = err.message;
+  }
+  return live;
 }
 
 // ----- taking out -----
@@ -110,12 +120,12 @@ const hide = (shown) => { detach(shown); };
 const REMOVE = Object.freeze({
   box: (i) => removeWall(i),
   region: (i) => { const r = game.regions()[i]; detach(r.mc); r.mc = undefined; r.x = r.y = FAR; r[F.R_USE_ON] = 0; },
-  trigger: (i) => { const t = unwrap(game.triggers()[i]); t[F.T_ENABLED] = false; t[F.T_CALLS] = 0; },
-  timer: (i) => { const t = game.timers()[i]; t[F.T_ENABLED] = false; t[F.T_CALLS] = 0; },
+  trigger: (i) => { const t = unwrap(game.triggers()[i]); t[F.T_ENABLED] = false; t[F.T_CALLS] = t[F.T_MAX_CALLS] = 0; setStart('trigger', t, 'enabled', false); },
+  timer: (i) => { const t = game.timers()[i]; t[F.T_ENABLED] = false; t[F.T_CALLS] = t[F.T_MAX_CALLS] = 0; setStart('timer', t, 'enabled', false); },
   decor: (i) => hide(game.decors()[i]),
   door: (i) => {
     const d = game.doors()[i];
-    const texture = textureAt({ x: d.x, y: d.y, w: d.w, h: d.h });
+    const texture = doorTexture(i) ?? textureAt({ x: d.x, y: d.y, w: d.w, h: d.h });
     if (texture) Object.assign(texture, { scaleX: 0, scaleY: 0 });
     hide(d);
     d.x = d.y = FAR; d.tarx = d.tary = FAR;

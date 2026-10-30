@@ -45,6 +45,7 @@ export const editorOn = () => state.on;
 export const editorShown = () => state.shown;
 export const pendingCount = () => state.pending.size;
 export const markPending = (e) => { state.pending.add(e.id); };
+export const isPending = (e) => state.pending.has(e.id);
 export const editorDoc = () => state.doc;
 export const currentLayer = () => state.layer;
 export const isSelectable = (tag) => state.selectable.has(tag);

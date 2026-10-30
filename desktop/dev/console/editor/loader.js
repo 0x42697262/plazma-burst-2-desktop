@@ -22,7 +22,12 @@ const COUNTER = /(\$[^\s;=[\]().,+\-*/!&|<>?:{}"'`]+)\+\+;/g;
 const SCRATCH = Object.freeze(['a', 'b', 'mc', 'i', 'i2', 'n']);
 
 let loader = null; // { first: { tag: { code, counter } }, second: { ... } }
-let source = null; // the game's file, for other code read from it (lamps.js)
+let source = null; // the game's file, for other code read from it (lamps.js, later.js)
+// The loader's watchdog: a function it calls in its loops that throws once the level has
+// taken too long to build (always, after the level is built). Code run here has its own
+// that does nothing.
+let watchdog = null;
+const WATCHDOG = /let ([$\w\u0400-\u04FF]+)=\(\)=>\s*\{\s*let t=Date\.now\(\);/;
 let problem = 'the game\'s loader has not been read yet';
 
 export const loaderReady = () => !!loader;
@@ -128,10 +133,12 @@ export async function readLoader(fetchFn = globalThis.fetch) {
     const text = await r.text();
     loader = parseLoader(text);
     source = text;
+    watchdog = text.match(WATCHDOG)?.[1] || null;
     problem = '';
   } catch (err) {
     loader = null;
     source = null;
+    watchdog = null;
     problem = `the game's loader could not be read (${err.message})`;
   }
   return loaderReady();
@@ -146,7 +153,8 @@ export const canBuild = (tag) => !!loader?.first[tag];
 export const builtCount = (tag) => { const c = loader?.first[tag]?.counter; return c ? globalThis[c] : null; };
 
 function run(code, name) {
-  (0, eval)(`${code}\n//# sourceURL=${SOURCE_PREFIX}-${name}.js`);
+  const body = watchdog ? `{const ${watchdog}=()=>{};\n${code}\n}` : code;
+  (0, eval)(`${body}\n//# sourceURL=${SOURCE_PREFIX}-${name}.js`);
 }
 
 // Runs a branch of `pass` for one element, at `index` of its kind: in place when there
@@ -187,6 +195,51 @@ export function buildElement(tag, attrs, index) {
 
 // The kind's branch as the loader has it ({ code, counter }), for code that reads it.
 export const branchOf = (tag) => loader?.first[tag] || null;
+
+const ID = String.raw`[$\w\u0400-\u04FF]+`;
+export const GAME_ID = ID;
+
+// The game's code with its string-table names replaced by their text ($x -> "x"), to
+// read it by shape.
+export const decoded = (src) => src.replace(new RegExp(String.raw`(^|[^.\w$\u0400-\u04FF])(\$[\w\u0400-\u04FF]+)`, 'g'),
+  (m, pre, name) => (typeof globalThis[name] === 'string' ? pre + JSON.stringify(globalThis[name]) : m));
+
+// Names a kind's branch gives what it makes, read from the branch: { key: name } for
+// patterns { key: RegExp with one capture } over the decoded branch. A pattern that
+// does not match leaves its key out.
+export function branchNames(tag, patterns) {
+  const branch = branchOf(tag);
+  if (!branch) return {};
+  const code = decoded(branch.code);
+  const out = {};
+  for (const [key, re] of Object.entries(patterns)) { const m = code.match(re); if (m) out[key] = m[1]; }
+  return out;
+}
+
+// The loop of the loader's later steps around position at: "for(v=0;v<n;v++)" (or
+// "for(var v=0;...)") and its body, a block or a single if with a block. { loopVar, body }
+// of the innermost one, or null.
+export function loopAt(src, at) {
+  if (at < 0) return null;
+  const header = new RegExp(String.raw`for\((?:var |let )?(${ID})=0;\1<[^;]+;\1\+\+\)\s*`, 'g');
+  let best = null;
+  for (let m; (m = header.exec(src)) && m.index < at;) {
+    let start = m.index + m[0].length;
+    let open = start;
+    if (src[start] !== '{') {
+      const cond = src.slice(start).match(/^if\(/);
+      if (!cond) continue;
+      let depth = 0, k = start + 2;
+      for (; k < src.length; k++) { if (src[k] === '(') depth++; else if (src[k] === ')' && --depth === 0) break; }
+      open = src.slice(k + 1).search(/\S/) + k + 1;
+      if (src[open] !== '{') continue;
+    }
+    const end = blockEnd(src, open);
+    const body = src.slice(start, end + 1);
+    if (end > at) best = { loopVar: m[1], body: src[start] === '{' ? body : `{${body}}` };
+  }
+  return best;
+}
 // A block of the game's code run like the loader's, with some of its names set first
 // (set: { name: value }) and others only kept (keep), all put back afterwards like the
 // scratch globals. The names are set by the code itself, so a "let" of the game's

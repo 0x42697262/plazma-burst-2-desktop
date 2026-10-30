@@ -13,7 +13,7 @@ import { el } from '../ui/dom.js';
 import { IN_OVERLAY } from '../ui/theme.js';
 import { COLOR } from '../core/colors.js';
 import { game } from '../game/bindings.js';
-import { KINDS, KIND_TAGS, kindOf, nameOf } from './kinds.js';
+import { KINDS, KIND_TAGS, NOT_PLACED, kindOf, nameOf } from './kinds.js';
 import {
   editorDoc, selected, select, currentLayer, showLayer, countByTag, onChange, pendingCount,
   currentTool, setTool, TOOL, isSelectable, selectableLayers, setSelectable, moreLayers, setMoreLayers, LAYER_GROUPS,
@@ -57,7 +57,7 @@ function drawTools() {
   const grid = el('div', { display: 'grid', gridTemplateColumns: `repeat(2, ${TOOL_SIZE}px)`, justifyContent: 'center' });
   const square = { width: `${TOOL_SIZE}px`, height: `${TOOL_SIZE}px` };
   grid.append(button(icon('edit'), { active: tool === TOOL.SELECT, title: 'Select, move and resize', style: square, onPress: () => setTool(TOOL.SELECT) }));
-  for (const tag of KIND_TAGS) {
+  for (const tag of KIND_TAGS.filter((t) => !NOT_PLACED.has(t))) {
     const active = tool === TOOL.PLACE && currentLayer() === tag;
     grid.append(button(icon(tag), {
       active, title: `Place ${KINDS[tag].title}`, style: square, onPress: () => { showLayer(tag); setTool(TOOL.PLACE); },

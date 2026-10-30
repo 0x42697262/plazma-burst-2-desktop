@@ -8,10 +8,9 @@
 // remembered until the level starts over. An edit builds it again in its slot with the
 // loader's lamp branch, draws its shape and flare with the game's own code (read from
 // its file like the loader), and has the game draw the lightmap again. A lamp the
-// loader does not keep (no flare, outside every background) is put out.
-import { blockEnd, branchOf, buildElement, builtCount, loaderSource, loaderProblem, runGameCode } from './loader.js';
+// loader does not keep (no flare, outside every background), or deleted, is put out.
+import { branchOf, buildElement, builtCount, decoded, loopAt, loaderSource, loaderProblem, runGameCode, GAME_ID as ID } from './loader.js';
 
-const ID = String.raw`[$\wЀ-ӿ]+`;
 const OFF = 0, FLARE = 2;
 // Plain names the light drawing writes as globals ("var g", "var alphas").
 const SHAPE_SCRATCH = Object.freeze(['g', 'alphas']);
@@ -21,22 +20,6 @@ let code = null; // what lamps.js read from the game's file, for its source
 let codeFor = null;
 
 export function forgetLamps() { found = new Map(); }
-
-// The game's string-table names replaced by their text, to read its code by shape.
-const decoded = (src) => src.replace(new RegExp(String.raw`(^|[^.\w$Ѐ-ӿ])(\$[\wЀ-ӿ]+)`, 'g'),
-  (m, pre, name) => (typeof globalThis[name] === 'string' ? pre + JSON.stringify(globalThis[name]) : m));
-
-// The body of the counted loop "for(v=0;v<n;v++){...}" around position at: { loopVar, body }.
-function loopAround(src, at) {
-  const header = new RegExp(String.raw`for\((${ID})=0;\1<${ID};\1\+\+\)\s*\{`, 'g');
-  let best = null;
-  for (let m; (m = header.exec(src)) && m.index < at;) {
-    const open = m.index + m[0].length - 1;
-    const end = blockEnd(src, open);
-    if (end > at) best = { loopVar: m[1], body: src.slice(open, end + 1) };
-  }
-  return best;
-}
 
 const one = (src, re, what) => {
   const m = src.match(re);
@@ -49,8 +32,8 @@ export function parseLights(src, lampCode) {
   const lamp = decoded(lampCode);
   const arr = (attr) => one(lamp, new RegExp(String.raw`(${ID})\[${ID}\]=(?:Math\.min\()?parseFloat\(b\["#${attr}"\]\)`), `lamp ${attr} array`)[1];
   const state = one(lamp, new RegExp(String.raw`(${ID})\[(${ID})\]=2;`), 'lamp state array');
-  const light = loopAround(src, src.indexOf('createRadialGradientAndBeginFill('));
-  const flare = loopAround(src, src.indexOf('new lens_flare'));
+  const light = loopAt(src, src.indexOf('createRadialGradientAndBeginFill('));
+  const flare = loopAt(src, src.indexOf('new lens_flare'));
   if (!light || !flare) throw new Error('the game\'s light drawing was not found');
   const flares = one(flare.body, new RegExp(String.raw`(${ID})\[${ID}\]=graphics_3d_front\.addChildAt\(new lens_flare`), 'flare list')[1];
   const draw = src.indexOf('drawWithQuality(');
@@ -91,6 +74,17 @@ function hideFlares(L, i) {
 }
 
 const redraw = (L) => globalThis[L.redraw](false);
+const drawLight = (L, i) => runGameCode(L.light.body, 'lamp-light', { set: { [L.light.loopVar]: i }, keep: SHAPE_SCRATCH });
+
+// Light i put out for good: a new round of a match lights every lamp that is out again
+// (frame2.js), so it is left with no power and a light of nothing.
+function putOut(L, i) {
+  hideFlares(L, i);
+  globalThis[L.power][i] = 0;
+  drawLight(L, i);
+  globalThis[L.state][i] = OFF;
+  redraw(L);
+}
 
 // Element e's light as its attributes say, in its slot (a new one at the end when it
 // has none). Returns its slot, or null when the loader does not keep it.
@@ -102,12 +96,12 @@ export function placeLamp(e) {
   const kept = buildElement('lamp', e.attrs, at);
   const S = globalThis[L.state];
   if (!kept) {
-    if (i !== null) { S[i] = OFF; redraw(L); }
+    if (i !== null) putOut(L, i);
     return null;
   }
   i = at;
   found.set(e.id, i);
-  runGameCode(L.light.body, 'lamp-light', { set: { [L.light.loopVar]: i }, keep: SHAPE_SCRATCH });
+  drawLight(L, i);
   if (S[i] === FLARE) runGameCode(L.flare.body, 'lamp-flare', { set: { [L.flare.loopVar]: i } });
   redraw(L);
   return i;
@@ -118,7 +112,5 @@ export function removeLamp(e) {
   const L = lights();
   const i = lampOf(e);
   if (i === null) throw new Error('the running level has no light for it');
-  hideFlares(L, i);
-  L.S[i] = OFF;
-  redraw(L);
+  putOut(L, i);
 }

@@ -6,7 +6,7 @@
 // again on the same map (dying, a restart, a new round), the game builds it from that
 // text, and the edits are put into the new level again.
 import { ROUTE } from '../core/shared.js';
-import { kindOf, SHAPE, DEFAULTS, newUid } from './kinds.js';
+import { kindOf, SHAPE, DEFAULTS, NOT_PLACED, newUid } from './kinds.js';
 import { applyLive } from './apply.js';
 import { addLive, removeLive, restoreLive } from './rebuild.js';
 import { forgetGuns } from './guns.js';
@@ -64,8 +64,7 @@ function insert(e, at, { recorded = true } = {}) {
   const doc = editorDoc();
   const where = doc.insert(e, at);
   try {
-    if (e.live) { restoreLive(e); takenOut.delete(e); } else e.live = addLive(e);
-    lastWhy = '';
+    if (e.live) { restoreLive(e); takenOut.delete(e); lastWhy = ''; } else lastWhy = addToLevel(e);
   } catch (err) { markPending(e); lastWhy = err.message; }
   if (recorded) record({ kind: 'insert', e, at: where });
   notify('edit');
@@ -100,6 +99,7 @@ export function setPlace(e, { x, y, w, h }) {
 // A new element of a kind at a place (a rectangle's w and h, or NEW_RECT), with the map
 // editor's defaults and a fresh uid. It is selected.
 export function addElement(tag, { x, y, w = NEW_RECT, h = NEW_RECT }) {
+  if (NOT_PLACED.has(tag)) throw new Error(`a ${kindOf(tag).title} comes with a custom image; it is not added by hand`);
   const kind = kindOf(tag);
   if (!kind) throw new Error(`cannot add a "${tag}"`);
   const uid = newUid(editorDoc(), tag);
@@ -114,6 +114,7 @@ export function deleteElement(e) { remove(e); }
 
 // A copy next to the original, with a uid of its own when it has one. It is selected.
 export function duplicateElement(e) {
+  if (NOT_PLACED.has(e.tag)) throw new Error(`a ${kindOf(e.tag).title} comes with a custom image; it is not copied by hand`);
   const attrs = { ...e.attrs, x: tidy(Number(e.attrs.x) + DUPLICATE_OFFSET), y: tidy(Number(e.attrs.y) + DUPLICATE_OFFSET) };
   if (attrs.uid) attrs.uid = newUid(editorDoc(), e.tag);
   const copy = newElement(e.tag, attrs);
@@ -144,6 +145,13 @@ export function redo() { const entry = takeRedo(); if (entry) play(entry, false)
 // edits. Every attribute of an element the game has that differs from the map is put in
 // again, the way the edit put it in the first time; what was taken out is taken out
 // again, and what was added is added again, in the order it was added.
+// e added to the running level: e.live, and what of it failed ('' when nothing).
+function addToLevel(e) {
+  const { problem = '', ...live } = addLive(e);
+  e.live = live;
+  return problem;
+}
+
 function replayEdits() {
   const doc = editorDoc();
   const original = MapDoc.of(doc.source);
@@ -161,7 +169,7 @@ function replayEdits() {
   }
   for (const e of takenOut) { try { removeLive(e); } catch { markPending(e); } }
   for (const e of added.sort((x, y) => x.live.index - y.live.index)) {
-    try { e.live = addLive(e); } catch { markPending(e); }
+    try { addToLevel(e); } catch { markPending(e); }
   }
 }
 

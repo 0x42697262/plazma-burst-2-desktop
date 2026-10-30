@@ -1395,8 +1395,7 @@ test('editor: walls (with trims), backgrounds, water, pushers and movables move 
     session.select(doc.byUid('#pool'));
     quiet('editor set w 200');
     assert.deepEqual([pool.scaleX, G[N.waterX][0], G[N.waterW][0], G[N.waterH][0]], [2, 590, 220, 60]);
-    quiet('editor set damage 5');
-    assert.equal(G[N.waterDamage][0], 5);
+    // Its damage builds it again (shown as acid): that test has a loader with water.
 
     // A pusher: its corners and its push.
     session.select(doc.byUid('#fan'));
@@ -1891,6 +1890,7 @@ $drawn.push($shapes[k]);
     quiet('editor set x 300');
     assert.deepEqual([G.$lampS[1], G.$lampN], [0, 2]);
     assert.deepEqual(G.$drawn, ['fill']);
+    assert.deepEqual(G.$shapes[1], { x: 300, power: 0 }, 'a light of nothing, if a new round lights it again');
     quiet('editor set x 150');
     assert.deepEqual([G.$lampX[1], G.$lampS[1], G.$lampN], [150, -1, 2], 'back in its slot');
     // Added: a new slot at the end, with its light and flare.
@@ -1933,5 +1933,268 @@ test('editor: an engine mark\'s parameter offers what its mark takes, as the edi
     table.params.splice(table.params.length - rows.length, rows.length);
     for (const k of Object.keys(table.markPairs)) delete table.markPairs[k];
     delete table.values.sky_model;
+  }
+});
+
+test('editor: movables and water take every parameter in the running level, with the loader\'s later steps', async () => {
+  const session = await consoleModule('editor/session.js');
+  const loader = await consoleModule('editor/loader.js');
+  const vm = await import('node:vm');
+  const G = c.G, N = c.N;
+  const original = G[N.mapText];
+  const quiet = (line) => c.run(line).filter((l) => !l.startsWith('Note:'));
+  const level = (on) => { G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; c.frame(); };
+  // A frame2.js shaped like the game's: branches that make movables, regions and water,
+  // then the later steps over all of them, each loop calling the loader's watchdog (which
+  // throws once the level is built).
+  G.$tagBox = 'box'; G.$tagDoor = 'door'; G.$tagRegion = 'region'; G.$tagWater = 'water';
+  vm.runInThisContext('let $watch = () => { throw new Error("Map construction took longer than 15 seconds"); };');
+  // Its counters are "$" names, like the game's; the console reads them by its own names.
+  const [doors, doorCount, waters, waterCount] = [N.doors, '$doorN', N.waters, '$waterN'];
+  for (const [mine, theirs] of [[N.doorCount, '$doorN'], [N.waterCount, '$waterN'], [N.regionCount, '$regionN']]) {
+    Object.defineProperty(G, mine, { get: () => G[theirs], set: (v) => { G[theirs] = v; }, configurable: true });
+  }
+  const [wx, wy, ww, wh, wd] = [N.waterX, N.waterY, N.waterW, N.waterH, N.waterDamage];
+  const frame2 = `
+let $watch=()=>
+{
+let t=Date.now();
+};
+for(var $el of $doc.children())
+{
+if(a==$tagBox)
+{
+$wallsBuilt++;
+}
+if(a==$tagWater)
+{
+${waters}[${waterCount}]=new water();
+if(b["#attach"]!="-1"&&b["#attach"]!=""&&b["#attach"]!=undefined)
+attachments.push({parent:b["#attach"],id:${waterCount},child:${waters}[${waterCount}],type:5});
+${wx}[${waterCount}]=parseFloat(b["#x"]);
+${wy}[${waterCount}]=parseFloat(b["#y"]);
+${ww}[${waterCount}]=parseFloat(b["#w"]);
+${wh}[${waterCount}]=parseFloat(b["#h"]);
+${wd}[${waterCount}]=parseFloat(b["#damage"]);
+$friction[${waterCount}]=(b["#friction"]!="0"&&b["#friction"]!="false");
+${waterCount}++;
+}
+if(a==$tagDoor)
+{
+mc=graphics_3d.addChildAt(new door,graphics_3d.numChildren);
+mc.visible=false;
+if(b["#vis"]=="true")
+mc.$vis=true;
+else
+mc.$vis=false;
+mc.$startX=mc["x"]=parseFloat(b["#x"]);
+mc.$startY=mc["y"]=parseFloat(b["#y"]);
+mc.scaleX=parseFloat(b["#w"])/100;
+mc.scaleY=parseFloat(b["#h"])/100;
+${doors}[${doorCount}]=mc;
+mc.w=parseFloat(b["#w"]);
+mc.h=parseFloat(b["#h"]);
+mc.$moving=(b["#moving"]=="true");
+mc.$startTarX=mc["tarx"]=parseFloat(b["#tarx"]);
+mc.$startTarY=mc["tary"]=parseFloat(b["#tary"]);
+mc.$startSpeed=mc.$speed=parseFloat(b["#maxspeed"]);
+mc.$sound=!(b["#mute"]==="true"||b["#mute"]==="1");
+if(b["#attach"]!=="-1"&&b["#attach"]!==""&&b["#attach"]!==undefined)
+attachments.push({parent:b["#attach"],child:mc,type:0});
+${doorCount}++;
+}
+if(a==$tagRegion)
+{
+${N.regions}[$regionN]=new Object();
+${N.regions}[$regionN]["x"]=parseFloat(b["#x"]);
+${N.regions}[$regionN]["y"]=parseFloat(b["#y"]);
+${N.regions}[$regionN].w=parseFloat(b["#w"]);
+${N.regions}[$regionN].h=parseFloat(b["#h"]);
+if(b["#attach"]!=="-1"&&b["#attach"]!==""&&b["#attach"]!==undefined)
+attachments.push({parent:b["#attach"],child:${N.regions}[$regionN],type:4});
+$regionN++;
+}
+}
+for(var i=0;i<attachments.length;i++)
+{
+$watch();
+attachments[i].parent=${doors}[$doorOf(attachments[i].parent)];
+if(attachments[i]["type"]==5)
+{
+attachments[i].dx=${wx}[attachments[i].id]-attachments[i].parent["x"];
+attachments[i].dy=${wy}[attachments[i].id]-attachments[i].parent["y"];
+}
+else
+{
+attachments[i].dx=attachments[i].child["x"]-attachments[i].parent["x"];
+attachments[i].dy=attachments[i].child["y"]-attachments[i].parent["y"];
+}
+}
+for(i=0;i<${waterCount};i++)
+{
+$watch();
+if($friction[i])
+{
+$shown=graphics_3d_front.addChildAt(${waters}[i],0);
+$shown["x"]=${wx}[i];
+$shown["y"]=${wy}[i];
+$shown.scaleX=${ww}[i]/100;
+$shown.scaleY=${wh}[i]/100;
+if(${wd}[i]>0)
+$shown.gotoAndStop(1);
+else
+$shown.gotoAndStop(2);
+}
+${wx}[i]-=10;
+${ww}[i]+=20;
+${wh}[i]+=10;
+}
+for(i=0;i<${doorCount};i++)
+{
+if(${doors}[i].$vis)
+{
+mc=game.addChildAt(new veh_hh,game.numChildren);
+mc["x"]=${doors}[i]["x"];
+mc.$edgeOf=i;
+mc=game.addChildAt(new veh_hh,game.numChildren);
+mc["x"]=${doors}[i]["x"]+${doors}[i].w;
+mc.$edgeOf=i;
+}
+}
+for(i=0;i<${doorCount};i++)
+if(${doors}[i].$vis)
+{
+$watch();
+$tex=graphics_3d.addChildAt(new texture_front0,graphics_3d.numChildren);
+$tex["x"]=${doors}[i]["x"];
+$tex.scaleX=${doors}[i].scaleX;
+$tex.scaleY=${doors}[i].scaleY;
+$tex["y"]=${doors}[i]["y"];
+${N.textureFollows}($tex,i);
+}
+function ${N.textureFollows}(clip,$door)
+{
+$tieN=$tieClips.length;
+$tieClips[$tieN]=clip;
+$tieDoors[$tieN]=$door;
+}
+function $moveTied(i,$speed,$interp=0)
+{
+for(var $k=0;$k<attachments.length;$k++)
+if(attachments[$k].parent===${doors}[i])
+{
+attachments[$k].child["x"]=${doors}[i]["x"]+attachments[$k].dx;
+attachments[$k].child["y"]=${doors}[i]["y"]+attachments[$k].dy;
+}
+}
+`;
+  const layer = () => ({ children: [], get numChildren() { return this.children.length; },
+    addChildAt(o, at) { if (o.parent) o.parent.removeChild(o); this.children.splice(at, 0, o); o.parent = this; return o; },
+    removeChild(o) { this.children.splice(this.children.indexOf(o), 1); o.parent = null; },
+    clearMCInterpolationData() {} });
+  const saved = { game: G.game, graphics_3d: G.graphics_3d, graphics_3d_front: G.graphics_3d_front, regions: G[N.regions] };
+  const world = Object.assign(layer(), { x: saved.game.x, y: saved.game.y, scaleX: saved.game.scaleX, scaleY: saved.game.scaleY, parent: saved.game.parent });
+  Object.assign(G, {
+    graphics_3d: layer(), graphics_3d_front: layer(), game: world, attachments: [], $tieClips: [], $tieDoors: [], $friction: [], $wallsBuilt: 0,
+    $regionN: 0, $doorOf: (uid) => G[doors].findIndex((d) => d.uid === uid),
+    door: class { constructor() { this.uid = null; } }, water: class { gotoAndStop(f) { this.frame = f; } }, veh_hh: class {}, texture_front0: class {},
+    [N.textureFollows]: (clip, door) => { G.$tieClips.push(clip); G.$tieDoors.push(door); },
+    $moveTied: (i) => { for (const a of G.attachments) if (a.parent === G[doors][i]) { a.child.x = G[doors][i].x + a.dx; a.child.y = G[doors][i].y + a.dy; } },
+    [doors]: [], $doorN: 0, [waters]: [], $waterN: 0, [wx]: [], [wy]: [], [ww]: [], [wh]: [], [wd]: [], [N.regions]: [],
+    [N.displayInit]: () => {},
+  });
+  await loader.readLoader(async () => ({ ok: true, status: 200, text: async () => frame2 }));
+  assert.ok(loader.loaderReady(), loader.loaderProblem());
+  // Uids as the game's own uid table would resolve them (the fake keeps it on the movable).
+  const named = (uid) => { const d = G[doors][G[doors].length - 1]; d.uid = uid; };
+  try {
+    G[N.mapText] = '<box x="0" y="0" w="10" h="10" m="0" />';
+    c.run('editor on');
+    level(false); level(true);
+    // Added: the movable, its texture (tied to it) and its two edges.
+    assert.deepEqual(quiet('editor add door 500 0 40 10'), ['Added #door*1 at 500, 0 (40 x 10); in the running level']);
+    const lift = session.selected();
+    named(lift.attrs.uid);
+    const tex = G.$tieClips[0];
+    assert.deepEqual([G[doorCount], G.graphics_3d.children.includes(tex), G.$tieDoors[0], tex.x, tex.scaleX], [1, true, 0, 500, 0.4]);
+    assert.equal(G.game.children.length, 2, 'two edges');
+    // A region attached to it: tied as the loader ties it.
+    c.run('editor add region 510 -20 20 20');
+    const rider = session.selected();
+    assert.deepEqual(quiet(`editor set attach ${lift.attrs.uid}`), [`${rider.attrs.uid}: attach = "${lift.attrs.uid}", live now`]);
+    assert.equal(G.attachments.length, 1);
+    assert.deepEqual([G.attachments[0].parent, G.attachments[0].dx, G.attachments[0].dy], [G[doors][0], 10, -20]);
+    // The movable moved: its start copy for a new round, its texture, what rides on it.
+    session.select(lift);
+    assert.deepEqual(quiet('editor set x 600'), [`${lift.attrs.uid}: x = "600", live now`]);
+    assert.deepEqual([G[doors][0].x, G[doors][0].$startX, tex.x, G[N.regions][0].x], [600, 600, 600, 610]);
+    quiet('editor set tary -50');
+    assert.deepEqual([G[doors][0].tary, G[doors][0].$startTarY], [-50, -50]);
+    // Hidden: built again, its texture taken off, the rider tied to the new one.
+    const before = G[doors][0];
+    assert.deepEqual(quiet('editor set vis false'), [`${lift.attrs.uid}: vis = "false", live now`]);
+    named(lift.attrs.uid);
+    assert.notEqual(G[doors][0], before);
+    assert.ok(!G.graphics_3d.children.includes(tex), 'no texture');
+    assert.equal(G.attachments[0].parent, G[doors][0], 'the rider on the new one');
+    // Shown again: the same texture back, no second pair of edges.
+    quiet('editor set vis true');
+    named(lift.attrs.uid);
+    assert.deepEqual([G.graphics_3d.children.includes(tex), tex.x, G.game.children.length, G.$tieClips.length], [true, 600, 2, 1]);
+    for (const [attr, v, field, want] of [['maxspeed', '20', '$speed', 20], ['moving', 'true', '$moving', true], ['mute', 'true', '$sound', false]]) {
+      assert.deepEqual(quiet(`editor set ${attr} ${v}`), [`${lift.attrs.uid}: ${attr} = "${v}", live now`]);
+      named(lift.attrs.uid);
+      assert.equal(G[doors][0][field], want, attr);
+    }
+    assert.equal(G[doors][0].$startSpeed, 20);
+
+    // Water: shown as water, its area widened, as the loader does once the map is read.
+    c.run('editor add water 800 0 100 50');
+    const pool = session.selected();
+    const first = G[waters][0];
+    assert.deepEqual([G.graphics_3d_front.children[0], first.frame, G[wx][0], G[ww][0], G[wh][0]], [first, 2, 790, 120, 60]);
+    // Acid: built again and shown as acid, the area widened once.
+    assert.deepEqual(quiet('editor set damage 5'), [`${pool.attrs.uid}: damage = "5", live now`]);
+    assert.ok(!G.graphics_3d_front.children.includes(first), 'the old one off the screen');
+    assert.deepEqual([G[waters][0].frame, G[wd][0], G[wx][0], G[ww][0], G[waterCount]], [1, 5, 790, 120, 1]);
+    // No friction: not shown.
+    quiet('editor set friction false');
+    assert.deepEqual(G.graphics_3d_front.children, []);
+    // Attached to the movable: tied by its index.
+    quiet(`editor set attach ${lift.attrs.uid}`);
+    const tie = G.attachments.find((a) => a.type === 5);
+    assert.deepEqual([tie.id, tie.parent, tie.dx], [0, G[doors][0], 800 - 600]);
+    assert.equal(session.pendingCount(), 0, 'all in the running level');
+  } finally {
+    session.setEditor(false); session.forgetDocument();
+    G[N.mapText] = original;
+    Object.assign(G, { game: saved.game, graphics_3d: saved.graphics_3d, graphics_3d_front: saved.graphics_3d_front, [N.regions]: saved.regions });
+    for (const k of ['$tagBox', '$tagDoor', '$tagRegion', '$tagWater', 'attachments', '$tieClips', '$tieDoors', '$friction', '$wallsBuilt', '$regionN',
+      '$doorOf', 'door', 'water', 'veh_hh', 'texture_front0', '$moveTied', '$shown', '$tex', '$tieN', '$k', '$doorN', '$waterN']) delete G[k];
+    for (const k of ['doors', 'doorCount', 'waters', 'waterCount', 'waterX', 'waterY', 'waterW', 'waterH', 'waterDamage', 'regionCount', 'textureFollows']) delete G[N[k]];
+  }
+});
+
+test('editor: every parameter the game reads is in the params panel, and every one says how it reaches a running level', async () => {
+  const { paramsOf } = await consoleModule('editor/params.js');
+  const { KIND_TAGS } = await consoleModule('editor/kinds.js');
+  const { liveSupport } = await consoleModule('editor/apply.js');
+  // What the map loader reads of each kind (frame2.js: b["#..."] in each kind's branch).
+  const GAME_READS = {
+    box: 'x y w h m', image: 'id width height', bg: 'x y w h f c u v a m s', pushf: 'x y w h tox toy stab damage uid attach',
+    water: 'attach x y w h damage friction', door: 'vis x y w h moving tarx tary maxspeed uid mute attach',
+    region: 'x y w h uses_timer use_target use_on uid attach', trigger: 'execute enabled maxcalls uid', timer: 'enabled maxcalls target delay uid',
+    barrel: 'model x y tox toy uid', vehicle: 'model x y tox toy uid side hpp', decor: 'model f u v x y r sx sy uid attach text',
+    gun: 'model command upg uid x y', song: 'uid url volume loop callback', inf: 'mark forteam x y', lamp: 'x y power flare uid',
+    player: 'x y uid hea hmax tox toy ondeath team botaction side incar char', enemy: 'x y uid hea hmax tox toy ondeath team botaction side incar char',
+  };
+  assert.deepEqual(Object.keys(GAME_READS).sort(), [...KIND_TAGS].sort(), 'every kind the game reads, and no other');
+  for (const tag of KIND_TAGS) {
+    const shown = paramsOf(tag);
+    for (const attr of GAME_READS[tag].split(' ')) assert.ok(shown.includes(attr), `${tag} ${attr}: not in the panel`);
+    for (const attr of shown) {
+      const how = liveSupport(tag, attr);
+      assert.ok(how && how !== 'the running level cannot take it', `${tag} ${attr}: no way into a running level, and no reason`);
+    }
   }
 });
