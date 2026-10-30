@@ -8,7 +8,7 @@
 // view.js     the overlay layer: outlines, selection, logic links
 // history.js  undo and redo
 // panels.js   Tools, Layers, Objects, Params, the status line
-// input.js    the click layer: select, drag, resize, place
+// input.js    presses in the world: select, drag, resize, place
 // Views listen to the session; the session never draws.
 import { COLOR } from '../core/colors.js';
 import { showKey, eventKeyName } from '../state/keys.js';
