@@ -100,7 +100,7 @@ export const DEFAULTS = Object.freeze({
   inf: { mark: 'hero1_guns', forteam: '0' },
 });
 // Kinds whose elements have no uid in the map editor either.
-const NO_UID = new Set(['box', 'bg', 'inf']);
+export const NO_UID = new Set(['box', 'bg', 'inf']);
 
 // A uid no element has yet, numbered like the map editor's: "#region*12".
 export function newUid(doc, tag) {

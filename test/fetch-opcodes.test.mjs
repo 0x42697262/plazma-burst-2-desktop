@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
-const { parseParams, check } = createRequire(import.meta.url)('../tools/fetch-opcodes.js');
+const { parseParams, parseParamTable, check } = createRequire(import.meta.url)('../tools/fetch-opcodes.js');
 
 const SRC = `
 function addTrigger(trigger_type_id, description, paramA, paramB ) { /* the editor's own */ }
@@ -27,4 +27,22 @@ test('fetch-opcodes reads actions and aliases like the editor registers them', (
   assert.equal(actions[12].alias, undefined, 'an alias in a comment belongs to nothing');
   assert.deepEqual(aliases, { MovableTo: 0, DamageRegion: 6, Same: 9 }, 'a name used twice is the lower number');
   assert.match(check({ actions, aliases }).join('\n'), /only 7 actions found/);
+});
+
+test('fetch-opcodes reads the editor\'s object parameters and value lists', () => {
+  const src = String.raw`
+param_type[0] = 	['uid', 'string', 			'ID', 			'Object ID', '*'];
+param_type[23] = 	['use_on', 'region_activation',	'Activation on',		'Determines when trigger which is defined by "Activation Trigger" parameter runs', 'region'];
+//param_type[35] = 	['hero1_guns', 'engine_mark',			'Modificator',	'Game modificator', 'engine_mark'];
+for (var i=1;i<=trigger_actions_limit;i++) param_type[param_type.length] = ['actions_'+i+'_type', 'trigger_type', 'Action', 'x', 'trigger'];
+special_values_table['side']=new Array();
+special_values_table['side'][-1]="&#9668; Left";
+special_values_table['bool']['true']="Yes";
+special_values_table['region_activation'][1]='\'\'USE\'\' key (with button)';
+special_values_table['maxcalls']['[val]']='# calls';
+`;
+  const { params, values } = parseParamTable(src);
+  assert.deepEqual(params.map((p) => p.name), ['uid', 'use_on'], 'not the commented one, not the loop');
+  assert.equal(params[1].desc, 'Determines when trigger which is defined by "Activation Trigger" parameter runs');
+  assert.deepEqual(values, { side: { '-1': '◄ Left' }, bool: { true: 'Yes' }, region_activation: { 1: "''USE'' key (with button)" } });
 });

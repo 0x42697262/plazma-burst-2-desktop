@@ -8,6 +8,7 @@ import { actionInfo, opcodeName, opcodeNames, opcodeType } from '../triggers/scr
 import { actionsOf, actionValues, triggerText, valuesFromText } from './actions.js';
 import { setAttrs } from './edit.js';
 import { editField } from './fields.js';
+import { choicesOf, shownValue } from './params.js';
 import { PALETTE, FONT, FONT_SIZE, caption, button, paramRow, onClick } from './style.js';
 
 const NEW_ACTION_TYPE = 100; // "set variable A to value B": an action that does something harmless
@@ -43,12 +44,12 @@ export function drawTriggerActions(box, trigger, { redraw, say }) {
     row.append(remove);
     box.append(row);
     for (const side of ['A', 'B']) {
-      const span = el('span', {}, a[side]);
       const kind = side === 'A' ? info?.a : info?.b;
+      const span = el('span', {}, shownValue(kind, a[side]));
       const { row: r, value: v } = paramRow(`${side}${kind && kind !== 'nochange' ? ` (${kind})` : ''}`, span);
       if (kind === 'nochange') v.style.opacity = '0.5';
       onClick(v, () => editField(span, {
-        initial: a[side], onDone: redraw,
+        initial: a[side], onDone: redraw, choices: choicesOf(kind),
         onCommit: (text) => run(actionValues(trigger.attrs, list.map((b, k) => (k === i ? { ...b, [side]: text } : b))), `action ${i + 1} ${side}`),
       }));
       box.append(r);

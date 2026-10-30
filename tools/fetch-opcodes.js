@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Downloads the map editor's list of trigger actions and writes desktop/dev/opcodes.js,
-// which the dev console uses to read triggers written as text ("triggers exec").
+// Downloads the map editor's list of trigger actions, its object parameters and their
+// value lists, and writes desktop/dev/opcodes.js. The dev console uses them to read
+// triggers written as text ("triggers exec") and in its map editor's params panel.
 //
 // The editor's "edit triggers as text" view writes each action as
 //   MovableTo( "#door*13", "#region*306" );
@@ -8,6 +9,10 @@
 // The game itself only knows the numbers. The aliases, with each action's description
 // and the kind of its two targets, are registered in the editor's lib_params.js:
 //   addTrigger(0, "Movable &#8250; Force Movable 'A' move to region 'B'", 'door', 'region'); AddOpcodeAlias('MovableTo');
+// The same file has every object parameter the editor's params panel shows:
+//   param_type[23] = ['use_on', 'region_activation', 'Activation on', 'Determines ...', 'region'];
+// (attribute, kind of value, title, description, object kind or '*'), and the values a
+// kind offers: special_values_table['region_activation'][9] = "''USE'' key, only Red team ...".
 // The editor page needs a login, its scripts do not.
 //
 // Usage: node tools/fetch-opcodes.js [--from file] [--out file]
@@ -27,6 +32,7 @@ const OUT = path.join(REPO, 'desktop', 'dev', 'opcodes.js');
 const MIN_ACTIONS = 400;
 const MIN_ALIASES = 100;
 const KNOWN = Object.freeze({ MovableTo: 0, 'next if VarA == ValueB': 123 });
+const MIN_PARAMS = 50;
 
 // The source without comments. Strings are kept as written, so a "//" inside one
 // stays; a regular expression literal containing a quote would confuse it, and the
@@ -59,7 +65,9 @@ const CALL = new RegExp(String.raw`\b(addTrigger|AddOpcodeAlias)\s*\(\s*(?:(-?\d
 
 const unquote = (s) => s.slice(1, -1).replace(/\\(.)/g, '$1');
 const ENTITIES = Object.freeze({ '&#8250;': '›', '&quot;': '"', '&amp;': '&', '&lt;': '<', '&gt;': '>', '&#39;': '\'' });
-const plainText = (s) => s.replace(/<[^>]*>/g, '').replace(/&#?\w+;/g, (e) => ENTITIES[e] ?? e);
+const plainText = (s) => s.replace(/<[^>]*>/g, '')
+  .replace(/&#(\d+);/g, (e, n) => ENTITIES[e] ?? String.fromCharCode(Number(n)))
+  .replace(/&\w+;/g, (e) => ENTITIES[e] ?? e);
 
 // { actions: { type: { desc, a, b, alias? } }, aliases: { alias: type } }. Like the
 // editor: an alias belongs to the action registered last, a later registration of a
@@ -84,19 +92,42 @@ function parseParams(src) {
   return { actions, aliases };
 }
 
-function check({ actions, aliases }) {
+const PARAM = new RegExp(String.raw`\bparam_type\[\s*\d+\s*\]\s*=\s*\[\s*(${STRING})\s*,\s*(${STRING})\s*,\s*(${STRING})\s*,\s*(${STRING})\s*,\s*(${STRING})\s*\]`, 'g');
+const VALUE = new RegExp(String.raw`\bspecial_values_table\[\s*(${STRING})\s*\]\[\s*(-?\d+|${STRING})\s*\]\s*=\s*(${STRING})\s*;`, 'g');
+
+// params: [{ name, kind, title, desc, cls }] in the editor's order; values: { kind:
+// { value: label } }. Lists the editor builds in loops or from other files are left as
+// far as their plain assignments go.
+function parseParamTable(src) {
+  const code = stripComments(src);
+  const params = [...code.matchAll(PARAM)].map((m) => ({
+    name: unquote(m[1]), kind: unquote(m[2]), title: plainText(unquote(m[3])), desc: plainText(unquote(m[4])), cls: unquote(m[5]),
+  }));
+  const values = {};
+  for (const m of code.matchAll(VALUE)) {
+    const kind = unquote(m[1]);
+    const key = /^-?\d+$/.test(m[2]) ? m[2] : unquote(m[2]);
+    if (key.startsWith('[')) continue; // '[listof]', '[val]': how the editor picks, not a value
+    (values[kind] ||= {})[key] = plainText(unquote(m[3]));
+  }
+  return { params, values };
+}
+
+function check({ actions, aliases, params, values }) {
   const problems = [];
   const n = Object.keys(actions).length;
   if (n < MIN_ACTIONS) problems.push(`only ${n} actions found (expected ${MIN_ACTIONS}+)`);
   if (Object.keys(aliases).length < MIN_ALIASES) problems.push(`only ${Object.keys(aliases).length} aliases found (expected ${MIN_ALIASES}+)`);
+  if (params && params.length < MIN_PARAMS) problems.push(`only ${params.length} object parameters found (expected ${MIN_PARAMS}+)`);
+  if (values && !values.region_activation) problems.push('no "region_activation" values found');
   for (const [alias, type] of Object.entries(KNOWN)) {
     if (aliases[alias] !== type) problems.push(`"${alias}" is ${aliases[alias] ?? 'missing'}, expected ${type}`);
   }
   return problems;
 }
 
-function render({ actions, aliases }, source) {
-  const data = { source, fetched: new Date().toISOString().slice(0, 10), aliases, actions };
+function render({ actions, aliases, params, values }, source) {
+  const data = { source, fetched: new Date().toISOString().slice(0, 10), aliases, actions, params, values };
   return '// Trigger action names and descriptions from the map editor, for the dev console.\n'
     + '// Generated by "npm run fetch-opcodes"; do not edit.\n'
     + `globalThis.PB2_OPCODES = ${JSON.stringify(data, null, 1)};\n`;
@@ -121,17 +152,17 @@ async function main() {
     if (res.status !== 200) throw new Error(`${SOURCE_URL}: HTTP ${res.status}`);
     src = await res.text();
   }
-  const table = parseParams(src);
+  const table = { ...parseParams(src), ...parseParamTable(src) };
   const problems = check(table);
   if (problems.length) {
     for (const p of problems) console.error(`problem: ${p}`);
     throw new Error(`${out} not written`);
   }
   fs.writeFileSync(out, render(table, from ? path.basename(from) : SOURCE_URL));
-  console.log(`Found ${Object.keys(table.actions).length} trigger actions, ${Object.keys(table.aliases).length} with names. Wrote ${path.relative(REPO, out)}`);
+  console.log(`Found ${Object.keys(table.actions).length} trigger actions (${Object.keys(table.aliases).length} with names), ${table.params.length} object parameters, ${Object.keys(table.values).length} value lists. Wrote ${path.relative(REPO, out)}`);
 }
 
-module.exports = { parseParams, stripComments, check };
+module.exports = { parseParams, parseParamTable, stripComments, check };
 
 if (require.main === module) {
   main().catch((e) => {

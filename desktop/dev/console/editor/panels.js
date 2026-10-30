@@ -23,6 +23,7 @@ import { PALETTE, FONT, FONT_SIZE, panel, caption, icon, button, listRow, paramR
 import { drawTriggerActions } from './trigger-panel.js';
 import { isActionAttr } from './actions.js';
 import { editField } from './fields.js';
+import { paramsOf, paramInfo, defaultOf, choicesOf, shownValue } from './params.js';
 
 const OBJECTS_SHOWN = 400; // rows in the object box; a long layer says how many more
 const HIDDEN_ALPHA = '0.35';
@@ -99,10 +100,11 @@ function drawObjects() {
   nodes.objectsCaption.textContent = `Objects: ${kindOf(tag).title} (${list.length})`;
 }
 
-// A value turns into a text box when clicked (fields.js).
-function editValue(span, sel, attr) {
+// A value turns into a text box when clicked (fields.js), offering the values the
+// parameter's kind has.
+function editValue(span, sel, attr, choices) {
   editField(span, {
-    initial: sel.attrs[attr], onDone: drawParams,
+    initial: sel.attrs[attr] ?? defaultOf(sel.tag, attr) ?? '', choices, onDone: drawParams,
     onCommit: (text) => {
       try {
         const { live, why } = setAttr(sel, attr, text);
@@ -112,6 +114,9 @@ function editValue(span, sel, attr) {
   });
 }
 
+// Every parameter of the kind (params.js), then whatever else the map gives it; a
+// parameter the map leaves out shows the editor's default, dimmed. A trigger's actions
+// are listed after them (trigger-panel.js).
 function drawParams() {
   const doc = editorDoc();
   const sel = selected();
@@ -121,11 +126,16 @@ function drawParams() {
   const head = el('div', { display: 'flex', alignItems: 'center', gap: '2px', margin: '2px 2px 3px', color: PALETTE.title });
   head.append(icon(sel.tag), el('span', {}, `1 ${kindOf(sel.tag)?.title || sel.tag} selected: ${nameOf(doc, sel)}`));
   box.append(head);
-  for (const [attr, value] of Object.entries(sel.attrs)) {
-    if (sel.tag === 'trigger' && isActionAttr(attr)) continue; // listed as actions below
-    const span = el('span', {}, value);
-    const { row, value: cell } = paramRow(attr, span);
-    onClick(cell, () => editValue(span, sel, attr));
+  const known = paramsOf(sel.tag);
+  const extra = Object.keys(sel.attrs).filter((a) => !known.includes(a) && !(sel.tag === 'trigger' && isActionAttr(a)));
+  for (const attr of [...known, ...extra]) {
+    const info = paramInfo(sel.tag, attr);
+    const set = attr in sel.attrs;
+    const value = set ? sel.attrs[attr] : defaultOf(sel.tag, attr) ?? '';
+    const span = el('span', {}, shownValue(info?.kind, value));
+    const { row, value: cell } = paramRow(info?.title || attr, span, { hint: `${attr}${info?.desc ? `: ${info.desc}` : ''}${set ? '' : ' (not in the map: the default)'}` });
+    if (!set) cell.style.opacity = '0.55';
+    onClick(cell, () => editValue(span, sel, attr, choicesOf(info?.kind)));
     box.append(row);
   }
   if (sel.tag === 'trigger') drawTriggerActions(box, sel, { redraw: drawParams, say });

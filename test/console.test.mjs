@@ -1466,3 +1466,22 @@ test('editor: a trigger\'s actions are added, changed and removed, or edited as 
     c.G[c.N.mapText] = original;
   }
 });
+
+test('editor: Params shows every parameter of the kind, with the editor\'s titles, defaults and values', async () => {
+  const session = await consoleModule('editor/session.js');
+  const original = c.G[c.N.mapText];
+  const level = (on) => { c.G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; c.frame(); };
+  try {
+    c.run('editor on');
+    c.G[c.N.mapText] = '<region x="0" y="0" w="10" h="10" use_on="1" />'; // an old map: no uid, no use_target, no attach
+    level(false); level(true);
+    session.select(session.editorDoc().byTag('region')[0]);
+    const texts = textsOf(c.G[c.N.uiOverlay].overlay);
+    for (const t of ['ID', 'X', 'Activation Trigger', 'Activation on', 'attach', "1 (''USE'' key (with button))", '-1']) {
+      assert.ok(texts.includes(t), `${t}: ${texts.slice(-30).join(' | ')}`);
+    }
+  } finally {
+    session.setEditor(false);
+    c.G[c.N.mapText] = original;
+  }
+});

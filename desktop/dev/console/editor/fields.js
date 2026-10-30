@@ -1,6 +1,6 @@
 // A value that turns into a text box when clicked, as in the map editor's params: Enter
 // applies it, Esc or clicking elsewhere leaves it as it was. `choices` offers
-// completions (a datalist).
+// completions (a datalist): strings, or { value, label }.
 import { el } from '../ui/dom.js';
 import { PALETTE, FONT, FONT_SIZE } from './style.js';
 
@@ -17,7 +17,12 @@ export function editField(span, { initial, onCommit, onDone, choices = [] }) {
   if (choices.length && input.setAttribute) {
     list = el('datalist', {});
     list.id = `pb2dev-choices-${++lists}`;
-    for (const c of choices) { const o = el('option', {}); o.value = c; list.append(o); }
+    for (const c of choices) {
+      const o = el('option', {});
+      o.value = typeof c === 'string' ? c : c.value;
+      if (typeof c !== 'string' && c.label) o.label = c.label;
+      list.append(o);
+    }
     input.setAttribute('list', list.id);
   }
   let finished = false;

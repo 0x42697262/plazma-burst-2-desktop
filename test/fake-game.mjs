@@ -41,6 +41,13 @@ const FAKE_OPCODES = Object.freeze({
     123: { desc: "Var › Skip next trigger action if value of variable 'A' does not equals value 'B'", a: 'string', b: 'string', alias: 'next if VarA == ValueB' },
     562: { desc: 'Debug › Something without a name', a: 'string', b: 'string' },
   },
+  params: [
+    { name: 'uid', kind: 'string', title: 'ID', desc: 'Object ID', cls: '*' },
+    { name: 'x', kind: 'value+round10', title: 'X', desc: 'Object position along X axis', cls: '*' },
+    { name: 'use_target', kind: 'trigger+none', title: 'Activation Trigger', desc: 'Trigger being called on Action event', cls: 'region' },
+    { name: 'use_on', kind: 'region_activation', title: 'Activation on', desc: 'When it runs', cls: 'region' },
+  ],
+  values: { region_activation: { 0: 'No activation', 1: "''USE'' key (with button)" } },
 });
 
 // Installs the fake game on globalThis, then loads and starts the real console.
