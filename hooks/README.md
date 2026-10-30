@@ -7,6 +7,7 @@ Hooks are small scripts in this folder that change or watch what the game does,
 - Your hooks: `hooks/<name>.js`. Not in git (only this guide and `*.example.js` are).
 - Templates: `hooks/*.example.js`. Never loaded. Copy one to `<name>.js` to use it.
 - Turn all hooks off: `PB2_HOOKS=0 npm start`.
+- Every call, rule, order and message in detail: [REFERENCE.md](REFERENCE.md).
 
 ## Quick start (2 minutes)
 

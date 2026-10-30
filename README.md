@@ -41,7 +41,7 @@ In the game, press Shift+`` ` `` (`~`) for the dev console and type `help`.
 | `desktop/credentials.json` | Your login (copy `credentials.example.json`) | no |
 | `desktop/dev-overrides.json` | Dev console settings, binds and profiles (per-map settings, `profile` in the console). Editing it while the game runs reloads it | no |
 | `desktop/kv-file.js` | Shares `dev-overrides.json` between the console and your edits | yes |
-| `hooks/` | Your hooks: Frida-style scripts that change the game's code as it loads. Guide: `hooks/README.md` | only `README.md` and `*.example.js` |
+| `hooks/` | Your hooks: Frida-style scripts that change the game's code as it loads. Guide: `hooks/README.md`, reference: `hooks/REFERENCE.md` | only `README.md`, `REFERENCE.md` and `*.example.js` |
 | `desktop/hooks.js`, `desktop/hooks-runtime.js` | The hooks loader (dry run, patches, trampolines) and its in-page runtime | yes |
 | `screenshots/` | Screenshots from the dev console: F12 (console key `screenshot_key`) or `screenshot` | no |
 | `tools/fetch-game.js` | Downloads the game | yes |

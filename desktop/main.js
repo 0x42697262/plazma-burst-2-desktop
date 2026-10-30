@@ -449,7 +449,12 @@ async function serveLocal(url) {
       buildHookPlan();
       // Before the game's first script, so handlers exist before any game code runs.
       if (hookPlan) out = hooks.injectTags(out, hookPlan);
-      if (hookPlan && hookPlan.hooks.length && out === html) log.error('Hooks: could not inject into index.html (no <script> tag)');
+      if (hookPlan && hookPlan.hooks.length && out === html) {
+        // Without the runtime, patched scripts would call a PB2Hooks that does not exist:
+        // serve the original scripts instead.
+        log.error('Hooks: could not inject into index.html (no <script> tag); no hooks this load');
+        hookPlan = null;
+      }
     }
     if (DEV_ENABLED) {
       // After the game's own scripts; fall back to the end of <body> if the tag changed.
