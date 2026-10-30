@@ -54,9 +54,16 @@ const PICKS = Object.freeze({
 });
 export const pickKindsOf = (valueKind) => PICKS[valueKind] || null;
 
+// The pictures the map editor shows next to a model or a skin (its server's lists:
+// decors/<model>.png, chars_full/char0001.png), and how it shows them.
+const PICTURES = Object.freeze({
+  decor_model: (v) => ({ src: `/level_editor/decors/${v}.png`, fit: true }),
+  char: (v) => (/^\d+$/.test(v) ? { src: `/level_editor/chars_full/char${v.padStart(4, '0')}.png`, head: true } : null),
+});
+
 // The rows of the map editor's drop-down for a kind of value, in its order (its
 // special_values_table[kind], walked like the editor walks it):
-//   { value, label }                         a value it offers
+//   { value, label, picture? }               a value it offers (a model or a skin with its picture)
 //   { custom: true, label, negative }        "# calls": type a number ("-[val]": it is stored negative)
 //   { value, label, icon }                   an object of the map, named as a parameter names it
 //   { value, label, category, color }        a trigger action (kind "trigger_type")
@@ -69,9 +76,10 @@ export function dropdownItems(valueKind, doc, referenceTo, nameOf) {
   const base = valueKind.split('+')[0];
   const merged = { ...(base !== valueKind ? values[base] : null), ...values[valueKind] };
   const items = [];
+  const picture = PICTURES[valueKind];
   for (const [value, label] of Object.entries(merged)) {
     if (value.includes('[val]')) items.push({ custom: true, label, negative: value.startsWith('-') });
-    else items.push({ value, label });
+    else items.push({ value, label, ...(picture ? { picture: picture(value) } : {}) });
   }
   const kinds = pickKindsOf(valueKind);
   if (kinds && doc) {

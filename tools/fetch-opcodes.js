@@ -25,6 +25,10 @@ const path = require('path');
 
 const REPO = path.join(__dirname, '..');
 const SOURCE_URL = 'https://www.plazmaburst2.com/level_editor/editor_scripts/lib_params.js';
+// The value lists the editor asks its server for (models, skins): the reply is script
+// that fills special_values_table, read here like the editor's own file. Public.
+const LISTS_URL = 'https://www.plazmaburst2.com/level_editor/e_server.php?a=request_consts';
+const SERVER_LISTS = Object.freeze(['char', 'decor_model', 'bg_model']);
 const UA = 'Mozilla/5.0 (pb2-desktop fetch-opcodes)';
 const OUT = path.join(REPO, 'desktop', 'dev', 'opcodes.js');
 // Sanity checks: a list much shorter than this, or these aliases on other numbers,
@@ -151,6 +155,27 @@ function render({ actions, aliases, params, values, categories }, source) {
     + `globalThis.PB2_OPCODES = ${JSON.stringify(data, null, 1)};\n`;
 }
 
+// { kind: { value: label } } for the lists the editor's server gives (char, decor_model,
+// ...). A list that cannot be had is left out, with a warning.
+async function fetchServerLists() {
+  const out = {};
+  for (const kind of SERVER_LISTS) {
+    try {
+      const res = await fetch(LISTS_URL, {
+        method: 'POST', headers: { 'User-Agent': UA, 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `a=get_images&for_class=${kind}&update_const=all`,
+      });
+      if (res.status !== 200) throw new Error(`HTTP ${res.status}`);
+      const { values } = parseParamTable(await res.text());
+      if (values[kind]) out[kind] = values[kind];
+      else throw new Error('no values in the reply');
+    } catch (e) {
+      console.warn(`warning: the editor's "${kind}" list was not fetched (${e.message})`);
+    }
+  }
+  return out;
+}
+
 async function main() {
   const argv = process.argv.slice(2);
   let from = null;
@@ -171,6 +196,7 @@ async function main() {
     src = await res.text();
   }
   const table = { ...parseParams(src), ...parseParamTable(src) };
+  if (!from) Object.assign(table.values, await fetchServerLists());
   table.categories = parseCategories(src, table.actions);
   const problems = check(table);
   if (problems.length) {

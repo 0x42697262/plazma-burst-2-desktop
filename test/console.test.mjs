@@ -1775,3 +1775,23 @@ test('editor: a map gun moves, changes model, is deleted and comes back in the r
     G[N.mapText] = original;
   }
 });
+
+test('editor: decoration models and character skins are offered as the editor offers them, with their pictures', async () => {
+  const { dropdownItems } = await consoleModule('editor/params.js');
+  const table = globalThis.PB2_OPCODES;
+  table.values.decor_model = { stone: 'Stone', ship: 'Broken ship' };
+  table.values.char = { 1: 'Campaign Hero model', 77: 'Raven', '-1': 'Death Match model' };
+  try {
+    const decor = dropdownItems('decor_model');
+    assert.deepEqual(decor.map((i) => [i.value, i.label, i.picture.src]), [
+      ['stone', 'Stone', '/level_editor/decors/stone.png'], ['ship', 'Broken ship', '/level_editor/decors/ship.png'],
+    ]);
+    const skins = dropdownItems('char');
+    assert.deepEqual(skins.map((i) => [i.value, i.picture?.src ?? null]), [
+      ['1', '/level_editor/chars_full/char0001.png'], ['77', '/level_editor/chars_full/char0077.png'], ['-1', null],
+    ]);
+  } finally {
+    delete table.values.decor_model;
+    delete table.values.char;
+  }
+});

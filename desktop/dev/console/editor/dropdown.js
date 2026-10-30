@@ -41,12 +41,25 @@ const field = (style) => el('input', {
   color: '#ffffff', background: '#000', border: `0.5px solid ${PALETTE.activeEdge}`, ...style,
 });
 
+// A model's or skin's picture, as the editor shows it: a decoration shrunk to fit, a
+// skin as the editor's 16 px crop around the head.
+const PICTURE = 8;
+function pictureOf({ src, head }) {
+  const p = el('span', {
+    width: `${PICTURE}px`, height: `${PICTURE}px`, flex: 'none', display: 'inline-block',
+    backgroundImage: `url("${src}")`, backgroundRepeat: 'no-repeat',
+    ...(head ? { backgroundSize: `${PICTURE * 67 / 16}px`, backgroundPosition: '30% 26%' } : { backgroundSize: 'contain', backgroundPosition: 'center' }),
+  });
+  return p;
+}
+
 function rowOf(item, current, take) {
   const r = el('div', {
     display: 'flex', alignItems: 'center', gap: '2px', padding: '1.3px', whiteSpace: 'nowrap', overflow: 'hidden',
     textOverflow: 'ellipsis', color: '#ffffff', cursor: 'pointer', background: item.value === current ? ROW.current : 'transparent',
   });
   if (item.icon) r.append(icon(item.icon));
+  if (item.picture) r.append(pictureOf(item.picture));
   if (item.category) {
     r.append(el('span', { color: item.color }, item.category), el('span', { color: SEPARATOR }, '›'), el('span', {}, item.text));
   } else {

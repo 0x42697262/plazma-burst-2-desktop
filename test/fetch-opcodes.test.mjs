@@ -62,3 +62,14 @@ addTrigger(1, "Movable &#8250; Change Speed", 'door', 'value');
 `;
   assert.deepEqual(parseCategories(src), [{ name: 'Movable', color: '#5f6887' }, { name: 'Region', color: '#94a4c1' }]);
 });
+
+test('fetch-opcodes reads the editor server\'s model and skin lists (script that fills special_values_table)', () => {
+  const reply = String.raw`special_values_table['char']['-1']='Death Match model';					{
+						let img = new Image();
+						img.loaded = false;
+						CACHED_CHARS['-1'] = img;						CUSTOM_IMAGES_APPROVED['-1'] = true;
+					}
+					special_values_table['char']['1']='Campaign Hero model';					{ let img = new Image(); img.src = 'chars_full/char0001.png'; }
+special_values_table['char']['77']='Raven by A Coniferous Chair';`;
+  assert.deepEqual(parseParamTable(reply).values, { char: { 1: 'Campaign Hero model', 77: 'Raven by A Coniferous Chair', '-1': 'Death Match model' } });
+});
