@@ -48,6 +48,7 @@ const FAKE_OPCODES = Object.freeze({
     { name: 'use_on', kind: 'region_activation', title: 'Activation on', desc: 'When it runs', cls: 'region' },
   ],
   values: { region_activation: { 0: 'No activation', 1: "''USE'' key (with button)" } },
+  markPairs: {},
 });
 
 // Installs the fake game on globalThis, then loads and starts the real console.

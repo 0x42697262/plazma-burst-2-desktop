@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
-const { parseParams, parseParamTable, parseCategories, check } = createRequire(import.meta.url)('../tools/fetch-opcodes.js');
+const { parseParams, parseParamTable, parseCategories, parseMarkPairs, check } = createRequire(import.meta.url)('../tools/fetch-opcodes.js');
 
 const SRC = `
 function addTrigger(trigger_type_id, description, paramA, paramB ) { /* the editor's own */ }
@@ -72,4 +72,14 @@ test('fetch-opcodes reads the editor server\'s model and skin lists (script that
 					special_values_table['char']['1']='Campaign Hero model';					{ let img = new Image(); img.src = 'chars_full/char0001.png'; }
 special_values_table['char']['77']='Raven by A Coniferous Chair';`;
   assert.deepEqual(parseParamTable(reply).values, { char: { 1: 'Campaign Hero model', 77: 'Raven by A Coniferous Chair', '-1': 'Death Match model' } });
+});
+
+test('fetch-opcodes reads which engine marks give their parameter a kind of its own (mark_pairs)', () => {
+  const src = String.raw`var mark_pairs = new Array(); // for all cases of pair parameters
+	mark_pairs['trigger_type_A'+trigger_type_id]=paramA;
+mark_pairs['mark_sky'] = 'sky_model';
+mark_pairs['mark_he_nades_count'] = 'value>=0+round1';
+// mark_pairs['mark_old'] = 'gone';
+mark_pairs['mark_watercolor']="string";`;
+  assert.deepEqual(parseMarkPairs(src), { sky: 'sky_model', he_nades_count: 'value>=0+round1', watercolor: 'string' });
 });

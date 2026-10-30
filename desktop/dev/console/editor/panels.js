@@ -160,7 +160,7 @@ function drawParams() {
   const known = paramsOf(sel.tag);
   const extra = Object.keys(sel.attrs).filter((a) => !known.includes(a) && !(sel.tag === 'trigger' && isActionAttr(a)));
   for (const attr of [...known, ...extra]) {
-    const info = paramInfo(sel.tag, attr);
+    const info = paramInfo(sel.tag, attr, sel.attrs);
     const set = attr in sel.attrs;
     const value = set ? sel.attrs[attr] : defaultOf(sel.tag, attr) ?? '';
     const span = el('span', {}, shownValue(info?.kind, value));

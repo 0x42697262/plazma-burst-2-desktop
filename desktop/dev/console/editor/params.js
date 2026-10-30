@@ -23,12 +23,22 @@ export function paramsOf(tag) {
 // The value a parameter has when the map leaves it out: the editor's default.
 export const defaultOf = (tag, attr) => DEFAULTS[tag]?.[attr];
 
+// Parameters whose kind of value follows another parameter (the editor's mark_pairs,
+// lib_params.js): an engine mark's parameter is a sky for "sky", a count for
+// "he_nades_count", ... and free text for a mark the table leaves out.
+const PAIRED = Object.freeze({ inf: { forteam: 'mark' } });
+const UNPAIRED = 'nochange';
+
 // { title, desc, kind } of an attribute: the editor's row for this kind, else its row
-// for any kind; null when the editor has none.
-export function paramInfo(tag, attr) {
+// for any kind; null when the editor has none. attrs: the element's, for a parameter
+// whose kind follows another one.
+export function paramInfo(tag, attr, attrs = {}) {
   const rows = TABLE?.params || [];
   const row = rows.find((p) => p.name === attr && p.cls === tag) || rows.find((p) => p.name === attr && p.cls === ANY_KIND);
-  return row ? { title: row.title, desc: row.desc, kind: row.kind } : null;
+  if (!row) return null;
+  const by = PAIRED[tag]?.[attr];
+  const kind = by ? TABLE?.markPairs?.[attrs[by] ?? defaultOf(tag, by)] ?? UNPAIRED : row.kind;
+  return { title: row.title, desc: row.desc, kind };
 }
 
 // [{ value, label }] a kind of value offers ("team", "region_activation", ...), or [].
@@ -55,10 +65,11 @@ const PICKS = Object.freeze({
 export const pickKindsOf = (valueKind) => PICKS[valueKind] || null;
 
 // The pictures the map editor shows next to a model or a skin (its server's lists:
-// decors/<model>.png, chars_full/char0001.png), and how it shows them.
+// decors/<model>.png, chars_full/char0001.png; a sky from pic.php), and how it shows them.
 const PICTURES = Object.freeze({
   decor_model: (v) => ({ src: `/level_editor/decors/${v}.png`, fit: true }),
   char: (v) => (/^\d+$/.test(v) ? { src: `/level_editor/chars_full/char${v.padStart(4, '0')}.png`, head: true } : null),
+  sky_model: (v) => ({ src: `/level_editor/pic.php?m=${v}&c=6`, fit: true }),
 });
 
 // The rows of the map editor's drop-down for a kind of value, in its order (its

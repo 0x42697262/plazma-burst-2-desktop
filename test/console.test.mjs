@@ -1910,3 +1910,28 @@ $drawn.push($shapes[k]);
       '$flares', '$flareN', '$drawn', '$inBg', '$lightmap', 'g', 'graphics_3d_front', 'lens_flare', '$drawLights']) delete G[k];
   }
 });
+
+test('editor: an engine mark\'s parameter offers what its mark takes, as the editor\'s mark pairs say', async () => {
+  const { paramInfo, dropdownItems } = await consoleModule('editor/params.js');
+  const table = globalThis.PB2_OPCODES;
+  const rows = [
+    { name: 'mark', kind: 'engine_mark', title: 'Modificator', desc: 'Game modificator', cls: 'inf' },
+    { name: 'forteam', kind: 'nochange', title: 'Parameter', desc: 'Modificator parameter', cls: 'inf' },
+  ];
+  table.params.push(...rows);
+  Object.assign(table.markPairs, { sky: 'sky_model', he_nades_count: 'value>=0+round1' });
+  table.values.sky_model = { 1: 'Yellow, dark', 5: 'Space' };
+  try {
+    assert.equal(paramInfo('inf', 'forteam', { mark: 'sky' }).kind, 'sky_model');
+    assert.deepEqual(dropdownItems(paramInfo('inf', 'forteam', { mark: 'sky' }).kind).map((i) => [i.value, i.label, i.picture.src]),
+      [['1', 'Yellow, dark', '/level_editor/pic.php?m=1&c=6'], ['5', 'Space', '/level_editor/pic.php?m=5&c=6']]);
+    assert.equal(paramInfo('inf', 'forteam', { mark: 'he_nades_count' }).kind, 'value>=0+round1');
+    assert.equal(paramInfo('inf', 'forteam', { mark: 'casual' }).kind, 'nochange', 'a mark the table leaves out: free text');
+    assert.equal(paramInfo('inf', 'forteam', {}).kind, 'nochange', 'the default mark (hero1_guns)');
+    assert.equal(paramInfo('inf', 'mark', { mark: 'sky' }).kind, 'engine_mark');
+  } finally {
+    table.params.splice(table.params.length - rows.length, rows.length);
+    for (const k of Object.keys(table.markPairs)) delete table.markPairs[k];
+    delete table.values.sky_model;
+  }
+});
