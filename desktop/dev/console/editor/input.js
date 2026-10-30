@@ -7,6 +7,8 @@
 // Pointer events, not mouse events: the game's graphics library cancels pointerdown on
 // its canvas, and then the browser sends no mousedown or mouseup at all.
 //
+// A parameter waiting for an object (the map editor's quick pick): a press takes the
+// nearest object of the kinds it names instead.
 // Select tool: a press selects what is under it and can drag it right away: from inside
 // it moves, from an edge or a corner of a rectangle it resizes. A click on the selection
 // without moving takes the one below it instead. Place tool: a click adds an element of the current layer there;
@@ -19,6 +21,7 @@ import { kindOf, anchorOf, SHAPE } from './kinds.js';
 import { liveBounds } from './live.js';
 import {
   editorDoc, pickAt, elementAt, select, selected, currentTool, currentLayer, setPreview, TOOL,
+  currentPick, pickTargetAt, finishPick,
 } from './session.js';
 import { setPlace, addElement } from './edit.js';
 import { beginAction, endAction } from './history.js';
@@ -26,6 +29,7 @@ import { beginAction, endAction } from './history.js';
 const SNAP = 10; // world units, like the map editor's grid
 const EDGE = 3; // screen units around a rectangle's edge that resize it
 const DRAG_START = 2; // screen units the mouse moves before a press becomes a drag
+const PICK_REACH = 9; // screen units from an object's centre that pick it (the editor's 20 px)
 
 let listening = false;
 let press = null; // { at (world), screen, target, mode, start, dragging } while pressed
@@ -97,6 +101,13 @@ function onPointerDown(e) {
   lastPress.window = { target: describe(e.target), taken: !!(p && inGame(p)), x: Math.round(e.clientX), y: Math.round(e.clientY) };
   if (!p || !inGame(p)) return;
   take(e);
+  // A parameter waiting for an object: the press picks one instead.
+  if (currentPick()) {
+    const target = pickTargetAt(p.world, PICK_REACH * p.perScreenUnit);
+    lastPress.layer = { world: { x: Math.round(p.world.x), y: Math.round(p.world.y) }, picked: target ? `${target.tag} for the parameter` : 'nothing to pick there' };
+    finishPick(target);
+    return;
+  }
   onMouseDown(e, p);
 }
 

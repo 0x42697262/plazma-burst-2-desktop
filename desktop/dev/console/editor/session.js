@@ -21,6 +21,7 @@ const state = {
   layer: 'region', // the layer the objects list shows
   selectable: new Set(KIND_TAGS), // the active layers: what a click can select (the rest is drawn faint)
   moreLayers: false, // the Layers list shows every kind ("More"), not just the groups
+  pick: null, // { kinds, what, onPick(element) }: a parameter waiting for an object clicked in the world
   tool: 'select', // TOOL: what a click in the world does
   preview: null, // { tag, x, y, w, h }: the rectangle being dragged out with the place tool
   lastPick: null, // { at, ids, k }: the stack under the last click, for cycling
@@ -32,7 +33,7 @@ export const TOOL = Object.freeze({ SELECT: 'select', PLACE: 'place' });
 
 export const onChange = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
 // what: 'shown' (on/off or level start/end), 'doc', 'reloaded' (the level started again
-// on the same map), 'selection', 'layer', 'layers', 'tool', 'edit'.
+// on the same map), 'selection', 'layer', 'layers', 'tool', 'pick', 'edit'.
 export const notify = (what) => { for (const fn of listeners) fn(what); };
 const changed = notify;
 
@@ -45,6 +46,46 @@ export const currentLayer = () => state.layer;
 export const isSelectable = (tag) => state.selectable.has(tag);
 export const selectableLayers = () => [...state.selectable];
 export const moreLayers = () => state.moreLayers;
+export const currentPick = () => state.pick;
+
+// A parameter that takes an object: until one of `kinds` is clicked in the world (any
+// layer, as in the map editor) or Esc, a click picks instead of selecting.
+export function startPick(kinds, what, onPick) {
+  state.pick = { kinds, what, onPick };
+  changed('pick');
+}
+
+export function cancelPick() {
+  if (!state.pick) return false;
+  state.pick = null;
+  changed('pick');
+  return true;
+}
+
+// The object a pick at world point p takes: the one of the kinds whose centre is
+// nearest, within `reach`, or one whose box holds p.
+export function pickTargetAt(p, reach) {
+  if (!state.pick || !state.doc) return null;
+  let best = null;
+  for (const e of state.doc.elements) {
+    if (!state.pick.kinds.includes(e.tag)) continue;
+    const b = liveBounds(state.doc, e);
+    if (!b) continue;
+    const d = Math.hypot(b.x + b.w / 2 - p.x, b.y + b.h / 2 - p.y);
+    if ((d <= reach || contains(b, p, 0)) && (!best || d < best.d)) best = { e, d };
+  }
+  return best && best.e;
+}
+
+// Finishes a pick with element e (null: nothing there, keep waiting).
+export function finishPick(e) {
+  const pick = state.pick;
+  if (!pick || !e) return false;
+  state.pick = null;
+  pick.onPick(e);
+  changed('pick');
+  return true;
+}
 export const currentTool = () => state.tool;
 export const placePreview = () => state.preview;
 
@@ -97,6 +138,7 @@ export function select(e) {
   const id = e ? e.id : null;
   if (id === state.selectedId) return;
   state.selectedId = id;
+  state.pick = null;
   if (e && kindOf(e.tag)) state.layer = e.tag;
   changed('selection');
 }

@@ -17,6 +17,7 @@ import { KINDS, KIND_TAGS, kindOf, nameOf } from './kinds.js';
 import {
   editorDoc, selected, select, currentLayer, showLayer, countByTag, onChange, pendingCount,
   currentTool, setTool, TOOL, isSelectable, selectableLayers, setSelectable, moreLayers, setMoreLayers, LAYER_GROUPS,
+  currentPick, startPick, cancelPick,
 } from './session.js';
 import { setAttr, deleteElement, duplicateElement, undo, redo, notLiveReason } from './edit.js';
 import { canUndo, canRedo } from './history.js';
@@ -24,7 +25,8 @@ import { PALETTE, FONT, FONT_SIZE, panel, caption, icon, button, listRow, paramR
 import { drawTriggerActions } from './trigger-panel.js';
 import { isActionAttr } from './actions.js';
 import { editField } from './fields.js';
-import { paramsOf, paramInfo, defaultOf, choicesOf, shownValue } from './params.js';
+import { paramsOf, paramInfo, defaultOf, choicesOf, shownValue, pickKindsOf } from './params.js';
+import { referenceTo } from './kinds.js';
 
 const OBJECTS_SHOWN = 400; // rows in the object box; a long list says how many more
 const TOOL_SIZE = 22; // a tool button, square (.tool_sm)
@@ -111,16 +113,20 @@ function drawObjects() {
 }
 
 // A value turns into a text box when clicked (fields.js), offering the values the
-// parameter's kind has.
-function editValue(span, sel, attr, choices) {
+// parameter's kind has. One that names an object can also take it from the world: the
+// pick waits for a click on one (the map editor's quick pick).
+function editValue(span, sel, attr, choices, pickKinds) {
+  const set = (text) => {
+    try {
+      const { live, why } = setAttr(sel, attr, text);
+      if (!live) say(`${attr}: not in the running level (${why})`, COLOR.notice);
+    } catch (err) { say(`error: ${err.message}`, COLOR.error); }
+  };
+  if (pickKinds) startPick(pickKinds, attr, (target) => { set(referenceTo(editorDoc(), target)); drawParams(); });
   editField(span, {
-    initial: sel.attrs[attr] ?? defaultOf(sel.tag, attr) ?? '', choices, onDone: drawParams,
-    onCommit: (text) => {
-      try {
-        const { live, why } = setAttr(sel, attr, text);
-        if (!live) say(`${attr}: not in the running level (${why})`, COLOR.notice);
-      } catch (err) { say(`error: ${err.message}`, COLOR.error); }
-    },
+    initial: sel.attrs[attr] ?? defaultOf(sel.tag, attr) ?? '', choices,
+    onDone: () => { cancelPick(); drawParams(); }, // typed instead, or left: no pick
+    onCommit: set,
   });
 }
 
@@ -145,7 +151,7 @@ function drawParams() {
     const span = el('span', {}, shownValue(info?.kind, value));
     const { row, value: cell } = paramRow(info?.title || attr, span, { hint: `${attr}${info?.desc ? `: ${info.desc}` : ''}${set ? '' : ' (not in the map: the default)'}` });
     if (!set) cell.style.opacity = '0.55';
-    onClick(cell, () => editValue(span, sel, attr, choicesOf(info?.kind)));
+    onClick(cell, () => editValue(span, sel, attr, choicesOf(info?.kind), pickKindsOf(info?.kind)));
     box.append(row);
   }
   if (sel.tag === 'trigger') drawTriggerActions(box, sel, { redraw: drawParams, say });
@@ -166,7 +172,10 @@ export function say(text, color = COLOR.plain) {
 function drawStatus() {
   const s = nodes.status;
   s.textContent = '';
-  const how = currentTool() === TOOL.PLACE
+  const pick = currentPick();
+  const how = pick
+    ? `${pick.what}: click a ${pick.kinds.map((t) => KINDS[t].title).join(' or ')} in the world  ·  Esc: cancel`
+    : currentTool() === TOOL.PLACE
     ? `click: add a ${KINDS[currentLayer()].title}${KINDS[currentLayer()].shape === 'rect' ? ', or drag one out' : ''} (Alt: no snap)  ·  Esc: back to select`
     : 'click: select, again: the one below  ·  drag the selection: move, its edge: resize (Alt: no snap)  ·  Del, Ctrl+D copy, Ctrl+Z / Ctrl+Y';
   s.append(el('span', {}, `EDITOR${keyShown ? ` (${keyShown} closes)` : ''}  ·  ${how}`));
@@ -181,6 +190,7 @@ const REDRAW = Object.freeze({
   doc: ['tools', 'layers', 'objects', 'params', 'status'], layer: ['tools', 'layers', 'objects', 'status'],
   layers: ['layers', 'objects', 'params'], selection: ['tools', 'objects', 'params'],
   edit: ['tools', 'layers', 'objects', 'params', 'status'], tool: ['tools', 'status'], reloaded: ['status'],
+  pick: ['status'],
 });
 const DRAW = Object.freeze({ tools: drawTools, layers: drawLayers, objects: drawObjects, params: drawParams, status: drawStatus });
 

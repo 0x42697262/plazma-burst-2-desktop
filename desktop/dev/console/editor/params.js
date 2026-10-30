@@ -42,3 +42,14 @@ export function shownValue(valueKind, value) {
   const label = valueKind && TABLE?.values?.[valueKind]?.[value];
   return label ? `${value} (${label})` : value;
 }
+
+// The object kinds a value of this kind names, for picking one in the world (the map
+// editor's special_values_table[kind]['[listof]']); null when it is not an object.
+const PICKS = Object.freeze({
+  trigger: ['trigger'], 'trigger+none': ['trigger'], timer: ['timer'],
+  door: ['door'], 'door+none': ['door'], region: ['region'], 'region+random': ['region'],
+  character: ['player', 'enemy'], vehicle: ['vehicle'], 'vehicle+none+any': ['vehicle'],
+  gun: ['gun'], barrel: ['barrel'], decor: ['decor'], lamp: ['lamp'], water: ['water'], pushf: ['pushf'],
+  'song+none': ['song'],
+});
+export const pickKindsOf = (valueKind) => PICKS[valueKind] || null;

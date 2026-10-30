@@ -1503,3 +1503,57 @@ test('editor: Params shows every parameter of the kind, with the editor\'s title
     c.G[c.N.mapText] = original;
   }
 });
+
+test('editor: an object parameter is picked by clicking the object in the world, as in the map editor', async () => {
+  const session = await consoleModule('editor/session.js');
+  const { drawEditorFrame } = await consoleModule('editor/view.js');
+  const { currentTransform, toScreen } = await consoleModule('ui/overlay.js');
+  const overlay = c.G[c.N.uiOverlay].overlay;
+  // The node whose own text is `text`, and the params row it is in.
+  const find = (node, text) => {
+    if (node.text === text) return node;
+    for (const n of node.childNodes || []) { const hit = typeof n === 'object' && find(n, text); if (hit) return hit; }
+    return null;
+  };
+  const valueCell = (label) => find(overlay, label).parent.childNodes[1];
+  const shown = (p) => { const s = toScreen(currentTransform(), p); return { clientX: s.x, clientY: s.y }; };
+  const click = (p) => { c.dispatch(c.G.game_canvas, 'pointerdown', shown(p)); c.dispatch(c.G.game_canvas, 'pointerup', shown(p)); };
+  try {
+    c.run('editor on');
+    const doc = session.editorDoc();
+    const region = doc.byUid('#red_use');
+    session.select(region);
+    c.dispatch(valueCell('Activation Trigger'), 'click', {});
+    assert.deepEqual(session.currentPick().kinds, ['trigger']);
+    assert.ok(drawEditorFrame().picks > 0, 'every trigger is marked');
+    assert.match(textsOf(overlay).join('\n'), /use_target: click a trigger in the world {2}· {2}Esc: cancel/);
+    click({ x: 120, y: 0 }); // #locked is at 120, 0
+    assert.equal(region.attrs.use_target, '#locked');
+    assert.equal(c.G[c.N.regions][1][c.N.regionTrigger], c.triggers.findIndex((t) => t.uid === '#locked'), 'live');
+    assert.equal(session.currentPick(), null, 'done');
+    assert.equal(session.selected(), region, 'the region stays selected');
+    // Esc cancels one.
+    c.dispatch(valueCell('Activation Trigger'), 'click', {});
+    assert.ok(session.currentPick());
+    c.press('Escape');
+    assert.equal(session.currentPick(), null);
+    assert.equal(session.selected(), region, 'Esc ends the pick, not the selection');
+    // A trigger action's target: B of MovableTo is a region.
+    const trigger = doc.byUid('#open_door');
+    session.select(trigger);
+    c.dispatch(valueCell('B (region)'), 'click', {});
+    assert.deepEqual(session.currentPick().kinds, ['region']);
+    click({ x: 50, y: 0 }); // the #open_door trigger is here: not a region
+    assert.ok(session.currentPick(), 'only the kinds it takes');
+    click({ x: 490, y: 10 }); // #spawn_spot: 480, 0, 20 x 20
+    assert.equal(trigger.attrs.actions_2_targetB, '#spawn_spot');
+    // A pick with nothing there keeps waiting.
+    c.dispatch(valueCell('A (door)'), 'click', {});
+    click({ x: 5000, y: 5000 });
+    assert.ok(session.currentPick(), 'still waiting');
+    c.press('Escape');
+    c.run('editor undo'); c.run('editor undo');
+  } finally {
+    session.setEditor(false);
+  }
+});

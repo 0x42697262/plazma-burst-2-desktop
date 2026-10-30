@@ -8,7 +8,7 @@ import { buildGraph, nameless } from '../logic/graph.js';
 import { drawLink } from '../logic/view.js';
 import { kindOf } from './kinds.js';
 import { liveBounds } from './live.js';
-import { editorDoc, selected, visibleElements, placePreview } from './session.js';
+import { editorDoc, selected, visibleElements, placePreview, currentPick } from './session.js';
 
 const LAYER = 'editor';
 const LINE_WIDTH = 0.4; // screen units
@@ -52,6 +52,47 @@ function selectionLinks(m, doc, sel) {
     return b ? { point: toScreen(m, centre(b)), uid: node.uid } : null;
   };
   return links.map((l) => ({ from: at(l.from), to: at(l.to), kind: l.kind })).filter((l) => l.from && l.to);
+}
+
+// The map editor's quick-pick markers (level_editor/quickpick.png, quickpick2.png on the
+// one the pointer is over), pulsing as its lib_render.js pulses them.
+const PICK_IMAGES = Object.freeze({ idle: '/level_editor/quickpick.png', over: '/level_editor/quickpick2.png' });
+const PICK_SIZE = 12; // screen units, the editor's 27 px half size
+const PICK_PULSE = 2.2;
+const PICK_REACH = 9;
+let pickImages = null;
+function pickImage(which) {
+  if (typeof Image === 'undefined') return null;
+  if (!pickImages) pickImages = Object.fromEntries(Object.entries(PICK_IMAGES).map(([k, src]) => { const img = new Image(); img.src = src; return [k, img]; }));
+  const img = pickImages[which];
+  return img.complete && img.naturalWidth ? img : null;
+}
+
+function drawPickMarkers(ctx, m, doc, pick) {
+  const t = performance.now() / 100;
+  const size = PICK_SIZE + Math.sin(t) * PICK_PULSE;
+  const pointer = crosshair(m);
+  let over = null;
+  const marks = [];
+  for (const e of doc.elements) {
+    if (!pick.kinds.includes(e.tag)) continue;
+    const b = liveBounds(doc, e);
+    if (!b) continue;
+    const c = toScreen(m, centre(b));
+    if (c.x < -size || c.x > GAME_WIDTH + size || c.y < -size || c.y > GAME_HEIGHT + size) continue;
+    const d = pointer ? Math.hypot(c.x - pointer.x, c.y - pointer.y) : Infinity;
+    if (d <= PICK_REACH && (!over || d < over.d)) over = { e, d };
+    marks.push({ e, c });
+  }
+  ctx.save();
+  ctx.globalAlpha = 0.75 - Math.sin(t) / 4;
+  for (const { e, c } of marks) {
+    const img = pickImage(over && over.e === e ? 'over' : 'idle');
+    if (img) ctx.drawImage(img, c.x - size, c.y - size, size * 2, size * 2);
+    else { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = SELECTED_WIDTH; ctx.beginPath(); ctx.arc(c.x, c.y, size / 2, 0, Math.PI * 2); ctx.stroke(); }
+  }
+  ctx.restore();
+  return marks.length;
 }
 
 function drawEditor(ctx, m) {
@@ -98,8 +139,10 @@ function drawEditor(ctx, m) {
     ctx.setLineDash([]);
     labels.push({ x: r.x + r.w, y: r.y + r.h, text: `${Math.round(preview.w)} x ${Math.round(preview.h)}` });
   }
+  const pick = currentPick();
+  const picks = pick ? drawPickMarkers(ctx, m, doc, pick) : 0;
   drawLabels(ctx, labels, crosshair(m), BOUNDS);
-  return { outlines, selected: sel ? sel.id : null, links };
+  return { outlines, selected: sel ? sel.id : null, links, picks };
 }
 
 export const showEditorView = (on) => setLayer(LAYER, on ? drawEditor : null);

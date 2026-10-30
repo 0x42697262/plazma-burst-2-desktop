@@ -113,3 +113,13 @@ export function newUid(doc, tag) {
   }
   return prefix + (n + 1);
 }
+
+// How a parameter names element e: its uid, or in old maps without uids its number (a
+// character's among players and enemies together, as the game counts them).
+export function referenceTo(doc, e) {
+  if (e.attrs.uid) return e.attrs.uid;
+  if (e.tag === 'player' || e.tag === 'enemy') {
+    return String(doc.elements.filter((x) => x.tag === 'player' || x.tag === 'enemy').indexOf(e));
+  }
+  return String(doc.ordinal(e));
+}

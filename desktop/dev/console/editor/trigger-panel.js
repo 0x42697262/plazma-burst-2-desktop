@@ -8,7 +8,9 @@ import { actionInfo, opcodeName, opcodeNames, opcodeType } from '../triggers/scr
 import { actionsOf, actionValues, triggerText, valuesFromText } from './actions.js';
 import { setAttrs } from './edit.js';
 import { editField } from './fields.js';
-import { choicesOf, shownValue } from './params.js';
+import { choicesOf, shownValue, pickKindsOf } from './params.js';
+import { referenceTo } from './kinds.js';
+import { editorDoc, startPick, cancelPick } from './session.js';
 import { PALETTE, FONT, FONT_SIZE, caption, button, paramRow, onClick } from './style.js';
 
 const NEW_ACTION_TYPE = 100; // "set variable A to value B": an action that does something harmless
@@ -48,10 +50,13 @@ export function drawTriggerActions(box, trigger, { redraw, say }) {
       const span = el('span', {}, shownValue(kind, a[side]));
       const { row: r, value: v } = paramRow(`${side}${kind && kind !== 'nochange' ? ` (${kind})` : ''}`, span);
       if (kind === 'nochange') v.style.opacity = '0.5';
-      onClick(v, () => editField(span, {
-        initial: a[side], onDone: redraw, choices: choicesOf(kind),
-        onCommit: (text) => run(actionValues(trigger.attrs, list.map((b, k) => (k === i ? { ...b, [side]: text } : b))), `action ${i + 1} ${side}`),
-      }));
+      const setSide = (text) => run(actionValues(trigger.attrs, list.map((b, k) => (k === i ? { ...b, [side]: text } : b))), `action ${i + 1} ${side}`);
+      onClick(v, () => {
+        // A target that is an object can be clicked in the world (the map editor's quick pick).
+        const kinds = pickKindsOf(kind);
+        if (kinds) startPick(kinds, `action ${i + 1} ${side}`, (target) => setSide(referenceTo(editorDoc(), target)));
+        editField(span, { initial: a[side], onDone: () => { cancelPick(); redraw(); }, choices: choicesOf(kind), onCommit: setSide });
+      });
       box.append(r);
     }
   });
