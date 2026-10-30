@@ -18,7 +18,7 @@ import { currentTransform, toWorld } from '../ui/overlay.js';
 import { kindOf, anchorOf, SHAPE } from './kinds.js';
 import { liveBounds } from './live.js';
 import {
-  editorDoc, pickAt, selected, currentTool, currentLayer, setPreview, TOOL,
+  editorDoc, pickAt, selected, currentTool, currentLayer, setPreview, setPressing, TOOL,
 } from './session.js';
 import { setPlace, addElement } from './edit.js';
 import { beginAction, endAction } from './history.js';
@@ -98,12 +98,14 @@ function onPointerDown(e) {
   if (!p || !inGame(p)) return;
   take(e);
   onMouseDown(e, p);
+  setPressing(!!press);
 }
 
 function onPointerUp(e) {
   if (!press) return;
   take(e);
   onMouseUp();
+  setPressing(false);
 }
 
 function onMouseDown(e, p = pointOfEvent(e)) {
@@ -179,6 +181,7 @@ export function captureMouse(on, errors) {
   if (!on) {
     if (press && press.dragging && press.target) endAction();
     press = null;
+    setPressing(false);
     setPreview(null);
   } else {
     if (errors) onError = errors;

@@ -2,13 +2,17 @@
 // game's object, the way the map loader would have set them (frame2.js, the map
 // loader): those changes are live. Anything else waits for the level to load the map
 // again (single-player: "editor reload").
-// Walls, movables, backgrounds, water and pushers are never written live: the game
-// keeps their geometry in arrays its integrity check snapshots, and a change there
-// makes the game report the client and reload. The game's own loader builds them from
-// the edited map on a reload instead.
+// Walls, backgrounds, water and pushers are not written live: the game keeps their
+// geometry in arrays its integrity check snapshots, and a change there makes the game
+// report the client and reload. The game's own loader builds them from the edited map
+// on a reload instead ("editor_autoreload" does that by itself). Walls only go live
+// when "editor livewalls" was turned on, which says so first (unsafe.js).
 import { game } from '../game/bindings.js';
 import { F } from '../game/fields.js';
 import { unwrap } from '../triggers/log.js';
+import { moveWall, textureAt } from '../game/walls.js';
+import { boundsOf } from './kinds.js';
+import { liveWallsOn } from './unsafe.js';
 
 // Activation modes the loader rewrites: hidden use keys become the plain ones.
 const LOADER_USE_ON = Object.freeze({ 8: 1, 11: 9, 12: 10, 15: 1 });
@@ -86,6 +90,33 @@ const decor = {
   sx: decorNumber('scaleX', 1), sy: decorNumber('scaleY', 1),
 };
 
+// A movable is a display object: its place, size and destination change at once, its
+// texture (a visible one has one in the 3D layer) with it. One attached to another
+// movable is placed by it.
+function placeDoor(mc, attrs) {
+  if (attached(attrs)) return false;
+  const r = boundsOf({ tag: 'door', attrs });
+  if (!r) return false;
+  const body = textureAt({ x: mc.x, y: mc.y, w: mc.w, h: mc.h });
+  Object.assign(mc, { x: r.x, y: r.y, w: r.w, h: r.h, scaleX: r.w / 100, scaleY: r.h / 100 });
+  if (body) Object.assign(body, { x: r.x, y: r.y, scaleX: r.w / 100, scaleY: r.h / 100 });
+  return true;
+}
+const doorPlace = (mc, v, attrs) => placeDoor(mc, attrs);
+const door = {
+  x: doorPlace, y: doorPlace, w: doorPlace, h: doorPlace,
+  tarx: (mc, v) => { if (!finite(v)) return false; mc.tarx = parseFloat(v); return true; },
+  tary: (mc, v) => { if (!finite(v)) return false; mc.tary = parseFloat(v); return true; },
+};
+
+// Walls: only with "editor livewalls" on, in single-player, inside the level's grid.
+const wallPlace = (i) => (v, attrs) => {
+  if (!liveWallsOn() || game.isMP()) return false;
+  const r = boundsOf({ tag: 'box', attrs });
+  if (!r) return false;
+  try { moveWall(i, r); return true; } catch { return false; }
+};
+
 const LIVE = Object.freeze({
   region: { of: (i) => (i < game.regionCount() ? game.regions()?.[i] : null), attrs: region },
   trigger: {
@@ -94,6 +125,11 @@ const LIVE = Object.freeze({
     other: (t, attr, v, attrs) => ACTION_ATTR.test(attr) && loadActions(t, attrs),
   },
   decor: { of: (i) => game.decors()?.[i], attrs: decor },
+  door: { of: (i) => (i < game.doorCount() ? game.doors()?.[i] : null), attrs: door },
+  box: {
+    of: (i) => (i < game.walls().count ? { wall: i } : null),
+    attrs: Object.fromEntries(['x', 'y', 'w', 'h'].map((a) => [a, (o, v, attrs) => wallPlace(o.wall)(v, attrs)])),
+  },
   timer: {
     of: (i) => (i < game.timerCount() ? game.timers()?.[i] : null),
     attrs: { ...counted, target: (t, v) => { t[F.TIMER_TARGET] = game.resolveTarget(v); return true; } },
@@ -105,7 +141,9 @@ const LIVE = Object.freeze({
 // again, which is also the case for an element the game does not have yet.
 export function applyLive(e, attr) {
   const kind = LIVE[e.tag];
-  const obj = kind && e.live && kind.of(e.live.index);
+  let obj = null;
+  // A name missing from names.js (an older one) only means it is not live.
+  try { obj = kind && e.live && kind.of(e.live.index); } catch { return false; }
   if (!obj) return false;
   const v = e.attrs[attr];
   const fn = kind.attrs[attr];

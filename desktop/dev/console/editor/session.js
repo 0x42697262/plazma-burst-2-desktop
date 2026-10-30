@@ -22,6 +22,7 @@ const state = {
   hidden: new Set(), // tags not drawn and not picked
   tool: 'select', // TOOL: what a click in the world does
   preview: null, // { tag, x, y, w, h }: the rectangle being dragged out with the place tool
+  pressing: false, // the mouse is down on the world (a drag may be going on)
   lastPick: null, // { at, ids, k }: the stack under the last click, for cycling
 };
 
@@ -53,6 +54,8 @@ export function setTool(tool) {
 }
 
 export function setPreview(rect) { state.preview = rect; }
+export const isPressing = () => state.pressing;
+export function setPressing(on) { state.pressing = on; }
 export const selected = () => (state.doc && state.selectedId !== null ? state.doc.byId(state.selectedId) : null);
 
 // The map text the game is playing, as a document. Throws when there is none yet.

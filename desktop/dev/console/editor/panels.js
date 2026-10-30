@@ -17,6 +17,8 @@ import {
 } from './session.js';
 import { setAttr, reloadLevel, deleteElement, duplicateElement, undo, redo } from './edit.js';
 import { canUndo, canRedo } from './history.js';
+import { KEY } from '../state/schema.js';
+import { settings } from '../state/store.js';
 
 const Z_INDEX = '45'; // over the editor's click layer, under the console (50)
 const FONT_SIZE = '6px';
@@ -176,7 +178,8 @@ function drawStatus() {
   if (n) {
     const what = `  ·  ${n} edited object${n === 1 ? '' : 's'} not live yet`;
     s.append(el('span', { color: COLOR.notice }, what));
-    if (!game.isMP()) {
+    if (!game.isMP() && settings.effective(KEY.EDITOR_AUTORELOAD)) s.append(el('span', { color: COLOR.muted }, ' (auto-reload on)'));
+    else if (!game.isMP()) {
       const button = el('span', { color: COLOR.bright, textDecoration: 'underline', cursor: 'pointer', pointerEvents: 'auto', marginLeft: '4px' }, 'reload level');
       swallow(markUi(button));
       onClick(button, () => { try { reloadLevel(); } catch (err) { say(`error: ${err.message}`, COLOR.error); } });

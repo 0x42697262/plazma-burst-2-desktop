@@ -15,7 +15,9 @@ import { record, takeUndo, takeRedo, clearHistory } from './history.js';
 import { F } from '../game/fields.js';
 import { player } from '../game/level.js';
 import { movePlayerTo } from '../game/teleport.js';
-import { editorDoc, notify, markPending, onChange, select, selected } from './session.js';
+import { editorDoc, notify, markPending, onChange, select, selected, pendingCount, isPressing, editorShown } from './session.js';
+import { KEY } from '../state/schema.js';
+import { settings } from '../state/store.js';
 
 const NAME = /^[A-Za-z0-9_]+$/;
 const NUMBER_ATTRS = new Set(['x', 'y', 'w', 'h', 'tox', 'toy']);
@@ -23,6 +25,7 @@ const LEVEL_RESTART = 'restart';
 const SAVE_NAME = /^[A-Za-z0-9 _.-]{1,60}$/;
 const DUPLICATE_OFFSET = 20; // a copy lands this far right of and below the original
 const NEW_RECT = 100; // the size of a rectangle placed with a click instead of a drag
+const AUTO_RELOAD_MS = 700; // editor_autoreload waits this long after the last edit
 
 const tidy = (n) => String(Math.round(n * 100) / 100);
 
@@ -32,12 +35,30 @@ function checkValue(attr, value) {
   if (NUMBER_ATTRS.has(attr) && !Number.isFinite(Number(value))) throw new Error(`${attr} must be a number`);
 }
 
-// Single-player: the game reads this text whenever the level loads again.
+// Single-player: the game reads this text whenever the level loads again. With
+// editor_autoreload on, an edit the level does not have yet reloads it a moment later.
 function syncMapText(doc) {
   if (game.isMP()) return;
   const text = doc.toText();
   doc.source = text;
   game.setMapText(text);
+  scheduleReload();
+}
+
+// Waits until the edits stop (and the mouse is up, and nothing is being typed in) for
+// AUTO_RELOAD_MS, then reloads.
+let reloadTimer = null;
+function scheduleReload() {
+  if (!settings.effective(KEY.EDITOR_AUTORELOAD) || !pendingCount()) return;
+  clearTimeout(reloadTimer);
+  reloadTimer = setTimeout(autoReload, AUTO_RELOAD_MS);
+}
+function autoReload() {
+  reloadTimer = null;
+  if (!settings.effective(KEY.EDITOR_AUTORELOAD) || !pendingCount() || !editorShown() || game.isMP()) return;
+  const typing = globalThis.document?.activeElement?.tagName === 'INPUT';
+  if (isPressing() || typing) { reloadTimer = setTimeout(autoReload, AUTO_RELOAD_MS); return; }
+  reloadLevel();
 }
 
 // The attributes changed together, e.g. x and y of a move (undefined removes one).

@@ -163,6 +163,19 @@ const RULES = [
   // Each <decor> of the map, as the loader makes it: a display object, stored in map order.
   { file: 'frame2', keys: ['decors'], what: ['map decorations array (display objects, in map order)'],
     re: String.raw`⟨ID⟩\[⟨_⟩\]=mc;\s*if\(mc\.⟨_⟩\)\s*mc\.⟨_⟩\(\);\s*⟨_⟩\(b\["#uid"\],⟨_⟩\);` },
+  // Walls: the loader keeps each <box> in parallel arrays, counted in map order.
+  { file: 'frame2', keys: ['wallX', 'wallCount', 'wallY', 'wallW', 'wallH', 'wallMaterial'],
+    what: ['wall x array', 'number of walls', 'wall y array', 'wall width array', 'wall height array', 'wall material array'],
+    re: String.raw`if\(a=="box"\)\s*\{\s*⟨ID⟩\[⟨ID⟩\]=parseFloat\(b\["#x"\]\);\s*⟨ID⟩\[⟨_⟩\]=parseFloat\(b\["#y"\]\);\s*⟨ID⟩\[⟨_⟩\]=parseFloat\(b\["#w"\]\);\s*⟨ID⟩\[⟨_⟩\]=parseFloat\(b\["#h"\]\);\s*⟨ID⟩\[` },
+  // The wall collision grid: cells of gridCell units from (gridMinX, gridMinY), each a
+  // list of wall indexes; gridAddWall(i) puts wall i into every cell it reaches.
+  { file: 'frame2', keys: ['gridCell', 'grid', 'gridCols', 'gridRows', 'gridMinX', 'gridMinY', 'gridAddWall'],
+    what: ['wall grid cell size (100)', 'wall grid: [column][row] -> wall indexes', 'wall grid columns', 'wall grid rows',
+      'wall grid left edge', 'wall grid top edge', 'function(wall index): adds a wall to the grid cells it reaches'],
+    re: String.raw`var ⟨ID⟩=100;\s*var ⟨ID⟩;\s*var ⟨_⟩=\[\];\s*var ⟨ID⟩;\s*var ⟨ID⟩;\s*var ⟨ID⟩;\s*var ⟨_⟩;\s*var ⟨ID⟩;\s*var ⟨_⟩;\s*function ⟨ID⟩\(` },
+  // Each <door> (movable) of the map: a display object in the 3D layer, in map order.
+  { file: 'frame2', keys: ['doors', 'doorCount'], what: ['map movables array (display objects, in map order)', 'number of movables'],
+    re: String.raw`⟨ID⟩\[⟨ID⟩\]=mc;\s*mc\.w=parseFloat\(b\["#w"\]\);\s*mc\.h=parseFloat\(b\["#h"\]\);` },
   // The same shot, in multiplayer: tells the server so every other client runs it too.
   { file: 'frame2', keys: ['net', 'netNum'],
     what: ['multiplayer network class (.Event(type, ...parts) sends to the server)',

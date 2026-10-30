@@ -148,6 +148,19 @@ export const game = {
   regionCount: () => read('regionCount'),
   timers: () => read('timers'),
   decors: () => read('decors'), // display objects, in map order
+  doors: () => read('doors'), // movables: display objects, in map order
+  doorCount: () => read('doorCount'),
+  // Walls: parallel arrays by wall index, and the collision grid built from them. The
+  // arrays are ones the game's integrity check snapshots (see editor/walls-live).
+  walls: () => ({ x: read('wallX'), y: read('wallY'), w: read('wallW'), h: read('wallH'), count: read('wallCount') }),
+  wallGrid: () => ({
+    cells: read('grid'), cell: read('gridCell'), cols: read('gridCols'), rows: read('gridRows'),
+    minX: read('gridMinX'), minY: read('gridMinY'),
+  }),
+  addWallToGrid: (i) => call('gridAddWall', i),
+  // The 3D layer every wall body is drawn in, one texture_front0 per wall (frame2.js).
+  wallLayer: () => (typeof graphics_3d === 'undefined' ? null : graphics_3d),
+  wallTexture: () => (typeof texture_front0 === 'undefined' ? null : texture_front0),
   timerCount: () => read('timerCount'),
   sayTrigger: () => read('sayTrigger'), // the map's "player says" trigger (-1/undefined = none)
   setSayTrigger: (v) => write('sayTrigger', v),

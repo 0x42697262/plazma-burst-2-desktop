@@ -1262,3 +1262,109 @@ test('logic: old maps without uids link by number, as the game reads them', asyn
     c.G[c.N.mapText] = original;
   }
 });
+
+test('editor: movables go live; walls only with "editor livewalls"; editor_autoreload reloads by itself', async () => {
+  const session = await consoleModule('editor/session.js');
+  const original = c.G[c.N.mapText];
+  const G = c.G, N = c.N;
+  const quiet = (line) => c.run(line).filter((l) => !l.startsWith('Note:'));
+  const level = (on) => { G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; c.frame(); };
+  // A level with two walls and a movable, as the game holds them after loading.
+  G[N.mapText] = [
+    '<box x="0" y="0" w="200" h="20" m="0" />',
+    '<box x="300" y="0" w="100" h="20" m="0" />',
+    '<door uid="#lift" x="500" y="0" w="40" h="10" moving="false" tarx="500" tary="-100" maxspeed="10" vis="true" attach="-1" />',
+  ].join('\n');
+  G[N.wallX] = [0, 300]; G[N.wallY] = [0, 0]; G[N.wallW] = [200, 100]; G[N.wallH] = [20, 20]; G[N.wallCount] = 2;
+  // The loader's grid: 100-unit cells, from 200 left of and above the walls.
+  Object.assign(G, { [N.gridCell]: 100, [N.gridMinX]: -200, [N.gridMinY]: -200, [N.gridCols]: 9, [N.gridRows]: 5 });
+  G[N.grid] = Array.from({ length: 9 }, () => Array.from({ length: 5 }, () => []));
+  G[N.gridAddWall] = (i) => {
+    const x0 = Math.floor((G[N.wallX][i] - 100 + 200) / 100), x1 = Math.ceil((G[N.wallX][i] + G[N.wallW][i] + 100 + 200) / 100);
+    const y0 = Math.floor((G[N.wallY][i] - 100 + 200) / 100), y1 = Math.ceil((G[N.wallY][i] + G[N.wallH][i] + 100 + 200) / 100);
+    for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) G[N.grid][x][y].push(i);
+  };
+  G[N.gridAddWall](0); G[N.gridAddWall](1);
+  G.texture_front0 = class {};
+  const body = Object.assign(new G.texture_front0(), { x: 300, y: 0, scaleX: 1, scaleY: 0.2 });
+  const liftBody = Object.assign(new G.texture_front0(), { x: 500, y: 0, scaleX: 0.4, scaleY: 0.1 });
+  G.graphics_3d = { children: [liftBody, body] };
+  const lift = { x: 500, y: 0, w: 40, h: 10, scaleX: 0.4, scaleY: 0.1, tarx: 500, tary: -100 };
+  G[N.doors] = [lift]; G[N.doorCount] = 1;
+  // The cells wall i is in, against the cells the game's own function would put it in.
+  const cellsOf = (grid, i) => grid.flatMap((col, x) => col.map((cell, y) => (cell.includes(i) ? `${x},${y}` : null))).filter(Boolean);
+  const freshCells = (i) => {
+    const real = G[N.grid];
+    G[N.grid] = real.map((col) => col.map(() => []));
+    G[N.gridAddWall](i);
+    const want = cellsOf(G[N.grid], i);
+    G[N.grid] = real;
+    return want;
+  };
+  try {
+    c.setMP(false);
+    c.run('editor on');
+    level(false); level(true);
+    const doc = session.editorDoc();
+
+    // A movable: place, size and its texture at once.
+    session.select(doc.byUid('#lift'));
+    assert.deepEqual(quiet('editor set x 520'), ['#lift: x = "520", live now']);
+    quiet('editor set w 80');
+    assert.deepEqual([lift.x, lift.w, lift.scaleX, liftBody.x, liftBody.scaleX], [520, 80, 0.8, 520, 0.8]);
+    quiet('editor set tary -200');
+    assert.equal(lift.tary, -200);
+
+    // Walls: on a reload, unless live walls are on.
+    const wall = doc.byTag('box')[1];
+    session.select(wall);
+    assert.match(quiet('editor set x 310')[0], /shows after "editor reload"/);
+    assert.equal(G[N.wallX][1], 300);
+    let out = c.run('editor livewalls on');
+    assert.ok(out.some((l) => /REPORTS YOUR CLIENT TO THE SERVER/.test(l)));
+    assert.match(out[out.length - 1], /Not turned on\. If you accept that: "editor livewalls on --i-understand"/);
+    c.setMP(true);
+    assert.match(errorsOf(c.run('editor livewalls on --i-understand'))[0], /not in multiplayer/);
+    c.setMP(false);
+    quiet('editor livewalls on --i-understand');
+    assert.deepEqual(quiet('editor set x 350'), ['wall #1: x = "350", live now']);
+    assert.equal(G[N.wallX][1], 350);
+    assert.deepEqual([body.x, body.scaleX], [350, 1]);
+    assert.deepEqual(cellsOf(G[N.grid], 1), freshCells(1), 'in exactly the cells the game lists it in now');
+    assert.deepEqual(cellsOf(G[N.grid], 0), freshCells(0), 'the other wall untouched');
+    quiet('editor set w 50');
+    assert.equal(body.scaleX, 0.5);
+    quiet('editor set y -150');
+    assert.deepEqual(cellsOf(G[N.grid], 1), freshCells(1), 'smaller and higher: out of the cells it left');
+    assert.match(quiet('editor set x 5000')[0], /shows after "editor reload"/, 'outside the grid: not live');
+    assert.equal(G[N.wallX][1], 350);
+    quiet('editor livewalls off');
+    assert.match(quiet('editor set x 360')[0], /shows after "editor reload"/);
+
+    // editor_autoreload: a non-live edit reloads by itself once the edits stop.
+    G[N.fadeOverlay] = { alpha: 0, visible: false };
+    quiet('editor_autoreload on');
+    quiet('editor set y 20');
+    assert.equal(G[N.levelState], '', 'not at once');
+    await new Promise((r) => setTimeout(r, 800));
+    assert.equal(G[N.levelState], 'restart');
+    G[N.levelState] = '';
+    // Not while the mouse is down.
+    session.setPressing(true);
+    quiet('editor set y 30');
+    await new Promise((r) => setTimeout(r, 800));
+    assert.equal(G[N.levelState], '', 'waits for the drag to end');
+    session.setPressing(false);
+    await new Promise((r) => setTimeout(r, 800));
+    assert.equal(G[N.levelState], 'restart');
+  } finally {
+    G[N.levelState] = '';
+    G[N.fadeOverlay] = null;
+    quiet('editor_autoreload off');
+    c.run('editor livewalls off');
+    c.setMP(true);
+    session.setEditor(false);
+    G[N.mapText] = original;
+    for (const k of ['doors', 'doorCount', 'wallCount']) delete G[N[k]];
+  }
+});
