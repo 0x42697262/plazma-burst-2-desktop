@@ -1395,3 +1395,28 @@ test('editor: walls (with trims), backgrounds, water, pushers and movables move 
     delete G.graphics_3d;
   }
 });
+
+test('the anti-cheat scan report is logged as the game sends it, once', () => {
+  const { G, N } = c;
+  const net = G[N.net];
+  const walls = [0, 300];
+  G[N.wallX] = walls;
+  G[N.lockedArrays].push([], walls);
+  const warned = [];
+  const realWarn = console.warn;
+  console.warn = (...a) => warned.push(a.join(' '));
+  try {
+    // The game's own ping (2 parts), then the scan's report for locked array 1.
+    net[N.netLog].push({ type: 'PING', parts: ['PING', '7'], time: 1 });
+    net[N.netLog].push({ type: 'PING', parts: ['PING', 'undefined', '3', '1'], time: 2 });
+    c.frame(2);
+    assert.equal(warned.length, 1, warned.join(' | '));
+    assert.match(warned[0], /^\[anti-cheat\] scan report sent.*code 3 \(a locked array changed\): locked array 1 of 2 \(wallX\)$/);
+    net[N.netLog].push({ type: 'PING', parts: ['PING', 'undefined', '2', '5/old/new'], time: 3 });
+    c.frame();
+    assert.match(warned[1], /code 2 \(a function changed\): 5\/old\/new$/);
+  } finally {
+    console.warn = realWarn;
+    G[N.lockedArrays].length = 0;
+  }
+});

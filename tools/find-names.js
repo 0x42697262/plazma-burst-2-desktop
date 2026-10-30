@@ -30,6 +30,7 @@ const FILES = {
   guns: 'scripts/guns.js',
   ui: 'scripts/ui.js',
   flash: 'scripts/libs/flash.js',
+  tools: 'scripts/libs/tools.js',
 };
 
 // Each rule: `keys` are the names captured by ⟨ID⟩ in order ('_' = ignore), `file` is a
@@ -202,6 +203,16 @@ const RULES = [
   { file: 'flash', keys: ['lobbyConn', 'netSend'],
     what: ['net property: lobby/match server connection', 'connection method(channel, parts, callback): send a message'],
     re: String.raw`⟨net⟩\.⟨ID⟩\.⟨ID⟩\(⟨net⟩\.⟨_⟩,\[⟨net⟩\["RELIABLE_JOIN_MATCH"\],-1,` },
+  // Kept for the game's multiplayer logs screen. A sent message is always added
+  // (scripts/connection.js); a received one only with TRACK_MP_LOGS.
+  { file: 'flash', keys: ['netLog'],
+    what: ['net property: recent network messages, oldest first: { type, parts, time }'],
+    re: String.raw`if\(TRACK_MP_LOGS\)\s*\{\s*⟨net⟩\.⟨ID⟩\.push\(⟨_⟩\);` },
+  // The anti-cheat's locked arrays (ANTICHEAT.md §7). The scan's code 3 report sends an
+  // index into this list.
+  { file: 'tools', keys: ['lockedArrays'],
+    what: ['anti-cheat locked arrays, in the order the scan compares them'],
+    re: String.raw`let ⟨ID⟩=\[\];\s*let ⟨_⟩=new Map\(\);\s*let ⟨_⟩=true;` },
   { file: 'flash', keys: ['mapText', 'mapChunks'],
     what: ['globalThis property: map XML of the level being loaded (compressed "<q." until the level starts)',
       'net property: multiplayer map chunks received so far (null = none)'],

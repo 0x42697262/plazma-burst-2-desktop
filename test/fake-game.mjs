@@ -133,8 +133,10 @@ export async function bootConsole({ mapFile = path.join(REPO, 'test/fixtures/map
   set('mp', true); set('customMap', true); set('sayTrigger', sayTrigger && index.has(sayTrigger) ? index.get(sayTrigger) : -1);
   set('net', {
     RELIABLE_EXEC_TRIGGER: 'EXEC', RELIABLE_VAR_SYNC: 'VSYNC', RELIABLE_JOIN_MATCH: 'JOIN', RELIABLE_GET_MATCH_LIST: 'LIST',
-    [N.netNum]: (i) => `n${i}`, [N.mapChunks]: null, Event: (...a) => log.net.push(a),
+    RELIABLE_PING: 'PING',
+    [N.netNum]: (i) => `n${i}`, [N.mapChunks]: null, [N.netLog]: [], Event: (...a) => log.net.push(a),
   });
+  set('lockedArrays', []);
   set('triggerActivator', -1); set('triggerPower', 0);
   // A runner named like the game's, reading "enabled" the way it does, so the run log
   // sees it.

@@ -19,7 +19,12 @@ export const NET = Object.freeze({
   VAR_SYNC: 'RELIABLE_VAR_SYNC',
   JOIN_MATCH: 'RELIABLE_JOIN_MATCH',
   GET_MATCH_LIST: 'RELIABLE_GET_MATCH_LIST',
+  PING: 'RELIABLE_PING',
 });
+
+// Locked arrays the console has a name for, to say which one a scan report means.
+const LOCKED_NAMED = Object.freeze(['wallX', 'wallY', 'wallW', 'wallH', 'pushToX', 'pushToY', 'pushStab',
+  'pushDamage', 'waterX', 'waterY', 'waterW', 'waterH', 'waterDamage']);
 
 const ENTER_KEY = {
   keyCode: 13, which: 13, key: 'Enter', code: 'Enter',
@@ -214,6 +219,17 @@ export const game = {
   matchMapId: () => { const d = read('net').match_details; return d && d.map_id; }, // map of the match you are in
   mapId: () => read('mapId'), // map loaded last: campaign "c31a" or a custom map ID
   sendMethodName: () => nameOf('netSend'),
+  // Recent network messages, oldest first: { type, parts, time }. Every message sent is
+  // added (parts as sent, as strings); received ones only with the game's TRACK_MP_LOGS.
+  netLog: () => { const net = read('net'); return (net && net[nameOf('netLog')]) || []; },
+
+  // ----- Anti-cheat -----
+  // The console name of locked array i (the scan's code 3 detail), or null.
+  lockedArrayName: (i) => {
+    const arr = (read('lockedArrays') || [])[i];
+    return (arr && LOCKED_NAMED.find((k) => N[k] && read(k) === arr)) || null;
+  },
+  lockedArrayCount: () => (read('lockedArrays') || []).length,
   clearMapChunks: () => { read('net')[nameOf('mapChunks')] = null; },
 
   // ----- Chat -----
