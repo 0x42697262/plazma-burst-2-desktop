@@ -59,13 +59,14 @@ export class MapDoc {
   }
 
   // The game has just loaded this text: every element is where the document has it.
-  // live.index: its index among its kind; live.char: its character, for players.
+  // live.index: its index among its kind; live.char: its character, for players;
+  // live.loaded: its attributes as the game read them.
   markLoaded() {
     const count = {};
     let chars = 0;
     for (const e of this.elements) {
       count[e.tag] = (count[e.tag] ?? -1) + 1;
-      e.live = { index: count[e.tag], char: CHAR_TAGS.has(e.tag) ? chars++ : undefined };
+      e.live = { index: count[e.tag], char: CHAR_TAGS.has(e.tag) ? chars++ : undefined, loaded: { ...e.attrs } };
     }
   }
 

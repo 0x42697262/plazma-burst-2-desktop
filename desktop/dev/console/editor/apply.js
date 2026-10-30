@@ -12,6 +12,7 @@ import { moveWall, textureAt } from '../game/walls.js';
 import { findRect, moveRect } from '../game/layers.js';
 import { boundsOf } from './kinds.js';
 import { rebuildable, rebuildLive } from './rebuild.js';
+import { moveGun, remakeGun } from './guns.js';
 
 // Activation modes the loader rewrites: hidden use keys become the plain ones.
 const LOADER_USE_ON = Object.freeze({ 8: 1, 11: 9, 12: 10, 15: 1 });
@@ -173,6 +174,12 @@ const LIVE = Object.freeze({
     of: (i) => (i < game.walls().count ? { index: i } : null),
     attrs: each(['x', 'y', 'w', 'h'], (o, v, attrs) => wallPlace(o.index)(v, attrs)),
   },
+  // A map gun: the game gun it is (guns.js), moved or made again.
+  gun: {
+    of: () => ({}),
+    attrs: { x: (o, v, attrs, e) => moveGun(e), y: (o, v, attrs, e) => moveGun(e),
+      model: (o, v, attrs, e) => remakeGun(e), upg: (o, v, attrs, e) => remakeGun(e), command: (o, v, attrs, e) => remakeGun(e) },
+  },
   bg: {
     of: (i) => (i < game.backgrounds().count ? { index: i } : null),
     attrs: each(['x', 'y', 'w', 'h'], (o, v, attrs) => placeBg(o.index, attrs)),
@@ -210,11 +217,11 @@ export function applyLive(e, attr) {
   const kind = LIVE[e.tag];
   let finer = { live: false, why: NOT_LIVE };
   try {
-    const obj = kind && e.live && kind.of(e.live.index);
+    const obj = kind && e.live && kind.of(e.live.index, e);
     if (kind && e.live && !obj) return { live: false, why: NOT_IN_GAME };
     const v = e.attrs[attr];
     const fn = obj && (kind.attrs[attr] || (kind.other && ((o, val, attrs) => kind.other(o, attr, val, attrs))));
-    if (fn && fn(obj, v, e.attrs)) return { live: true };
+    if (fn && fn(obj, v, e.attrs, e)) return { live: true };
   } catch (err) {
     finer = { live: false, why: err.message };
   }

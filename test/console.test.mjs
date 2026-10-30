@@ -1727,3 +1727,46 @@ $regionR++;
     for (const k of ['$tagBox', '$tagRegion', '$tagDecor', '$regionN', '$regionR', '$wallsBuilt']) delete G[k];
   }
 });
+
+test('editor: a map gun moves, changes model, is deleted and comes back in the running level', async () => {
+  const session = await consoleModule('editor/session.js');
+  const G = c.G, N = c.N;
+  const original = G[N.mapText];
+  const level = (on) => { G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; c.frame(); };
+  const quiet = (line) => c.run(line).filter((l) => !l.startsWith('Note:'));
+  // A rifle lying on the map (fallen a little since), with its two physics points, and
+  // one a character holds.
+  const X = G[N.ptX], Y = G[N.ptY], PX = G[N.ptPrevX], PY = G[N.ptPrevY];
+  X[20] = 100; Y[20] = 30; X[21] = 110; Y[21] = 30; PX[20] = 100; PY[20] = 30; PX[21] = 110; PY[21] = 30;
+  const rifle = { model: 'gun_rifle', x: 100, y: 30, picken_by: -1, [N.gunPtA]: 20, [N.gunPtB]: 21 };
+  const held = { model: 'gun_rifle', x: 101, y: 0, picken_by: 0 };
+  G[N.guns] = [held, rifle];
+  const made = [];
+  const factory = G[N.gunFactory];
+  G[N.gunFactory] = (model, params) => { const g = { model, x: params.x, y: params.y, upg: params.upg, picken_by: -1 }; made.push(g); G[N.guns].push(g); return g; };
+  try {
+    G[N.mapText] = '<gun uid="#rifle" x="100" y="0" model="gun_rifle" command="-1" upg="0" />';
+    c.run('editor on');
+    level(false); level(true);
+    const gun = session.editorDoc().byUid('#rifle');
+    session.select(gun);
+    // Moved: its points go along, the held one is not touched.
+    assert.deepEqual(quiet('editor set x 300'), ['#rifle: x = "300", live now']);
+    assert.deepEqual([rifle.x, X[20], X[21], PX[20]], [300, 300, 310, 300]);
+    assert.equal(held.x, 101);
+    // A new model: a new gun from the game's factory where it lies; the old one out of play.
+    assert.deepEqual(quiet('editor set model gun_sniper'), ['#rifle: model = "gun_sniper", live now']);
+    assert.deepEqual([made.length, made[0].model, made[0].x], [1, 'gun_sniper', 300]);
+    assert.ok(rifle.x >= 1e7 && rifle.visible === false);
+    // Deleted, and back with undo where the map puts it.
+    c.press('Delete');
+    assert.ok(made[0].x >= 1e7);
+    c.run('editor undo');
+    assert.deepEqual([made.length, made[1].model, made[1].x], [2, 'gun_sniper', 300]);
+  } finally {
+    session.setEditor(false);
+    G[N.gunFactory] = factory;
+    G[N.guns] = [];
+    G[N.mapText] = original;
+  }
+});

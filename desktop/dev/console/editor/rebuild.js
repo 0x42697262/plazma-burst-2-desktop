@@ -12,6 +12,7 @@ import { textureAt, addWall, removeWall } from '../game/walls.js';
 import { findRect, moveRect } from '../game/layers.js';
 import { boundsOf } from './kinds.js';
 import { unwrap } from '../triggers/log.js';
+import { claimNewestGun, removeGun, remakeGun } from './guns.js';
 
 const detach = (shown) => { if (shown && shown.parent && shown.parent.removeChild) shown.parent.removeChild(shown); };
 
@@ -92,7 +93,8 @@ export function addLive(e) {
   if (!canBuild(e.tag)) throw new Error(loaderProblem() || `the game's loader has no ${e.tag}`);
   const index = builtCount(e.tag);
   buildElement(e.tag, e.attrs, index ?? 0);
-  if (index === null) return {}; // guns, barrels, vehicles: made by the game's own helpers, no place of ours to edit later
+  if (e.tag === 'gun') { claimNewestGun(e); return {}; } // edited later through guns.js
+  if (index === null) return {}; // barrels, vehicles: made by the game's own helpers, no place of ours to edit later
   AFTER_BUILD[e.tag]?.(index, e.attrs);
   return { index };
 }
@@ -125,18 +127,20 @@ const REMOVE = Object.freeze({
   },
   water: (i) => { const w = game.waters(); hide(w.shown?.[i]); w.w[i] = 0; w.h[i] = 0; },
   pushf: (i) => { const p = game.pushers(); p.x2[i] = p.x1[i]; p.y2[i] = p.y1[i]; },
+  gun: (i, e) => removeGun(e),
 });
 
 // Takes element e out of the running level, or throws why it cannot.
 export function removeLive(e) {
   const remove = REMOVE[e.tag];
-  if (!remove || !e.live || e.live.index === undefined) throw new Error(`a ${e.tag} cannot be taken out of a running level`);
-  remove(e.live.index);
+  if (!remove || !e.live || (e.live.index === undefined && e.tag !== 'gun')) throw new Error(`a ${e.tag} cannot be taken out of a running level`);
+  remove(e.live.index, e);
 }
 
 // Puts a deleted element back (undo of a delete): built again in its place where the
 // game's loader can, or throws why not.
 export function restoreLive(e) {
+  if (e.tag === 'gun' && e.live) { remakeGun(e); return; } // a new one where the old one lies
   if (!e.live || e.live.index === undefined) throw new Error('it is not in the running level');
   if (rebuildable(e.tag)) { rebuildLive(e); return; }
   throw new Error(`a deleted ${e.tag} only comes back when the level loads again`);
