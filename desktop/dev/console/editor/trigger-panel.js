@@ -11,7 +11,7 @@ import { editField } from './fields.js';
 import { choicesOf, shownValue, pickKindsOf } from './params.js';
 import { referenceTo } from './kinds.js';
 import { editorDoc, startPick, cancelPick } from './session.js';
-import { PALETTE, FONT, FONT_SIZE, caption, button, paramRow, onClick } from './style.js';
+import { PALETTE, FONT, FONT_SIZE, caption, button, paramRow, onClick, scrolling } from './style.js';
 
 const NEW_ACTION_TYPE = 100; // "set variable A to value B": an action that does something harmless
 let asText = false; // the map editor's "Edit triggers as text"
@@ -70,11 +70,11 @@ export function drawTriggerActions(box, trigger, { redraw, say }) {
 
 function drawText(box, trigger, run, redraw) {
   box.append(caption('Edit triggers as text:'));
-  const area = el('textarea', {
+  const area = scrolling(el('textarea', {
     width: 'calc(100% - 4px)', height: '160px', margin: '0 2px', boxSizing: 'border-box', resize: 'vertical',
     fontFamily: 'monospace', fontSize: `${FONT_SIZE}px`, color: PALETTE.title, background: PALETTE.box,
     border: `0.5px solid ${PALETTE.activeEdge}`, whiteSpace: 'pre', overflow: 'auto',
-  });
+  }));
   area.value = triggerText(trigger.attrs);
   area.spellcheck = false;
   area.addEventListener('keydown', (e) => e.stopPropagation());

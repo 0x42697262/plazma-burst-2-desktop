@@ -21,7 +21,9 @@ import {
 } from './session.js';
 import { setAttr, deleteElement, duplicateElement, undo, redo, notLiveReason } from './edit.js';
 import { canUndo, canRedo } from './history.js';
-import { PALETTE, FONT, FONT_SIZE, panel, caption, icon, button, listRow, paramRow, onClick } from './style.js';
+import {
+  PALETTE, FONT, FONT_SIZE, panel, caption, icon, button, listRow, paramRow, onClick, scrolling, useEditorStyles,
+} from './style.js';
 import { drawTriggerActions } from './trigger-panel.js';
 import { isActionAttr } from './actions.js';
 import { editField } from './fields.js';
@@ -198,6 +200,7 @@ const DRAW = Object.freeze({ tools: drawTools, layers: drawLayers, objects: draw
 export const panelsOnPage = () => (!nodes ? 'none' : nodes.left.isConnected === false ? 'made, but not on the page' : 'on the page');
 
 export function showPanels(on, keyName) {
+  useEditorStyles(on);
   if (!on) {
     if (unsubscribe) unsubscribe();
     unsubscribe = null;
@@ -211,10 +214,9 @@ export function showPanels(on, keyName) {
   const right = panel(PLACE.right);
   const section = () => el('div', {});
   nodes = { left, right, tools: section(), layers: section(), objectsCaption: caption(''), params: section() };
-  nodes.objects = el('div', {
-    height: `${OBJECTS_H}px`, overflowY: 'auto', margin: '0 2px', padding: '1px', background: PALETTE.box,
-    borderRadius: '2.5px', scrollbarWidth: 'thin',
-  });
+  nodes.objects = scrolling(el('div', {
+    height: `${OBJECTS_H}px`, overflowY: 'auto', margin: '0 2px', padding: '1px', background: PALETTE.box, borderRadius: '2.5px',
+  }));
   left.append(nodes.tools, el('div', { height: '4px' }), nodes.layers);
   right.append(nodes.objectsCaption, nodes.objects, el('div', { height: '4px' }), nodes.params);
   nodes.status = el('div', {

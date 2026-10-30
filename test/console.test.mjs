@@ -933,12 +933,19 @@ test('editor: on and off by its key, outlines every object, selects by click and
     // The map editor's own icons, from the site.
     const imgs = (node) => [node.src, ...(node.childNodes || []).flatMap((n) => (typeof n === 'string' ? [] : imgs(n)))].filter(Boolean);
     assert.ok(imgs(overlay).includes('/level_editor/icons16/edit.gif') && imgs(overlay).includes('/level_editor/icons16/box.gif'));
+    // The map editor's thin scroll bars, from a stylesheet (inline styles cannot do it).
+    const sheet = c.G.document.getElementById('pb2dev-editor-style');
+    assert.match(sheet.text, /pb2dev-editor-scroll::-webkit-scrollbar \{ width: 1\.75px;/);
+    assert.match(sheet.text, /-webkit-scrollbar-thumb \{ border-radius: 1\.75px; background-color: #515151;/);
+    const scrollers = (n) => [n.className, ...(n.childNodes || []).flatMap((k) => (typeof k === 'string' ? [] : scrollers(k)))].filter(Boolean);
+    assert.ok(scrollers(overlay).filter((cn) => cn === 'pb2dev-editor-scroll').length >= 3, 'both panels and the object box');
     // The game's CSS hides its overlay container; everything put in it must show itself.
     for (const n of overlay.childNodes) if (n.style) assert.equal(n.style.visibility, 'visible', `hidden: ${textsOf(n).slice(0, 2).join(' ')}`);
     assert.match(c.press('F8')[0], /^\[key f8\] > editor/);
     assert.ok(!session.editorOn(), 'the key turns it off');
     assert.equal(drawEditorFrame(), null);
     assert.ok(!textsOf(overlay).includes('Layers:'), 'panels gone');
+    assert.equal(c.G.document.getElementById('pb2dev-editor-style'), null, 'and the stylesheet');
     c.press('F8');
     assert.ok(session.editorOn(), 'and on again');
 

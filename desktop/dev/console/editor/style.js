@@ -25,7 +25,40 @@ export const PALETTE = Object.freeze({
   valueEdge: '#2a2a2a', // .p_u2
   title: '#c8c8c8', // .gui_sel_info
   muted: '#595959',
+  scrollThumb: '#515151', // ::-webkit-scrollbar-thumb (#7088ac)
+  scrollTrack: 'rgba(0,0,0,0.2)',
 });
+
+// The map editor's scroll bars (e_css.css: 4px, rounded, a faint track): scroll bars
+// are only styled through a stylesheet, so the editor's scrolling elements carry this
+// class and useEditorStyles puts the rules on the page while the editor is shown.
+// (The standard scrollbar-width / scrollbar-color would win over them, so they are not
+// set.) 1.75 game units is the editor's 4 px at the overlay's usual scale.
+export const SCROLLS = 'pb2dev-editor-scroll';
+const SCROLLBAR = 1.75;
+const STYLESHEET_ID = 'pb2dev-editor-style';
+const STYLESHEET = `
+.${SCROLLS}::-webkit-scrollbar { width: ${SCROLLBAR}px; height: ${SCROLLBAR}px; }
+.${SCROLLS}::-webkit-scrollbar-track { border-radius: ${SCROLLBAR}px; background-color: ${PALETTE.scrollTrack}; }
+.${SCROLLS}::-webkit-scrollbar-thumb { border-radius: ${SCROLLBAR}px; background-color: ${PALETTE.scrollThumb}; }
+.${SCROLLS}::-webkit-scrollbar-corner { background: transparent; }
+`;
+
+export function useEditorStyles(on) {
+  const doc = globalThis.document;
+  const old = doc?.getElementById?.(STYLESHEET_ID);
+  if (!on) { if (old) old.remove(); return; }
+  if (old || !doc?.head) return;
+  const sheet = el('style', {}, STYLESHEET);
+  sheet.id = STYLESHEET_ID;
+  doc.head.append(sheet);
+}
+
+// An element that scrolls, with the editor's scroll bars.
+export function scrolling(node) {
+  node.className = SCROLLS;
+  return node;
+}
 
 export const FONT = 'Tahoma, Verdana, sans-serif';
 export const FONT_SIZE = 5; // the editor's 10px at the overlay's usual scale
@@ -39,10 +72,10 @@ export function panel(place) {
   const p = el('div', {
     ...IN_OVERLAY, position: 'absolute', ...place, boxSizing: 'border-box', zIndex: '45',
     background: PALETTE.panel, fontFamily: FONT, fontSize: px(FONT_SIZE), color: PALETTE.value,
-    overflowX: 'hidden', overflowY: 'auto', scrollbarWidth: 'thin', pointerEvents: 'auto', cursor: 'default', userSelect: 'none',
+    overflowX: 'hidden', overflowY: 'auto', pointerEvents: 'auto', cursor: 'default', userSelect: 'none',
   });
   swallow(p);
-  return markUi(p);
+  return markUi(scrolling(p));
 }
 
 export const caption = (text) => el('div', { color: PALETTE.title, margin: '2px 2px 1px', whiteSpace: 'nowrap' }, text);

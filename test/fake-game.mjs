@@ -208,6 +208,8 @@ export async function bootConsole({ mapFile = path.join(REPO, 'test/fixtures/map
     addEventListener: (t, f, capture) => { listeners[t] = f; docAdd(t, f, capture); },
     removeEventListener: docRemove,
     pointerLockElement: null,
+    head: node(),
+    getElementById(id) { const find = (n) => (n && n.id === id ? n : (n?.childNodes || []).map(find).find(Boolean)); return find(this.head) || null; },
   };
   G.stage = { currentFrameLabel: 'gaming', addEventListener: (t, f) => { listeners.frame = f; }, runEvents() {} };
   G.Event = { ENTER_FRAME: 'enterFrame' };
