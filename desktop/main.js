@@ -9,6 +9,11 @@ const path = require('path');
 const vm = require('vm');
 const { loadCredentials, applyLogin } = require('./login');
 const { createKvFile } = require('./kv-file');
+const { parseLogLevel, createLogger } = require('./log');
+
+// The terminal log: --verbose / --log-level=<error|warn|info|debug> / PB2_LOG_LEVEL.
+const logLevel = parseLogLevel();
+const log = createLogger(logLevel.level);
 
 // Game files, downloaded with "npm run fetch-game". Override with PB2_GAME_DIR.
 const ROOT = path.resolve(process.env.PB2_GAME_DIR || path.join(__dirname, '..', 'game'));
@@ -42,6 +47,12 @@ const kvFile = createKvFile(DEV_KV_FILE, {
   onError: (message) => callConsole('fileError', message),
 });
 const MAIN_SCRIPT_TAG = '<script src="scripts/main.js"></script><script>//# sourceURL=scripts/main.js</script>';
+// The game's own debug output: scripts/flash.js defines "var trace = isCompiled ? () => {}
+// : console.log", and served under its real URL the game counts as compiled, so trace()
+// prints nothing. At debug level it is pointed at console.debug right after flash.js,
+// before the game's scripts that call it (and before window.onload).
+const FLASH_SCRIPT_TAG = '<script src="scripts/flash.js"></script>';
+const TRACE_SCRIPT_TAG = '<script>trace = console.debug.bind(console, "[trace]");</script>';
 const DEV_SCRIPT_TAG = `<script src="${SHARED.devDir}${ROUTE.names}"></script>`
   + `<script src="${SHARED.devDir}${ROUTE.opcodes}"></script>`
   + `<script type="module" src="${SHARED.devDir}${ROUTE.console}${DEV_CONSOLE_ENTRY}"></script>`;
@@ -63,14 +74,14 @@ function checkNamesFile() {
   try {
     text = fsSync.readFileSync(DEV_NAMES, 'utf8');
   } catch {
-    console.error('Dev console: desktop/dev/names.js is missing. Run "npm run find-names".');
+    log.error('Dev console: desktop/dev/names.js is missing. Run "npm run find-names".');
     return;
   }
   const m = text.match(/^\s*version:\s*"([^"]*)"/m);
   if (m && m[1] !== VERSION) {
-    console.error(`Dev console: names.js is for game ${m[1]} but the game is ${VERSION}. Run "npm run find-names".`);
+    log.error(`Dev console: names.js is for game ${m[1]} but the game is ${VERSION}. Run "npm run find-names".`);
   }
-  if (/NOT FOUND/.test(text)) console.error('Dev console: names.js has names that were not found; some commands will fail.');
+  if (/NOT FOUND/.test(text)) log.error('Dev console: names.js has names that were not found; some commands will fail.');
 }
 
 // Local maps: type "local-<name>" as the Map ID in Campaign > Custom Map.
@@ -159,7 +170,7 @@ async function saveMap(id, raw) {
   } catch {}
   await fs.mkdir(MAPS_DIR, { recursive: true });
   await fs.writeFile(file, out);
-  console.log(`Saved map ${id} to ${file} (${text.length} chars)`);
+  log.info(`Saved map ${id} to ${file} (${text.length} chars)`);
   return SHARED.saveResult.saved;
 }
 
@@ -178,7 +189,7 @@ async function saveEditedMap(name, text, overwrite) {
     if (e.code === 'EEXIST') throw Object.assign(new Error(`desktop/maps/${name}.xml exists`), { status: 409 });
     throw e;
   }
-  console.log(`Saved edited map to ${file}`);
+  log.info(`Saved edited map to ${file}`);
   return { file: path.relative(path.join(__dirname, '..'), file), id: LOCAL_MAP_PREFIX + name };
 }
 
@@ -203,9 +214,9 @@ const types = {
 async function applyCredentials() {
   const credentials = loadCredentials(path.join(__dirname, 'credentials.json'));
   const { removed, set } = await applyLogin(session.defaultSession.cookies, credentials, HOST);
-  if (removed.length) console.log(`Cleared saved site cookies: ${removed.join(', ')}`);
-  if (set.length) console.log(`Logged in from credentials: ${set.join(', ')}`);
-  else console.log('No credentials (desktop/credentials.json or PB2_LOGIN/PB2_PASSWORD/PB2_UID): starting logged out.');
+  if (removed.length) log.info(`Cleared saved site cookies: ${removed.join(', ')}`);
+  if (set.length) log.info(`Logged in from credentials: ${set.join(', ')}`);
+  else log.info('No credentials (desktop/credentials.json or PB2_LOGIN/PB2_PASSWORD/PB2_UID): starting logged out.');
 }
 
 async function listLocalMaps() {
@@ -245,10 +256,10 @@ async function serveLocalMap(request) {
   if (!id.toLowerCase().startsWith(LOCAL_MAP_PREFIX)) return serveServerMap(request, id);
   const file = await findLocalMap(id.slice(LOCAL_MAP_PREFIX.length));
   if (!file) {
-    console.error(`Local map not found: ${id} (looked in ${MAPS_DIR})`);
+    log.error(`Local map not found: ${id} (looked in ${MAPS_DIR})`);
     return new Response(`${SHARED.map.notPublished} />`, { headers: { 'Content-Type': 'text/plain' } });
   }
-  console.log(`Serving local map ${id} from ${file}`);
+  log.info(`Serving local map ${id} from ${file}`);
   const text = (await fs.readFile(file, 'utf8')).replace(/^\uFEFF/, '').trim();
   return new Response(text, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
 }
@@ -258,7 +269,7 @@ async function serveServerMap(request, id) {
   if (fastMapsOn()) {
     const saved = await readSavedMap(id);
     if (saved) {
-      console.log(`Fast load: map ${id} from ${path.join(MAPS_DIR, mapFileName(id))}`);
+      log.info(`Fast load: map ${id} from ${path.join(MAPS_DIR, mapFileName(id))}`);
       return new Response(saved, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
     }
   }
@@ -266,7 +277,7 @@ async function serveServerMap(request, id) {
   if (!res.ok) return res;
   const text = await res.text();
   saveMap(id, text).catch((e) => {
-    if (!text.startsWith(SHARED.map.notPublished)) console.error(`Could not save map ${id}: ${e.message}`);
+    if (!text.startsWith(SHARED.map.notPublished)) log.error(`Could not save map ${id}: ${e.message}`);
   });
   return new Response(text, { status: res.status, headers: { 'Content-Type': res.headers.get('content-type') || 'text/plain; charset=utf-8' } });
 }
@@ -390,10 +401,14 @@ async function serveLocal(url) {
   if (DEV_ENABLED && rel === 'index.html') {
     const html = await fs.readFile(path.join(ROOT, 'index.html'), 'utf8');
     // After the game's own scripts; fall back to the end of <body> if the tag changed.
-    const out = html.includes(MAIN_SCRIPT_TAG)
+    let out = html.includes(MAIN_SCRIPT_TAG)
       ? html.replace(MAIN_SCRIPT_TAG, MAIN_SCRIPT_TAG + DEV_SCRIPT_TAG)
       : html.replace(/<\/body>/i, DEV_SCRIPT_TAG + '</body>');
-    if (out === html) console.error('Dev console: could not inject into index.html');
+    if (out === html) log.error('Dev console: could not inject into index.html');
+    if (log.on('debug')) {
+      if (out.includes(FLASH_SCRIPT_TAG)) out = out.replace(FLASH_SCRIPT_TAG, FLASH_SCRIPT_TAG + TRACE_SCRIPT_TAG);
+      else log.warn('Verbose: scripts/flash.js not found in index.html; the game\'s trace() stays silent');
+    }
     return new Response(out, { headers: { 'Content-Type': types['.html'] } });
   }
   const file = path.join(ROOT, path.normalize(rel));
@@ -414,16 +429,27 @@ async function serveLocal(url) {
 app.whenReady().then(async () => {
   if (!VERSION || !fsSync.existsSync(path.join(ROOT, 'index.html'))) {
     const msg = `No game files found in ${ROOT}.\n\nRun "npm run fetch-game" first (see README.md).`;
-    console.error(msg);
+    log.error(msg);
     dialog.showErrorBox('Plazma Burst 2: game files missing', msg);
     app.quit();
     return;
   }
-  console.log(`Game ${VERSION} from ${ROOT}`);
+  if (logLevel.problem) log.warn(logLevel.problem);
+  log.info(`Game ${VERSION} from ${ROOT}`);
+  log.debug(`Log level: debug (requests, window events, the game's trace() output)`);
   if (DEV_ENABLED) checkNamesFile();
   await applyCredentials();
 
+  // Debug level: every request, where it was answered from, its status and how long.
   protocol.handle('https', async (request) => {
+    if (!log.on('debug')) return handleRequest(request);
+    const started = Date.now();
+    const res = await handleRequest(request);
+    log.debug(`[net] ${request.method} ${request.url} -> ${res.status} (${Date.now() - started} ms)`);
+    return res;
+  });
+
+  async function handleRequest(request) {
     const url = new URL(request.url);
     if (url.hostname === HOST && url.pathname === '/pb2/server.php' && request.method === 'POST') {
       const local = await serveLocalMap(request);
@@ -434,7 +460,7 @@ app.whenReady().then(async () => {
       return serveLocal(url);
     }
     return net.fetch(request, { bypassCustomProtocolHandlers: true });
-  });
+  }
 
   // Electron's default menu without Window > Close, whose Ctrl+W closed the game. The
   // rest stays: Quit (Ctrl+Q), copy/paste, reload, DevTools, zoom, full screen.
@@ -452,15 +478,23 @@ app.whenReady().then(async () => {
     title: 'Plazma Burst 2',
     webPreferences: { backgroundThrottling: false },
   });
-  // Dev mode: print the page's console.log/warn/error to this terminal.
+  // The page's console (the game's and the dev console's) in this terminal, by level:
+  // console.debug and trace() only with --verbose.
+  const PAGE_LEVEL = Object.freeze({ error: 'error', warning: 'warn', info: 'info', log: 'info', debug: 'debug', verbose: 'debug' });
   win.webContents.on('console-message', (e) => {
-      const src = e.sourceId ? ` (${e.sourceId.split('/').pop()}:${e.lineNumber})` : '';
-      const out = e.level === 'error' ? console.error : e.level === 'warning' ? console.warn : console.log;
-      out(`[page:${e.level}] ${e.message}${src}`);
-    });
+    const src = e.sourceId ? ` (${e.sourceId.split('/').pop()}:${e.lineNumber})` : '';
+    log[PAGE_LEVEL[e.level] || 'info'](`[page:${e.level}] ${e.message}${src}`);
+  });
+  // The window itself: loads, failed loads, crashes, hangs.
+  win.webContents.on('did-fail-load', (e, code, desc, url) => log.error(`[window] failed to load ${url}: ${desc} (${code})`));
+  win.webContents.on('render-process-gone', (e, d) => log.error(`[window] the page's process is gone: ${d.reason} (exit code ${d.exitCode})`));
+  win.on('unresponsive', () => log.warn('[window] the page stopped responding'));
+  win.on('responsive', () => log.info('[window] the page responds again'));
+  win.webContents.on('did-navigate', (e, url) => log.debug(`[window] navigated to ${url}`));
+  win.webContents.on('did-finish-load', () => log.debug('[window] page loaded'));
 
   if (DEV_ENABLED) {
-    try { kvFile.watch(); } catch (e) { console.warn(`Not watching ${DEV_KV_FILE}: ${e.message}`); }
+    try { kvFile.watch(); } catch (e) { log.warn(`Not watching ${DEV_KV_FILE}: ${e.message}`); }
   }
   win.loadURL(START_URL);
 });

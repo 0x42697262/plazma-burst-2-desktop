@@ -6,6 +6,7 @@
   "main": "desktop/main.js",
   "scripts": {
     "start": "electron .",
+    "start:verbose": "electron . --verbose",
     "fetch-game": "node tools/fetch-game.js",
     "find-names": "node tools/find-names.js",
     "fetch-opcodes": "node tools/fetch-opcodes.js",

@@ -191,6 +191,7 @@ If names are missing, the dev console still opens and lists them in red. Only co
 | `PB2_GAME_DIR` | `game/` | Play a different game copy |
 | `PB2_VERSION` | from `pb2-version.json` | Version folder used in the URL |
 | `PB2_LOGIN`, `PB2_PASSWORD`, `PB2_UID` | `desktop/credentials.json` | Login cookies |
+| `--verbose` / `-v`, `--log-level=<level>`, `PB2_LOG_LEVEL` | `info` | Terminal log level: `error`, `warn`, `info` or `debug`. `--verbose` is `debug`: every request (served locally, by the dev routes or passed to the network, with status and time), window events, the page's `console.debug` and the game's own `trace()` output (silent otherwise). `npm start -- --verbose` or `npm run start:verbose` |
 
 Every start clears the game site's cookies before the game loads, then logs in with the credentials above. Without credentials the game starts logged out, even if an account logged in last time; with them, only that account's cookies are set. Saved games and settings (localStorage) are kept.
 
@@ -201,4 +202,4 @@ Every start clears the game site's cookies before the game loads, then logs in w
 - **`npm install` fails with `ENOENT package.json`**: run it in the repository root, not in `desktop/`.
 - **"names.js is for game vX but the game is vY"** in the terminal: run `npm run find-names`.
 - **Dev console says names were not found**: see [section 5](#5-finding-the-obfuscated-names).
-- **Game console output**: the game page's `console.log` is printed in the terminal running `npm start`. Press `Ctrl+Shift+I` in the window for DevTools.
+- **Game console output**: the game page's `console.log` is printed in the terminal running `npm start`; `npm start -- --verbose` adds requests, window events and the game's `trace()` output. Press `Ctrl+Shift+I` in the window for DevTools.
