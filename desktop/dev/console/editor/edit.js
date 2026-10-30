@@ -8,7 +8,10 @@ import { game } from '../game/bindings.js';
 import { ROUTE } from '../core/shared.js';
 import { kindOf, SHAPE } from './kinds.js';
 import { applyLive } from './apply.js';
-import { editorDoc, notify, markPending } from './session.js';
+import { F } from '../game/fields.js';
+import { player } from '../game/level.js';
+import { movePlayerTo } from '../game/teleport.js';
+import { editorDoc, notify, markPending, onChange } from './session.js';
 
 const NAME = /^[A-Za-z0-9_]+$/;
 const NUMBER_ATTRS = new Set(['x', 'y', 'w', 'h', 'tox', 'toy']);
@@ -59,10 +62,31 @@ export function setPlace(e, { x, y, w, h }) {
   return change(e, values);
 }
 
+// Where you stood when you reloaded: you are put back there once the level runs again,
+// so building goes on where it was.
+let returnTo = null;
+
+function yourSpot() {
+  const p = player();
+  const ref = p && p[F.REF_PT];
+  const x = p && game.ptX()?.[ref];
+  const y = p && game.ptY()?.[ref];
+  return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null;
+}
+
+onChange((what) => {
+  if (what === 'doc') returnTo = null; // another map loaded instead
+  if (what !== 'reloaded' || !returnTo) return;
+  const spot = returnTo;
+  returnTo = null;
+  try { movePlayerTo(spot.x, spot.y, { effect: false }); } catch {}
+});
+
 // Single-player: plays the level again from the edited map, the way the game restarts
-// it. Everything in the level starts over.
+// it. Everything in the level starts over, and you are put back where you stood.
 export function reloadLevel() {
   if (game.isMP()) throw new Error('multiplayer: the server decides when the level loads; edits that are not live stay in the editor for "editor save"');
+  returnTo = yourSpot();
   syncMapText(editorDoc());
   game.setLevelState(LEVEL_RESTART);
   const fade = game.fadeOverlay();

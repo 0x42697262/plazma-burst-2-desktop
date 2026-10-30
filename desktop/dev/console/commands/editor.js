@@ -97,8 +97,10 @@ export const editorCommand = {
     ],
     notes: [
       'Live edits: a region\'s place, size and activation; trigger and timer settings',
-      'and trigger actions. Everything else (walls, movables, ...) moves in the editor',
-      'at once and in the game after "editor reload" (single-player).',
+      'and trigger actions; a decoration\'s place, rotation and scale. Everything else',
+      '(walls, movables, ...) moves in the editor at once and in the game after',
+      '"editor reload" (single-player), which puts you back where you stood. Walls are',
+      'never written live: the game\'s integrity check watches them.',
       'Single-player: the game plays the edited map from then on, so dying or',
       'restarting keeps the edits. Multiplayer: only live edits reach your game (not',
       'the other players\'), and the next round starts from the server\'s map.',
@@ -134,8 +136,8 @@ export const editorCommand = {
       help: {
         about: [
           'Restarts the level the way the game does, from the edited map: walls, lights,',
-          'everything is built again. Everything in the level starts over (you, enemies,',
-          'variables). The editor stays on.',
+          'everything is built again. Everything in the level starts over (enemies,',
+          'variables, your HP); you are put back where you stood. The editor stays on.',
         ],
         notes: [
           'In single-player the game always plays the edited map: dying or restarting',

@@ -160,6 +160,9 @@ const RULES = [
   { file: 'frame2', keys: ['resolveTarget'],
     what: ['function(text): an action target as the map loader stores it ("#uid" -> index, "12" -> 12)'],
     re: String.raw`function ⟨ID⟩\(⟨_⟩\)\s*\{\s*if\(⟨_⟩===null\|\|⟨_⟩===undefined\)\s*⟨_⟩="-1";\s*⟨_⟩\+="";\s*if\(⟨_⟩\.charAt\(0\)==="#"\)` },
+  // Each <decor> of the map, as the loader makes it: a display object, stored in map order.
+  { file: 'frame2', keys: ['decors'], what: ['map decorations array (display objects, in map order)'],
+    re: String.raw`⟨ID⟩\[⟨_⟩\]=mc;\s*if\(mc\.⟨_⟩\)\s*mc\.⟨_⟩\(\);\s*⟨_⟩\(b\["#uid"\],⟨_⟩\);` },
   // The same shot, in multiplayer: tells the server so every other client runs it too.
   { file: 'frame2', keys: ['net', 'netNum'],
     what: ['multiplayer network class (.Event(type, ...parts) sends to the server)',

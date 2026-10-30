@@ -2,6 +2,10 @@
 // game's object, the way the map loader would have set them (frame2.js, the map
 // loader): those changes are live. Anything else waits for the level to load the map
 // again (single-player: "editor reload").
+// Walls, movables, backgrounds, water and pushers are never written live: the game
+// keeps their geometry in arrays its integrity check snapshots, and a change there
+// makes the game report the client and reload. The game's own loader builds them from
+// the edited map on a reload instead.
 import { game } from '../game/bindings.js';
 import { F } from '../game/fields.js';
 import { unwrap } from '../triggers/log.js';
@@ -67,6 +71,21 @@ const counted = {
   },
 };
 
+// A decoration is a display object: place, rotation and scale can change at once. One
+// attached to a movable is placed by it, so that waits for a reload.
+const attached = (attrs) => attrs.attach !== undefined && attrs.attach !== '' && attrs.attach !== '-1';
+const decorNumber = (prop, fallback) => (mc, v, attrs) => {
+  if (attached(attrs)) return false;
+  const n = v === '' || v === undefined ? fallback : parseFloat(v);
+  if (!Number.isFinite(n)) return false;
+  mc[prop] = n;
+  return true;
+};
+const decor = {
+  x: decorNumber('x'), y: decorNumber('y'), r: decorNumber('rotation', 0),
+  sx: decorNumber('scaleX', 1), sy: decorNumber('scaleY', 1),
+};
+
 const LIVE = Object.freeze({
   region: { of: (i) => game.regions()?.[i], attrs: region },
   trigger: {
@@ -74,6 +93,7 @@ const LIVE = Object.freeze({
     attrs: counted,
     other: (t, attr, v, attrs) => ACTION_ATTR.test(attr) && loadActions(t, attrs),
   },
+  decor: { of: (i) => game.decors()?.[i], attrs: decor },
   timer: {
     of: (i) => game.timers()?.[i],
     attrs: { ...counted, target: (t, v) => { t[F.TIMER_TARGET] = game.resolveTarget(v); return true; } },
@@ -88,6 +108,6 @@ export function applyLive(e, i, attr) {
   if (!obj) return false;
   const v = e.attrs[attr];
   const fn = kind.attrs[attr];
-  if (fn) return !!fn(obj, v);
+  if (fn) return !!fn(obj, v, e.attrs);
   return kind.other ? !!kind.other(obj, attr, v, e.attrs) : false;
 }

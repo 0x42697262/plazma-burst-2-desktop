@@ -21,3 +21,4 @@
 <door uid="#door_a" x="200" y="0" w="40" h="100" attach="-1" />
 <decor uid="#sign" x="210" y="-20" attach="#door_a" />
 <trigger uid="#two words" x="300" y="0" enabled="true" maxcalls="-1" actions_1_type="100" actions_1_targetA="opened" actions_1_targetB="1" />
+<decor x="700" y="-50" model="stone" />

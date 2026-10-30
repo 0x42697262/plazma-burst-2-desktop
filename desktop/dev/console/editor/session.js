@@ -24,7 +24,8 @@ const state = {
 };
 
 export const onChange = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
-// what: 'shown' (on/off or level start/end), 'doc', 'selection', 'layer', 'layers', 'edit'.
+// what: 'shown' (on/off or level start/end), 'doc', 'reloaded' (the level started again
+// from the document), 'selection', 'layer', 'layers', 'edit'.
 export const notify = (what) => { for (const fn of listeners) fn(what); };
 const changed = notify;
 
@@ -141,6 +142,7 @@ export function editorTick() {
       changed('doc');
     } else {
       state.pending.clear();
+      changed('reloaded');
     }
   }
   setShown(active);

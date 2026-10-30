@@ -5,8 +5,9 @@ import { plural, isNumberText, parseIndex, capitalize } from '../core/text.js';
 import { takeOptions } from '../core/args.js';
 import { game } from '../game/bindings.js';
 import { F } from '../game/fields.js';
+import { movePlayerTo } from '../game/teleport.js';
 import {
-  player, isActive, requireLevel, isDown, charAt, charLabel, be, noCharacter, resolveChar, BODY_MIDDLE,
+  player, isActive, requireLevel, isDown, charAt, charLabel, be, noCharacter, resolveChar,
 } from '../game/level.js';
 import { KEY, CLIENT_ONLY_REASON } from '../state/schema.js';
 import { settings, binds } from '../state/store.js';
@@ -134,38 +135,10 @@ function revive(rawArgs) {
 
 // ----- teleport -----
 
-// Same steps as the game's own "move character to region" trigger: shift every physics
-// point of the player and their carried guns, move the camera, play the effect.
 function teleportTo(tx, ty, label) {
   requireLevel();
-  const p = player();
-  if (!(p[F.HP] > 0)) throw new Error('you are dead');
-  const X = game.ptX(), Y = game.ptY();
-  const ref = p[F.REF_PT];
-  const u = X[ref] - tx;
-  const v = Y[ref] - ty;
-  if (!Number.isFinite(u) || !Number.isFinite(v)) throw new Error('could not read your position');
-  if (game.cameraFollowsMe()) game.moveCamera(u, v);
-  const me = p[F.INDEX];
-  const owner = game.ptOwner();
-  const guns = game.guns();
-  const base = game.gunPtBase(), range = game.gunPtRange();
-  const interp = game.interpolating();
-  const PX = game.ptPrevX(), PY = game.ptPrevY();
-  for (let i = 0, n = game.ptCount(); i < n; i++) {
-    const o = owner[i];
-    const mine = o === me || (o >= base && o < base + range && guns[o - base] && guns[o - base].picken_by === me);
-    if (!mine) continue;
-    X[i] -= u;
-    Y[i] -= v;
-    if (interp) { PX[i] -= u; PY[i] -= v; }
-    game.clearPtInterp(i);
-  }
-  try { game.teleportFx(p.x, p.y - BODY_MIDDLE); } catch {}
-  p.x -= u;
-  p.y -= v;
-  try { game.teleportFx(p.x, p.y - BODY_MIDDLE); } catch {}
-  p[F.AFTER_MOVE]();
+  if (!(player()[F.HP] > 0)) throw new Error('you are dead');
+  movePlayerTo(tx, ty);
   print(`Teleported to ${label ? label + ' at ' : ''}${Math.round(tx)}, ${Math.round(ty)}`, COLOR.ok);
 }
 

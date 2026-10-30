@@ -1028,11 +1028,21 @@ test('editor: edits go live where the game can take them, the rest on a reload; 
     quiet('editor set enabled false');
     assert.equal(t[c.N.trigEnabled], false);
 
+    // A decoration moves at once, unless a movable carries it.
+    const stone = doc.elements.find((e) => e.tag === 'decor' && !e.attrs.uid);
+    session.select(stone);
+    assert.deepEqual(quiet('editor set x 720'), ['decoration #1: x = "720", live now']);
+    assert.equal(c.G[c.N.decors][1].x, 720);
+    quiet('editor set r 45');
+    assert.equal(c.G[c.N.decors][1].rotation, 45);
+    session.select(doc.byUid('#sign'));
+    assert.match(quiet('editor set x 230')[0], /shows after "editor reload"/);
+
     // Not live: kept, and the status says a reload brings it.
     const door = doc.byUid('#door_a');
     session.select(door);
     assert.deepEqual(quiet('editor set w 60'), ['#door_a: w = "60", shows after "editor reload"']);
-    assert.equal(session.pendingCount(), 1);
+    assert.equal(session.pendingCount(), 2);
     assert.match(errorsOf(c.run('editor set x abc'))[0], /x must be a number/);
     assert.match(errorsOf(c.run('editor set c "a"b"'))[0], /cannot contain a double quote/);
 
@@ -1056,13 +1066,17 @@ test('editor: edits go live where the game can take them, the rest on a reload; 
 
     // Reload: the game's own restart, from the edited text; then nothing is pending.
     c.G[c.N.fadeOverlay] = { alpha: 0, visible: false };
-    assert.match(c.run('editor reload')[0], /^Reloading the level from the edited map \(1 object not live until now\)/);
+    const ref = c.player[c.N.refPoint];
+    const spot = { x: c.G[c.N.ptX][ref], y: c.G[c.N.ptY][ref] };
+    assert.match(c.run('editor reload')[0], /^Reloading the level from the edited map \(2 objects not live until now\)/);
     assert.equal(c.G[c.N.levelState], 'restart');
     assert.deepEqual(c.G[c.N.fadeOverlay], { alpha: 1, visible: true });
     c.G[c.N.levelState] = '';
     c.G[c.N.fadeOverlay] = null;
     c.G.stage.currentFrameLabel = 'loading'; c.frame();
+    c.G[c.N.ptX][ref] = c.player.x = spot.x - 300; // the level starts you at its spawn
     c.G.stage.currentFrameLabel = 'gaming'; c.frame();
+    assert.equal(c.G[c.N.ptX][ref], spot.x, 'back where you stood');
     assert.equal(session.editorDoc(), doc, 'same text: same document');
     assert.equal(session.pendingCount(), 0);
 

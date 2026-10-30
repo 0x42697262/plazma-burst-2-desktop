@@ -28,7 +28,7 @@ function parseMap(xml) {
     for (const a of m[0].matchAll(/([A-Za-z0-9_]+)="([^"]*)"/g)) at[a[1]] = a[2];
     return at;
   });
-  return { triggers: tags('trigger'), regions: tags('region'), timers: tags('timer'), players: tags('player') };
+  return { triggers: tags('trigger'), regions: tags('region'), timers: tags('timer'), players: tags('player'), decors: tags('decor') };
 }
 
 // A few of the map editor's actions (desktop/dev/opcodes.js has them all).
@@ -96,6 +96,7 @@ export async function bootConsole({ mapFile = path.join(REPO, 'test/fixtures/map
   set('regionCount', map.regions.length);
   set('timers', map.timers.map((at) => ({ [N.timerTarget]: fix(at.target), [N.trigEnabled]: at.enabled === 'true' })));
   set('timerCount', map.timers.length);
+  set('decors', map.decors.map((at) => ({ x: +at.x, y: +at.y, rotation: +(at.r ?? 0), scaleX: +(at.sx ?? 1), scaleY: +(at.sy ?? 1) })));
   set('mapText', xml);
   set('mapVars', { var_mods: 'CTHC Lenaa', door_1: 0, size_P0: 1, SkinChatVar: '-zoom 0.9' });
   set('varSyncOn', true);

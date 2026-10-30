@@ -147,6 +147,7 @@ export const game = {
   regions: () => read('regions'),
   regionCount: () => read('regionCount'),
   timers: () => read('timers'),
+  decors: () => read('decors'), // display objects, in map order
   timerCount: () => read('timerCount'),
   sayTrigger: () => read('sayTrigger'), // the map's "player says" trigger (-1/undefined = none)
   setSayTrigger: (v) => write('sayTrigger', v),
