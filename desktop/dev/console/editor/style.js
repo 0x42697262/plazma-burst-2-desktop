@@ -1,27 +1,30 @@
-// The editor's look, after the browser map editor's (level_editor/e_css.css): its panel
-// and button colours, its 16x16 object icons (level_editor/icons16/<kind>.gif, loaded
+// The editor's look, after the browser map editor's (level_editor/e_css.css): its panels
+// and buttons in its Dark theme, its 16x16 object icons (level_editor/icons16/<kind>.gif, loaded
 // from the site like the rest of the game), and small builders for its elements. Sizes
 // are game units (the overlay is 800 x 400 of them).
 import { el } from '../ui/dom.js';
 import { IN_OVERLAY, swallow, markUi } from '../ui/theme.js';
 
+// Dark, like the game's own dark panels (HUD panel type 2, "#000000d9": the Esc menu's
+// side panels, where a match host sees the logs), with the map editor's Dark theme
+// greys for everything on them (its blue theme turned grey: lib_gui.js, ThemeSet).
 export const PALETTE = Object.freeze({
-  panel: '#2e405a', // .leftui / .rightui
-  panelEdge: '#152e4e',
-  box: '#26354a', // .objbox
-  button: '#26354a', // .tool_btn
-  buttonText: '#adc6e8',
-  buttonHover: '#202d3f',
-  active: '#415b80', // .tool_btn2
-  activeEdge: '#6887b4',
-  rowSelected: '#3c506e', // .selline1
-  label: '#819cc0', // .pa1
-  labelBack: '#3c506e',
-  value: '#adc6e8', // .pa2
-  valueBack: '#4a6489',
-  valueEdge: '#40577a', // .p_u2
-  title: '#ffffff', // .gui_sel_info
-  muted: '#7f93ad',
+  panel: '#000000d9', // the game's dark panel
+  panelEdge: '#101010',
+  box: '#141414', // .objbox
+  button: '#141414', // .tool_btn
+  buttonText: '#8b8b8b',
+  buttonHover: '#0f0f0f',
+  active: '#2d2d2d', // .tool_btn2
+  activeEdge: '#515151',
+  rowSelected: '#252525', // .selline1
+  label: '#626262', // .pa1
+  labelBack: '#252525',
+  value: '#8b8b8b', // .pa2
+  valueBack: '#333333',
+  valueEdge: '#2a2a2a', // .p_u2
+  title: '#c8c8c8', // .gui_sel_info
+  muted: '#595959',
 });
 
 export const FONT = 'Tahoma, Verdana, sans-serif';
