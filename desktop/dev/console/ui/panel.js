@@ -1,34 +1,23 @@
 // The console window, styled after the game's "View logs" panel (800x400 game units),
 // and the keys it reacts to: Shift+` toggles it, Esc closes it, binds run in levels.
 import { el } from './dom.js';
+import { THEME, swallow } from './theme.js';
 import { print, attachLog, clearLog } from './log.js';
 import { complete } from './complete.js';
 import { COLOR } from '../core/colors.js';
 import { game } from '../game/bindings.js';
 import { isActive } from '../game/level.js';
 import { eventKeyName, showKey, baseKey, TOGGLE_KEY } from '../state/keys.js';
-import { binds, history, settings } from '../state/store.js';
-import { KEY } from '../state/schema.js';
+import { binds, history } from '../state/store.js';
+import { hotkeyOf } from '../state/hotkeys.js';
 import { levelWasActive } from '../overrides/frame.js';
 import { run } from '../dispatch.js';
 import { looksLikeScript } from '../triggers/script.js';
+import { editorKey } from '../editor/index.js';
 
-const THEME = Object.freeze({
-  background: '#0E2236e5',
-  scrollThumb: '#3C9DFF',
-  scrollTrack: '#01010119',
-  inputBackground: '#00000066',
-  inputBorder: '1px solid rgba(60,157,255,0.3)',
-  font: 'DejaVuSansMono',
-  titleFont: 'EuropeExt',
-});
 const Z_INDEX = '50';
 const BUTTON_STEP = 190; // horizontal distance between the buttons
 
-// Keep the game's handlers (on window and document, bubble phase) from seeing input
-// meant for the console.
-const SWALLOWED_EVENTS = ['keydown', 'keypress', 'mousedown', 'mouseup', 'click', 'dblclick',
-  'wheel', 'contextmenu', 'pointerdown', 'pointerup', 'touchstart', 'touchend'];
 
 let root, inputEl, statusEl;
 let isOpen = false;
@@ -178,7 +167,7 @@ export function buildPanel() {
     root.append(b);
   });
 
-  for (const type of SWALLOWED_EVENTS) root.addEventListener(type, (e) => e.stopPropagation());
+  swallow(root);
   inputEl.addEventListener('keydown', onInputKey);
   inputEl.addEventListener('paste', onPaste);
   historyPos = history.lines.length;
@@ -187,7 +176,7 @@ export function buildPanel() {
 
 const isTextInput = (t) => !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
 
-// A function key types nothing, so it can take a screenshot while you type.
+// A function key types nothing, so it works as a hotkey while you type.
 const typesNothing = (k) => /^f\d+$/.test(baseKey(k));
 
 export function onKeyDownCapture(e) {
@@ -202,14 +191,13 @@ export function onKeyDownCapture(e) {
     return;
   }
   const inRoot = root && root.contains(e.target);
-  const shotKey = settings.effective(KEY.SCREENSHOT_KEY);
-  if (shotKey && !e.metaKey && eventKeyName(e) === shotKey
-    && (typesNothing(shotKey) || (!isTextInput(e.target) && !game.chatTyping()))) {
+  const hot = !e.metaKey && hotkeyOf(eventKeyName(e));
+  if (hot && (typesNothing(eventKeyName(e)) || (!isTextInput(e.target) && !game.chatTyping()))) {
     // Before binds and the game: anywhere, also with the console open.
     e.preventDefault();
     e.stopImmediatePropagation();
     heldBoundKeys.add(e.code);
-    if (!e.repeat) run('screenshot', `key ${showKey(shotKey)}`);
+    if (!e.repeat) run(hot.command, `key ${showKey(eventKeyName(e))}`);
     return;
   }
   if (!e.metaKey && eventKeyName(e) === TOGGLE_KEY) {
@@ -220,6 +208,12 @@ export function onKeyDownCapture(e) {
       if (!e.repeat) togglePanel();
       return;
     }
+  }
+  if (!isOpen && !isTextInput(e.target) && !game.chatTyping() && editorKey(e)) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    heldBoundKeys.add(e.code);
+    return;
   }
   if (!isOpen && !e.metaKey) {
     const k = eventKeyName(e);

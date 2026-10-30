@@ -52,10 +52,21 @@ function arrowHead(ctx, from, to) {
   ctx.fill();
 }
 
+// One link as an arrow from a to b (screen units), coloured by its kind. Also drawn by
+// the editor for the selected element.
+export function drawLink(ctx, a, b, kind) {
+  ctx.lineWidth = LINE_WIDTH;
+  ctx.strokeStyle = ctx.fillStyle = LINK_COLOR[kind];
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(b.x, b.y);
+  ctx.stroke();
+  arrowHead(ctx, a, b);
+}
+
 function drawLogic(ctx, m) {
   const g = logicGraph();
   if (!g) return null;
-  ctx.lineWidth = LINE_WIDTH;
   const at = new Map(); // node -> its screen point, worked out once per frame
   const point = (node) => {
     if (!at.has(node)) at.set(node, toScreen(m, centreOf(placeOf(node))));
@@ -73,12 +84,7 @@ function drawLogic(ctx, m) {
     const a = point(link.from), b = point(link.to);
     if (![a.x, a.y, b.x, b.y].every(Number.isFinite)) continue;
     if (screenOnly ? !(visible(link.from) && visible(link.to)) : !onScreen(a) && !onScreen(b)) continue;
-    ctx.strokeStyle = ctx.fillStyle = LINK_COLOR[link.kind];
-    ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
-    ctx.stroke();
-    arrowHead(ctx, a, b);
+    drawLink(ctx, a, b, link.kind);
     shown.add(link.from).add(link.to);
     lines++;
   }

@@ -26,6 +26,9 @@ function worldTransform(canvas, cam) {
 // A world point in screen game units (0..GAME_WIDTH, 0..GAME_HEIGHT).
 export const toScreen = (m, p) => ({ x: (m.a * p.x + m.e) / m.unit, y: (m.d * p.y + m.f) / m.unit });
 
+// The other way: a point in screen game units back to the world.
+export const toWorld = (m, p) => ({ x: (p.x * m.unit - m.e) / m.a, y: (p.y * m.unit - m.f) / m.d });
+
 // The crosshair in screen units: it follows the mouse in world units (also with the
 // pointer locked). null when it cannot be read.
 export function crosshair(m) {

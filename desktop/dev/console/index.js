@@ -13,8 +13,8 @@
 //
 // Layout: core/ (helpers), game/ (the game adapter), state/ (settings, binds, history),
 // overrides/ (per-frame forcing), triggers/ (map triggers and variables), maps/ (the map
-// cache), ui/ (panel, log, pager), commands/ (one module per command group, all in the
-// registry), dispatch.js (running a typed line).
+// cache), editor/ (the in-game map editor), ui/ (panel, log, pager), commands/ (one
+// module per command group, all in the registry), dispatch.js (running a typed line).
 import './commands/index.js';
 import { print, TAG } from './ui/log.js';
 import { buildPanel, updateStatus, updateStatusIfOpen, openPanel, closePanel, onKeyDownCapture, onKeyUpCapture } from './ui/panel.js';
@@ -29,6 +29,7 @@ import { profileTick } from './commands/profile.js';
 import { applyOverrides, onActiveChange } from './overrides/frame.js';
 import { syncTriggerHooks } from './triggers/log.js';
 import { mapTick } from './maps/cache.js';
+import { editorTick } from './editor/index.js';
 import { run } from './dispatch.js';
 
 const BOOT_POLL_MS = 200; // how often to look for the game's stage while it loads
@@ -48,6 +49,7 @@ const mapGuard = errorBudget(MAP_ERRORS_SHOWN, reportError);
 function onFrame() {
   frameGuard('Trigger history', syncTriggerHooks);
   frameGuard('Frame', applyOverrides);
+  frameGuard('Editor', editorTick);
 }
 
 function start(source) {

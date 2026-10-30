@@ -914,3 +914,76 @@ test('triggers exec runs a trigger pasted from the map editor\'s text view, once
   assert.match(c.run('triggers actions 562')[1], /562\s+op562\s+Debug/);
   assert.ok(c.run('triggers #god').some((l) => /type 123\s.*\(Var › Skip next trigger action/.test(l)));
 });
+
+// Every text in a fake DOM tree, depth first.
+const textsOf = (node) => [node.text, ...(node.childNodes || []).flatMap((n) => (typeof n === 'string' ? [n] : textsOf(n)))].filter(Boolean);
+
+test('editor: on and off by its key, outlines every object, selects by click and from its lists', async () => {
+  const session = await consoleModule('editor/session.js');
+  const { drawEditorFrame } = await consoleModule('editor/view.js');
+  const { worldOfEvent } = await consoleModule('editor/input.js');
+  const original = c.G[c.N.mapText];
+  const overlay = c.G[c.N.uiOverlay].overlay;
+  try {
+    assert.match(c.run('editor')[0], /^Editor on: click an object to select it\. f8 or "editor" turns it off\./);
+    assert.ok(session.editorOn());
+    const first = drawEditorFrame();
+    assert.ok(first.outlines > 5, JSON.stringify(first));
+    assert.ok(textsOf(overlay).includes('Layers'));
+    assert.match(c.press('F8')[0], /^\[key f8\] > editor/);
+    assert.ok(!session.editorOn(), 'the key turns it off');
+    assert.equal(drawEditorFrame(), null);
+    assert.ok(!textsOf(overlay).includes('Layers'), 'panels gone');
+    c.press('F8');
+    assert.ok(session.editorOn(), 'and on again');
+
+    // A new map text (a restart, another map) is read again.
+    c.G[c.N.mapText] = [
+      '<box x="0" y="0" w="400" h="200" m="0" />',
+      '<box x="100" y="50" w="20" h="20" m="0" />',
+      '<trigger uid="#t" x="500" y="0" enabled="true" maxcalls="-1" actions_1_type="100" actions_1_targetA="a" actions_1_targetB="1" />',
+      '<timer uid="#clock" x="560" y="0" enabled="true" maxcalls="-1" target="#t" delay="30" />',
+    ].join('\n');
+    c.frame();
+    const doc = session.editorDoc();
+    assert.equal(doc.elements.length, 4);
+    assert.equal(doc.toText(), c.G[c.N.mapText], 'the map text comes back as it was');
+
+    // The smallest under the click first; the same spot again takes the next one.
+    const at = { x: 110, y: 60 };
+    assert.equal(doc.ordinal(session.pickAt(at)), 1);
+    assert.equal(doc.ordinal(session.pickAt(at)), 0);
+    assert.equal(doc.ordinal(session.pickAt(at)), 1, 'and round again');
+    assert.equal(session.pickAt({ x: 1000, y: 1000 }), null, 'nothing there: deselect');
+    // Screen to world and back: the fake canvas is 800x400 on screen, as wide as the game.
+    const { currentTransform, toScreen } = await consoleModule('ui/overlay.js');
+    const back = toScreen(currentTransform(), worldOfEvent({ clientX: 110, clientY: 60 }));
+    assert.ok(Math.abs(back.x - 110) < 1e-9 && Math.abs(back.y - 60) < 1e-9, JSON.stringify(back));
+
+    // The selection's logic links, and its params and layer in the panels.
+    session.pickAt({ x: 500, y: 0 });
+    assert.equal(session.selected().attrs.uid, '#t');
+    assert.equal(drawEditorFrame().links, 1, 'the timer that runs it');
+    assert.equal(session.currentLayer(), 'trigger');
+    const texts = textsOf(overlay);
+    assert.ok(texts.includes('trigger (1)') && texts.includes('#t') && texts.includes('actions_1_targetA'), texts.join(' | '));
+
+    // Esc clears the selection; a hidden layer is neither drawn nor picked.
+    assert.deepEqual(c.press('Escape'), []);
+    assert.equal(session.selected(), null);
+    session.setHidden('box', true);
+    assert.equal(drawEditorFrame().outlines, 2);
+    assert.equal(session.pickAt(at), null);
+    session.setHidden('box', false);
+
+    // It goes off with the level.
+    c.G.stage.currentFrameLabel = 'menu';
+    c.frame();
+    assert.ok(!session.editorOn());
+    assert.match(errorsOf(c.run('editor'))[0], /start a level first/);
+  } finally {
+    c.G.stage.currentFrameLabel = 'gaming';
+    c.G[c.N.mapText] = original;
+    session.setEditor(false);
+  }
+});

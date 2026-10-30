@@ -1,0 +1,78 @@
+// Every kind of map element the editor shows: its name, its layer colour, and its shape
+// in the world. Rectangles (walls, regions, ...) are x, y, w, h. Everything else is a
+// point with a box around it, sized like the map editor's selection boxes
+// (level_editor/editor_scripts/lib_sources.js); "side": -1 mirrors it.
+// The order is the layer list's, roughly the map editor's: things you build with first.
+
+export const SHAPE = Object.freeze({ RECT: 'rect', POINT: 'point' });
+
+const BOX = Object.freeze({
+  actor: { x: -15, y: -82, w: 30, h: 82 },
+  gun: { x: -25, y: -7, w: 50, h: 14 },
+  marker: { x: -16, y: -16, w: 32, h: 32 },
+  barrel: { x: -15, y: -20, w: 30, h: 40 },
+  vehicle: { x: -21, y: -21, w: 42, h: 42 },
+});
+const VEHICLE_BOX = Object.freeze({
+  veh_jeep: { x: -99, y: -32, w: 222, h: 111 },
+  veh_walker: { x: -110, y: -56, w: 233, h: 257 },
+  veh_capsule: { x: -30, y: -60, w: 60, h: 120 },
+  veh_crate: { x: -30, y: -30, w: 60, h: 60 },
+  veh_drone: { x: -13, y: -11, w: 45, h: 34 },
+  veh_rope: { x: -10, y: 0, w: 20, h: 188 },
+  veh_corvette: { x: -49, y: -46, w: 182, h: 129 },
+});
+
+const rect = (title, color) => ({ title, color, shape: SHAPE.RECT });
+const point = (title, color, box) => ({ title, color, shape: SHAPE.POINT, box });
+
+export const KINDS = Object.freeze({
+  box: rect('wall', '#cfd8e3'),
+  door: rect('movable', '#ffb347'),
+  region: rect('region', '#3C9DFF'),
+  bg: rect('background', '#7a8a99'),
+  water: rect('water', '#33c3ff'),
+  pushf: rect('pusher', '#c77dff'),
+  player: point('player', '#ff6666', BOX.actor),
+  enemy: point('enemy', '#ff3355', BOX.actor),
+  vehicle: point('vehicle', '#e0c341', (attrs) => VEHICLE_BOX[attrs.model] || BOX.vehicle),
+  barrel: point('barrel', '#ff7b39', BOX.barrel),
+  gun: point('gun', '#9cff6b', BOX.gun),
+  decor: point('decoration', '#b3e5c5', BOX.marker),
+  lamp: point('lamp', '#fff27a', BOX.marker),
+  trigger: point('trigger', '#33ff33', BOX.marker),
+  timer: point('timer', '#ffd84d', BOX.marker),
+  song: point('song', '#ff9ad5', BOX.marker),
+  inf: point('engine mark', '#ffffff', BOX.marker),
+});
+
+export const KIND_TAGS = Object.freeze(Object.keys(KINDS));
+export const kindOf = (tag) => KINDS[tag] || null;
+
+const num = (v) => (v === undefined || v === '' ? NaN : Number(v));
+
+// Where the map puts an element: { x, y, w, h } with w and h never negative, or null
+// for an element with no place (an <image>, an unknown tag, a broken number).
+export function boundsOf(e) {
+  const kind = kindOf(e.tag);
+  if (!kind) return null;
+  const x = num(e.attrs.x);
+  const y = num(e.attrs.y);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  if (kind.shape === SHAPE.RECT) {
+    const w = num(e.attrs.w);
+    const h = num(e.attrs.h);
+    if (!Number.isFinite(w) || !Number.isFinite(h)) return null;
+    return { x: Math.min(x, x + w), y: Math.min(y, y + h), w: Math.abs(w), h: Math.abs(h) };
+  }
+  const box = typeof kind.box === 'function' ? kind.box(e.attrs) : kind.box;
+  const left = num(e.attrs.side) === -1 ? -box.x - box.w : box.x;
+  return { x: x + left, y: y + box.y, w: box.w, h: box.h };
+}
+
+// Its anchor: the corner the map stores for a rectangle, the point itself otherwise.
+export const anchorOf = (e) => ({ x: num(e.attrs.x), y: num(e.attrs.y) });
+
+// How an element is called in lists: its uid, or the kind and index for the many walls
+// and backgrounds without one.
+export const nameOf = (doc, e) => e.attrs.uid || `${kindOf(e.tag)?.title || e.tag} #${doc.ordinal(e)}`;

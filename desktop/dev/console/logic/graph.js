@@ -32,7 +32,8 @@ const linkKindOfAttr = (attr) => (STARTING_ATTRS.has(attr) ? LINK.START : attr =
 const linkKindOfAction = (type) => (STARTS.has(type) ? LINK.START : CONTROLS.has(type) ? LINK.CONTROL : LINK.ACT);
 export const actionLabel = (n, type) => `action ${n}: ${type}${ACTION_NAMES[type] ? ` ${ACTION_NAMES[type]}` : ''}`;
 
-function build(text) {
+// The graph of a map text. logicGraph() is the running map's, read once per map.
+export function buildGraph(text) {
   const nodes = [];
   const byUid = new Map(); // a uid used twice names the first, as the game resolves it
   const perTag = {};
@@ -80,7 +81,7 @@ let graph = null;
 export function logicGraph() {
   const text = game.mapText();
   if (typeof text !== 'string' || !text || text.startsWith(MAP.compressedPrefix)) return null;
-  if (text !== builtFor) { builtFor = text; graph = build(text); }
+  if (text !== builtFor) { builtFor = text; graph = buildGraph(text); }
   return graph;
 }
 

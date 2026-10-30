@@ -151,7 +151,7 @@ export async function bootConsole({ mapFile = path.join(REPO, 'test/fixtures/map
   const node = () => ({
     style: {}, childNodes: [], parent: null,
     get textContent() { return ''; },
-    set textContent(v) { this.childNodes = []; },
+    set textContent(v) { this.childNodes = []; this.text = v; },
     get firstChild() { return this.childNodes[0]; },
     append(c) { if (c && typeof c === 'object') c.parent = this; this.childNodes.push(c); },
     remove() { if (this.parent) this.parent.childNodes.splice(this.parent.childNodes.indexOf(this), 1); },

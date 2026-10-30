@@ -4,16 +4,17 @@ import { print } from '../ui/log.js';
 import { catchNextKey } from '../ui/panel.js';
 import { COLOR } from '../core/colors.js';
 import { eventKeyName, parseKeyName, showKey, baseKey, GAME_KEYS, TOGGLE_KEY } from '../state/keys.js';
-import { KEY } from '../state/schema.js';
-import { binds, settings } from '../state/store.js';
+import { hotkeyOf } from '../state/hotkeys.js';
+import { binds } from '../state/store.js';
 
 let stopWaiting = null;
 
-// What the key does now: the console key, the screenshot key, a bind, a game key.
+// What the key does now: the console key, a hotkey, a bind, a game key.
 function uses(name) {
   if (name === TOGGLE_KEY) return [`opens and closes the console`];
   const out = [];
-  if (settings.effective(KEY.SCREENSHOT_KEY) === name) out.push('the screenshot key ("screenshot_key")');
+  const hot = hotkeyOf(name);
+  if (hot) out.push(`${hot.what} ("${hot.key}")`);
   const bound = binds.active(name);
   if (bound && bound.profile) out.push(`bound to (profile ${bound.profile}, this map): ${bound.command}`);
   if (binds.get(name)) out.push(`bound to${bound && bound.profile ? ' (yours, other maps)' : ''}: ${binds.get(name)}`);
