@@ -221,7 +221,7 @@ A second copy of the app started in the same second gets `..._local-2.log`. Page
 05:30:14.200  c1 server     OUT  REL    #5 RELIABLE_CHAT  hello there | #12
 05:30:16.300  c1 server     OUT  LOSS   resend #5 RELIABLE_CHAT (try 2, first sent 2100 ms ago, not acknowledged yet)
 05:30:16.500  c1 server     IN   LOSS   gap: #11 arrived before #9-#10 (2 missing: lost or out of order)
-05:30:17.000  c1 server     ---  STAT   ping 45 ms | out 60 packets 3.1 KB (2 reliable, 58 state) | in 61 packets 12.4 KB (3 reliable, 58 state) | loss: 1 resend, 0 dropped, 1 gap, 0 late, 0 duplicates
+05:30:17.000  c1 server     ---  STAT   ping 45 ms | out 60 packets 3174 chars (2 reliable, 58 state) | in 61 packets 12.4K chars (3 reliable, 58 state) | loss: 1 resend, 0 dropped, 1 gap, 0 late, 0 duplicates
 ```
 
 | Kind | What |
@@ -231,7 +231,7 @@ A second copy of the app started in the same second gets `..._local-2.log`. Page
 | `STAT` | Once a second per busy connection: ping, packets, bytes, losses |
 | `CONN` | Connected, disconnected (with the game's reason and the connection's totals) |
 | `STATE` | Every unreliable state update, its parts decoded. Off by default (60 to 250 a second); only counted in `STAT`. On with `net_log_state` or `net_log_all` |
-| `PKT` | Every packet, also ack-only ones: size, ack, how many parts its state has, which reliable messages it carries. Only with `net_log_all` |
+| `PKT` | Every packet, also ack-only ones: size in characters, ack, how many parts its state has, which reliable messages it carries, then `raw "..."`: the packet exactly as sent, `\x01` between fields, `\x02` between parts, other control characters (the game's number digits) as `\xNN`. Only with `net_log_all` |
 
 **In the console:**
 
