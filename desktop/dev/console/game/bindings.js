@@ -25,6 +25,12 @@ export const NET = Object.freeze({
   CHAT: 'RELIABLE_CHAT',
 });
 
+// names.js keys of the state update positions (find-names.js, "The state update").
+const STATE_KEYS = Object.freeze({
+  hp: 'stateHp', respawns: 'stateRespawns', aimX: 'stateAimX', aimY: 'stateAimY', headHp: 'stateHeadHp',
+  faceHp: 'stateFaceHp', x: 'stateX', y: 'stateY', killer: 'stateKiller', clock: 'stateClock', velScale: 'stateVelScale',
+});
+
 // Locked arrays the console has a name for, to say which one a scan report means.
 const LOCKED_NAMED = Object.freeze(['wallX', 'wallY', 'wallW', 'wallH', 'pushToX', 'pushToY', 'pushStab',
   'pushDamage', 'waterX', 'waterY', 'waterW', 'waterH', 'waterDamage']);
@@ -247,6 +253,18 @@ export const game = {
   connReason: (c) => c[nameOf('connReason')] || null, // why it closed
   // Numbers in messages are written in base N with these digits (built at load).
   netDigits: () => { const net = read('net'); return (net && net[nameOf('netDigits')]) || ''; },
+  // Where the server reads each value of a player's state update (ANTICHEAT.md §14.2):
+  // index numbers on the network class, null for a name that was not found.
+  stateLayout: () => {
+    const net = read('net');
+    if (!net) return null;
+    const out = {};
+    for (const [k, key] of Object.entries(STATE_KEYS)) {
+      const v = N[key] ? net[N[key]] : undefined;
+      out[k] = typeof v === 'number' ? v : null;
+    }
+    return out;
+  },
   netTypeName: (type) => { const net = read('net'); const m = net && net[nameOf('netTypeNames')]; return (m && m[type]) || null; },
 
   // ----- Dedicated host (server/) -----

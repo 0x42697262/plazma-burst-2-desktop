@@ -1,8 +1,8 @@
 // Network recorder: every packet on the game's connections, as readable lines. The lines
 // go to the desktop wrapper, which writes them to netlogs/<run>_<instance>.log
 // (desktop/netlog.js); "netlog" shows them. Console key net_log (on by default) turns it
-// on and off, net_log_state adds every unreliable state update, net_log_all every packet
-// (PKT lines) and every state update.
+// on and off, net_log_state adds every unreliable state update (decoded by position,
+// net/state.js), net_log_all every packet (PKT lines) and every state update.
 //
 // The game's protocol (scripts/connection.js; ANTICHEAT.md §13.3): a packet is text,
 // fields split by \x01 (escaped "$.1" inside a field):
@@ -37,11 +37,10 @@ import { game } from '../game/bindings.js';
 import { KEY } from '../state/schema.js';
 import { settings } from '../state/store.js';
 import { ROUTE } from '../core/shared.js';
+import { FIELD, PART, unescField, splitParts, decodeNumber, showPart } from './codec.js';
+import { describeState } from './state.js';
 
-const FIELD = '\x01';
-const PART = '\x02';
-const ESC_FIELD = '$.1';
-const ESC_PART = '$.2';
+export { decodeNumber, showPart };
 const SOCKET_EVENT = 'm'; // the game's one socket.io event, both ways
 const WRAP = Symbol('pb2dev netlog wrapper');
 
@@ -50,7 +49,6 @@ const FLUSH_MS = 500;
 const STAT_MS = 1000;
 const BUFFER_MAX = 5000; // this page's lines, for "netlog show" without the wrapper
 const PENDING_MAX = 20000; // lines waiting for the wrapper
-const PART_CHARS_MAX = 2000; // a longer part (a map chunk, a match list) is cut
 const CONN_WIDTH = 13;
 const PING_NONE = 9999; // the game's ping with no samples
 const PING_UNKNOWN_MS = 1000; // assumed while the game has no ping yet
@@ -74,43 +72,10 @@ const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 // Decoding: a message is written like a call, TYPE(part, part, ...), with numbers bare,
 // text in quotes and JSON as it is.
 // ---------------------------------------------------------------------------
-const unescField = (s) => s.split(ESC_FIELD).join(FIELD);
-const unescPart = (s) => s.split(ESC_FIELD).join(FIELD).split(ESC_PART).join(PART);
-
 const TYPE_PREFIX = 'RELIABLE_'; // every reliable type name starts with it; left out
 // Parts that are always an encoded number, even when it looks like a letter: the callback
 // ID a RESPONSE answers (the game's counter starts at 100, so most IDs are one letter).
 const NUMBER_PARTS = Object.freeze({ RESPONSE: [1] });
-
-// A number in the game's digits, or null when the text is not one.
-export function decodeNumber(text, digits) {
-  if (!digits || typeof text !== 'string' || !text) return null;
-  const neg = text[0] === '-';
-  if (neg && text.length === 1) return null;
-  let n = 0;
-  for (let i = neg ? 1 : 0; i < text.length; i++) {
-    const d = digits.indexOf(text[i]);
-    if (d < 0) return null;
-    n = n * digits.length + d;
-  }
-  return neg ? -n : n;
-}
-
-const CONTROL = /[\x00-\x1f\x7f]/;
-const isJson = (p) => {
-  if (!/^[[{]/.test(p)) return false;
-  try { JSON.parse(p); return true; } catch { return false; }
-};
-// A part as it is shown: a bare number for an encoded number (control characters and only
-// digits, or a part that is always a number), JSON as it is, any other text in quotes.
-export function showPart(p, digits, isNumber = false) {
-  if (isNumber || CONTROL.test(p)) {
-    const n = decodeNumber(p, digits);
-    if (n !== null) return String(n);
-  }
-  if (p.length > PART_CHARS_MAX) return `${JSON.stringify(p.slice(0, PART_CHARS_MAX))}...(${p.length} chars)`;
-  return isJson(p) ? p : JSON.stringify(p);
-}
 
 // A packet: { ack, state, stateSize, rel: [{ uid, data, size }] }. Sizes are as sent, so
 // the packet's length is their sum plus the framing (ack, sequence numbers, separators).
@@ -125,7 +90,7 @@ export function parsePacket(text) {
 // A reliable message: { name, text }: name is its type without RELIABLE_ ("CHAT"), text is
 // 'CHAT("hello", 7)'.
 export function describeMessage(data, digits, typeName) {
-  const parts = data.split(PART).map(unescPart);
+  const parts = splitParts(data);
   const type = decodeNumber(parts[0], digits);
   const full = type !== null ? typeName(type) : null;
   const name = full ? full.replace(TYPE_PREFIX, '') : `TYPE_${type !== null ? type : '?'}`;
@@ -133,8 +98,6 @@ export function describeMessage(data, digits, typeName) {
   const args = parts.slice(1).map((p, i) => showPart(p, digits, numbers.includes(i + 1))).join(', ');
   return { name, parts, text: `${name}(${args})` };
 }
-
-const describeState = (data, digits) => `(${data.split(PART).map(unescPart).map((p) => showPart(p, digits)).join(', ')})`;
 
 // "#4", "#4-#6".
 const range = (a, b) => (a === b ? `#${a}` : `#${a}-#${b}`);
@@ -176,6 +139,16 @@ const digitsNow = () => { try { return game.netDigits(); } catch { return ''; } 
 const typeNameNow = (type) => { try { return game.netTypeName(type); } catch { return null; } };
 const allOn = () => settings.effective(KEY.NET_LOG_ALL) === true;
 const stateOn = () => allOn() || settings.effective(KEY.NET_LOG_STATE) === true;
+const layoutNow = () => { try { return game.stateLayout(); } catch { return null; } };
+
+// What a state on this connection is (net/state.js): a client sends its player's state and
+// gets the server's snapshot; a P2P host (p2p-guest connections) the other way round.
+function stateKind(rec, dir) {
+  const client = rec.kind === 'server' || rec.kind === 'p2p-host';
+  const host = rec.kind === 'p2p-guest';
+  if (!client && !host) return null;
+  return (dir === 'OUT') === client ? 'player' : 'snapshot';
+}
 
 // A RESPONSE answers a request by its callback ID: the request had that ID, encoded, as
 // one of its parts (where the game put its callback placeholder). Requests are matched
@@ -248,7 +221,7 @@ function onOut(rec, text, dropped, t = now()) {
   if (!Number.isNaN(p.ack)) rec.ackOut = p.ack;
   if (p.state) {
     count(rec, 'stateOut');
-    if (stateOn()) emit(rec, 'OUT', 'STATE', describeState(p.state, digits), t);
+    if (stateOn()) emit(rec, 'OUT', 'STATE', describeState(p.state, digits, stateKind(rec, 'OUT'), layoutNow()), t);
   }
   for (const { uid, data } of p.rel) {
     if (Number.isNaN(uid)) continue;
@@ -288,7 +261,7 @@ function onIn(rec, text, t = now()) {
   }
   if (p.state) {
     count(rec, 'stateIn');
-    if (stateOn()) emit(rec, 'IN', 'STATE', describeState(p.state, digits), t);
+    if (stateOn()) emit(rec, 'IN', 'STATE', describeState(p.state, digits, stateKind(rec, 'IN'), layoutNow()), t);
   }
   const uids = p.rel.map((r) => r.uid).filter((u) => !Number.isNaN(u));
   // Recording started while the connection was already busy: start counting here.

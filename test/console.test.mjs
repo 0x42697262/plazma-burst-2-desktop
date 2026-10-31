@@ -2770,3 +2770,67 @@ test('bypass checks: a red warning, then only the exact phrase typed on its own 
   c.frame();
   assert.notEqual(c.player.hmax, 500, 'held back again');
 });
+
+// ---------------------------------------------------------------------------
+// State updates by position (net/state.js)
+// ---------------------------------------------------------------------------
+const encSigned = (n) => (n < 0 ? `-${encNum(-n)}` : encNum(n));
+// A player's state as flash.js $ТеeАp builds it (v1769098419): 21 parts.
+function playerState({ hp = 100, x = 1264, y = -520, aimX = 212, aimY = -40, respawns = 1, gun = 2, clock = 52310 } = {}) {
+  return ['', encSigned(x), encSigned(y), '', '', '', hp === '' ? '' : encNum(hp), encSigned(aimX), encSigned(aimY), '', encNum(gun), '',
+    encNum(60), encNum(90), encNum(60), encNum(75), '', '', '', encNum(clock), encNum(respawns)];
+}
+const LAYOUT = Object.freeze({ x: 1, y: 2, hp: 6, aimX: 7, aimY: 8, headHp: 12, faceHp: 13, killer: 16, clock: 19, respawns: 20, velScale: 5 });
+
+test('a state update is decoded by position, numbers that look like letters included (HP 100 is "h")', async () => {
+  const st = await consoleModule('net/state.js');
+  const parts = playerState();
+  assert.equal(parts[6], 'h', 'HP 100 travels as one letter');
+  const line = st.describeState(parts.join('\x02'), NET_DIGITS, 'player', LAYOUT);
+  assert.equal(line, 'hp 100 | respawns 1 | aim +212,-40 | pos 1264,-520 | vel 0,0 | body hp: head 60 face 90 arms 60 legs 75 | gun 2 | clock 52.310 s');
+  // Dead: part 16 is who killed you.
+  const dead = playerState({ hp: 0 });
+  dead[16] = encNum(3);
+  assert.match(st.describeState(dead.join('\x02'), NET_DIGITS, 'player', LAYOUT), /^hp 0 \| .* \| killed by 3 \|/);
+  // The server's snapshot: header (round timer), then each changed player with the server's HP.
+  const relayed = playerState({ hp: '' });
+  const snap = [encNum(12000), encNum(3), encNum(80), `${encNum(45)}~${encNum(123)}~${encNum(10)}`, encNum(relayed.length), ...relayed,
+    encNum(5), encNum(150), `${encNum(60)}~${encNum(100)}~${encNum(0)}`, encNum(0)];
+  assert.equal(st.describeState(snap.join('\x02'), NET_DIGITS, 'snapshot', LAYOUT),
+    'round timer 12.0 s | #3 hp 80 ping 45 ms [hp - | respawns 1 | aim +212,-40 | pos 1264,-520 | vel 0,0 | body hp: head 60 face 90 arms 60 legs 75 | gun 2 | clock 52.310 s] | #5 hp 150 ping 60 ms');
+  // Something else as a snapshot: shown part by part.
+  assert.equal(st.describeState(['x', 'y'].join('\x02'), NET_DIGITS, 'snapshot', LAYOUT), '("x", "y")');
+});
+
+test('a new game version: the server\'s positions come from the game, the rest is not guessed', async () => {
+  const st = await consoleModule('net/state.js');
+  // One part added before HP: the game's own positions moved by one.
+  const parts = playerState();
+  parts.splice(6, 0, encNum(7));
+  const moved = { ...LAYOUT, hp: 7, aimX: 8, aimY: 9, headHp: 13, faceHp: 14, killer: 17, clock: 20, respawns: 21 };
+  const line = st.describeState(parts.join('\x02'), NET_DIGITS, 'player', moved);
+  assert.match(line, /^hp 100 \| respawns 1 \| aim \+212,-40 \| pos 1264,-520 \| head hp 60, face hp 90 \| clock 52\.310 s \| \(22 parts; not this version's layout: only the server's positions are named\), p6 7, /);
+  // A name missing from names.js: that value is simply not labelled.
+  assert.doesNotMatch(st.describeState(playerState().join('\x02'), NET_DIGITS, 'player', { ...LAYOUT, hp: null }), /hp 100/);
+});
+
+test('STATE lines on the main server connection are labelled: your state out, the snapshot in', async (t) => {
+  const { G, N } = c;
+  const rec = await consoleModule('net/recorder.js');
+  const net = G[N.net];
+  net[N.netDigits] = NET_DIGITS;
+  for (const [k, key] of Object.entries({ x: 'stateX', y: 'stateY', hp: 'stateHp', aimX: 'stateAimX', aimY: 'stateAimY', headHp: 'stateHeadHp', faceHp: 'stateFaceHp', killer: 'stateKiller', clock: 'stateClock', respawns: 'stateRespawns', velScale: 'stateVelScale' })) net[N[key]] = LAYOUT[k];
+  const conn = fakeConnection(N);
+  conn.socket.connected = true;
+  net.connections = [conn];
+  net[N.lobbyConn] = conn;
+  t.after(() => { c.run('unset net_log_state'); net.connections = []; delete net[N.lobbyConn]; rec.netTick(Date.now() + 999999); });
+  rec.netTick(Date.now() + 600000);
+  c.run('net_log_state on');
+  const since = rec.netlog.lines().length;
+  conn.socket.volatile.emit('m', netPacket(-1, playerState({ hp: 150 }).join('\x02')));
+  conn[N.connRecv](netPacket(-1, [encNum(0), encNum(0), encNum(150), `${encNum(45)}~${encNum(0)}~${encNum(0)}`, encNum(0)].join('\x02')));
+  const out = rec.netlog.lines().slice(since).map((l) => l.slice(14));
+  assert.match(out[0], /^c\d+ server +OUT +STATE +hp 150 \| respawns 1 \| aim \+212,-40 \|/);
+  assert.match(out[1], /^c\d+ server +IN +STATE +#0 hp 150 ping 45 ms$/);
+});
