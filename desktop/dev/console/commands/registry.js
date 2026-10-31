@@ -24,6 +24,8 @@
 //                       word typed for it. reportsReach: it says itself whether others
 //                       see it.
 
+import { allowedHere } from '../core/remote.js';
+
 const commands = [];
 const byWord = new Map();
 
@@ -31,8 +33,9 @@ const norm = (def) => ({ aliases: [], subcommands: [], ...def });
 
 export function register(...defs) {
   for (const raw of defs) {
+    if (!allowedHere(raw)) continue; // remote play: not even listed (core/remote.js)
     const def = norm(raw);
-    def.subcommands = def.subcommands.map(norm);
+    def.subcommands = def.subcommands.filter(allowedHere).map(norm);
     const subWords = new Set();
     for (const sub of def.subcommands) {
       for (const word of [sub.name, ...sub.aliases]) {

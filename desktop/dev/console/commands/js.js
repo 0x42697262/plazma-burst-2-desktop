@@ -38,6 +38,7 @@ function printJsGuide() {
 }
 
 export const jsCommand = {
+  remote: false, // runs any code in the page: never in remote play (core/remote.js)
   name: 'js',
   usage: 'js <code>',
   desc: 'Evaluate JavaScript in the page. "js help" explains it with examples',

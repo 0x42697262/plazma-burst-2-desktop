@@ -7,6 +7,7 @@ import { plural } from '../core/text.js';
 import { requireLevel } from '../game/level.js';
 import { LINK, logicGraph, findNode, placeOf, chatTriggerUid } from '../logic/graph.js';
 import { showLogic, hideLogic, logicShown, isVisible } from '../logic/view.js';
+import { REMOTE } from '../core/remote.js';
 
 const KINDS = Object.values(LINK);
 const DEFAULT_DEPTH = Object.freeze({ show: 1, tree: 3 });
@@ -253,8 +254,10 @@ export const logicCommand = {
           'Regions are drawn as their rectangle, where they are now (they move with',
           'the doors they are attached to); players where they are now.',
           'Like the game\'s "debug 1", but on its own layer: it only reads the camera, so',
-          'it works in multiplayer. (The game\'s debug switch is an anti-cheat checked',
-          'value; changing it from outside its own code is reported.)',
+          'it works in multiplayer.',
+          // How the anti-cheat works is not shown to remote testers (core/remote.js).
+          ...(REMOTE ? [] : ['(The game\'s debug switch is an anti-cheat checked value; changing it from',
+            'outside its own code is reported.)']),
         ],
         args: [
           ['<uid>', 'only the links of this element, and of those it links to'],

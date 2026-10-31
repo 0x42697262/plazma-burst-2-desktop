@@ -3,6 +3,7 @@
 // small-text flag are for the log pane only, so the terminal gets the plain text.
 import { el } from './dom.js';
 import { LOG_MAX } from '../core/limits.js';
+import { redact } from '../core/remote.js';
 
 export const TAG = '[pb2dev]'; // marks the console's own lines in the terminal
 
@@ -21,7 +22,8 @@ export function print(text, color) {
     const style = {};
     if (c) style.color = c;
     if (small) style.fontSize = '0.8em';
-    line.append(el('span', style, t));
+    // Remote play: the pane is streamed to a tester, so host paths and game names are hidden.
+    line.append(el('span', style, redact(t)));
   }
   logEl.append(line);
   while (logEl.childNodes.length > LOG_MAX) logEl.firstChild.remove();

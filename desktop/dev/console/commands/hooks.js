@@ -29,6 +29,7 @@ function listHooks(args) {
 }
 
 export const hooksCommand = {
+  remote: false, // the host's hooks are not the tester's business (core/remote.js)
   name: 'hooks',
   aliases: ['hook'],
   usage: 'hooks',
