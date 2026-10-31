@@ -12,6 +12,8 @@ const errorsOf = (out) => out.filter((l) => l.startsWith('error: '));
 
 let c;
 before(async () => { c = await bootConsole({ sayTrigger: '#chat_in' }); });
+// The fake game is in multiplayer; a test of what the console does offline leaves it.
+const offline = (t) => { c.setMP(false); t.after(() => c.setMP(true)); };
 
 test('every command and subcommand has help, and every "Related" topic exists', async () => {
   const { helpEntries } = await consoleModule('commands/registry.js');
@@ -100,7 +102,8 @@ test('the run log records runs through the game\'s runner', () => {
   assert.ok(c.run('triggers history').some((l) => l.includes('#open_door') && l.includes('ran x2')));
 });
 
-test('settings are forced every frame and put back when removed', () => {
+test('settings are forced every frame and put back when removed', (t) => {
+  offline(t); // single-player: nothing is held back (overrides/server-checks.js)
   const p = c.player;
   c.run('max_hp 500; jump 3; swords off');
   c.frame();
@@ -134,7 +137,8 @@ test('typed commands are saved with the settings', async () => {
   assert.equal(saved.history.filter((l) => l === 'vars').length, 1);
 });
 
-test('leaving the level puts every forced value back', () => {
+test('leaving the level puts every forced value back', (t) => {
+  offline(t); // single-player: nothing is held back (overrides/server-checks.js)
   const p = c.player;
   c.run('max_hp 400; jump 2; world_gravity 0.1');
   c.frame();
@@ -680,7 +684,8 @@ test('shifted characters are Shift and their US key; keyname names the key you p
   c.run('unbind --all');
 });
 
-test('profiles: a map\'s profile wins over your settings there, and is checked when the file is edited', async () => {
+test('profiles: a map\'s profile wins over your settings there, and is checked when the file is edited', async (t) => {
+  offline(t); // single-player: nothing is held back (overrides/server-checks.js)
   const { profileTick } = await consoleModule('commands/profile.js');
   const atMap = (id) => { c.G[c.N.mapId] = id; };
   const saved = () => JSON.parse(c.store.get('pb2dev_kv'));
@@ -2285,7 +2290,8 @@ $makeVehicle(mc,n,1);
   }
 });
 
-test('zoom: any amount once, or locked so the map cannot change it', () => {
+test('zoom: any amount once, or locked so the map cannot change it', (t) => {
+  offline(t); // single-player: nothing is held back (overrides/server-checks.js)
   const { G, N } = c;
   const run = (line) => c.run(line).filter((l) => !l.startsWith('Note:'));
   const was = G[N.zoom];
@@ -2659,4 +2665,62 @@ test('a RESPONSE says which request it answers, and the PKT line adds up to the 
     net.connections = [];
     rec.netTick(t + 50);
   }
+});
+
+// ---------------------------------------------------------------------------
+// Multiplayer protection (overrides/server-checks.js) and "bypass checks"
+// ---------------------------------------------------------------------------
+const REFUSED = /^error: refused in multiplayer: .*"bypass checks" turns this protection off \(dangerous\)\.$/;
+// The error line of a command's output (a client-only note can come first).
+const errorOf = (out) => out.find((l) => l.startsWith('error: ')) || out.join(' | ');
+
+test('in multiplayer, what the server checks is refused: raising HP and zooming out; the rest still works', (t) => {
+  const p = c.player;
+  t.after(() => { c.run('reset'); c.frame(); });
+  c.frame();
+  const own = p.hmax;
+  for (const line of ['max_hp 500', 'hp +100', 'hp +50%', 'hp_bonus 20', 'hp_bonus_pct 10', 'zoom 50', 'zoom 30 --lock', 'game god', 'game god 1', 'game grow', 'game zoom 25']) {
+    assert.match(errorOf(c.run(line)), REFUSED, line);
+  }
+  assert.match(errorOf(c.run('max_hp 500')), /HealthAltering.*ANTICHEAT\.md §14\.4/);
+  assert.match(errorOf(c.run('zoom 50')), /announces to the other players.*§14\.6/);
+  assert.equal(p.hmax, own, 'nothing changed');
+  // Lowering HP, zooming in, other game commands and other keys are not the server's business.
+  assert.ok(c.run(`max_hp ${own - 30}`).includes(`max_hp = ${own - 30}`));
+  assert.ok(c.run('zoom 150').some((l) => l.startsWith('Zoom 150%')));
+  assert.doesNotMatch(c.run('game grow enemies').join(' '), /refused in multiplayer/);
+  assert.ok(c.run('speed 2').includes('speed = 2'));
+  c.run('zoom default');
+});
+
+test('settings you had are not applied in multiplayer, even with god on, and come back offline', (t) => {
+  const p = c.player;
+  t.after(() => { c.setMP(true); c.run('reset'); c.frame(); });
+  c.setMP(false);
+  c.frame();
+  const own = p.hmax;
+  c.run('max_hp 470; god on; zoom 40 --lock');
+  c.frame();
+  assert.equal(p.hmax, 470);
+  assert.equal(p.hea, 470);
+  assert.equal(c.G[c.N.zoom], 0.4);
+  c.log.printed.length = 0;
+  c.setMP(true);
+  c.frame();
+  assert.equal(p.hmax, own, 'max HP back to the game\'s');
+  assert.equal(p.hea, own, 'HP down to it, past god');
+  assert.equal(c.G[c.N.zoom], 1, 'zoom back to 100%');
+  const notes = c.log.printed.join('\n');
+  assert.match(notes, /Multiplayer: not applying max_hp: .*HealthAltering.*Your saved values are kept/);
+  assert.match(notes, /Multiplayer: not applying your zoom 40%/);
+  c.log.printed.length = 0;
+  c.frame(3);
+  assert.deepEqual(c.log.printed, [], 'said once');
+  p.hea = 1;
+  assert.equal(p.hea, own, 'god itself still works');
+  c.setMP(false);
+  c.frame();
+  assert.equal(p.hmax, 470, 'offline again: applied again');
+  assert.equal(c.G[c.N.zoom], 0.4);
+  c.run('zoom --unlock');
 });

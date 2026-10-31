@@ -6,6 +6,7 @@ import { COLOR } from '../core/colors.js';
 import { takeOptions, oneOf } from '../core/args.js';
 import { game } from '../game/bindings.js';
 import { requireLevel, isActive } from '../game/level.js';
+import { zoomHeldBack, refusal, BYPASS_HINT } from '../overrides/server-checks.js';
 
 const PERCENT = 100;
 const MIN = 1; // the game's own limits: its "set zoom" trigger clamps to 1-1500%
@@ -24,9 +25,23 @@ export function zoomChanges() {
 }
 
 // Once per frame: a held zoom puts back whatever else set it (a map trigger, a vehicle,
-// the map's gamescale mark).
+// the map's gamescale mark). In multiplayer a zoom out of yours is held back
+// (overrides/server-checks.js): the lock stays, but is not applied, and the zoom it set
+// goes back to 100%.
+let heldNoted = false;
 export function zoomTick() {
-  if (locked !== null && isActive() && game.zoom() !== locked / PERCENT) game.setZoom(locked / PERCENT);
+  if (!isActive()) return;
+  const mine = locked !== null ? locked : setOnce;
+  const why = mine !== null && zoomHeldBack(mine);
+  if (why) {
+    if (game.zoom() === mine / PERCENT) game.setZoom(DEFAULT / PERCENT);
+    if (locked === null) setOnce = null;
+    if (!heldNoted) print(`Multiplayer: not applying your zoom ${mine}%: ${why}. ${BYPASS_HINT}.`, COLOR.warn);
+    heldNoted = true;
+    return;
+  }
+  heldNoted = false;
+  if (locked !== null && game.zoom() !== locked / PERCENT) game.setZoom(locked / PERCENT);
 }
 
 const shown = (z) => `${Math.round(z * PERCENT * 100) / 100}%`;
@@ -54,6 +69,8 @@ function zoom(args) {
   const word = rest[0].replace(/%$/, '');
   const pct = word === 'default' ? DEFAULT : Number(word);
   if (!Number.isFinite(pct) || pct < MIN || pct > MAX) throw new Error(usage);
+  const why = zoomHeldBack(pct);
+  if (why) throw refusal(`zoom ${pct}%`, why);
   if (how === 'lock') {
     locked = pct;
     setOnce = null;

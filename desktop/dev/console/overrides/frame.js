@@ -8,6 +8,9 @@ import { KEY } from '../state/schema.js';
 import { settings } from '../state/store.js';
 import { force, original, restore, restoreObj, restoreAll } from './force.js';
 import { installGod, uninstallGodExcept, uninstallAllGod } from './god.js';
+import { heldBack, guarding, REASON, BYPASS_HINT } from './server-checks.js';
+import { print } from '../ui/log.js';
+import { COLOR } from '../core/colors.js';
 
 // The game's walk acceleration per tick, which "speed" scales.
 const STAND_WALK = (sit) => (2 - sit * 0.75) / 2 * 3;
@@ -33,10 +36,30 @@ const val = (key) => settings.get(key);
 
 // Total bonus for a character whose own (game) max HP is `base`: flat plus a percent of
 // base. Percents add up (+50% twice = +100% of base), they do not compound.
+// A bonus held back in multiplayer (server-checks.js) counts as 0.
 export function hpBonusFor(base) {
   const flat = settings.effective(KEY.HP_BONUS) ?? 0;
   const pct = settings.effective(KEY.HP_BONUS_PCT) ?? 0;
-  return flat + Math.round(base * pct / 100);
+  return (heldBack(KEY.HP_BONUS, flat) ? 0 : flat) + (heldBack(KEY.HP_BONUS_PCT, pct) ? 0 : Math.round(base * pct / 100));
+}
+
+// Your character's own max HP, without max_hp or a bonus from the console; null
+// outside a level.
+export const gameMaxOf = (p) => (p ? original(p, F.MAX_HP) - hpBonusAppliedTo(p) : null);
+export const gameMaxHp = () => (isActive() ? gameMaxOf(player()) : null);
+
+// max_hp is set and not held back.
+const maxHpOn = (p) => on(KEY.MAX_HP) && !heldBack(KEY.MAX_HP, val(KEY.MAX_HP), gameMaxOf(p));
+
+// Says once which of your settings multiplayer holds back, and again when that changes.
+let heldNote = '';
+function noteHeld(p) {
+  if (!guarding()) { heldNote = ''; return; }
+  const held = [KEY.MAX_HP, KEY.HP_BONUS, KEY.HP_BONUS_PCT]
+    .filter((k) => settings.has(k) && heldBack(k, val(k), gameMaxOf(p)));
+  const note = held.join(', ');
+  if (note && note !== heldNote) print(`Multiplayer: not applying ${note}: ${REASON.hp}. Your saved values are kept. ${BYPASS_HINT}.`, COLOR.warn);
+  heldNote = note;
 }
 
 function forceMult(obj, field, key) {
@@ -53,7 +76,7 @@ function applyGod(p) {
 }
 
 function applyMaxHp(p) {
-  if (on(KEY.MAX_HP)) {
+  if (maxHpOn(p)) {
     force(p, F.MAX_HP, val(KEY.MAX_HP));
     if (lastMaxHp.get(p) !== val(KEY.MAX_HP)) { p[F.HP] = val(KEY.MAX_HP); lastMaxHp.set(p, val(KEY.MAX_HP)); }
   } else if (restore(p, F.MAX_HP)) {
@@ -66,7 +89,7 @@ function applyMaxHp(p) {
 // got, so it is applied once per character object (a new life or level gets it again)
 // and never adds up frame after frame. Skipped while max_hp forces the max.
 function applyHpBonus(p) {
-  if (on(KEY.MAX_HP) || !(p[F.HP] > 0) || p[F.DEAD]) return;
+  if (maxHpOn(p) || !(p[F.HP] > 0) || p[F.DEAD]) return;
   const applied = hpBonusAppliedTo(p);
   const want = hpBonusFor(p[F.MAX_HP] - applied); // max minus applied = the game's own max
   if (want === applied) return;
@@ -93,9 +116,13 @@ function applySpeed(p, running, dt) {
 }
 
 function applyPlayer(p, running, dt) {
+  noteHeld(p);
   applyGod(p);
   applyMaxHp(p);
   applyHpBonus(p);
+  // Multiplayer: never more HP than your max (what was held back above lowered it). God
+  // ignores decreases, so it steps aside for this one write; it is put back next frame.
+  if (guarding() && p[F.HP] > p[F.MAX_HP]) { uninstallGodExcept(null); p[F.HP] = p[F.MAX_HP]; }
   applySpeed(p, running, dt);
 
   if (on(KEY.JUMP)) force(p, F.JUMP, val(KEY.JUMP));

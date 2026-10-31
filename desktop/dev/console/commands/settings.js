@@ -10,7 +10,8 @@ import { tracedNow, tracingGroup, traceShown, distanceTo } from '../ui/trace.js'
 import { logicShown, logicDescription } from '../logic/view.js';
 import { groupOptions } from './trace.js';
 import { editedVars, showVar } from '../triggers/vars.js';
-import { levelWasActive } from '../overrides/frame.js';
+import { levelWasActive, gameMaxHp } from '../overrides/frame.js';
+import { heldBack, refusal } from '../overrides/server-checks.js';
 import { CLIENT_TAG } from './help.js';
 import { REMOTE } from '../core/remote.js';
 import { zoomChanges } from './zoom.js';
@@ -44,6 +45,8 @@ function requireKey(word) {
 
 export function setKey(key, raw) {
   const v = parseValue(key, raw);
+  const why = heldBack(key, v, gameMaxHp());
+  if (why) throw refusal(`${key} ${showValue(key, v)}`, why);
   settings.set(key, v);
   print(`${key} = ${showValue(key, v)}`, COLOR.ok);
   if (!levelWasActive() && affectsGame(key)) print('  (applies when you are in a level)', COLOR.hint);

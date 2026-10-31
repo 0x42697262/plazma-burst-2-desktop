@@ -8,6 +8,7 @@ import { LEVEL_REQUIRED } from '../game/level.js';
 import { F } from '../game/fields.js';
 import { KEY } from '../state/schema.js';
 import { settings } from '../state/store.js';
+import { gameCommandHeldBack, refusal } from '../overrides/server-checks.js';
 
 const NAME_WIDTH = 40;
 const CHAT_PANEL_ITEMS = 11; // lines of the chat log panel
@@ -153,6 +154,8 @@ function runSilent(text) {
 
 function runGameCommand(text) {
   if (!text) throw new Error('usage: game <command>');
+  const why = gameCommandHeldBack(text);
+  if (why) throw refusal(`game ${text}`, why);
   if (!game.inLevelFrame()) throw new Error(LEVEL_REQUIRED);
   if (builtinOn()) { runSilent(text); return; }
   // builtin off: normal game chat. On custom maps the game sends chat to the map's
