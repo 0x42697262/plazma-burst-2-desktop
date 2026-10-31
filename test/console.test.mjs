@@ -2587,9 +2587,9 @@ test('net_log_all (off by default) adds a PKT line per packet and every state up
     conn.socket.volatile.emit('m', netPacket(-1, '', [[0, netMsg(5, 'hi')], [1, netMsg(5, 'yo')]]));
     const out = fresh();
     assert.equal(out.length, 5, out.join('\n'));
-    assert.match(out[0], /IN +PKT +8 chars \| ack #3 \| state \(3 parts\)$/);
+    assert.match(out[0], /IN +PKT +8 chars \| ack #3 \| state \(3 parts\) 6 chars \| framing 2 chars$/);
     assert.match(out[1], /IN +STATE +\(1, 250, "x"\)$/);
-    assert.match(out[2], /OUT +PKT +17 chars \| ack none \| #0 CHAT, #1 CHAT$/);
+    assert.match(out[2], /OUT +PKT +17 chars \| ack none \| #0 CHAT 4 chars, #1 CHAT 4 chars \| framing 9 chars$/);
     assert.match(out[3], /OUT +REL +#0 CHAT\("hi"\)$/);
     const shown = c.run('netlog show --pkt last:5');
     assert.equal(shown.filter((l) => / PKT /.test(l)).length, 2, shown.join('\n'));
@@ -2611,4 +2611,39 @@ test('the network log decodes a RESPONSE\'s callback ID even when it looks like 
     'RESPONSE(101, "ok", [{"uid":1,"map_id":"a-b"}])');
   assert.equal(rec.describeMessage(netMsg(4, 'h'), NET_DIGITS, names).text, 'GET_MATCH_LIST("h")', 'elsewhere a letter stays text');
   assert.equal(rec.describeMessage(netMsg(77), NET_DIGITS, names).text, 'TYPE_77()');
+});
+
+test('a RESPONSE says which request it answers, and the PKT line adds up to the packet\'s size', async () => {
+  const { G, N } = c;
+  const rec = await consoleModule('net/recorder.js');
+  const net = G[N.net];
+  net[N.netDigits] = NET_DIGITS;
+  net[N.netTypeNames] = { 0: 'RELIABLE_RESPONSE', 3: 'RELIABLE_AUTHENTICATE', 26: 'RELIABLE_PING' };
+  const conn = fakeConnection(N);
+  conn.socket.connected = true;
+  net.connections = [conn];
+  let t = Date.now() + 400000;
+  try {
+    rec.netTick(t);
+    c.run('net_log_all on');
+    const since = rec.netlog.lines().length;
+    // The login: the game put callback ID 100 ("h") where its placeholder was.
+    conn.socket.volatile.emit('m', netPacket(-1, '', [[0, netMsg(3, '.guest', 'version_h5', encNum(100), 'x')]]));
+    // The server's answer, as in a real log: 39 characters.
+    const answer = netPacket(0, '', [[0, netMsg(0, encNum(100), 'fail', 'Server: Unknown error [2]')]]);
+    assert.equal(answer.length, 39);
+    conn[N.connRecv](answer);
+    // The server asks (a keep-alive with callback 7); our RESPONSE answers it.
+    conn[N.connRecv](netPacket(0, '', [[1, netMsg(26, encNum(7))]]));
+    conn.socket.volatile.emit('m', netPacket(1, '', [[1, netMsg(0, encNum(7))]]));
+    const out = rec.netlog.lines().slice(since).map((l) => l.slice(14));
+    assert.match(out[1], /OUT +REL +#0 AUTHENTICATE\(".guest", "version_h5", "h", "x"\)$/);
+    assert.match(out[2], /IN +PKT +39 chars \| ack #0 \| #0 RESPONSE 34 chars \| framing 5 chars$/);
+    assert.match(out[3], /IN +REL +#0 RESPONSE\(100, "fail", "Server: Unknown error \[2\]"\) {2}<- answers #0 AUTHENTICATE \(its part 3, "h", was callback ID 100\), \d+ ms later$/);
+    assert.match(out[7], /OUT +REL +#1 RESPONSE\(7\) {2}<- answers #1 PING \(its part 1, "\\n", was callback ID 7\), \d+ ms later$/);
+  } finally {
+    c.run('unset net_log_all');
+    net.connections = [];
+    rec.netTick(t + 50);
+  }
 });

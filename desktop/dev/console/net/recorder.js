@@ -103,12 +103,14 @@ export function showPart(p, digits, isNumber = false) {
   return isJson(p) ? p : JSON.stringify(p);
 }
 
-// A packet: { ack, state, rel: [{ uid, data }] }.
+// A packet: { ack, state, stateSize, rel: [{ uid, data, size }] }. Sizes are as sent, so
+// the packet's length is their sum plus the framing (ack, sequence numbers, separators).
 export function parsePacket(text) {
-  const f = text.split(FIELD).map(unescField);
+  const raw = text.split(FIELD);
+  const f = raw.map(unescField);
   const rel = [];
-  for (let i = 2; i + 1 < f.length; i += 2) rel.push({ uid: parseInt(f[i], 10), data: f[i + 1] });
-  return { ack: parseInt(f[0], 10), state: f[1] || '', rel };
+  for (let i = 2; i + 1 < f.length; i += 2) rel.push({ uid: parseInt(f[i], 10), data: f[i + 1], size: raw[i + 1].length });
+  return { ack: parseInt(f[0], 10), state: f[1] || '', stateSize: (raw[1] || '').length, rel };
 }
 
 // A reliable message: { name, text }: name is its type without RELIABLE_ ("CHAT"), text is
@@ -120,7 +122,7 @@ export function describeMessage(data, digits, typeName) {
   const name = full ? full.replace(TYPE_PREFIX, '') : `TYPE_${type !== null ? type : '?'}`;
   const numbers = NUMBER_PARTS[name] || [];
   const args = parts.slice(1).map((p, i) => showPart(p, digits, numbers.includes(i + 1))).join(', ');
-  return { name, text: `${name}(${args})` };
+  return { name, parts, text: `${name}(${args})` };
 }
 
 const describeState = (data, digits) => `(${data.split(PART).map(unescPart).map((p) => showPart(p, digits)).join(', ')})`;
@@ -163,15 +165,42 @@ const typeNameNow = (type) => { try { return game.netTypeName(type); } catch { r
 const allOn = () => settings.effective(KEY.NET_LOG_ALL) === true;
 const stateOn = () => allOn() || settings.effective(KEY.NET_LOG_STATE) === true;
 
+// A RESPONSE answers a request by its callback ID: the request had that ID, encoded, as
+// one of its parts (where the game put its callback placeholder). Requests are matched
+// newest first, each answered once. Kept: the last REQUESTS_KEPT messages each way.
+const REQUESTS_KEPT = 300;
+const RESPONSE = 'RESPONSE';
+function remember(list, uid, m, t) {
+  if (m.name === RESPONSE) return;
+  list.push({ uid, name: m.name, parts: m.parts, t, answered: false });
+  if (list.length > REQUESTS_KEPT) list.splice(0, list.length - REQUESTS_KEPT);
+}
+// "  <- answers #0 AUTHENTICATE (its "h" was callback ID 100), 320 ms later", or ''.
+function answerOf(list, m, t) {
+  if (m.name !== RESPONSE || m.parts.length < 2) return '';
+  const id = m.parts[1];
+  for (let i = list.length - 1; i >= 0; i--) {
+    const q = list[i];
+    const at = q.parts.indexOf(id, 1);
+    if (q.answered || at < 1) continue;
+    q.answered = true;
+    const n = decodeNumber(id, digitsNow());
+    return `  <- answers #${q.uid} ${q.name} (its part ${at}, ${JSON.stringify(id)}, was callback ID ${n === null ? '?' : n}), ${t - q.t} ms later`;
+  }
+  return '';
+}
+
 // net_log_all: one line per packet, before what it carries (the REL and STATE lines
 // after it show the contents).
 function packetLine(rec, dir, text, p, t) {
   const digits = digitsNow();
   const ack = Number.isNaN(p.ack) || p.ack < 0 ? 'ack none' : `ack #${p.ack}`;
   const what = [];
-  if (p.state) what.push(`state (${plural(p.state.split(PART).length, 'part')})`);
-  for (const { uid, data } of p.rel) what.push(`#${uid} ${describeMessage(data, digits, typeNameNow).name}`);
-  emit(rec, dir, 'PKT', `${text.length} chars | ${ack} | ${what.length ? what.join(', ') : 'nothing else'}`, t);
+  let used = 0;
+  if (p.state) { what.push(`state (${plural(p.state.split(PART).length, 'part')}) ${p.stateSize} chars`); used += p.stateSize; }
+  for (const { uid, data, size } of p.rel) { what.push(`#${uid} ${describeMessage(data, digits, typeNameNow).name} ${size} chars`); used += size; }
+  // What is left: the ack, the sequence numbers and the separators between the fields.
+  emit(rec, dir, 'PKT', `${text.length} chars | ${ack} | ${what.length ? `${what.join(', ')} | framing ${text.length - used} chars` : 'nothing else'}`, t);
 }
 
 function onOut(rec, text, dropped, t = Date.now()) {
@@ -193,7 +222,8 @@ function onOut(rec, text, dropped, t = Date.now()) {
       const m = describeMessage(data, digits, typeNameNow);
       rec.unacked.set(uid, { t, tries: 1, name: m.name });
       count(rec, 'relOut');
-      emit(rec, 'OUT', 'REL', `#${uid} ${m.text}`, t);
+      emit(rec, 'OUT', 'REL', `#${uid} ${m.text}${answerOf(rec.asked.IN, m, t)}`, t);
+      remember(rec.asked.OUT, uid, m, t);
     } else {
       count(rec, 'resends');
       const name = sent ? sent.name : describeMessage(data, digits, typeNameNow).name;
@@ -230,7 +260,9 @@ function onIn(rec, text, t = Date.now()) {
       continue;
     }
     count(rec, 'relIn');
-    emit(rec, 'IN', 'REL', `#${uid} ${describeMessage(data, digits, typeNameNow).text}`, t);
+    const m = describeMessage(data, digits, typeNameNow);
+    emit(rec, 'IN', 'REL', `#${uid} ${m.text}${answerOf(rec.asked.OUT, m, t)}`, t);
+    remember(rec.asked.IN, uid, m, t);
     const gapAt = rec.missing.get(uid);
     if (gapAt !== undefined) {
       rec.missing.delete(uid);
@@ -334,7 +366,7 @@ function attach(c) {
   const connected = isConnected(c);
   const rec = {
     id: nextId++, conn: c, kind: kindOf(c), socket: null, peer: null, connected,
-    maxOut: -1, ackOut: null, unacked: new Map(),
+    maxOut: -1, ackOut: null, unacked: new Map(), asked: { OUT: [], IN: [] },
     contig: connected ? null : -1, seen: new Set(), missing: new Map(),
     sec: newCounts(), total: newCounts(), opened: Date.now(),
   };
