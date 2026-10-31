@@ -1,7 +1,8 @@
 // Network recorder: every packet on the game's connections, as readable lines. The lines
 // go to the desktop wrapper, which writes them to netlogs/<run>_<instance>.log
 // (desktop/netlog.js); "netlog" shows them. Console key net_log (on by default) turns it
-// on and off, net_log_state adds every unreliable state update.
+// on and off, net_log_state adds every unreliable state update, net_log_all every packet
+// (PKT lines) and every state update.
 //
 // The game's protocol (scripts/connection.js; ANTICHEAT.md §13.3): a packet is text,
 // fields split by \x01 (escaped "$.1" inside a field):
@@ -149,13 +150,24 @@ function emit(rec, dir, kind, text, t = Date.now()) {
 const count = (rec, k, n = 1) => { rec.sec[k] += n; rec.total[k] += n; };
 const digitsNow = () => { try { return game.netDigits(); } catch { return ''; } };
 const typeNameNow = (type) => { try { return game.netTypeName(type); } catch { return null; } };
-const stateOn = () => settings.effective(KEY.NET_LOG_STATE) === true;
+const allOn = () => settings.effective(KEY.NET_LOG_ALL) === true;
+const stateOn = () => allOn() || settings.effective(KEY.NET_LOG_STATE) === true;
+
+// net_log_all: one line per packet, before what it carries.
+function packetLine(rec, dir, text, p, t) {
+  const uids = p.rel.map((r) => r.uid).filter((u) => !Number.isNaN(u));
+  const state = p.state ? `state ${plural(p.state.split(PART).length, 'part')} (${p.state.length} chars)` : 'no state';
+  const rel = uids.length ? `reliable ${uids.length === 1 ? `#${uids[0]}` : `${uids.length}: ${uids.map((u) => `#${u}`).join(' ')}`}` : 'no reliable';
+  const ack = Number.isNaN(p.ack) || p.ack < 0 ? 'ack none' : `ack #${p.ack}`;
+  emit(rec, dir, 'PKT', `${text.length} chars | ${ack} | ${state} | ${rel}`, t);
+}
 
 function onOut(rec, text, dropped, t = Date.now()) {
   count(rec, 'pkOut');
   count(rec, 'bytesOut', text.length);
   const p = parsePacket(text);
   const digits = digitsNow();
+  if (allOn()) packetLine(rec, 'OUT', text, p, t);
   if (!Number.isNaN(p.ack)) rec.ackOut = p.ack;
   if (p.state) {
     count(rec, 'stateOut');
@@ -188,6 +200,7 @@ function onIn(rec, text, t = Date.now()) {
   count(rec, 'bytesIn', text.length);
   const p = parsePacket(text);
   const digits = digitsNow();
+  if (allOn()) packetLine(rec, 'IN', text, p, t);
   // Their ack: our messages up to it arrived.
   if (!Number.isNaN(p.ack)) for (const uid of rec.unacked.keys()) if (uid <= p.ack) rec.unacked.delete(uid);
   if (p.state) {

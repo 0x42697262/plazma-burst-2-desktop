@@ -115,6 +115,13 @@ export const SCHEMA = Object.freeze({
     about: ['State updates are sent every 16 ms over a socket and every 4 ms peer to peer.',
       'Off, they are only counted (STAT lines); on, each one is written too.'],
   },
+  net_log_all: {
+    type: 'bool', group: GROUP.network, default: false,
+    desc: 'Log everything: every packet (PKT: size, ack, what it carries) and every state update, decoded (very large files)',
+    about: ['Adds a PKT line for every packet sent and received, also the ones that only',
+      'carry an acknowledgement, and turns on net_log_state: every unreliable state',
+      'update with its parts decoded. 60 to 250 packets a second each way: large files.'],
+  },
 });
 
 // KEY.MAX_HP === 'max_hp'. Reading a key that does not exist throws, so a typo fails
@@ -135,6 +142,7 @@ export const ALIASES = Object.freeze({
   savemaps: KEY.SAVE_MAPS, mapsave: KEY.SAVE_MAPS, fastmaps: KEY.FAST_MAPS, fastload: KEY.FAST_MAPS,
   fast_load: KEY.FAST_MAPS, fastloadmaps: KEY.FAST_MAPS, fast_load_maps: KEY.FAST_MAPS,
   net_logs: KEY.NET_LOG, packet_log: KEY.NET_LOG, netlog_state: KEY.NET_LOG_STATE,
+  netlog_all: KEY.NET_LOG_ALL, net_log_everything: KEY.NET_LOG_ALL,
 });
 
 export const GROUPS = Object.freeze([...new Set(Object.values(SCHEMA).map((s) => s.group))]);

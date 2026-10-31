@@ -25,11 +25,11 @@ export const parseLine = (line) => {
   return m && { time: m[1], conn: m[2], dir: m[3], kind: m[4], text: m[5] };
 };
 
-const KIND_OPTIONS = Object.freeze({ loss: 'LOSS', stat: 'STAT', stats: 'STAT', rel: 'REL', state: 'STATE', conn: 'CONN' });
+const KIND_OPTIONS = Object.freeze({ loss: 'LOSS', stat: 'STAT', stats: 'STAT', rel: 'REL', state: 'STATE', conn: 'CONN', pkt: 'PKT', packet: 'PKT' });
 const OPTIONS = ['in', 'out', ...Object.keys(KIND_OPTIONS)];
 const TERMS = ['run', 'type', 'conn', 'last'];
 
-const KIND_COLOR = Object.freeze({ LOSS: COLOR.warn, STAT: COLOR.hint, CONN: COLOR.notice, PAGE: COLOR.notice, STATE: COLOR.muted });
+const KIND_COLOR = Object.freeze({ LOSS: COLOR.warn, STAT: COLOR.hint, CONN: COLOR.notice, PAGE: COLOR.notice, STATE: COLOR.muted, PKT: COLOR.muted });
 const colorOf = (p) => (p && KIND_COLOR[p.kind]) || (p && p.dir === 'IN' ? COLOR.bright : COLOR.plain);
 
 let lastRuns = []; // from the last "netlog runs", for run:<n>
@@ -140,7 +140,10 @@ function runs(args) {
 function status(args) {
   if (args.length) throw new Error('usage: netlog [show | runs | on | off]');
   const on = netlog.on();
-  print(`Network log: ${on ? 'on' : 'off'} (net_log). State updates: ${settings.effective(KEY.NET_LOG_STATE) ? 'written' : 'counted only'} (net_log_state).`, on ? COLOR.ok : COLOR.notice);
+  const all = settings.effective(KEY.NET_LOG_ALL) === true;
+  const state = all || settings.effective(KEY.NET_LOG_STATE) === true;
+  print(`Network log: ${on ? 'on' : 'off'} (net_log). Everything (every packet and state update): ${all ? 'on' : 'off'} (net_log_all).`
+    + ` State updates: ${state ? 'written' : 'counted only'}${all ? '' : ' (net_log_state)'}.`, on ? COLOR.ok : COLOR.notice);
   if (netlog.writeError()) print(`  Not written to a file: ${netlog.writeError()}`, COLOR.error);
   else print(`  File: ${netlog.file() || 'none yet (made with the first line sent)'}`, COLOR.hint);
   print(`  This page: ${plural(netlog.pageLines(), 'line')}.`, COLOR.hint);
@@ -158,7 +161,7 @@ function status(args) {
 const SHOW_ARGS = [
   ['--in | --out', 'received or sent only'],
   ['--loss', 'packet loss only: resend, dropped, gap, late, duplicate'],
-  ['--rel --stat --conn --state', 'only these kinds (they combine)'],
+  ['--rel --stat --conn --state --pkt', 'only these kinds (they combine)'],
   ['type:<name>', 'messages of a type, e.g. type:chat (RELIABLE_ left out)'],
   ['conn:<c1 | server | p2p>', 'one connection'],
   ['last:<n>', `look at the last n lines (default ${LAST_DEFAULT})`],
@@ -187,12 +190,14 @@ export const netlogCommand = {
       ['netlog show --in conn:server', 'what the main server sent'],
       ...(REMOTE ? [] : [['netlog runs', 'other instances and earlier runs'], ['netlog show run:2 --loss', 'the losses of another one']]),
       ['netlog off', 'stop recording (net_log off)'],
+      ['netlog all on', 'log everything: every packet and state update'],
     ],
     notes: [
       'In the file each line is: time, connection, OUT/IN/---, kind (REL, LOSS, STAT, CONN,',
-      'STATE, PAGE), details. #<n> is a number the game sent encoded. The file header explains it all.',
+      'STATE, PKT, PAGE), details. #<n> is a number the game sent encoded. The file header explains it all.',
+      '"netlog all on" logs everything: every packet and every state update (off by default).',
     ],
-    see: ['net_log', 'net_log_state'],
+    see: ['net_log', 'net_log_state', 'net_log_all'],
   },
   run: status,
   subcommands: [
@@ -231,6 +236,27 @@ export const netlogCommand = {
         see: ['netlog show'],
       },
       run: runs,
+    },
+    {
+      name: 'all',
+      aliases: ['everything'],
+      usage: 'netlog all [on | off]',
+      desc: 'Log everything: every packet (PKT) and every state update (net_log_all, off by default)',
+      help: {
+        about: [
+          'The same as "net_log_all". On, every packet sent and received gets a PKT line (its',
+          'size, ack, how many parts its state has, which reliable messages it carries), and',
+          'every unreliable state update is written decoded (STATE). Alone it says on or off.',
+          '60 to 250 packets a second each way in a match: the files grow fast.',
+        ],
+        examples: [['netlog all on', 'log everything'], ['netlog show --pkt --state last:200', 'the latest packets and state updates']],
+        see: ['net_log_all', 'net_log_state'],
+      },
+      run: (args) => {
+        if (args.length > 1) throw new Error('usage: netlog all [on | off]');
+        if (!args.length) { print(`net_log_all = ${settings.effective(KEY.NET_LOG_ALL) ? 'on' : 'off'}`); return; }
+        runKey(KEY.NET_LOG_ALL, args);
+      },
     },
     {
       name: 'on',

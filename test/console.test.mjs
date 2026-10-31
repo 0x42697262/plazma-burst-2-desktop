@@ -2509,7 +2509,7 @@ test('netlog: status, the last lines with filters, other instances and on/off', 
     conn[N.connRecv](netPacket(1, '', [[0, netMsg(5, 'hi back')], [2, netMsg(9, encNum(4))]]));
 
     const st = c.run('netlog');
-    assert.match(st[0], /^Network log: on \(net_log\)\. State updates: counted only/);
+    assert.match(st[0], /^Network log: on \(net_log\)\. Everything \(every packet and state update\): off \(net_log_all\)\. State updates: counted only \(net_log_state\)\.$/);
     assert.ok(st.some((l) => /^ {2}c\d+ server +connected, ping 45 ms, out 1 packets, in 1 packets \| loss: 0 resends, 0 dropped, 1 gap, 0 late, 0 duplicates \| 1 missing$/.test(l)), st.join('\n'));
 
     const chat = c.run(`netlog show type:chat ${last()}`);
@@ -2559,6 +2559,43 @@ test('netlog: status, the last lines with filters, other instances and on/off', 
   } finally {
     G.fetch = realFetch;
     c.run('unset net_log');
+    net.connections = [];
+    rec.netTick(t + 50);
+  }
+});
+
+test('net_log_all (off by default) adds a PKT line per packet and every state update, decoded', async () => {
+  const { G, N } = c;
+  const rec = await consoleModule('net/recorder.js');
+  const net = G[N.net];
+  net[N.netDigits] = NET_DIGITS;
+  net[N.netTypeNames] = { 5: 'RELIABLE_CHAT' };
+  const conn = fakeConnection(N);
+  conn.socket.connected = true;
+  net.connections = [conn];
+  let t = Date.now() + 300000;
+  try {
+    rec.netTick(t);
+    const since = rec.netlog.lines().length;
+    const fresh = () => rec.netlog.lines().slice(since).map((l) => l.slice(14));
+    // Off by default: an ack-only packet and a state update leave no line.
+    conn[N.connRecv](netPacket(3, netMsg(1, encNum(250), 'x'), []));
+    assert.deepEqual(fresh(), []);
+    assert.match(c.run('netlog all')[0], /^net_log_all = off$/);
+    assert.match(c.run('netlog all on')[0], /net_log_all = on/);
+    conn[N.connRecv](netPacket(3, netMsg(1, encNum(250), 'x'), []));
+    conn.socket.volatile.emit('m', netPacket(-1, '', [[0, netMsg(5, 'hi')], [1, netMsg(5, 'yo')]]));
+    const out = fresh();
+    assert.equal(out.length, 5, out.join('\n'));
+    assert.match(out[0], /IN +PKT +\d+ chars \| ack #3 \| state 3 parts \(\d+ chars\) \| no reliable$/);
+    assert.match(out[1], /IN +STATE +3 parts {2}#1 \| #250 \| x$/);
+    assert.match(out[2], /OUT +PKT +\d+ chars \| ack none \| no state \| reliable 2: #0 #1$/);
+    assert.match(out[3], /OUT +REL +#0 RELIABLE_CHAT {2}hi$/);
+    const shown = c.run('netlog show --pkt last:5');
+    assert.equal(shown.filter((l) => / PKT /.test(l)).length, 2, shown.join('\n'));
+    assert.match(c.run('netlog')[0], /Everything \(every packet and state update\): on \(net_log_all\)\. State updates: written\.$/);
+  } finally {
+    c.run('unset net_log_all');
     net.connections = [];
     rec.netTick(t + 50);
   }
