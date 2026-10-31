@@ -20,6 +20,7 @@
 11. [More Improvements to Come](#11-more-improvements-to-come)
 12. [Appendix](#12-appendix)
 13. [`RELIABLE_PING` Reference](#13-reliable_ping-reference)
+14. [Server-Side State Checks (`$ММ.$pOeрМ`)](#14-server-side-state-checks-ммpoeрм)
 
 ---
 
@@ -1396,3 +1397,326 @@ t=300    client  location.reload()
 - Removed: the scan's whole body (original lines 941–1059). `$сMlcА1` is an empty function.
 
 So with this copy **no report is ever sent**, and the value guard never runs. Everything above describes the original. To get it back: `npm run fetch-game` (it re-downloads; the current copy moves to `game.previous/`).
+
+---
+
+## 14. Server-Side State Checks (`$ММ.$pOeрМ`)
+
+> **Line numbers:** `libs/flash.js` and `connection.js` are the current files (`v1769098419`). `node tools/find-names.js --decode scripts/libs/flash.js` prints the file with its string constants filled in, on the same line numbers.
+
+Everything in sections 3–7 runs on the cheater's own machine. This section covers the opposite side: what the **server** does with the state your game sends it ~60 times a second. Three checks look at that state:
+
+| Check | Looks at | Effect in the shipped code | Seen by you? |
+|---|---|---|---|
+| [14.4 Health above the match maximum](#144-check-1-health-above-the-match-maximum-healthaltering) | your HP | `$с0A.$Т0ОcpT(connection, "HealthAltering")`, and the whole update is thrown away | No |
+| [14.5 Respawn counter desync](#145-check-2-respawn-counter-desync) | your respawn count | Your state is ignored while it is wrong; a message to the whole match after 30 bad updates | Yes, a server chat line |
+| [14.6 Aiming outside the view area](#146-check-3-aiming-outside-the-view-area-zoom-hack) | where your crosshair is | A logged report, and a chat line to the other players | No, only the others see it |
+
+A fourth check in the same function is the only one that **disconnects** you itself: [14.7 the clock check](#147-related-the-clock-check-server-and-client-time-mismatch).
+
+### 14.1 Where this code runs
+
+The server's code is shipped inside the client. `libs/flash.js` is one file for both sides. Each branch is chosen at run time:
+
+| Flag | Meaning | Where it is set |
+|---|---|---|
+| `connection.$с0А0О` | This end of the connection is the **server** side | `connection.js` constructor: `$ММ.$T0еcр` for socket connections; `params.$ОеТAН` for P2P (`true` when we host) |
+| `$ММ.$T0еcр` | This process is a **dedicated** server (the official one) | `libs/flash.js:9` (`false` in the browser) |
+
+So the same function runs in three places:
+
+1. **The official server** (`$T0еcр` true). Its source is not public, but the client file carries the dedicated-server branches (`if ($ММ.$T0еcр)` with server-only logging through `$OcМср`, the 30 s timeout in `connection.js:888`). That is strong evidence that the official server runs this same file. One part is **not** shipped: the reporting module `$с0A` (14.3).
+2. **A player-hosted (P2P) match**, on the host's machine (`$T0еcр` false, `$с0А0О` true on each guest's connection). Hosting installs a stub `$с0A` (`libs/flash.js:345`, by `$ММ.$AOIе0o`, `:3178`).
+3. **Never on the client side of a connection.** `$pOeрМ` has a client branch too (from `:1200`), which applies the other players' states. None of the checks below run there.
+
+### 14.2 The state update, part by part
+
+**Sending (client):** `$ММ.$ТеeАp(connection)` (`libs/flash.js:421`) runs on every network tick, every 16 ms on a socket and 4 ms peer to peer (`connection.js:1061`). For your own character `$lНH10М = $0Ме1А[$НAlНc]` (`chars[me]`) it builds `parts` and queues it as the connection's **unreliable** message: `$НAAloМ.$OMeTо($ММ.$ОAA0р, parts)` (`:783`). Only the newest one is sent: `connection.$MТTМM` is overwritten each tick ([13.3](#133-on-the-wire)). Numbers are written with `$Oоolр` (base-N digits, [README §7](README.md#7-network-log)). With `true` as its second argument, `0` becomes `""`.
+
+| Index | Constant | Built at | Value |
+|---|---|---|---|
+| 0 | | `:448–452` | Body control, percent (`Math.round(char.$eoОpА * 100)`). `""` when 100 (standing); it is 1 while the character is dead (`frame2.js:5311`) |
+| 1 | `$ММ.$ТOlOep` = 1 | `:453` | `x` |
+| 2 | `$ММ.$1ТIHТр` = 2 | `:454` | `y` |
+| 3, 4 | | `:455–456` | Velocity `tox`, `toy`, times `$ММ.$MеМMА` = 5 |
+| 5 | | `:458–478` | Only when part 0 is under 100: the limp body's points, 8 or 10 of them (10 when face HP ≤ 0), 4 numbers each relative to `x`/`y`, joined with `~` |
+| 6 | `$ММ.$сoТрIН` = 6 | `:480` | **HP**: `Math.ceil(char.hea)` |
+| 7 | `$ММ.$OlОplр` = 7 | `:482` | **Aim dx**: `tarx - x` (crosshair minus position, game units) |
+| 8 | `$ММ.$рI1lрA` = 8 | `:483` | **Aim dy**: `tary - y` |
+| 9 | | `:486–527` | Packed booleans (`$IooорO.$oеМ0рe`): per weapon slot "not ready", then 5 action flags |
+| 10 | | `:529` | The held gun's network id, `""` for none |
+| 11 | | `:530` | Vehicle index (`$ОMррe`), `""` when on foot |
+| 12–15 | `$ММ.$НсеMep` = 12, `$ММ.$lIHрHТ` = 13 | `:532–535` | Body part HP: head, face, arms, legs (`ceil`) |
+| 16 | `$ММ.$MHOeе0` = 16 | `:537–540` | Alive: crouch amount (`sit * 35`, `""` standing). Dead: **who killed you** (`$1МI0р`) |
+| 17 | | `:542–555` | `"3"`, `"2"`, `"1"` or `""`: two flags, one of them "knocked down" (`$loАoM`) |
+| 18 | | `:558–591` | Your projectiles in flight, 7 numbers each (id, x, y, speed x, speed y, rotation, one more), joined with `~` |
+| 19 | `$ММ.$ОHIАAA` = 19 | `:593` | **Client clock**: `performance.now() - $ММ.$1МАTMH` |
+| 20 | `$ММ.$TТoМоА` = 20 | `:595` | **Respawn count**: `char["respawns"]` |
+
+**Receiving (server):** packets arrive in `connection.$AoH1e` (`connection.js:763`), which keeps only the newest state in `connection.$eМОсM`. Once per tick `connection.$AОAcc` first runs every reliable message in order, then the state, through `$ММ.$pOeрМ(data, connection)` (`connection.js:982`, `libs/flash.js:869`). So a reliable message (like `RESPAWN`) and a state in the **same packet** are handled reliable first.
+
+`$pOeрМ`, server side, step by step (`libs/flash.js:869–1199`):
+
+```text
+split at \x02, unescape                                  :873–875
+if this is the server side ($с0А0О)
+ and the player is in a match (connection.$eоIIH)
+ and has sent CLIENT_READY_FOR_FIRST_SYNC ($HАНeT.$HеeТTA, set at :3402):
+   if spectator ($HАНeT.$еТр1O): nothing is done at all            :891
+   else
+     CHECK 2: respawn count                                         :897
+     if it does not match: count, maybe announce, and STOP here      :899–911
+     if it matches:                                                 :912
+       revivable = head HP > 0 and face HP > 0                     :924–926
+       if the HP part is not empty:                                 :928
+         if alive on the server, or revivable within 3 s of a revive:   :934–936
+           CHECK 1: HP above match max -> report, return            :938–944
+           if HP > 0 and approved map and round playing:
+             CHECK 3: aim outside view                              :946–990
+           store HP; death or revival when it crosses 0             :1059–1094
+         else: server says dead, client says alive
+               -> YOU_ARE_STILL_DEAD once a second                   :1096–1112
+         blank the HP part before passing the state on             :1119
+         note position changes (inactivity timer)                   :1121–1131
+       CLOCK CHECK (14.7)                                           :1134–1189
+       keep the state for the other players ($HАНeT.$OeeНl)         :1192
+```
+
+Two consequences of the order:
+
+- **Check 2 gates everything.** While your respawn count is wrong, the server skips the rest of the function: the HP and aim checks, your HP and deaths, your position, the clock check, and storing your state for the other players. To them your character stops moving until the count matches again.
+- **Check 1 returns early.** A flagged update never reaches the clock check, and is never stored in `$OeeНl`, so the other players stop getting your state for as long as your HP stays over the limit.
+
+### 14.3 The reporting module `$с0A`
+
+Two of the checks call into `globalThis.$с0A`, the server's reporting module:
+
+| Call | Used for |
+|---|---|
+| `$с0A.$Т0ОcpT(connection, reason, code, detail)` | A cheat report: `"HealthAltering"` (check 1), or the anti-cheat scan's report ([13.5](#135-anti-cheat-report-start-run-end): `undefined`, code, detail) |
+| `$с0A.$оlеоН(connection, kind, text, match)` | An event log: joins, leaves, and the aim report (check 3, kind `$с0A.$0ААр0c`) |
+
+**On the official server** its real code is loaded, and the client has no copy of it. What `$Т0ОcpT` does there (log, flag the account, kick, ban) cannot be read from the client.
+
+**On a P2P host** the stub (`libs/flash.js:345–352`) is:
+
+```js
+globalThis.$с0A = { $1OoOН: new WeakMap(), $оlеоН: () => {}, $lр1oМе: () => {}, $НАеоТc: () => {} };
+```
+
+`$оlеоН` exists and does nothing, so check 3's log line goes nowhere. `$Т0ОcpT` **does not exist**: check 1 throws `TypeError: $с0A.$Т0ОcpT is not a function` on a P2P host. What that leads to is in 14.4.
+
+### 14.4 Check 1: health above the match maximum ("HealthAltering")
+
+**Code** (`libs/flash.js:928–944`):
+
+```js
+if (parts[6].length > 0) {                                  // the HP part is there
+  let wasAlive = connection.player.hea > 0;                  // $Нl0сco: the server's own idea
+  let hp = decode(parts[6]);                                 // $cеMсAН
+  if (wasAlive || (connection.player.revivable && now < connection.player.reviveUntil)) {
+    if (match.hmax !== 0)
+      if (hp > match.hmax)
+        if (now > match.hmaxGraceUntil) {                     // $OННОeО
+          $с0A.$Т0ОcpT(connection, "HealthAltering");
+          return;                                             // the whole update is dropped
+        }
+    ...
+```
+
+**The limit, `match.hmax`**, is set when the match loads a map (`libs/flash.js:5660–5736`):
+
+1. `match.hmax = 0`, which means no limit.
+2. Only for an **approved** map (`match.approved`, from the map's listing; `0` also turns `ranked` off, `:5642–5645`).
+3. If the match has `force_player_health` set, that is the limit.
+4. Otherwise the server parses the map XML (`$сАеMО`, a cache of the last 100 maps in `$ММ.$НA0MОА`) and looks at every `<player>` object, which covers spawn points and preplaced characters (`:5689–5711`):
+   - each one must have `hea === hmax`, otherwise: `Player objects do not have .hea and .hmax set to same value`
+   - neither may be `NaN`
+   - all of them must have the **same** `hmax`, otherwise: `Player objects have inconsistent .hmax (a and b)`
+   - that common `hmax` is the limit.
+5. If any rule fails, the limit stays 0 and every player gets `Map Verification Error: <reason>` (`:5731`) as a service message.
+6. `match.$OННОeО = Date.now() + 10000` (`:5736`): **a 10 s grace period** after every map load, so the HP of the previous map does not trip the check.
+
+**When it is checked:** only while the server thinks you are **alive** (`hea > 0` from your last accepted update), or during a **revive window**. The window opens when you are revivable (head and face HP above 0, parts 12 and 13) and the server has set `$МеeНMO = now + 3000` (`$ММ.$0AA1HO`):
+
+- at round start / warmup, for every player (`:6402`)
+- when a teammate's heal hit lands on you while you are dead (`:6950–6955`)
+
+A dead player reporting HP is not checked here. It gets `RELIABLE_YOU_ARE_STILL_DEAD` once a second instead (`:1096–1112`), and the client sets its HP back to 0 when that arrives (`:3511–3523`).
+
+**What compares:** your **reported** `Math.ceil(hea)` against `hmax`. The check uses the **current** HP (`hea`), not your character's maximum, so a raised maximum alone is not caught; filling HP above the limit is. The HP you send in `RESPAWN` (`x, y, hea`, `frame2.js:42923`, read at `libs/flash.js:3851`) is **not** checked here. Your next state update carries the same HP and is.
+
+**What happens:**
+
+| Where | Result |
+|---|---|
+| Official server | `$Т0ОcpT(connection, "HealthAltering")`; its effect is server-side and unknown. The update is dropped either way (`return`), so the server keeps your last accepted HP and position, and the other players stop seeing your updates |
+| P2P host | `$Т0ОcpT` is missing, so it throws. The unreliable loop catches it (`connection.js:984–999`): `console.error("Received unreliable message resulted in an error")`, an error report `net_process_unreliable`, and the whole match gets `Server: Unreliable messsage error from <login>, user will be disconnected`. You are **not** disconnected (`$ММ.$T0еcр` is false), but every update throws, so the host never applies your state again while your HP stays over the limit |
+
+**Dev console:** `god`, `max_hp`, `hp_bonus`, `hp_bonus_pct` and the game's own `game god` all push `hea` above the map's `hmax`. They trip this check on approved maps, from 10 s after the map loads.
+
+**Trace** (approved map, `hmax` 130, `max_hp 500` set mid-round):
+
+```text
+t=0       client  hea 130 -> state part 6 = 130                      accepted, stored
+t=16      client  dev console sets hmax/hea 500 -> part 6 = 500
+t≈16+ping server  wasAlive, 500 > 130, past the 10 s grace -> $Т0ОcpT(conn, "HealthAltering"), return
+t+16...   every update until HP <= 130 is dropped the same way
+```
+
+### 14.5 Check 2: respawn counter desync
+
+**Why the counter exists.** Hits and explosions carry the target's respawn count (`RELIABLE_DAMAGE_PLAYERS_VIA_EXPLOSION` puts `obj["respawns"]` in every entry, `libs/flash.js:682`). The server drops a hit whose count does not match the target's current life (`$1eMМеТ`, `:6926–6931`: `if (target.respawns !== params.respawns) return false`). A late hit from your previous life can't kill you again.
+
+**How it counts**, in both copies:
+
+| Event | Client | Server |
+|---|---|---|
+| Joining | `0` (`frame2.js:7298`), or the value in `FIRST_SYNC_RESPONSE` | `0` (`libs/flash.js:6716`) |
+| You respawn | sends `RELIABLE_RESPAWN(x, y, hea)` and does `respawns++` (`frame2.js:42923–42924`) | on `RESPAWN`: `respawns++`, then sends it to everyone with the new count in part 4 (`libs/flash.js:3852–3857`) |
+| A teammate revives you | sends `RELIABLE_RESSURECT(x, y, hea)`, `respawns++` (`frame2.js:16070–16071`) | same handler as `RESPAWN` (`:3830`) |
+| Another player's respawn arrives | sets their `respawns` from part 4 (`:4103`) | |
+
+**Code** (`libs/flash.js:897–922`):
+
+```js
+let theirs = decode(parts[20]);
+if (theirs !== connection.player.respawns) {
+  connection.desyncCount++;                                   // $eMOоI
+  if (connection.desyncCount >= 30)                           // $ММ.$eрIМIр
+    if (!connection.desyncAnnounced) {                        // $AоIТМ
+      connection.desyncAnnounced = true;
+      match.broadcast("Server: Respawn counter desync happens for " + login + " (" + nickname + ")");
+    }
+} else {
+  connection.desyncCount = 0;
+  if (connection.desyncAnnounced) {
+    connection.desyncAnnounced = false;
+    match.broadcast("Server: Respawn counter desync has been resolved for " + login + " (" + nickname + ")");
+  }
+  ... checks 1 and 3, HP, death, position (14.2)
+}
+```
+
+**Details:**
+
+- **The counter only resets on a matching update.** The server handles at most one state per player per server tick (the newest that arrived), and a socket client sends 40 to 60 a second. So 30 mismatching updates take **about half a second or more**; peer to peer (4 ms ticks) it can be faster.
+- **No kick.** The effect is two broadcasts (`$HАeHT` sends a `RELIABLE_SERVICE_MESSAGE` to every player in the match, yellow by default) and a frozen state.
+- **While it is wrong, the server ignores your whole state** (14.2): no HP check, no aim check, no clock check, no deaths, and no state passed on, so you freeze on the other players' screens. A desynced player also escapes the HP check, but nobody sees them move.
+- **A normal respawn does not trip it.** The client puts `RESPAWN` (reliable) and the next state with the new count into the same or a later packet, and the server runs reliable messages first (14.2). A desync means a `RESPAWN`/`RESSURECT` the server refused or never got, a count changed on the client, or a `FIRST_SYNC_RESPONSE` count that was not applied.
+- **The `respawn_model` "v2" respawn queue** (`:3833–3848`) does not refuse the respawn. A respawn without permission or out of turn only gets a broadcast (`respawns without respawn permission or it has expired`, `respawns yet is not at the start of the respawn queue`), and the count is still increased, so it does not desync.
+
+**In the network log:** `IN REL SERVICE_MESSAGE("<font color=\"#ffff00\">Server: Respawn counter desync happens for ...</font>")`. Compare `net_log_state` part 20 (the 21st value of an `OUT STATE` line) with the count in your last `IN REL RESPAWN(...)` line for your slot.
+
+### 14.6 Check 3: aiming outside the view area ("zoom hack")
+
+**Code** (`libs/flash.js:946–990`):
+
+```js
+if (hp > 0)
+  if (match.approved)
+    if (match.coop_state === 0) {                              // $ММ.$ОeрoT: the round is being played
+      let dx = decode(parts[7]), dy = decode(parts[8]);        // tarx - x, tary - y
+      if (dx !== connection.lastDx || dy !== connection.lastDy) {   // $HMc0o, $TТMТO
+        connection.lastDx = dx; connection.lastDy = dy;
+        if (dx > 800 + 200 || dy > 400 + 200) {
+          connection.outsideScore += 1;                        // $Tе0MО
+          if (connection.outsideScore > 25) {
+            if (now > connection.nextAimLog) {                 // $pАAОо
+              connection.nextAimLog = now + 60000;
+              $с0A.$оlеоН(connection, $с0A.$0ААр0c, "zoom hack attempt detected " +
+                JSON.stringify({ dx, dy, p: connection.outsideScore }), match);
+            }
+            let msg = "Server: " + login + " (" + nickname + ") aims outside of their view area";
+            for (let other of match.players)
+              if (other && other !== connection)
+                if (other.account.is_staff || other.ip !== connection.ip)
+                  match.sendTo(other, msg, "#ffffff");          // $cТTоМH -> RELIABLE_SERVICE_MESSAGE
+            connection.outsideScore = 0;
+          }
+        } else if (connection.outsideScore > 0)
+          connection.outsideScore -= 1;
+      }
+    }
+```
+
+**The numbers:** the game stage is 800 × 400 units (`<canvas width="800" height="400">`), and the camera is centered on you at zoom 1. A legitimate crosshair stays within about 400 units horizontally and 200 vertically of your character. The limit is the **full stage size plus 200**: `dx > 1000` or `dy > 600`.
+
+**Exact behaviour:**
+
+- **Only right and down are checked.** The comparison is signed (`dx > 1000`, not `Math.abs(dx) > 1000`). Aiming 2000 units to the left (`dx = -2000`) or straight up never counts.
+- **Only samples where the aim changed count.** Holding the crosshair still outside the limit adds nothing after the first sample. The score is a leaky counter: +1 per changed sample outside, −1 per changed sample inside, floored at 0.
+- **More than 25 net outside samples** trigger it: 26 in a row at the least. While the mouse moves, every update the server handles is a new sample, so that is about half a second of moving the crosshair far right or down. Then the score goes back to 0, and it can trigger again.
+- **Only when it matters:** you are alive by your own report (`hp > 0`), on an approved map, while the round is played (`coop_state` 0). Warmup (2) and round end (1) are not checked, nor are unapproved maps. It is also inside check 1's "alive or revive window" block, and behind check 2.
+- **The log line** is rate-limited to once per 60 s per connection. **The chat line** goes out on every trigger.
+- **Who sees the message:** every other player in the match who is staff (`$ppO0l.is_staff`) **or has a different IP** from you. Players on your own network (same public IP) do not, and **you never do**. Nothing else happens: no kick, no dropped update.
+
+**Dev console:** the console's `zoom` (any camera zoom), and the game's own `zoom 25` / `zoom 50` chat commands, show more of the map. Aiming at what you now see to the right of or below the old view sends `dx > 1000` / `dy > 600`. The map's own zoom (the `gamescale` engine mark and the "set zoom" trigger action) does the same, so on a map that zooms out, legitimate players can trip it too.
+
+**In the network log:** you never receive it. With `net_log_state on`, parts 7 and 8 of your `OUT STATE` lines are `dx` and `dy` (the 8th and 9th values in the parentheses).
+
+### 14.7 Related: the clock check ("Server and client time mismatch")
+
+The only check in this function that disconnects you directly. Your game's clock (part 19) must advance at the same speed as the server's, which catches speed hacks that change the page's clock (`libs/flash.js:1134–1186`):
+
+```js
+let clientTime = decode(parts[19]);                           // performance.now() - start
+if (samples.length === 0 || now > samples.at(-1).server + 500) {   // one sample per ≥ 500 ms
+  samples.push({ server: now, client: clientTime });  if (samples.length > 2) samples.shift();
+  if (samples.length === 2) {
+    serverSum = serverSum * 0.99 + (samples[1].server - samples[0].server);   // $lрТHе
+    clientSum = clientSum * 0.99 + (samples[1].client - samples[0].client);   // $cHcTO
+    let limit = $ММ.$T0еcр ? 600 : 1200;                      // dedicated : P2P host
+    if (Math.abs(serverSum - clientSum) > limit) {
+      if (++strikes > 6) {                                    // $0cНMТ
+        connection.sendServiceMessage("Server and client time mismatch");
+        strikes = -10000;                                     // once
+        setTimeout(() => connection.Disconnect(), 500);
+      }
+    } else strikes = 0;
+  }
+}
+```
+
+- **Both sums decay by 1 % per sample**, so they remember about the last 100 samples, about 50 s. Each holds about 100 × 500 ms = 50 s of elapsed time. A clock running **1.2 % fast or slow** (600 / 50 000) builds a 600 ms difference and is caught: 7 bad samples in a row, so about 3.5 s after the gap passes the limit. A P2P host allows 2.4 %.
+- **A lag spike counts once.** A packet that is late by more than 600 ms puts one sample out of line, and the next sample brings it back, because client time is read from the packet's contents, not from when it arrived. Seven bad samples in a row need a clock that really runs at a different speed, or a connection that stalls again and again for longer than the limit.
+- **Why it can't be missed:** the server sends `RELIABLE_SERVICE_MESSAGE("Server and client time mismatch")`, then disconnects you 500 ms later. On the client, socket.io reports `io server disconnect`. In the network log that shows as an `IN REL SERVICE_MESSAGE(...)` line just before `CONN closed: io server disconnect`. **A disconnect without that line came from somewhere else.**
+
+### 14.8 Summary for players
+
+| You did | Check | What happens |
+|---|---|---|
+| HP above the map's max (`god`, `max_hp`, `hp_bonus`, `game god`) on an approved map, from 10 s after it loaded | 1 | Official server: a "HealthAltering" report (outcome unknown), and your updates are dropped while it lasts. P2P host: an error message to the whole match, and the host ignores you |
+| Respawn count out of step with the server for ~0.5 s | 2 | "Respawn counter desync" to the whole match; the server ignores your whole state (you freeze for the others) until it matches |
+| Aimed more than 1000 units right or 600 down, moving, for ~0.5 s, on an approved map mid-round | 3 | "aims outside of their view area" to the other players (not you, not your IP); a logged report once a minute |
+| Page clock running ≥ 1.2 % off the server's | clock | "Server and client time mismatch", then disconnected |
+
+### 14.9 Names in this section
+
+| Obfuscated | Meaning |
+|---|---|
+| `$ММ.$pOeрМ` | Handles one unreliable state update (both sides; server branch `:884–1199`) |
+| `$ММ.$ТеeАp` | Builds and queues your state update (client); sends match state and keep-alives (server) |
+| `$ММ.$OНННО` / `$ММ.$Oоolр` | Decode / encode a network number |
+| `connection.$HАНeT` | The server's record of the player on this connection (`hea`, `respawns`, `login`, `nickname`, `team` ...) |
+| `$HАНeT.$HеeТTA` | Sent `CLIENT_READY_FOR_FIRST_SYNC`: checks are on |
+| `$HАНeT.$еТр1O` | Spectator: no checks |
+| `$HАНeT.$МоТeII` | Revivable: head and face HP above 0 in the last update |
+| `$HАНeT.$МеeНMO` | Revive window end (`now + $ММ.$0AA1HO`, 3000 ms) |
+| `$HАНeT.$оcIеMM` | Next `YOU_ARE_STILL_DEAD` time |
+| `$HАНeT.$OeeНl` | Your last state, passed on to the other players |
+| `match.hmax` | HP limit; 0 = none |
+| `match.$OННОeО` | End of the 10 s HP grace after a map load |
+| `match.$HАeHT(text, color)` | Service message to every player in the match |
+| `match.$cТTоМH(conn, text, color)` | Service message to one player |
+| `connection.$ТАMpо(text)` | Sends `RELIABLE_SERVICE_MESSAGE` |
+| `connection.$eMOоI` / `$AоIТМ` | Respawn desync count / announced |
+| `connection.$HMc0o`, `$TТMТO` | Last aim dx, dy |
+| `connection.$Tе0MО` | Aim score |
+| `connection.$pАAОо` | Next time the aim report may be logged |
+| `connection.$НAТсО` | Clock samples `{ server, client }` |
+| `connection.$lрТHе`, `$cHcTO`, `$0cНMТ` | Clock sums (server, client), strikes |
+| `$ММ.$eрIМIр` | 30: desync updates before the message |
+| `$ММ.$ОeрoT`, `$оорoсH`, `$ОоcОMH` | `coop_state`: 0 playing, 1 round ended, 2 warmup |
+| `$с0A.$Т0ОcpT` / `$с0A.$оlеоН` | Cheat report / event log (14.3) |
+| `$с0A.$0ААр0c` | Event kind of the aim report |
