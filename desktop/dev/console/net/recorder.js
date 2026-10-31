@@ -57,7 +57,13 @@ export const clock = (t) => {
   const d = new Date(t);
   return `${two(d.getHours())}:${two(d.getMinutes())}:${two(d.getSeconds())}.${two(d.getMilliseconds(), 3)}`;
 };
-const kb = (n) => `${(n / 1024).toFixed(1)} KB`;
+// Packet sizes are text lengths (the game counts them the same way).
+const kb = (n) => (n < 10240 ? `${n} chars` : `${(n / 1024).toFixed(1)}K chars`);
+
+// A packet exactly as it went over the wire, readable: the separators as \x01 and \x02,
+// other control characters (the game's number digits) as \xNN.
+export const rawText = (s) => `"${s.replace(/[\\"]/g, (ch) => `\\${ch}`)
+  .replace(/[\x00-\x1f\x7f]/g, (ch) => `\\x${ch.charCodeAt(0).toString(16).padStart(2, '0')}`)}"`;
 const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 
 // ---------------------------------------------------------------------------
@@ -153,13 +159,13 @@ const typeNameNow = (type) => { try { return game.netTypeName(type); } catch { r
 const allOn = () => settings.effective(KEY.NET_LOG_ALL) === true;
 const stateOn = () => allOn() || settings.effective(KEY.NET_LOG_STATE) === true;
 
-// net_log_all: one line per packet, before what it carries.
+// net_log_all: one line per packet, before what it carries, with its raw text.
 function packetLine(rec, dir, text, p, t) {
   const uids = p.rel.map((r) => r.uid).filter((u) => !Number.isNaN(u));
   const state = p.state ? `state ${plural(p.state.split(PART).length, 'part')} (${p.state.length} chars)` : 'no state';
   const rel = uids.length ? `reliable ${uids.length === 1 ? `#${uids[0]}` : `${uids.length}: ${uids.map((u) => `#${u}`).join(' ')}`}` : 'no reliable';
   const ack = Number.isNaN(p.ack) || p.ack < 0 ? 'ack none' : `ack #${p.ack}`;
-  emit(rec, dir, 'PKT', `${text.length} chars | ${ack} | ${state} | ${rel}`, t);
+  emit(rec, dir, 'PKT', `${text.length} chars | ${ack} | ${state} | ${rel} | raw ${rawText(text)}`, t);
 }
 
 function onOut(rec, text, dropped, t = Date.now()) {

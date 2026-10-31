@@ -2587,9 +2587,9 @@ test('net_log_all (off by default) adds a PKT line per packet and every state up
     conn.socket.volatile.emit('m', netPacket(-1, '', [[0, netMsg(5, 'hi')], [1, netMsg(5, 'yo')]]));
     const out = fresh();
     assert.equal(out.length, 5, out.join('\n'));
-    assert.match(out[0], /IN +PKT +\d+ chars \| ack #3 \| state 3 parts \(\d+ chars\) \| no reliable$/);
+    assert.match(out[0], /IN +PKT +\d+ chars \| ack #3 \| state 3 parts \(\d+ chars\) \| no reliable \| raw "3\\x01\\x04\\x02\\x05\\x09\\x02x"$/);
     assert.match(out[1], /IN +STATE +3 parts {2}#1 \| #250 \| x$/);
-    assert.match(out[2], /OUT +PKT +\d+ chars \| ack none \| no state \| reliable 2: #0 #1$/);
+    assert.match(out[2], /OUT +PKT +17 chars \| ack none \| no state \| reliable 2: #0 #1 \| raw "-1\\x01\\x010\\x01\\x08\\x02hi\\x011\\x01\\x08\\x02yo"$/);
     assert.match(out[3], /OUT +REL +#0 RELIABLE_CHAT {2}hi$/);
     const shown = c.run('netlog show --pkt last:5');
     assert.equal(shown.filter((l) => / PKT /.test(l)).length, 2, shown.join('\n'));
