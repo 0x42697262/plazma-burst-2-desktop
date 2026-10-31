@@ -52,7 +52,7 @@ test('the account module is built from how the game uses it', () => {
 });
 
 // The console in join mode is decided when its modules load: its own process.
-test('join mode: the lobby address points at the server, the login is set from the menu on', () => {
+test('join mode: the lobby address points at the server, the login is set from the menu on, Tab shows the server', () => {
   const out = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', `
     Object.defineProperty(globalThis, 'PB2_JOIN', { value: { address: '1.2.3.4:2053', nickname: 'Pal', password: 'pw' } });
     const { bootConsole } = await import(${JSON.stringify(pathToFileURL(path.join(REPO, 'test/fake-game.mjs')).href)});
@@ -65,12 +65,18 @@ test('join mode: the lobby address points at the server, the login is set from t
     tick();
     const before = { ...globalThis.loaderInfo.parameters };
     c.G.stage.currentFrameLabel = 'menu';
+    c.G[c.N.serverLocation] = 'USA, Arizona';
     tick();
-    process.stdout.write(JSON.stringify({ hosts: net[c.N.lobbyHosts], before, after: globalThis.loaderInfo.parameters, said: c.log.printed.filter((l) => /Private server/.test(l)) }));
+    const location = c.G[c.N.serverLocation];
+    c.G[c.N.serverLocation] = 'Europe, player-hosted';
+    tick();
+    process.stdout.write(JSON.stringify({ hosts: net[c.N.lobbyHosts], before, after: globalThis.loaderInfo.parameters, location, p2pLocation: c.G[c.N.serverLocation], said: c.log.printed.filter((l) => /Private server/.test(l)) }));
   `], { cwd: REPO, encoding: 'utf8' }));
   assert.deepEqual(out.hosts, ['https://1.2.3.4:2053/?', 'https://1.2.3.4:2053/?', 'https://1.2.3.4:2053/?']);
   assert.deepEqual(out.before, { l: '', p: '' }, 'nothing during start-up, when the game talks to the official site');
   assert.deepEqual(out.after, { l: 'Pal', p: 'pw' });
+  assert.equal(out.location, 'Private server, 1.2.3.4:2053', 'the Tab scoreboard names the server, not "USA, Arizona"');
+  assert.equal(out.p2pLocation, 'Europe, player-hosted', 'a player-hosted match keeps its region');
   assert.ok(out.said.some((l) => /Multiplayer connects there, as Pal/.test(l)), out.said.join('\n'));
 });
 

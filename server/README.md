@@ -103,7 +103,7 @@ Players don't need the map file: the server sends each map to whoever joins.
 | Ranked, stats | yes | ranked matches can be created, but nothing is kept |
 | Reports, endorsements | change reputation | answered "nothing was changed" |
 | Anti-cheat reports | the server disconnects the player | printed (`cheat_reports: "kick"` disconnects too). The game still reloads the page of a player whose own scan trips, as it always does |
-| Match browser location | "USA, Arizona" | also shows "USA, Arizona": the game writes that text for every match not hosted by a player |
+| Location on the Tab scoreboard | "USA, Arizona" | "Private server, <address>": the game writes "USA, Arizona" for every match not hosted by a player, and join mode replaces it |
 | Game version | the site's | the server and every player must run the **same game version**. After `npm run fetch-game` brings a new one, update all of them |
 | Who can connect | anyone | only `npm run join` with your fingerprint and password; ordinary copies of the game never come here |
 

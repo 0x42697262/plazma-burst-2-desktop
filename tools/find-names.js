@@ -366,6 +366,10 @@ const RULES = [
     re: String.raw`match\.⟨ID⟩\("Server: Minimum reputation to access this match was set to "` },
   { file: 'flash', keys: ['matchLoadMap'], what: ['match method(map ID, done(ok, message)): loads a map and moves everyone to it'],
     re: String.raw`match\.⟨ID⟩\(match\["map_id"\],\(success,message\)=>` },
+  // The location the Tab scoreboard shows, chosen by the client when it joins a match:
+  // a player-hosted match's region, otherwise always "USA, Arizona".
+  { file: 'flash', keys: ['serverLocation'], what: ['global: the match location text the Tab scoreboard shows'],
+    re: String.raw`⟨ID⟩=\(⟨_⟩\["p2p"\]\)\?\(⟨_⟩\["p2p_region"\]\+", player-hosted"\): "USA, Arizona";` },
   // The lobby address: hosts[CONNECTION_SERVER_ID] + "plazmaburst2.com" + ":" + port.
   { file: 'lobby', keys: ['lobbyHosts', 'lobbyPort'], what: ['net property: lobby server address starts ("https://vvvv.")', 'net property: lobby server port'],
     re: String.raw`"localhost" : ⟨net⟩\.⟨ID⟩\[CONNECTION_SERVER_ID\]\+"plazmaburst2\.com"\)\+":"\+⟨net⟩\.⟨ID⟩;` },

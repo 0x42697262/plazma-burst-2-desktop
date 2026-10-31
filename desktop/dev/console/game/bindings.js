@@ -273,6 +273,10 @@ export const game = {
     const hosts = read('net')[nameOf('lobbyHosts')];
     for (let i = 0; i < hosts.length; i++) if (hosts[i] !== start) hosts[i] = start;
   },
+  // The match location the Tab scoreboard shows (the client writes "USA, Arizona" for
+  // every match not hosted by a player).
+  serverLocation: () => read('serverLocation'),
+  setServerLocation: (text) => write('serverLocation', text),
   // The login the lobby sends (the game reads its login cookies into these).
   setLoginParams: (login, password) => {
     const p = globalThis.loaderInfo && globalThis.loaderInfo.parameters;
