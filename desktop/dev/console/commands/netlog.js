@@ -62,7 +62,7 @@ export function parseFilter(args) {
     if (!p) return !dir && !kinds.size && !type && !conn && words.every((w) => line.toLowerCase().includes(w));
     if (dir && p.dir !== dir) return false;
     if (kinds.size && !kinds.has(p.kind)) return false;
-    if (type && !(p.text.match(/\bRELIABLE_\w+/g) || []).some((t) => t.slice('RELIABLE_'.length).includes(type))) return false;
+    if (type && ![...p.text.matchAll(/#\d+ ([A-Z][A-Z0-9_]*)/g)].some((m) => m[1].includes(type))) return false;
     if (conn && !p.conn.toLowerCase().split(' ').some((part) => part === conn || part.startsWith(conn))) return false;
     const low = line.toLowerCase();
     return words.every((w) => low.includes(w));
@@ -162,7 +162,7 @@ const SHOW_ARGS = [
   ['--in | --out', 'received or sent only'],
   ['--loss', 'packet loss only: resend, dropped, gap, late, duplicate'],
   ['--rel --stat --conn --state --pkt', 'only these kinds (they combine)'],
-  ['type:<name>', 'messages of a type, e.g. type:chat (RELIABLE_ left out)'],
+  ['type:<name>', 'messages of a type, e.g. type:chat (part of the name is enough)'],
   ['conn:<c1 | server | p2p>', 'one connection'],
   ['last:<n>', `look at the last n lines (default ${LAST_DEFAULT})`],
   ['<text>', 'lines with this text (several: all of them)'],
@@ -194,7 +194,8 @@ export const netlogCommand = {
     ],
     notes: [
       'In the file each line is: time, connection, OUT/IN/---, kind (REL, LOSS, STAT, CONN,',
-      'STATE, PKT, PAGE), details. #<n> is a number the game sent encoded. The file header explains it all.',
+      'STATE, PKT, PAGE), details. A message reads like a call: CHAT("hello", 7): text in',
+      'quotes, numbers bare (decoded), #<n> a sequence number. The file header explains it all.',
       '"netlog all on" logs everything: every packet and every state update (off by default).',
     ],
     see: ['net_log', 'net_log_state', 'net_log_all'],

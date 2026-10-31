@@ -37,16 +37,15 @@ const HEADER = [
   '#               match you joined), p2p-guest (a player in a match you host), socket',
   '#   direction   OUT = sent by this game, IN = received, --- = neither',
   '#   kind        CONN  connected, disconnected (with the reason)',
-  '#               REL   reliable message: #<sequence number> <type> then its parts, " | " between them',
-  '#               STATE unreliable state update, its parts decoded (only with net_log_state or net_log_all on)',
-  '#               PKT   one packet: size, ack, its state, its reliable messages, then raw "<text>": the',
-  '#                     packet as sent, \\x01 between fields, \\x02 between parts (only with net_log_all on)',
+  '#               REL   reliable message: #<sequence number> TYPE(part, part, ...)',
+  '#               STATE unreliable state update: (part, part, ...) (only with net_log_state or net_log_all on)',
+  '#               PKT   one packet: its size, its ack, and what it carries (only with net_log_all on)',
   '#               LOSS  packet loss: resend (not acknowledged in time), gap (a message is missing),',
   '#                     late (a missing message arrived), duplicate (arrived twice), dropped (never sent)',
   '#               STAT  once a second per busy connection: ping, packets, characters, losses',
   '#               PAGE  the game page loaded, recording turned on or off',
-  '# Parts: plain text as sent; "quoted" when it has a " | ", line breaks or control characters;',
-  '# #<number> for the game\'s encoded numbers (text it writes in its own base-N digits).',
+  '# Parts: "text" in quotes, numbers bare (the game sends them encoded; they are decoded here),',
+  '# JSON as it is. #<n> is always a sequence number. Types are the game\'s RELIABLE_<TYPE> names.',
 ];
 
 // dir: where the files go. version: the game version, for the header. now: for tests.

@@ -2433,15 +2433,15 @@ test('the network recorder logs messages readably and every kind of packet loss'
     const want = [
       /^c\d+ server +--- +CONN +new connection \(socket\.io over websocket\)$/,
       /^c\d+ server +--- +CONN +connected/,
-      /^c\d+ server +OUT +REL +#0 RELIABLE_CHAT {2}"hello \| world" \| #7 \| plain text$/,
-      /^c\d+ server +OUT +LOSS +resend #0 RELIABLE_CHAT \(try 2, first sent \d+ ms ago, not acknowledged yet\)$/,
+      /^c\d+ server +OUT +REL +#0 CHAT\("hello \| world", 7, "plain text"\)$/,
+      /^c\d+ server +OUT +LOSS +resend #0 CHAT \(try 2, first sent \d+ ms ago, not acknowledged yet\)$/,
       /^c\d+ server +OUT +LOSS +dropped: the socket was busy.*0 reliable messages.*its state update is lost\)$/,
-      /^c\d+ server +IN +REL +#0 RELIABLE_RESPONSE {2}#150$/,
-      /^c\d+ server +IN +REL +#2 RELIABLE_CHAT {2}b$/,
+      /^c\d+ server +IN +REL +#0 RESPONSE\(150\)$/,
+      /^c\d+ server +IN +REL +#2 CHAT\("b"\)$/,
       /^c\d+ server +IN +LOSS +gap: #2 arrived before #1 \(1 missing: lost or out of order\)$/,
-      /^c\d+ server +IN +REL +#1 RELIABLE_CHAT {2}a$/,
+      /^c\d+ server +IN +REL +#1 CHAT\("a"\)$/,
       /^c\d+ server +IN +LOSS +late #1 arrived \d+ ms after the gap was seen$/,
-      /^c\d+ server +IN +LOSS +duplicate #1 RELIABLE_CHAT/,
+      /^c\d+ server +IN +LOSS +duplicate #1 CHAT /,
       /^c\d+ server +--- +STAT +ping 1000 ms \| out 3 packets .* \| in 3 packets .* \| loss: 1 resend, 1 dropped, 1 gap, 1 late, 1 duplicate$/,
       /^c\d+ server +--- +CONN +closed: transport close \| after .* loss: 1 resend, 1 dropped, 1 gap, 1 late, 1 duplicate$/,
     ];
@@ -2510,16 +2510,16 @@ test('netlog: status, the last lines with filters, other instances and on/off', 
 
     const st = c.run('netlog');
     assert.match(st[0], /^Network log: on \(net_log\)\. Everything \(every packet and state update\): off \(net_log_all\)\. State updates: counted only \(net_log_state\)\.$/);
-    assert.ok(st.some((l) => /^ {2}c\d+ server +connected, ping 45 ms, out 1 packets, in 1 packets \| loss: 0 resends, 0 dropped, 1 gap, 0 late, 0 duplicates \| 1 missing$/.test(l)), st.join('\n'));
+    assert.ok(st.some((l) => /^ {2}c\d+ server +connected, ping 45 ms, out 1 packets, in 1 packets \| loss: 1 gap \| 1 missing$/.test(l)), st.join('\n'));
 
     const chat = c.run(`netlog show type:chat ${last()}`);
     assert.match(chat[0], /^Network log, this page: 2 of the last \d+ lines match\.$/);
-    assert.match(chat[1], /OUT +REL +#0 RELIABLE_CHAT {2}hello there$/);
-    assert.match(chat[2], /IN +REL +#0 RELIABLE_CHAT {2}hi back$/);
+    assert.match(chat[1], /OUT +REL +#0 CHAT\("hello there"\)$/);
+    assert.match(chat[2], /IN +REL +#0 CHAT\("hi back"\)$/);
     const back = c.run(`net show --in hi ${last()}`);
     assert.equal(back.length, 3, back.join('\n'));
     assert.match(c.run(`netlog show --loss ${last()}`)[1], /LOSS +gap: #2 arrived before #1/);
-    assert.match(c.run(`netlog show --out type:shot ${last()}`)[1], /RELIABLE_SHOT {2}#3$/);
+    assert.match(c.run(`netlog show --out type:shot ${last()}`)[1], / SHOT\(3\)$/);
     assert.match(c.run('netlog show --in --out')[0], /^error: --in and --out do not go together/);
     assert.match(c.run('netlog show nothing-like-this')[1], /Nothing matches/);
 
@@ -2534,8 +2534,8 @@ test('netlog: status, the last lines with filters, other instances and on/off', 
         ] });
       }
       return Promise.resolve({ ok: true, text: async () => [
-        '05:31:01.000  c1 server     OUT  REL    #0 RELIABLE_CHAT  from the other app',
-        '05:31:02.000  c1 server     OUT  LOSS   resend #0 RELIABLE_CHAT (try 2, first sent 2001 ms ago, not acknowledged yet)',
+        '05:31:01.000  c1 server     OUT  REL    #0 CHAT("from the other app")',
+        '05:31:02.000  c1 server     OUT  LOSS   resend #0 CHAT (try 2, first sent 2001 ms ago, not acknowledged yet)',
       ].join('\n') });
     };
     c.run('netlog runs');
@@ -2549,7 +2549,7 @@ test('netlog: status, the last lines with filters, other instances and on/off', 
     assert.match(asked.at(-1), /netread\?run=2026-11-01_05-31-00_local&lines=1000$/);
     const other = c.log.printed.filter((l) => !l.startsWith('> '));
     assert.match(other[0], /^Network log 2026-11-01_05-31-00_local: 1 of the last 2 lines match\.$/);
-    assert.match(other[1], /LOSS +resend #0 RELIABLE_CHAT/);
+    assert.match(other[1], /LOSS +resend #0 CHAT /);
     assert.match(c.run('netlog show run:9')[0], /^error: no run 9/);
 
     assert.match(c.run('netlog off')[0], /net_log = off/);
@@ -2587,10 +2587,10 @@ test('net_log_all (off by default) adds a PKT line per packet and every state up
     conn.socket.volatile.emit('m', netPacket(-1, '', [[0, netMsg(5, 'hi')], [1, netMsg(5, 'yo')]]));
     const out = fresh();
     assert.equal(out.length, 5, out.join('\n'));
-    assert.match(out[0], /IN +PKT +\d+ chars \| ack #3 \| state 3 parts \(\d+ chars\) \| no reliable \| raw "3\\x01\\x04\\x02\\x05\\x09\\x02x"$/);
-    assert.match(out[1], /IN +STATE +3 parts {2}#1 \| #250 \| x$/);
-    assert.match(out[2], /OUT +PKT +17 chars \| ack none \| no state \| reliable 2: #0 #1 \| raw "-1\\x01\\x010\\x01\\x08\\x02hi\\x011\\x01\\x08\\x02yo"$/);
-    assert.match(out[3], /OUT +REL +#0 RELIABLE_CHAT {2}hi$/);
+    assert.match(out[0], /IN +PKT +8 chars \| ack #3 \| state \(3 parts\)$/);
+    assert.match(out[1], /IN +STATE +\(1, 250, "x"\)$/);
+    assert.match(out[2], /OUT +PKT +17 chars \| ack none \| #0 CHAT, #1 CHAT$/);
+    assert.match(out[3], /OUT +REL +#0 CHAT\("hi"\)$/);
     const shown = c.run('netlog show --pkt last:5');
     assert.equal(shown.filter((l) => / PKT /.test(l)).length, 2, shown.join('\n'));
     assert.match(c.run('netlog')[0], /Everything \(every packet and state update\): on \(net_log_all\)\. State updates: written\.$/);
@@ -2599,4 +2599,16 @@ test('net_log_all (off by default) adds a PKT line per packet and every state up
     net.connections = [];
     rec.netTick(t + 50);
   }
+});
+
+test('the network log decodes a RESPONSE\'s callback ID even when it looks like a letter, and shows JSON as it is', async () => {
+  const rec = await consoleModule('net/recorder.js');
+  const names = (n) => ({ 0: 'RELIABLE_RESPONSE', 4: 'RELIABLE_GET_MATCH_LIST' })[n];
+  assert.equal(encNum(100), 'h', 'the callback counter starts at 100: one letter');
+  assert.equal(rec.describeMessage(netMsg(0, encNum(100), 'fail', 'Server: Unknown error [2]'), NET_DIGITS, names).text,
+    'RESPONSE(100, "fail", "Server: Unknown error [2]")');
+  assert.equal(rec.describeMessage(netMsg(0, encNum(101), 'ok', '[{"uid":1,"map_id":"a-b"}]'), NET_DIGITS, names).text,
+    'RESPONSE(101, "ok", [{"uid":1,"map_id":"a-b"}])');
+  assert.equal(rec.describeMessage(netMsg(4, 'h'), NET_DIGITS, names).text, 'GET_MATCH_LIST("h")', 'elsewhere a letter stays text');
+  assert.equal(rec.describeMessage(netMsg(77), NET_DIGITS, names).text, 'TYPE_77()');
 });

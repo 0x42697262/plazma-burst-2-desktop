@@ -59,18 +59,19 @@ export const clock = (t) => {
 };
 // Packet sizes are text lengths (the game counts them the same way).
 const kb = (n) => (n < 10240 ? `${n} chars` : `${(n / 1024).toFixed(1)}K chars`);
-
-// A packet exactly as it went over the wire, readable: the separators as \x01 and \x02,
-// other control characters (the game's number digits) as \xNN.
-export const rawText = (s) => `"${s.replace(/[\\"]/g, (ch) => `\\${ch}`)
-  .replace(/[\x00-\x1f\x7f]/g, (ch) => `\\x${ch.charCodeAt(0).toString(16).padStart(2, '0')}`)}"`;
 const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 
 // ---------------------------------------------------------------------------
-// Decoding
+// Decoding: a message is written like a call, TYPE(part, part, ...), with numbers bare,
+// text in quotes and JSON as it is.
 // ---------------------------------------------------------------------------
 const unescField = (s) => s.split(ESC_FIELD).join(FIELD);
 const unescPart = (s) => s.split(ESC_FIELD).join(FIELD).split(ESC_PART).join(PART);
+
+const TYPE_PREFIX = 'RELIABLE_'; // every reliable type name starts with it; left out
+// Parts that are always an encoded number, even when it looks like a letter: the callback
+// ID a RESPONSE answers (the game's counter starts at 100, so most IDs are one letter).
+const NUMBER_PARTS = Object.freeze({ RESPONSE: [1] });
 
 // A number in the game's digits, or null when the text is not one.
 export function decodeNumber(text, digits) {
@@ -87,16 +88,19 @@ export function decodeNumber(text, digits) {
 }
 
 const CONTROL = /[\x00-\x1f\x7f]/;
-// A part as it is written: #<n> for an encoded number (it has control characters and only
-// digits), plain text, or "quoted" when plain text would be ambiguous.
-export function showPart(p, digits) {
-  if (CONTROL.test(p)) {
+const isJson = (p) => {
+  if (!/^[[{]/.test(p)) return false;
+  try { JSON.parse(p); return true; } catch { return false; }
+};
+// A part as it is shown: a bare number for an encoded number (control characters and only
+// digits, or a part that is always a number), JSON as it is, any other text in quotes.
+export function showPart(p, digits, isNumber = false) {
+  if (isNumber || CONTROL.test(p)) {
     const n = decodeNumber(p, digits);
-    if (n !== null) return `#${n}`;
+    if (n !== null) return String(n);
   }
-  const cut = p.length > PART_CHARS_MAX ? `${p.slice(0, PART_CHARS_MAX)}... (${p.length} chars)` : p;
-  if (!cut || CONTROL.test(cut) || cut.includes(' | ') || /^\s|\s$/.test(cut) || /^(#-?\d|")/.test(cut)) return JSON.stringify(cut);
-  return cut;
+  if (p.length > PART_CHARS_MAX) return `${JSON.stringify(p.slice(0, PART_CHARS_MAX))}...(${p.length} chars)`;
+  return isJson(p) ? p : JSON.stringify(p);
 }
 
 // A packet: { ack, state, rel: [{ uid, data }] }.
@@ -107,19 +111,19 @@ export function parsePacket(text) {
   return { ack: parseInt(f[0], 10), state: f[1] || '', rel };
 }
 
-// A reliable message: { name, text } where text is "<type>  part | part ...".
+// A reliable message: { name, text }: name is its type without RELIABLE_ ("CHAT"), text is
+// 'CHAT("hello", 7)'.
 export function describeMessage(data, digits, typeName) {
   const parts = data.split(PART).map(unescPart);
   const type = decodeNumber(parts[0], digits);
-  const name = (type !== null && typeName(type)) || (type !== null ? `type ${type}` : `type ${JSON.stringify(parts[0])}`);
-  const rest = parts.slice(1).map((p) => showPart(p, digits)).join(' | ');
-  return { name, text: rest ? `${name}  ${rest}` : name };
+  const full = type !== null ? typeName(type) : null;
+  const name = full ? full.replace(TYPE_PREFIX, '') : `TYPE_${type !== null ? type : '?'}`;
+  const numbers = NUMBER_PARTS[name] || [];
+  const args = parts.slice(1).map((p, i) => showPart(p, digits, numbers.includes(i + 1))).join(', ');
+  return { name, text: `${name}(${args})` };
 }
 
-const describeState = (data, digits) => {
-  const parts = data.split(PART).map(unescPart);
-  return `${plural(parts.length, 'part')}  ${parts.map((p) => showPart(p, digits)).join(' | ')}`;
-};
+const describeState = (data, digits) => `(${data.split(PART).map(unescPart).map((p) => showPart(p, digits)).join(', ')})`;
 
 // "#4", "#4-#6".
 const range = (a, b) => (a === b ? `#${a}` : `#${a}-#${b}`);
@@ -159,13 +163,15 @@ const typeNameNow = (type) => { try { return game.netTypeName(type); } catch { r
 const allOn = () => settings.effective(KEY.NET_LOG_ALL) === true;
 const stateOn = () => allOn() || settings.effective(KEY.NET_LOG_STATE) === true;
 
-// net_log_all: one line per packet, before what it carries, with its raw text.
+// net_log_all: one line per packet, before what it carries (the REL and STATE lines
+// after it show the contents).
 function packetLine(rec, dir, text, p, t) {
-  const uids = p.rel.map((r) => r.uid).filter((u) => !Number.isNaN(u));
-  const state = p.state ? `state ${plural(p.state.split(PART).length, 'part')} (${p.state.length} chars)` : 'no state';
-  const rel = uids.length ? `reliable ${uids.length === 1 ? `#${uids[0]}` : `${uids.length}: ${uids.map((u) => `#${u}`).join(' ')}`}` : 'no reliable';
+  const digits = digitsNow();
   const ack = Number.isNaN(p.ack) || p.ack < 0 ? 'ack none' : `ack #${p.ack}`;
-  emit(rec, dir, 'PKT', `${text.length} chars | ${ack} | ${state} | ${rel} | raw ${rawText(text)}`, t);
+  const what = [];
+  if (p.state) what.push(`state (${plural(p.state.split(PART).length, 'part')})`);
+  for (const { uid, data } of p.rel) what.push(`#${uid} ${describeMessage(data, digits, typeNameNow).name}`);
+  emit(rec, dir, 'PKT', `${text.length} chars | ${ack} | ${what.length ? what.join(', ') : 'nothing else'}`, t);
 }
 
 function onOut(rec, text, dropped, t = Date.now()) {
@@ -344,7 +350,11 @@ function detach(rec, why) {
   if (why) emit(rec, '---', 'CONN', why);
 }
 
-const lossText = (n) => `${plural(n.resends, 'resend')}, ${n.dropped} dropped, ${plural(n.gaps, 'gap')}, ${n.late} late, ${plural(n.dups, 'duplicate')}`;
+const lossText = (n) => {
+  const parts = [[n.resends, 'resend'], [n.dropped, 'dropped'], [n.gaps, 'gap'], [n.late, 'late'], [n.dups, 'duplicate']]
+    .filter(([v]) => v).map(([v, w]) => (w === 'dropped' || w === 'late' ? `${v} ${w}` : plural(v, w)));
+  return parts.length ? parts.join(', ') : 'none';
+};
 export const pingText = (c) => (typeof c.ping !== 'number' ? '?' : c.ping >= PING_NONE ? 'none yet' : `${c.ping} ms`);
 
 function statLines(t) {
