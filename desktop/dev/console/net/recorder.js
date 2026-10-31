@@ -73,9 +73,20 @@ const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 // text in quotes and JSON as it is.
 // ---------------------------------------------------------------------------
 const TYPE_PREFIX = 'RELIABLE_'; // every reliable type name starts with it; left out
-// Parts that are always an encoded number, even when it looks like a letter: the callback
-// ID a RESPONSE answers (the game's counter starts at 100, so most IDs are one letter).
-const NUMBER_PARTS = Object.freeze({ RESPONSE: [1] });
+// Parts that are always an encoded number, even when it looks like a letter (values 29 to
+// 121 are one ordinary character): (index, part count) => true. The callback ID a RESPONSE
+// answers (the counter starts at 100), and every part of the messages that carry HP or the
+// respawn count (ANTICHEAT.md §14.10). HIT_PLAYER from the server has one more part at the
+// end, its kill flag ("1" or ""), which stays text.
+const ALL = () => true;
+const HIT_PLAYER_SENT = 15; // parts as the shooter sends them (type + 14 numbers)
+const NUMBER_PARTS = Object.freeze({
+  RESPONSE: (i) => i === 1,
+  RESPAWN: ALL, // (x, y, hp); from the server (slot, x, y, hp, respawn count)
+  RESSURECT: ALL,
+  HEAL_PLAYER: ALL, // (power x 100, healer, target, target's respawn count); from the server the sender's slot first
+  HIT_PLAYER: (i, n) => n <= HIT_PLAYER_SENT || i < n - 1,
+});
 
 // A packet: { ack, state, stateSize, rel: [{ uid, data, size }] }. Sizes are as sent, so
 // the packet's length is their sum plus the framing (ack, sequence numbers, separators).
@@ -94,8 +105,8 @@ export function describeMessage(data, digits, typeName) {
   const type = decodeNumber(parts[0], digits);
   const full = type !== null ? typeName(type) : null;
   const name = full ? full.replace(TYPE_PREFIX, '') : `TYPE_${type !== null ? type : '?'}`;
-  const numbers = NUMBER_PARTS[name] || [];
-  const args = parts.slice(1).map((p, i) => showPart(p, digits, numbers.includes(i + 1))).join(', ');
+  const isNumber = NUMBER_PARTS[name] || (() => false);
+  const args = parts.slice(1).map((p, i) => showPart(p, digits, isNumber(i + 1, parts.length))).join(', ');
   return { name, parts, text: `${name}(${args})` };
 }
 

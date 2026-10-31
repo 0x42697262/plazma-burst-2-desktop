@@ -2834,3 +2834,15 @@ test('STATE lines on the main server connection are labelled: your state out, th
   assert.match(out[0], /^c\d+ server +OUT +STATE +hp 150 \| respawns 1 \| aim \+212,-40 \|/);
   assert.match(out[1], /^c\d+ server +IN +STATE +#0 hp 150 ping 45 ms$/);
 });
+
+test('messages that carry HP or the respawn count are decoded as numbers even when a value looks like a letter', async () => {
+  const rec = await consoleModule('net/recorder.js');
+  const names = (n) => ({ 7: 'RELIABLE_RESPAWN', 8: 'RELIABLE_HIT_PLAYER' })[n];
+  // HP 100 and a respawn count of 40 travel as single letters.
+  assert.equal(rec.describeMessage(netMsg(7, encNum(1264), encSigned(-520), encNum(100)), NET_DIGITS, names).text, 'RESPAWN(1264, -520, 100)');
+  assert.equal(rec.describeMessage(netMsg(7, encNum(0), encNum(1264), encSigned(-520), encNum(100), encNum(40)), NET_DIGITS, names).text, 'RESPAWN(0, 1264, -520, 100, 40)');
+  // HIT_PLAYER: 14 numbers sent; from the server the shooter's slot first and the kill flag last.
+  const sent = [3, 2, 50, 100, 1, 600, 300, 10, 0, 4, 1, 7, 2500, 40].map(encNum);
+  assert.equal(rec.describeMessage(netMsg(8, ...sent), NET_DIGITS, names).text, 'HIT_PLAYER(3, 2, 50, 100, 1, 600, 300, 10, 0, 4, 1, 7, 2500, 40)');
+  assert.equal(rec.describeMessage(netMsg(8, encNum(1), ...sent, '1'), NET_DIGITS, names).text, 'HIT_PLAYER(1, 3, 2, 50, 100, 1, 600, 300, 10, 0, 4, 1, 7, 2500, 40, "1")');
+});
