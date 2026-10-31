@@ -231,6 +231,10 @@ const RULES = [
     re: String.raw`function ⟨ID⟩\(\)\s*\{\s*⟨_⟩\(\);\s*⟨_⟩\.⟨_⟩=true;\s*⟨_⟩\.length=0;\s*⟨_⟩=\[-1,-1\];[\s\S]{0,6000}?root\.⟨mapText⟩\.slice\(0,3\)=="<q\."` },
   { file: 'frame2', keys: ['charOnDeath'], what: ['character property: trigger run when it dies (-1 = none)'],
     re: String.raw`if\(b\["#ondeath"\]\.charAt\(0\)=="#"\)\s*mc\.⟨ID⟩=b\["#ondeath"\];` },
+  // The camera zoom the game sets (1 = 100%): the map's "gamescale" engine mark, the
+  // "set zoom" trigger actions and the chat's "zoom 50" write it, the camera follows it.
+  { file: 'frame2', keys: ['zoom'], what: ['camera zoom (1 = 100%)'],
+    re: String.raw`if\(b\["#mark"\]==="gamescale"\)\s*\{\s*⟨ID⟩=parseFloat\(b\["#forteam"\]\)\/100;` },
   { file: 'frame2', keys: ['timerTarget'], what: ['timer property: trigger it calls'],
     re: String.raw`if\(b\["#target"\]\.charAt\(0\)==="#"\)\s*⟨timers⟩\[⟨timerCount⟩\]\.⟨ID⟩=b\["#target"\];` },
   // The map's "var_sync" engine mark: set from an <inf mark="var_sync"> element, and the

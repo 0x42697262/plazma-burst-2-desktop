@@ -42,7 +42,7 @@ const GAME_COMMANDS = Object.freeze([
     ['extra fast | uber fast | over fast', 'x3 | x4 | x5'],
   ]],
   ['View', [
-    ['zoom 25 | zoom 50 | zoom 100 | zoom 200', 'Camera zoom (only these four values)'],
+    ['zoom 25 | zoom 50 | zoom 100 | zoom 200', 'Camera zoom (only these four values; the console\'s "zoom" takes any)'],
     ['render 0  /  render 1', 'Hide / show the game world'],
     ['debug  /  debug 1  /  debug 0', 'Debug display on / on / off'],
   ]],

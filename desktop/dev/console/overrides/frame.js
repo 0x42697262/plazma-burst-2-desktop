@@ -173,7 +173,11 @@ function applyBullets() {
   }
 }
 
+const PERCENT = 100;
+
 function applyWorld() {
+  // A locked zoom: put back whatever else set it this frame.
+  if (on(KEY.ZOOM_LOCK) && game.zoom() !== val(KEY.ZOOM_LOCK) / PERCENT) game.setZoom(val(KEY.ZOOM_LOCK) / PERCENT);
   if (on(KEY.WORLD_GRAVITY)) {
     if (origGravity === null) origGravity = game.getGravity();
     if (game.getGravity() !== val(KEY.WORLD_GRAVITY)) game.setGravity(val(KEY.WORLD_GRAVITY));

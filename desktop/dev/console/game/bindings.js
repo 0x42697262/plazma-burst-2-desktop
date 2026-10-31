@@ -114,6 +114,8 @@ export const game = {
   },
 
   // ----- World -----
+  zoom: () => read('zoom'), // camera zoom, 1 = 100%; the camera follows it each frame
+  setZoom: (v) => write('zoom', v),
   getGravity: () => gravity,
   setGravity: (v) => { gravity = v; },
 
