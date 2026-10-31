@@ -9,8 +9,10 @@
 //   ack | latest unreliable state | uid | reliable message | uid | reliable message ...
 // - ack: the highest reliable sequence number (uid) received in order.
 // - state: one unreliable message, the newest; an unsent older one is replaced.
-// - reliable messages: numbered 0, 1, 2 ... per connection and sent again until the other
-//   side acknowledges them (once 2 s pass with nothing sent, 6 s after a big one). Parts are split by
+// - reliable messages: numbered 0, 1, 2 ... per connection. Every packet repeats every
+//   message not acknowledged yet: each packet received resets what was sent to its ack, so
+//   a message goes out again with each packet (every 16 ms) until its ack arrives, about one
+//   round trip later. That repeating is normal, not loss. Parts are split by
 //   \x02 (escaped "$.2"); part 0 is its type, an encoded number (net type names map it to
 //   "RELIABLE_...").
 // - numbers inside messages are written in base N with the game's digits: the characters
@@ -18,13 +20,13 @@
 // Packets go over a socket.io socket, sent "volatile" (dropped when the socket is busy),
 // or a peer-to-peer data channel (unordered, never retransmitted).
 //
-// What counts as packet loss here:
-//   resend     a reliable message sent again: not acknowledged in time, so a packet (or
-//              its acknowledgement) was lost or late
+// What counts as packet loss here (repeats are only counted, in STAT):
+//   slow ack   a message acknowledged more than SLOW_ACK_MS after the ping: the packets
+//              carrying it (or the acks) were lost or held up
+//   no ack     a message still not acknowledged after STALL_MS: nothing gets through
 //   dropped    socket.io dropped a packet before sending it (the socket was busy)
 //   gap        a reliable message arrived before an earlier one: lost or out of order
 //   late       a message from a gap arrived (with how long it took)
-//   duplicate  a reliable message arrived twice: the other side resent it
 // Unreliable state updates have no number, so their loss cannot be seen one by one; the
 // STAT line counts them per second.
 //
@@ -51,6 +53,13 @@ const PENDING_MAX = 20000; // lines waiting for the wrapper
 const PART_CHARS_MAX = 2000; // a longer part (a map chunk, a match list) is cut
 const CONN_WIDTH = 13;
 const PING_NONE = 9999; // the game's ping with no samples
+const PING_UNKNOWN_MS = 1000; // assumed while the game has no ping yet
+const SLOW_ACK_MS = 500; // an ack this much later than the ping is a loss
+const STALL_MS = 2000; // no ack for this long: said once per message
+
+let now = () => Date.now();
+// Tests: a clock they move themselves.
+export const setClock = (fn) => { now = fn || (() => Date.now()); };
 
 const two = (n, w = 2) => String(n).padStart(w, '0');
 export const clock = (t) => {
@@ -147,9 +156,12 @@ let run = null;
 let writeError = null;
 let pageLines = 0;
 
-const newCounts = () => ({ pkOut: 0, bytesOut: 0, pkIn: 0, bytesIn: 0, relOut: 0, relIn: 0, stateOut: 0, stateIn: 0, resends: 0, dropped: 0, gaps: 0, late: 0, dups: 0 });
+const newCounts = () => ({
+  pkOut: 0, bytesOut: 0, pkIn: 0, bytesIn: 0, relOut: 0, relIn: 0, stateOut: 0, stateIn: 0,
+  repeatsOut: 0, repeatsIn: 0, acked: 0, ackMs: 0, slow: 0, stalled: 0, dropped: 0, gaps: 0, late: 0,
+});
 
-function emit(rec, dir, kind, text, t = Date.now()) {
+function emit(rec, dir, kind, text, t = now()) {
   const conn = rec ? `c${rec.id} ${rec.kind}` : '--';
   const line = `${clock(t)}  ${conn.padEnd(CONN_WIDTH)}  ${dir.padEnd(3)}  ${kind.padEnd(5)}  ${text}`;
   lines.push(line);
@@ -190,6 +202,30 @@ function answerOf(list, m, t) {
   return '';
 }
 
+const pingMs = (c) => (typeof c.ping === 'number' && c.ping < PING_NONE ? c.ping : PING_UNKNOWN_MS);
+
+// One of our messages was acknowledged: how long it took, and a LOSS line when that was
+// far over the ping.
+function acked(rec, uid, sent, t) {
+  const took = t - sent.t;
+  count(rec, 'acked');
+  count(rec, 'ackMs', took);
+  const ping = pingMs(rec.conn);
+  if (took <= ping + SLOW_ACK_MS) return;
+  count(rec, 'slow');
+  emit(rec, 'OUT', 'LOSS', `slow ack: #${uid} ${sent.name} acknowledged after ${took} ms, ping ${ping} ms (sent ${plural(sent.tries, 'time')}): packets or acks were lost on the way`, t);
+}
+
+// Messages with no ack for STALL_MS: said once each.
+function stallCheck(rec, t) {
+  for (const [uid, sent] of rec.unacked) {
+    if (sent.stalled || t - sent.t < STALL_MS) continue;
+    sent.stalled = true;
+    count(rec, 'stalled');
+    emit(rec, 'OUT', 'LOSS', `no ack: #${uid} ${sent.name} not acknowledged after ${t - sent.t} ms (sent ${plural(sent.tries, 'time')}): nothing is getting through`, t);
+  }
+}
+
 // net_log_all: one line per packet, before what it carries (the REL and STATE lines
 // after it show the contents).
 function packetLine(rec, dir, text, p, t) {
@@ -203,7 +239,7 @@ function packetLine(rec, dir, text, p, t) {
   emit(rec, dir, 'PKT', `${text.length} chars | ${ack} | ${what.length ? `${what.join(', ')} | framing ${text.length - used} chars` : 'nothing else'}`, t);
 }
 
-function onOut(rec, text, dropped, t = Date.now()) {
+function onOut(rec, text, dropped, t = now()) {
   count(rec, 'pkOut');
   count(rec, 'bytesOut', text.length);
   const p = parsePacket(text);
@@ -220,15 +256,14 @@ function onOut(rec, text, dropped, t = Date.now()) {
     if (uid > rec.maxOut) {
       rec.maxOut = uid;
       const m = describeMessage(data, digits, typeNameNow);
-      rec.unacked.set(uid, { t, tries: 1, name: m.name });
+      rec.unacked.set(uid, { t, tries: 1, name: m.name, stalled: false });
       count(rec, 'relOut');
       emit(rec, 'OUT', 'REL', `#${uid} ${m.text}${answerOf(rec.asked.IN, m, t)}`, t);
       remember(rec.asked.OUT, uid, m, t);
     } else {
-      count(rec, 'resends');
-      const name = sent ? sent.name : describeMessage(data, digits, typeNameNow).name;
+      // Repeated until acknowledged: normal (see the top of this file).
+      count(rec, 'repeatsOut');
       if (sent) sent.tries++;
-      emit(rec, 'OUT', 'LOSS', `resend #${uid} ${name}${sent ? ` (try ${sent.tries}, first sent ${t - sent.t} ms ago, not acknowledged yet)` : ' (not acknowledged yet)'}`, t);
     }
   }
   if (dropped) {
@@ -237,14 +272,20 @@ function onOut(rec, text, dropped, t = Date.now()) {
   }
 }
 
-function onIn(rec, text, t = Date.now()) {
+function onIn(rec, text, t = now()) {
   count(rec, 'pkIn');
   count(rec, 'bytesIn', text.length);
   const p = parsePacket(text);
   const digits = digitsNow();
   if (allOn()) packetLine(rec, 'IN', text, p, t);
   // Their ack: our messages up to it arrived.
-  if (!Number.isNaN(p.ack)) for (const uid of rec.unacked.keys()) if (uid <= p.ack) rec.unacked.delete(uid);
+  if (!Number.isNaN(p.ack)) {
+    for (const [uid, sent] of rec.unacked) {
+      if (uid > p.ack) continue;
+      rec.unacked.delete(uid);
+      acked(rec, uid, sent, t);
+    }
+  }
   if (p.state) {
     count(rec, 'stateIn');
     if (stateOn()) emit(rec, 'IN', 'STATE', describeState(p.state, digits), t);
@@ -255,8 +296,7 @@ function onIn(rec, text, t = Date.now()) {
   for (const { uid, data } of p.rel) {
     if (Number.isNaN(uid)) continue;
     if (uid <= rec.contig || rec.seen.has(uid)) {
-      count(rec, 'dups');
-      emit(rec, 'IN', 'LOSS', `duplicate #${uid} ${describeMessage(data, digits, typeNameNow).name} (arrived before: the other side resent it, our acknowledgement was lost or late)`, t);
+      count(rec, 'repeatsIn'); // the other side repeats it until our ack arrives: normal
       continue;
     }
     count(rec, 'relIn');
@@ -368,7 +408,7 @@ function attach(c) {
     id: nextId++, conn: c, kind: kindOf(c), socket: null, peer: null, connected,
     maxOut: -1, ackOut: null, unacked: new Map(), asked: { OUT: [], IN: [] },
     contig: connected ? null : -1, seen: new Set(), missing: new Map(),
-    sec: newCounts(), total: newCounts(), opened: Date.now(),
+    sec: newCounts(), total: newCounts(), opened: now(),
   };
   recs.set(c, rec);
   wrapAll(rec);
@@ -383,9 +423,27 @@ function detach(rec, why) {
 }
 
 const lossText = (n) => {
-  const parts = [[n.resends, 'resend'], [n.dropped, 'dropped'], [n.gaps, 'gap'], [n.late, 'late'], [n.dups, 'duplicate']]
-    .filter(([v]) => v).map(([v, w]) => (w === 'dropped' || w === 'late' ? `${v} ${w}` : plural(v, w)));
+  const parts = [[n.slow, 'slow ack', 's'], [n.stalled, 'no ack', ''], [n.dropped, 'dropped', ''], [n.gaps, 'gap', 's'], [n.late, 'late', '']]
+    .filter(([v]) => v).map(([v, w, s]) => `${v} ${w}${v === 1 ? '' : s}`);
   return parts.length ? parts.join(', ') : 'none';
+};
+// Messages sent again (and received again) until acknowledged: normal, how many per second.
+const repeatText = (n) => `repeated ${n.repeatsOut} out, ${n.repeatsIn} in`;
+const ackText = (n) => (n.acked ? ` | acks in ${Math.round(n.ackMs / n.acked)} ms` : '');
+
+// socket.io's reasons for a closed connection, in words.
+const CLOSE_REASONS = Object.freeze({
+  'io server disconnect': 'the server closed the connection on purpose',
+  'io client disconnect': 'this game closed the connection',
+  'ping timeout': 'the server stopped answering socket.io\'s heartbeat',
+  'transport close': 'the connection was cut (the network, or the server went away)',
+  'transport error': 'the connection failed',
+  'parse error': 'the server sent something socket.io could not read',
+});
+const reasonText = (r) => {
+  if (!r) return 'no reason given';
+  const known = Object.entries(CLOSE_REASONS).find(([k]) => String(r).startsWith(k));
+  return known ? `${r} (${known[1]})` : r;
 };
 export const pingText = (c) => (typeof c.ping !== 'number' ? '?' : c.ping >= PING_NONE ? 'none yet' : `${c.ping} ms`);
 
@@ -393,8 +451,8 @@ function statLines(t) {
   for (const rec of recs.values()) {
     const n = rec.sec;
     if (n.pkIn || n.pkOut) {
-      emit(rec, '---', 'STAT', `ping ${pingText(rec.conn)} | out ${plural(n.pkOut, 'packet')} ${kb(n.bytesOut)} (${n.relOut} reliable, ${n.stateOut} state)`
-        + ` | in ${plural(n.pkIn, 'packet')} ${kb(n.bytesIn)} (${n.relIn} reliable, ${n.stateIn} state) | loss: ${lossText(n)}`
+      emit(rec, '---', 'STAT', `ping ${pingText(rec.conn)}${ackText(n)} | out ${plural(n.pkOut, 'packet')} ${kb(n.bytesOut)} (${n.relOut} reliable, ${n.stateOut} state)`
+        + ` | in ${plural(n.pkIn, 'packet')} ${kb(n.bytesIn)} (${n.relIn} reliable, ${n.stateIn} state) | ${repeatText(n)} | loss: ${lossText(n)}`
         + `${rec.unacked.size ? ` | ${rec.unacked.size} waiting for ack` : ''}${rec.missing.size ? ` | ${rec.missing.size} missing` : ''}`, t);
     }
     rec.sec = newCounts();
@@ -419,7 +477,7 @@ function flush(beacon = false) {
   if (!pending.length || (flushing && !beacon)) return;
   const batch = pending;
   pending = [];
-  lastFlush = Date.now();
+  lastFlush = now();
   const body = JSON.stringify(batch);
   if (beacon && typeof navigator !== 'undefined' && navigator.sendBeacon) { navigator.sendBeacon(ROUTE.netLog, body); return; }
   flushing = true;
@@ -451,7 +509,7 @@ function hookPageHide() {
 
 // Every NET_TICK_MS (index.js): follows net_log, finds new and closed connections, writes
 // the STAT lines and sends the lines to the wrapper.
-export function netTick(t = Date.now()) {
+export function netTick(t = now()) {
   const want = settings.effective(KEY.NET_LOG) === true;
   if (want !== on || !started) setOn(want);
   if (on) {
@@ -462,17 +520,18 @@ export function netTick(t = Date.now()) {
       const c = rec.conn;
       if (!conns.includes(c)) {
         const n = rec.total;
-        detach(rec, `closed: ${game.connReason(c) || 'no reason given'} | after ${((t - rec.opened) / 1000).toFixed(1)} s: `
-          + `out ${n.pkOut} packets ${kb(n.bytesOut)}, in ${n.pkIn} packets ${kb(n.bytesIn)} | loss: ${lossText(n)}`);
+        detach(rec, `closed: ${reasonText(game.connReason(c))} | after ${((t - rec.opened) / 1000).toFixed(1)} s: `
+          + `out ${n.pkOut} packets ${kb(n.bytesOut)}, in ${n.pkIn} packets ${kb(n.bytesIn)}${ackText(n)} | loss: ${lossText(n)}`);
         continue;
       }
       if (rec.kind === 'socket') rec.kind = kindOf(c); // set right after it is made
       wrapAll(rec);
-      const now = isConnected(c);
-      if (now !== rec.connected) {
-        rec.connected = now;
-        emit(rec, '---', 'CONN', now ? `connected (${transportOf(c)})` : 'connection interrupted');
+      const up = isConnected(c);
+      if (up !== rec.connected) {
+        rec.connected = up;
+        emit(rec, '---', 'CONN', up ? `connected (${transportOf(c)})` : 'connection interrupted');
       }
+      stallCheck(rec, t);
     }
     if (t - lastStat >= STAT_MS) { lastStat = t; statLines(t); }
   }

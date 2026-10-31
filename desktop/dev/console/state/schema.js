@@ -105,7 +105,7 @@ export const SCHEMA = Object.freeze({
     desc: 'Record the game\'s network messages and packet losses to netlogs/, one readable file per run ' +
       '("netlog" shows it)',
     about: ['Every message the game sends and receives on its connections, packet losses',
-      '(resends, gaps, late and duplicate messages, dropped packets) and once a second',
+      '(slow and missing acks, dropped packets, gaps, late messages) and once a second',
       'the ping and traffic of each connection, as plain text in netlogs/: one file per',
       'run and game window. "netlog" shows it here, "netlog runs" lists other instances.'],
   },

@@ -2393,7 +2393,7 @@ function fakeConnection(N) {
   return c;
 }
 
-test('the network recorder logs messages readably and every kind of packet loss', async () => {
+test('the network recorder logs messages readably and every kind of packet loss, not the normal repeats', async () => {
   const { G, N } = c;
   const rec = await consoleModule('net/recorder.js');
   const net = G[N.net];
@@ -2401,32 +2401,43 @@ test('the network recorder logs messages readably and every kind of packet loss'
   net[N.netTypeNames] = { 0: 'RELIABLE_RESPONSE', 5: 'RELIABLE_CHAT' };
   const conn = fakeConnection(N);
   const emit = conn.socket.emit;
+  let t = Date.now();
+  rec.setClock(() => t);
   net.connections = [];
   rec.netTick(); // the page line, first time
   net.connections = [conn];
   net[N.lobbyConn] = conn;
   const since = rec.netlog.lines().length;
   const fresh = () => rec.netlog.lines().slice(since).map((l) => l.slice(14)); // without the time
-  let t = Date.now();
   try {
-    rec.netTick(t);
+    rec.netTick();
     conn.socket.connected = true;
+    conn.ping = 100;
     rec.netTick(t += 50);
-    // Sent: a chat message with text that needs quotes and an encoded number; then the
-    // same message again (not acknowledged); then a packet the busy socket drops.
-    conn.socket.volatile.emit('m', netPacket(-1, '', [[0, netMsg(5, 'hello | world', encNum(7), 'plain text')]]));
-    conn.socket.volatile.emit('m', netPacket(-1, '', [[0, netMsg(5, 'hello | world', encNum(7), 'plain text')]]));
+    // Sent: a chat message with text and an encoded number, then the same message in the
+    // next packet (the game repeats it until its ack: no line), then a packet the busy
+    // socket drops.
+    const chat = netPacket(-1, '', [[0, netMsg(5, 'hello | world', encNum(7), 'plain text')]]);
+    conn.socket.volatile.emit('m', chat);
+    t += 16;
+    conn.socket.volatile.emit('m', chat);
     conn.socket.io.engine.transport.writable = false;
     conn.socket.volatile.emit('m', netPacket(-1, netMsg(1, 'x'), []));
     conn.socket.io.engine.transport.writable = true;
-    // Received: #0, then #2 before #1 (a gap), then #1 (late), then #1 again (duplicate).
+    // #0 is acknowledged 900 ms after it was sent, with a ping of 100 ms: a slow ack.
+    t += 884;
+    // Received: #0, then #2 before #1 (a gap), then #1 (late), then #1 again (a repeat: no line).
     conn[N.connRecv](netPacket(0, '', [[0, netMsg(0, encNum(150))], [2, netMsg(5, 'b')]]));
     conn[N.connRecv](netPacket(0, '', [[1, netMsg(5, 'a')]]));
     conn[N.connRecv](netPacket(0, '', [[1, netMsg(5, 'a')]]));
     assert.equal(conn.got.length, 3, 'the game still gets every packet');
     assert.equal(conn.socket.sent.length, 2, 'and the socket still sends');
+    // #1 is sent and never acknowledged: "no ack" once, after 2 s.
+    conn.socket.volatile.emit('m', netPacket(2, '', [[1, netMsg(5, 'anyone?')]]));
     rec.netTick(t += 1000);
-    conn[N.connReason] = 'transport close';
+    rec.netTick(t += 1100);
+    rec.netTick(t += 500);
+    conn[N.connReason] = 'io server disconnect';
     net.connections = [];
     rec.netTick(t += 50);
     const out = fresh();
@@ -2434,21 +2445,23 @@ test('the network recorder logs messages readably and every kind of packet loss'
       /^c\d+ server +--- +CONN +new connection \(socket\.io over websocket\)$/,
       /^c\d+ server +--- +CONN +connected/,
       /^c\d+ server +OUT +REL +#0 CHAT\("hello \| world", 7, "plain text"\)$/,
-      /^c\d+ server +OUT +LOSS +resend #0 CHAT \(try 2, first sent \d+ ms ago, not acknowledged yet\)$/,
       /^c\d+ server +OUT +LOSS +dropped: the socket was busy.*0 reliable messages.*its state update is lost\)$/,
+      /^c\d+ server +OUT +LOSS +slow ack: #0 CHAT acknowledged after 900 ms, ping 100 ms \(sent 2 times\): packets or acks were lost on the way$/,
       /^c\d+ server +IN +REL +#0 RESPONSE\(150\)$/,
       /^c\d+ server +IN +REL +#2 CHAT\("b"\)$/,
       /^c\d+ server +IN +LOSS +gap: #2 arrived before #1 \(1 missing: lost or out of order\)$/,
       /^c\d+ server +IN +REL +#1 CHAT\("a"\)$/,
       /^c\d+ server +IN +LOSS +late #1 arrived \d+ ms after the gap was seen$/,
-      /^c\d+ server +IN +LOSS +duplicate #1 CHAT /,
-      /^c\d+ server +--- +STAT +ping 1000 ms \| out 3 packets .* \| in 3 packets .* \| loss: 1 resend, 1 dropped, 1 gap, 1 late, 1 duplicate$/,
-      /^c\d+ server +--- +CONN +closed: transport close \| after .* loss: 1 resend, 1 dropped, 1 gap, 1 late, 1 duplicate$/,
+      /^c\d+ server +OUT +REL +#1 CHAT\("anyone\?"\)$/,
+      /^c\d+ server +--- +STAT +ping 100 ms \| acks in 900 ms \| out 4 packets .* \| in 3 packets .* \| repeated 1 out, 1 in \| loss: 1 slow ack, 1 dropped, 1 gap, 1 late \| 1 waiting for ack$/,
+      /^c\d+ server +OUT +LOSS +no ack: #1 CHAT not acknowledged after 2100 ms \(sent 1 time\): nothing is getting through$/,
+      /^c\d+ server +--- +CONN +closed: io server disconnect \(the server closed the connection on purpose\) \| after .* \| acks in 900 ms \| loss: 1 slow ack, 1 no ack, 1 dropped, 1 gap, 1 late$/,
     ];
     assert.equal(out.length, want.length, out.join('\n'));
     want.forEach((re, i) => assert.match(out[i], re));
     assert.ok(!Object.hasOwn(conn, N.connRecv) && conn.socket.emit === emit, 'a closed connection is unwrapped');
   } finally {
+    rec.setClock(null);
     net.connections = [];
   }
 });

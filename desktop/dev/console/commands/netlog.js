@@ -153,14 +153,14 @@ function status(args) {
     const n = c.total;
     print(`  c${c.id} ${c.kind.padEnd(10)} ${c.connected ? 'connected' : 'not connected'}, ping ${c.ping}, out ${n.pkOut} packets, in ${n.pkIn} packets | loss: ${netlog.lossText(n)}`
       + `${c.unacked ? ` | ${c.unacked} waiting for ack` : ''}${c.missing ? ` | ${c.missing} missing` : ''}`,
-    n.resends || n.dropped || n.gaps || n.dups ? COLOR.warn : COLOR.plain);
+    n.slow || n.stalled || n.dropped || n.gaps ? COLOR.warn : COLOR.plain);
   }
   print(`"netlog show" = the last lines ("netlog show --loss", "netlog show type:chat")${REMOTE ? '' : ', "netlog runs" = other instances'}, "netlog ${on ? 'off' : 'on'}".`, COLOR.hint);
 }
 
 const SHOW_ARGS = [
   ['--in | --out', 'received or sent only'],
-  ['--loss', 'packet loss only: resend, dropped, gap, late, duplicate'],
+  ['--loss', 'packet loss only: slow ack, no ack, dropped, gap, late'],
   ['--rel --stat --conn --state --pkt', 'only these kinds (they combine)'],
   ['type:<name>', 'messages of a type, e.g. type:chat (part of the name is enough)'],
   ['conn:<c1 | server | p2p>', 'one connection'],
@@ -185,7 +185,7 @@ export const netlogCommand = {
     ],
     examples: [
       ['netlog', 'on or off, the file, each connection\'s ping and losses'],
-      ['netlog show --loss', 'every resend, dropped packet, gap, late and duplicate message'],
+      ['netlog show --loss', 'every slow or missing ack, dropped packet, gap and late message'],
       ['netlog show type:chat hello', 'chat messages with "hello"'],
       ['netlog show --in conn:server', 'what the main server sent'],
       ...(REMOTE ? [] : [['netlog runs', 'other instances and earlier runs'], ['netlog show run:2 --loss', 'the losses of another one']]),
