@@ -130,6 +130,23 @@ export function setEditor(on) {
   return true;
 }
 
+// Whether the running level has the document's edits: its map, not started over since
+// they went in.
+export const docInLevel = () => !!state.doc && state.levelRunning && state.doc.source === game.mapText()
+  && state.docLevel === state.levelStarts;
+
+// The document read again from the map the game plays (its edits, history and
+// pending ones gone); with the editor off, or no map to read, dropped until the next
+// "editor on".
+export function resetDocument() {
+  const doc = state.on ? MapDoc.of(game.mapText()) : null;
+  if (doc) { takeDoc(doc); return; }
+  state.doc = null;
+  state.selectedId = null;
+  state.pending.clear();
+  changed('doc');
+}
+
 // Drops the document (the next "editor on" reads the map again). For tests.
 export function forgetDocument() { if (!state.on) { state.doc = null; state.selectedId = null; } }
 

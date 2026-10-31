@@ -12,7 +12,7 @@ import {
   selectableLayers, setSelectable, LAYER_GROUPS,
 } from '../editor/session.js';
 import {
-  setAttr, saveMap, addElement, deleteElement, duplicateElement, undo, redo, notLiveReason,
+  setAttr, saveMap, addElement, deleteElement, duplicateElement, undo, redo, notLiveReason, resetEdits,
 } from '../editor/edit.js';
 import { nameOf, kindOf, KINDS, KIND_TAGS, SHAPE } from '../editor/kinds.js';
 import { player } from '../game/level.js';
@@ -94,6 +94,14 @@ function add(args) {
   const where = isPending(e) ? `not in the running level: ${why || 'it was not made'} (kept for "editor save")`
     : why ? `in the running level, but ${why}` : 'in the running level';
   print(`Added ${nameOf(editorDoc(), e)} at ${x}, ${y}${kindOf(tag).shape === SHAPE.RECT ? ` (${e.attrs.w} x ${e.attrs.h})` : ''}; ${where}`, COLOR.ok);
+}
+
+function reset(args) {
+  if (args.length) throw new Error('usage: editor reset');
+  if (!editorDoc()) { print('Nothing to reset: no edits are kept', COLOR.ok); return; }
+  const { undone, notBack } = resetEdits();
+  print(`Reset: ${undone ? `${undone} edit${undone === 1 ? '' : 's'} undone in the running level, ` : ''}every edit forgotten; nothing is put in again when the level starts over`, COLOR.ok);
+  if (notBack) print(`  ${notBack} of them did not reach the running level (not live, or it could not take them back): restart the level to be sure it is the map's own`, COLOR.notice);
 }
 
 function needSelection() {
@@ -353,6 +361,23 @@ export const editorCommand = {
         see: ['editor add'],
       },
       run: tool,
+    },
+    {
+      name: 'reset',
+      usage: 'editor reset',
+      desc: 'Undo every edit and forget them: the level is the map\'s again, nothing is put in again',
+      help: {
+        about: [
+          'Undoes every edit, last first, the way "editor undo" does in the running level,',
+          'then reads the map again: the edits, the undo history and the edits waiting for',
+          'the running level are gone. Turning the editor on again, or the level starting',
+          'over, puts nothing back. Edits the running level cannot take back (a deleted',
+          'wall, an engine mark, ...) are said: restart the level for those.',
+        ],
+        notes: ['Not undoable. "editor save" first to keep the edited map.'],
+        see: ['editor undo', 'editor save'],
+      },
+      run: reset,
     },
     {
       name: 'save',

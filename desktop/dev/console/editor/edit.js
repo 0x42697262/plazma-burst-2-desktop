@@ -13,7 +13,7 @@ import { forgetGuns } from './guns.js';
 import { forgetLamps } from './lamps.js';
 import { MapDoc, newElement } from './doc.js';
 import { record, takeUndo, takeRedo, clearHistory } from './history.js';
-import { editorDoc, notify, markPending, onChange, select, selected } from './session.js';
+import { editorDoc, notify, markPending, onChange, select, selected, resetDocument, docInLevel } from './session.js';
 
 const NAME = /^[A-Za-z0-9_]+$/;
 const NUMBER_ATTRS = new Set(['x', 'y', 'w', 'h', 'tox', 'toy']);
@@ -137,14 +137,25 @@ function play(entry, backwards) {
   select(gone ? null : last.e);
 }
 
+// Every edit undone, last first, the way "editor undo" undoes each in the running level,
+// and the document read again from the map the game plays: nothing is left to put in
+// again when the level starts over. { undone, notBack }: the edits undone, and the
+// undo steps the running level did not take (edits it never had, or could not take
+// back out: the map's way on its next start).
+export function resetEdits() {
+  let undone = 0;
+  let notBack = 0;
+  // A level without them (another map, or started over since) is the map's already.
+  if (docInLevel()) while (undo()) { undone++; if (lastWhy) notBack++; }
+  lastWhy = '';
+  resetDocument();
+  return { undone, notBack };
+}
+
 // Each returns false when there is nothing to undo or redo.
 export function undo() { const entry = takeUndo(); if (entry) play(entry, true); return !!entry; }
 export function redo() { const entry = takeRedo(); if (entry) play(entry, false); return !!entry; }
 
-// The level started again from the map text: it is the map as it loaded, without the
-// edits. Every attribute of an element the game has that differs from the map is put in
-// again, the way the edit put it in the first time; what was taken out is taken out
-// again, and what was added is added again, in the order it was added.
 // e added to the running level: e.live, and what of it failed ('' when nothing).
 function addToLevel(e) {
   const { problem = '', ...live } = addLive(e);
@@ -152,6 +163,10 @@ function addToLevel(e) {
   return problem;
 }
 
+// The level started again from the map text: it is the map as it loaded, without the
+// edits. Every attribute of an element the game has that differs from the map is put in
+// again, the way the edit put it in the first time; what was taken out is taken out
+// again, and what was added is added again, in the order it was added.
 function replayEdits() {
   const doc = editorDoc();
   const original = MapDoc.of(doc.source);

@@ -2092,7 +2092,7 @@ attachments[$k].child["y"]=${doors}[i]["y"]+attachments[$k].dy;
     addChildAt(o, at) { if (o.parent) o.parent.removeChild(o); this.children.splice(at, 0, o); o.parent = this; return o; },
     removeChild(o) { this.children.splice(this.children.indexOf(o), 1); o.parent = null; },
     clearMCInterpolationData() {} });
-  const saved = { game: G.game, graphics_3d: G.graphics_3d, graphics_3d_front: G.graphics_3d_front, regions: G[N.regions] };
+  const saved = { game: G.game, graphics_3d: G.graphics_3d, graphics_3d_front: G.graphics_3d_front, regions: G[N.regions], regionCount: G[N.regionCount] };
   const world = Object.assign(layer(), { x: saved.game.x, y: saved.game.y, scaleX: saved.game.scaleX, scaleY: saved.game.scaleY, parent: saved.game.parent });
   Object.assign(G, {
     graphics_3d: layer(), graphics_3d_front: layer(), game: world, attachments: [], $tieClips: [], $tieDoors: [], $friction: [], $wallsBuilt: 0,
@@ -2172,6 +2172,7 @@ attachments[$k].child["y"]=${doors}[i]["y"]+attachments[$k].dy;
     for (const k of ['$tagBox', '$tagDoor', '$tagRegion', '$tagWater', 'attachments', '$tieClips', '$tieDoors', '$friction', '$wallsBuilt', '$regionN',
       '$doorOf', 'door', 'water', 'veh_hh', 'texture_front0', '$moveTied', '$shown', '$tex', '$tieN', '$k', '$doorN', '$waterN']) delete G[k];
     for (const k of ['doors', 'doorCount', 'waters', 'waterCount', 'waterX', 'waterY', 'waterW', 'waterH', 'waterDamage', 'regionCount', 'textureFollows']) delete G[N[k]];
+    G[N.regionCount] = saved.regionCount;
   }
 });
 
@@ -2316,5 +2317,48 @@ test('zoom: any amount once, or locked so the map cannot change it', () => {
   } finally {
     run('zoom --unlock');
     G[N.zoom] = was;
+  }
+});
+
+test('editor reset: every edit undone in the running level and forgotten, nothing put in again', async () => {
+  const session = await consoleModule('editor/session.js');
+  const { G, N } = c;
+  const quiet = (line) => c.run(line).filter((l) => !l.startsWith('Note:'));
+  const level = (on) => { G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; c.frame(); };
+  const regions = G[N.regions];
+  const count = G[N.regionCount];
+  G[N.regionCount] = regions.length;
+  try {
+    level(true);
+    c.run('editor on');
+    const doc = session.editorDoc();
+    const red = doc.byUid('#red_use');
+    const i = red.live.index;
+    const y0 = regions[i].y;
+    session.select(red);
+    quiet('editor set y 30');
+    quiet('editor set x 77');
+    assert.deepEqual([regions[i].y, regions[i].x], [30, 77]);
+    c.run('editor off');
+    assert.match(quiet('editor reset')[0], /^Reset: 2 edits undone in the running level, every edit forgotten/);
+    assert.equal(regions[i].y, y0, 'the map\'s again');
+    // On again: the map as the game has it, no history, nothing to put in.
+    c.run('editor on');
+    assert.notEqual(session.editorDoc(), doc);
+    assert.equal(session.editorDoc().byUid('#red_use').attrs.y, String(y0));
+    assert.equal(quiet('editor undo')[0], 'Nothing to undo');
+    // An edit, then the level starts over with the editor off: the level is the map's
+    // own, so a reset only forgets it.
+    session.select(session.editorDoc().byUid('#red_use'));
+    quiet('editor set y 40');
+    c.run('editor off');
+    regions[i].y = y0; // the game builds the level again from the map
+    level(false); level(true);
+    assert.deepEqual(quiet('editor reset'), ['Reset: every edit forgotten; nothing is put in again when the level starts over']);
+    c.run('editor on');
+    assert.equal(regions[i].y, y0, 'not put in again');
+  } finally {
+    session.setEditor(false); session.forgetDocument();
+    G[N.regionCount] = count;
   }
 });
