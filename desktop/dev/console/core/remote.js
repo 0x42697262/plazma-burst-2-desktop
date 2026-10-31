@@ -6,6 +6,8 @@
 //   - hides, in everything it prints, the host's file paths and file names and the
 //     game's obfuscated names (they map the game's internals).
 // The wrapper sets PB2_REMOTE (not enumerable) before any script, for remote windows only.
+import { SERVER } from './server.js';
+
 export const REMOTE = globalThis.PB2_REMOTE === true;
 
 export const HIDDEN = '‹hidden›';
@@ -40,5 +42,6 @@ export function makeRedactor(names = {}) {
 // For this page: the identity outside remote mode.
 export const redact = REMOTE ? makeRedactor(globalThis.PB2_NAMES || {}) : (text) => text;
 
-// Whether a command (or subcommand) definition exists in this mode.
-export const allowedHere = (def) => !(REMOTE && def.remote === false);
+// Whether a command (or subcommand) definition exists in this mode: remote play leaves
+// out `remote: false`, and `server: true` exists only on the dedicated host (core/server.js).
+export const allowedHere = (def) => !(REMOTE && def.remote === false) && !(def.server === true && !SERVER);

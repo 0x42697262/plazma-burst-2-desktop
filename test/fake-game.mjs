@@ -250,6 +250,7 @@ export async function bootConsole({ mapFile = path.join(REPO, 'test/fixtures/map
 
   return {
     G, N, log, store, chars, triggers,
+    intervals, // every setInterval callback, in the order they were made
     player: chars[0],
     // Runs a line and returns what it printed (without the echoed command).
     run(line) {

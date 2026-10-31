@@ -1,0 +1,28 @@
+{
+  "_comment": "Copy to desktop/server.json. Guide: desktop/server/README.md. \"match\" takes the game's own preset (create screen > Copy Preset as text).",
+  "match": {
+    "title": "Friends only",
+    "map_id": "nanotech-cht",
+    "map_rotation": "",
+    "game_type": "DM",
+    "max_players": 8,
+    "password": "change-me",
+    "gameplay_modifications": "",
+    "min_reputation": 0,
+    "exclude_inactive_players": true,
+    "ping_limit": "",
+    "ping_limit_action": "spectate",
+    "rounds_until_rotation": "15",
+    "round_duration_str": "default",
+    "respawn_model": "v2",
+    "allow_vpn_guests": 1
+  },
+  "allow": [],
+  "host_plays": false,
+  "local_map": "",
+  "region": "",
+  "udp_ports": "",
+  "ice_servers": [],
+  "fps": 60,
+  "restart_after_s": 15
+}

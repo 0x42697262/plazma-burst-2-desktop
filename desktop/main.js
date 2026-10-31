@@ -16,6 +16,7 @@ const { REMOTE_PAGE_SCRIPT, REMOTE_WEB_PREFERENCES, isGamePage, lockDownSession,
 // A tester's screenshot key writes a file here each press: one per this many ms per tester.
 const REMOTE_SCREENSHOT_MS = 2000;
 const { startHost, parseHostArgs } = require('./remote/host');
+const serverConfig = require('./server/config');
 
 // Remote play host: "npm run host" (electron . --host). No window here: every tester who
 // opens their link gets an offscreen game instance on this machine, streamed to their
@@ -25,6 +26,14 @@ const REMOTE_TESTERS_FILE = path.join(__dirname, 'remote-testers.json');
 const REMOTE_DATA_DIR = path.join(__dirname, 'remote-data'); // per tester: their console settings
 // Frames are exactly the window's size, whatever this screen's scaling.
 if (HOST_MODE) app.commandLine.appendSwitch('force-device-scale-factor', '1');
+
+// Dedicated host: "npm run server" (electron . --server). One offscreen game window hosts
+// a player-hosted match from desktop/server.json and is driven from this terminal
+// (desktop/server/README.md). Its console settings are its own file.
+const SERVER_MODE = process.argv.includes('--server') && !HOST_MODE;
+const SERVER_CONFIG_FILE = path.join(__dirname, 'server.json');
+const SERVER_KV_FILE = path.join(__dirname, 'server-overrides.json');
+let serverPage = null; // the checked config the page gets as PB2_SERVER
 
 // The terminal log: --verbose / --log-level=<error|warn|info|debug> / PB2_LOG_LEVEL.
 const logLevel = parseLogLevel();
@@ -76,6 +85,14 @@ const MAIN_SCRIPT_TAG = '<script src="scripts/main.js"></script><script>//# sour
 // before the game's scripts that call it (and before window.onload).
 const FLASH_SCRIPT_TAG = '<script src="scripts/flash.js"></script>';
 const TRACE_SCRIPT_TAG = '<script>trace = console.debug.bind(console, "[trace]");</script>';
+// The dedicated host's trace(): a line from ChatNewMsg is a chat line ("[chat]"), the
+// rest is the game's debug output as above.
+const SERVER_TRACE_SCRIPT_TAG = '<script>trace = function (...a) {'
+  + ' if (/\\bChatNewMsg\\b/.test(new Error().stack || "")) console.log("[chat] " + a[0]); else console.debug("[trace]", ...a); };</script>';
+// Not enumerable, so the game's walks over globalThis do not see it; "<" escaped so the
+// settings cannot end the script.
+const serverPageScript = (config) => '<script>Object.defineProperty(globalThis, "PB2_SERVER", { value: Object.freeze('
+  + JSON.stringify(config).replace(/</g, '\\u003c') + ') });</script>';
 const DEV_SCRIPT_TAG = `<script src="${SHARED.devDir}${ROUTE.names}"></script>`
   + `<script src="${SHARED.devDir}${ROUTE.opcodes}"></script>`
   + `<script type="module" src="${SHARED.devDir}${ROUTE.console}${DEV_CONSOLE_ENTRY}"></script>`;
@@ -120,7 +137,7 @@ const LOCAL_MAP_PREFIX = 'local-';
 // tester's game is "tester-<name>" and only ever sees its own file.
 const NETLOG_DIR = path.join(__dirname, '..', 'netlogs');
 const netLog = createNetLog({ dir: NETLOG_DIR, version: VERSION });
-const netInstance = (ctx) => (ctx.remote ? `tester-${ctx.name}` : 'local');
+const netInstance = (ctx) => (ctx.remote ? `tester-${ctx.name}` : ctx.server ? 'server' : 'local');
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), {
   status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
 });
@@ -507,7 +524,7 @@ async function serveHooks(request, url) {
 async function serveLocal(url, ctx) {
   let rel = decodeURIComponent(url.pathname.slice(PREFIX.length));
   if (rel === '' || rel.endsWith('/')) rel += 'index.html';
-  if ((DEV_ENABLED || HOOKS_ENABLED || ctx.remote) && rel === 'index.html') {
+  if ((DEV_ENABLED || HOOKS_ENABLED || ctx.remote || ctx.server) && rel === 'index.html') {
     const html = await fs.readFile(path.join(ROOT, 'index.html'), 'utf8');
     let out = html;
     if (HOOKS_ENABLED) {
@@ -529,7 +546,17 @@ async function serveLocal(url, ctx) {
         : out.replace(/<\/body>/i, DEV_SCRIPT_TAG + '</body>');
       if (out === before) log.error('Dev console: could not inject into index.html');
     }
-    if (log.on('debug')) {
+    if (ctx.server) {
+      // The dedicated host: PB2_SERVER before every other script, and chat lines (the
+      // game traces each one when asked) to the terminal.
+      const at = out.search(/<script\b/i);
+      if (at < 0 || !out.includes(FLASH_SCRIPT_TAG)) {
+        log.error('Dedicated host: could not prepare index.html (no <script> tag or no scripts/flash.js); not serving it');
+        return new Response('Not available', { status: 503 });
+      }
+      out = out.slice(0, at) + serverPageScript(serverPage) + out.slice(at);
+      out = out.replace(FLASH_SCRIPT_TAG, FLASH_SCRIPT_TAG + SERVER_TRACE_SCRIPT_TAG);
+    } else if (log.on('debug')) {
       if (out.includes(FLASH_SCRIPT_TAG)) out = out.replace(FLASH_SCRIPT_TAG, FLASH_SCRIPT_TAG + TRACE_SCRIPT_TAG);
       else log.warn('Verbose: scripts/flash.js not found in index.html; the game\'s trace() stays silent');
     }
@@ -578,7 +605,7 @@ app.whenReady().then(async () => {
   if (DEV_ENABLED) checkNamesFile();
   await applyCredentials();
 
-  protocol.handle('https', (request) => handleRequestLogged(request, LOCAL_CTX));
+  protocol.handle('https', (request) => handleRequestLogged(request, SERVER_MODE ? SERVER_CTX : LOCAL_CTX));
 
   // Electron's default menu without Window > Close, whose Ctrl+W closed the game. The
   // rest stays: Quit (Ctrl+Q), copy/paste, reload, DevTools, zoom, full screen.
@@ -591,6 +618,10 @@ app.whenReady().then(async () => {
 
   if (HOST_MODE) {
     await startRemoteHost();
+    return;
+  }
+  if (SERVER_MODE) {
+    await startDedicatedServer();
     return;
   }
 
@@ -759,6 +790,124 @@ async function startRemoteHost() {
     log.error(`Remote play: could not listen on ${options.bind}:${options.port}: ${e.message}`);
     app.quit();
   }
+}
+
+// ---------------------------------------------------------------------------
+// Dedicated host (desktop/server/)
+// ---------------------------------------------------------------------------
+// The host's window: the default session (logged in like "npm start"), its own console
+// settings file, and PB2_SERVER on its page.
+const serverKvFile = SERVER_MODE ? createKvFile(SERVER_KV_FILE, {
+  onChange: (obj) => callConsole('reload', obj),
+  onError: (message) => callConsole('fileError', message),
+}) : null;
+const SERVER_CTX = Object.freeze({
+  remote: false,
+  server: true,
+  name: '',
+  fetch: (request) => net.fetch(request, { bypassCustomProtocolHandlers: true }),
+  kvFile: serverKvFile,
+  get window() { return mainWindow; },
+});
+
+// Its page's console in the terminal: the console's own lines and chat as plain text,
+// errors as errors, the game's other output only with --verbose.
+const CONSOLE_TAG = '[pb2dev] ';
+const CHAT_TAG = '[chat] ';
+const ENTITIES = Object.freeze({ '&lt;': '<', '&gt;': '>', '&amp;': '&', '&quot;': '"', '&#39;': "'", '&nbsp;': ' ' });
+const plainChat = (html) => String(html).replace(/<[^>]*>/g, '').replace(/&(lt|gt|amp|quot|#39|nbsp);/g, (e) => ENTITIES[e]);
+function logServerPage(win) {
+  win.webContents.on('console-message', (e) => {
+    const msg = String(e.message);
+    if (msg.startsWith(CONSOLE_TAG)) { log.info(msg.slice(CONSOLE_TAG.length)); return; }
+    if (msg.startsWith(CHAT_TAG)) { log.info(`[chat] ${plainChat(msg.slice(CHAT_TAG.length))}`); return; }
+    const src = e.sourceId ? ` (${e.sourceId.split('/').pop()}:${e.lineNumber})` : '';
+    if (e.level === 'error') log.error(`[page] ${msg}${src}`);
+    else log.debug(`[page:${e.level}] ${msg}${src}`);
+  });
+  win.webContents.on('did-fail-load', (e, code, desc, url) => log.error(`[host] failed to load ${url}: ${desc} (${code})`));
+  win.on('unresponsive', () => log.warn('[host] the page stopped responding'));
+  win.on('responsive', () => log.info('[host] the page responds again'));
+}
+
+const RELOAD_AFTER_CRASH_MS = 5000;
+const QUIT_AFTER_STOP_MS = 1500; // time for "-terminate" to reach the lobby server
+
+async function startDedicatedServer() {
+  const { config, problems: argProblems } = serverConfig.parseServerArgs(process.argv);
+  for (const p of argProblems) log.warn(`Host: ${p}`);
+  const file = config ? path.resolve(config) : SERVER_CONFIG_FILE;
+  const loaded = serverConfig.loadConfig(file);
+  if (loaded.missing) {
+    log.error(`Host: no ${file}. Copy desktop/server.example.json there and set "match.map_id" (guide: desktop/server/README.md).`);
+    app.quit();
+    return;
+  }
+  for (const p of loaded.problems) log.warn(`Host: ${p}`);
+  if (loaded.errors.length) {
+    for (const p of loaded.errors) log.error(`Host: ${p}`);
+    log.error(`Host: fix ${file} and start again.`);
+    app.quit();
+    return;
+  }
+  if (!DEV_ENABLED) {
+    log.error('Host: the dedicated host runs in the dev console; start it without PB2_DEV=0.');
+    app.quit();
+    return;
+  }
+  if (!fsSync.existsSync(DEV_NAMES)) log.warn('Host: desktop/dev/names.js is missing; run "npm run find-names" first.');
+  if (loaded.server.local_map && !(await findLocalMap(loaded.server.local_map))) {
+    log.error(`Host: local_map "${loaded.server.local_map}" is not in ${MAPS_DIR}`);
+    app.quit();
+    return;
+  }
+  serverPage = { match: loaded.match, server: loaded.server };
+  log.info(`Host: settings from ${file}`);
+
+  const win = mainWindow = new BrowserWindow({
+    show: false,
+    width: 800,
+    height: 400,
+    useContentSize: true,
+    title: 'Plazma Burst 2 (dedicated host)',
+    webPreferences: { backgroundThrottling: false, offscreen: true },
+  });
+  win.webContents.setAudioMuted(true);
+  win.webContents.setFrameRate(loaded.server.fps);
+  if (loaded.server.udp_ports) {
+    win.webContents.setWebRTCUDPPortRange(loaded.server.udp_ports);
+    log.info(`Host: WebRTC uses UDP ports ${loaded.server.udp_ports.min}-${loaded.server.udp_ports.max} (forward them on your router)`);
+  }
+  logServerPage(win);
+  win.webContents.on('render-process-gone', (e, d) => {
+    log.error(`[host] the page's process is gone: ${d.reason} (exit code ${d.exitCode}); loading the game again in ${RELOAD_AFTER_CRASH_MS / 1000} s`);
+    setTimeout(() => { if (!win.isDestroyed()) win.loadURL(START_URL); }, RELOAD_AFTER_CRASH_MS);
+  });
+  try { serverKvFile.watch(); } catch (e) { log.warn(`Not watching ${SERVER_KV_FILE}: ${e.message}`); }
+
+  // The terminal: every line is a console command; "quit" ends the match and closes.
+  let quitting = false;
+  const quit = () => {
+    if (quitting) { app.exit(0); return; }
+    quitting = true;
+    log.info('Host: ending the match and closing (Ctrl+C again to close at once)');
+    win.webContents.executeJavaScript('globalThis.pb2dev && pb2dev.run("server stop")').catch(() => {});
+    setTimeout(() => app.quit(), QUIT_AFTER_STOP_MS);
+  };
+  const rl = require('readline').createInterface({ input: process.stdin, terminal: false });
+  rl.on('line', (line) => {
+    const text = line.trim();
+    if (!text) return;
+    if (/^(quit|exit)$/i.test(text)) { quit(); return; }
+    win.webContents.executeJavaScript(`globalThis.pb2dev ? (pb2dev.run(${JSON.stringify(text)}), true) : false`)
+      .then((ok) => { if (!ok) log.warn('Host: the console is not loaded yet; try again in a moment'); })
+      .catch((e) => log.error(`Host: ${e.message}`));
+  });
+  rl.on('close', () => { if (!quitting) log.info('Host: terminal input closed; the host keeps running (Ctrl+C stops it)'); });
+  process.on('SIGINT', quit);
+
+  log.info('Host: starting the game. Type "help server" once it is up, "quit" to close.');
+  await win.loadURL(START_URL);
 }
 
 // Host mode has no window of its own; the testers' games come and go.

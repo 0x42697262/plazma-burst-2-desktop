@@ -21,10 +21,12 @@ import { editorCommand } from './editor.js';
 import { jsCommand } from './js.js';
 import { hooksCommand } from './hooks.js';
 import { netlogCommand } from './netlog.js';
+import { serverCommand, serverShortcuts } from './server.js';
 
 const [list, set, get, unset, reset, builtin] = settingsCommands;
 
 register(
+  serverCommand, ...serverShortcuts, // the dedicated host only (core/server.js)
   helpCommand, list, set, get, unset, reset, profileCommand,
   ...playerCommands, gunsCommand, tpCommand, posCommand, ...gunCommands, charsCommand, traceCommand,
   ...bindCommands, keynameCommand, triggersCommand, regionsCommand, varsCommand, logicCommand, editorCommand, chainTopic, moreCommand,

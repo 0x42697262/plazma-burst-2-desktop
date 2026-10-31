@@ -32,6 +32,9 @@ const FILES = {
   flash: 'scripts/libs/flash.js',
   tools: 'scripts/libs/tools.js',
   connection: 'scripts/connection.js',
+  lobby: 'scripts/screens/MPLobby.js',
+  createMatch: 'scripts/screens/MPCreateMatch.js',
+  gameScene: 'scripts/screens/GameScene.js',
 };
 
 // Each rule: `keys` are the names captured by ⟨ID⟩ in order ('_' = ignore), `file` is a
@@ -237,6 +240,57 @@ const RULES = [
   { file: 'flash', keys: ['p2pConn'],
     what: ['net property: connection to the player-hosted (P2P) match you joined'],
     re: String.raw`⟨net⟩\.connections\.push\(c\);\s*c\.⟨_⟩\(⟨_⟩\);\s*⟨net⟩\.⟨ID⟩=c;` },
+  // ----- Dedicated host (desktop/dev/console/server/, "npm run server") -----
+  // Leaving a match: [type, -1, where the reply goes, slot -1, "", ""] on the reliable channel.
+  { file: 'flash', keys: ['netChannel', 'netReplyTo'],
+    what: ['net property: the channel reliable messages are sent on',
+      'net property: placeholder a message that wants an answer carries as its third part (the reply id goes there)'],
+    re: String.raw`⟨net⟩\.⟨lobbyConn⟩\.⟨netSend⟩\(⟨net⟩\.⟨ID⟩,\[⟨net⟩\["RELIABLE_JOIN_MATCH"\],-1,⟨net⟩\.⟨ID⟩,-1,"",""\]` },
+  // What the lobby does with a join or create reply: connects to a player-hosted match
+  // (the reply carries the host's WebRTC offer), or leaves one ("", -1).
+  { file: 'flash', keys: ['enterMatch'],
+    what: ['net function(hostInfo, slot): connect to the match a join or create reply names'],
+    re: String.raw`static ⟨ID⟩\(⟨_⟩="",⟨_⟩=-1\)` },
+  // A player-hosted match the host makes for itself: a slot per player, then spectator slots.
+  { file: 'flash', keys: ['spectatorSlots', 'matchSlots'],
+    what: ['net property: number of spectator slots a match has after its player slots',
+      'match property: its slots, a connection or null each (players first, then spectators)'],
+    re: String.raw`for\(let i=0;i<match\["players_max"\]\+⟨net⟩\.⟨ID⟩;i\+\+\)\s*match\.⟨ID⟩\.push\(null\);` },
+  // The host accepting a player: their account, their standing, and their auth id.
+  { file: 'flash', keys: ['connUser', 'connStats', 'p2pAuth', 'p2pAuthIds'],
+    what: ['connection property: the account ({ login, nickname, uid, is_guest, ... }); on net: your own',
+      'connection property: the account\'s standing ({ reputation, ... })',
+      'globalThis property: the host\'s player records (.p2pAuthIds)',
+      'p2pAuth property: WeakMap connection -> { id: auth id }'],
+    re: String.raw`c\.⟨ID⟩=⟨_⟩;\s*c\.⟨ID⟩=⟨_⟩;\s*⟨ID⟩\.⟨ID⟩\.set\(c,\{id:` },
+  // The match's inactivity check, per slot: spectators are only excluded when spectating is full.
+  { file: 'flash', keys: ['connPlayer', 'connSpectator'],
+    what: ['connection property: its player in the match ({ hea, team, nickname, login, ... })', 'player property: is a spectator'],
+    re: String.raw`let ⟨_⟩=connection\.⟨ID⟩;\s*let ⟨_⟩=false;\s*let ⟨_⟩=false;\s*if\(⟨_⟩\.⟨ID⟩\)\s*\{\s*⟨_⟩=true;\s*if\(this\["spectators_current"\]>=` },
+  { file: 'flash', keys: ['connSay'],
+    what: ['connection method(text): a server message in that player\'s chat'],
+    re: String.raw`connection\.⟨ID⟩\("Server: Only staff members can do global announcements"\)` },
+  // The map a match plays: [map text, name, approved, max players, map ID]; every player
+  // in it gets the new map.
+  { file: 'flash', keys: ['matchSetMap'],
+    what: ['match method([map text, name, approved, max players, map ID]): change its map; players reload into it'],
+    re: String.raw`⟨ID⟩\(⟨_⟩,callback=null\)\s*\{\s*let\[⟨mapText⟩,` },
+  // The create screen's "Start New Match".
+  { file: 'createMatch', keys: ['acceptManually', 'createSettings'],
+    what: ['net property: ask before each player joins a match you host',
+      'globalThis property: the create screen\'s match settings (the game\'s preset JSON)'],
+    re: String.raw`⟨net⟩\.⟨ID⟩=globalThis\.⟨ID⟩\["accept_connections_manually"\];` },
+  { file: 'createMatch', keys: ['joinPassword'], what: ['the password of the match you are in (sent again on a rejoin)'],
+    re: String.raw`⟨ID⟩=globalThis\.⟨createSettings⟩\["password"\];` },
+  { file: 'lobby', keys: ['lobbyReady'], what: ['net property: the lobby connection once it is logged in (null before)'],
+    re: String.raw`⟨net⟩\.⟨ID⟩=c;\s*⟨net⟩\.⟨_⟩=performance\.now\(\);` },
+  // The in-match "Spectate" / "Join Game" button.
+  { file: 'gameScene', keys: ['spectatorSlot'], what: ['net property: the slot number that asks for a spectator slot'],
+    re: String.raw`let slot=⟨spectating⟩ \?-1 : ⟨net⟩\.⟨ID⟩;` },
+  { file: 'frame2', keys: ['chatToAll'], what: ['chat destination: everyone'],
+    re: String.raw`\(⟨_⟩===⟨net⟩\.⟨_⟩&&!⟨spectating⟩\)\? ⟨ID⟩ : ⟨_⟩\),\s*TextField\.QuickReplaceMyEmojis` },
+  { file: 'frame2', keys: ['chatTrace'], what: ['flag: every chat line also goes to trace()'],
+    re: String.raw`var ⟨ID⟩=false;\s*function ChatNewMsg\(` },
   // The anti-cheat's locked arrays (ANTICHEAT.md §7). The scan's code 3 report sends an
   // index into this list.
   { file: 'tools', keys: ['lockedArrays'],

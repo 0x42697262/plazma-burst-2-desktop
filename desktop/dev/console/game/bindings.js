@@ -20,6 +20,9 @@ export const NET = Object.freeze({
   JOIN_MATCH: 'RELIABLE_JOIN_MATCH',
   GET_MATCH_LIST: 'RELIABLE_GET_MATCH_LIST',
   PING: 'RELIABLE_PING',
+  CREATE_MATCH: 'RELIABLE_CREATE_MATCH',
+  KICK_USER: 'RELIABLE_KICK_USER',
+  CHAT: 'RELIABLE_CHAT',
 });
 
 // Locked arrays the console has a name for, to say which one a scan report means.
@@ -245,6 +248,63 @@ export const game = {
   // Numbers in messages are written in base N with these digits (built at load).
   netDigits: () => { const net = read('net'); return (net && net[nameOf('netDigits')]) || ''; },
   netTypeName: (type) => { const net = read('net'); const m = net && net[nameOf('netTypeNames')]; return (m && m[type]) || null; },
+
+  // ----- Dedicated host (server/) -----
+  frameLabel: () => { const st = stageOrNull(); return st ? st.currentFrameLabel : null; },
+  goToScreen: (label) => gotoAndStop(label), // the game's own global: the stage's frame
+  lobbyReady: () => { const net = read('net'); return !!(net && net[nameOf('lobbyReady')]); },
+  myAccount: () => { const net = read('net'); return (net && net[nameOf('connUser')]) || null; }, // { login, nickname, is_guest, ... }
+  // [type name, ...parts] to the lobby server, as the game's screens send it; a message
+  // that wants an answer carries netReplyTo as its third part, and reply(parts) gets it.
+  sendLobby: (typeName, parts, reply) => {
+    const net = read('net');
+    const conn = net && net[nameOf('lobbyConn')];
+    if (!conn || !net[nameOf('lobbyReady')]) throw new Error('not logged in to the lobby server yet');
+    conn[nameOf('netSend')](net[nameOf('netChannel')], [net[typeName], ...parts], reply);
+  },
+  replyTo: () => read('net')[nameOf('netReplyTo')],
+  // What "Start New Match" sets before it sends: the settings (the host's own match is
+  // made from them) and whether to ask before each player joins.
+  setCreateSettings: (settings, askFirst) => {
+    write('createSettings', settings);
+    read('net')[nameOf('acceptManually')] = askFirst;
+  },
+  enterMatch: (hostInfo, slot) => read('net')[nameOf('enterMatch')](hostInfo, slot),
+  setJoinPassword: (p) => write('joinPassword', p),
+  matchDetails: () => { const net = read('net'); return (net && net.match_details) || null; },
+  // The match this game hosts (a player-hosted match keeps it here; only a host has one).
+  hostedMatch: () => { const net = read('net'); return (net && Array.isArray(net.matches) && net.matches[0]) || null; },
+  matchSlots: (match) => match[nameOf('matchSlots')] || [],
+  spectatorSlotCount: () => read('net')[nameOf('spectatorSlots')],
+  // One connection of a hosted match: who it is and how they play.
+  slotInfo: (c) => {
+    const user = c[nameOf('connUser')] || {};
+    const stats = c[nameOf('connStats')] || {};
+    const player = c[nameOf('connPlayer')] || {};
+    const auth = read('p2pAuth');
+    const rec = auth && auth[nameOf('p2pAuthIds')] && auth[nameOf('p2pAuthIds')].get(c);
+    return {
+      login: user.login || '', nickname: user.nickname || player.nickname || '', guest: !!user.is_guest,
+      reputation: stats.reputation, authId: rec ? rec.id : null, ping: c.ping,
+      hp: player.hea, team: player.team, spectator: !!player[nameOf('connSpectator')],
+    };
+  },
+  tellSlot: (c, text) => c[nameOf('connSay')](text),
+  matchMapText: (match) => match[nameOf('mapText')],
+  // [map text, name, approved, max players, map ID]: every player reloads into it.
+  setMatchMap: (match, parts) => match[nameOf('matchSetMap')](parts),
+  sendChat: (text) => {
+    const net = read('net');
+    net.Event(net[NET.CHAT], net[nameOf('netNum')](read('chatToAll')), text);
+  },
+  spectatorSlot: () => read('net')[nameOf('spectatorSlot')],
+  isSpectating: () => !!read('spectating'),
+  setChatTrace: (on) => write('chatTrace', on),
+  // More WebRTC servers for the peers this game makes from now on, after SimplePeer's
+  // own (the game gives none of its own: every peer uses SimplePeer.config).
+  addIceServers: (list) => {
+    SimplePeer.config = { ...SimplePeer.config, iceServers: [...(SimplePeer.config.iceServers || []), ...list] };
+  },
 
   // ----- Anti-cheat -----
   // The console name of locked array i (the scan's code 3 detail), or null.

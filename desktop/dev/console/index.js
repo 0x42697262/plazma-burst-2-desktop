@@ -14,8 +14,9 @@
 // Layout: core/ (helpers), game/ (the game adapter), state/ (settings, binds, history),
 // overrides/ (per-frame forcing), triggers/ (map triggers and variables), maps/ (the map
 // cache), editor/ (the in-game map editor), net/ (the anti-cheat scan's report and the
-// network recorder for netlogs/), ui/ (panel, log, pager), commands/ (one module per
-// command group, all in the registry), dispatch.js (running a typed line).
+// network recorder for netlogs/), server/ (the dedicated host, "npm run server"), ui/
+// (panel, log, pager), commands/ (one module per command group, all in the registry),
+// dispatch.js (running a typed line).
 import './commands/index.js';
 import { print, TAG } from './ui/log.js';
 import { buildPanel, updateStatus, updateStatusIfOpen, openPanel, closePanel, onKeyDownCapture, onKeyUpCapture } from './ui/panel.js';
@@ -35,6 +36,8 @@ import { zoomTick } from './commands/zoom.js';
 import { scanReportTick } from './net/scan-report.js';
 import { netTick, NET_TICK_MS } from './net/recorder.js';
 import { run } from './dispatch.js';
+import { SERVER } from './core/server.js';
+import { startHost } from './server/host.js';
 
 const BOOT_POLL_MS = 200; // how often to look for the game's stage while it loads
 const STATUS_EVERY_MS = 500;
@@ -67,7 +70,7 @@ function start(source) {
   document.addEventListener('keydown', onKeyDownCapture, true);
   document.addEventListener('keyup', onKeyUpCapture, true);
   updateStatus();
-  print('Plazma Burst 2 dev console. Type "help". Toggle with Shift+` (~).', COLOR.bright);
+  if (!SERVER) print('Plazma Burst 2 dev console. Type "help". Toggle with Shift+` (~).', COLOR.bright);
   if (namesMissing.length) {
     const msg = `Game names not found: ${namesMissing.join(', ')}. Commands that use them will fail. Run "npm run find-names" (see README.md).`;
     print(msg, COLOR.error);
@@ -81,6 +84,7 @@ function start(source) {
   setInterval(() => { mapGuard('Map cache', mapTick); mapGuard('Profiles', profileTick); }, MAP_TICK_MS);
   // Not per frame: connections are made and packets arrive in menus too.
   setInterval(() => netGuard('Network log', netTick), NET_TICK_MS);
+  if (SERVER) startHost();
 }
 
 async function boot() {

@@ -12,6 +12,7 @@
     "fetch-opcodes": "node tools/fetch-opcodes.js",
     "test": "node --test test/",
     "host": "electron . --host",
+    "server": "electron . --server",
     "testers": "node tools/remote-testers.js"
   },
   "type": "commonjs",
