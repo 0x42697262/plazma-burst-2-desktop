@@ -4,7 +4,7 @@
 //   - No DevTools (disabled at creation, closed if opened anyway), no menu, no shortcuts
 //     that reach the host's clipboard.
 //   - No navigation away from the game, no new windows, no <webview>.
-//   - Every permission refused (clipboard read, media, notifications, ...).
+//   - Every permission refused (clipboard read, media, notifications, ...), no downloads.
 //   - The page gets PB2_REMOTE before any script: the dev console then hides "js",
 //     "hooks", host paths and game names (desktop/dev/console/core/remote.js).
 'use strict';
@@ -41,6 +41,7 @@ function lockDownSession(ses) {
   ses.setPermissionCheckHandler(() => false);
   if (ses.setDevicePermissionHandler) ses.setDevicePermissionHandler(() => false);
   if (ses.setDisplayMediaRequestHandler) ses.setDisplayMediaRequestHandler((req, callback) => callback({}));
+  ses.on('will-download', (e, item) => item.cancel()); // nothing a tester does writes downloads here
 }
 
 // gamePrefix: the game's own URL prefix (https://host/h5/versions/<v>/); the page may

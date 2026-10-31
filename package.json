@@ -10,7 +10,9 @@
     "fetch-game": "node tools/fetch-game.js",
     "find-names": "node tools/find-names.js",
     "fetch-opcodes": "node tools/fetch-opcodes.js",
-    "test": "node --test test/"
+    "test": "node --test test/",
+    "host": "electron . --host",
+    "testers": "node tools/remote-testers.js"
   },
   "type": "commonjs",
   "engines": {
@@ -18,5 +20,8 @@
   },
   "devDependencies": {
     "electron": "^45.0.0"
+  },
+  "dependencies": {
+    "ws": "^8.22.0"
   }
 }

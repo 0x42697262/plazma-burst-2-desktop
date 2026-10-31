@@ -11,6 +11,17 @@ const { loadCredentials, applyLogin } = require('./login');
 const { createKvFile } = require('./kv-file');
 const { parseLogLevel, createLogger } = require('./log');
 const hooks = require('./hooks');
+const { REMOTE_PAGE_SCRIPT, REMOTE_WEB_PREFERENCES, lockDownSession, lockDownWindow } = require('./remote/lockdown');
+const { startHost, parseHostArgs } = require('./remote/host');
+
+// Remote play host: "npm run host" (electron . --host). No window here: every tester who
+// opens their link gets an offscreen game instance on this machine, streamed to their
+// browser (desktop/remote/). Guide: desktop/remote/README.md.
+const HOST_MODE = process.argv.includes('--host');
+const REMOTE_TESTERS_FILE = path.join(__dirname, 'remote-testers.json');
+const REMOTE_DATA_DIR = path.join(__dirname, 'remote-data'); // per tester: their console settings
+// Frames are exactly the window's size, whatever this screen's scaling.
+if (HOST_MODE) app.commandLine.appendSwitch('force-device-scale-factor', '1');
 
 // The terminal log: --verbose / --log-level=<error|warn|info|debug> / PB2_LOG_LEVEL.
 const logLevel = parseLogLevel();
@@ -258,11 +269,11 @@ async function findLocalMap(name) {
 // Returns null for anything else so the request goes to the real server.
 // Other IDs: served from desktop/maps when fast_maps is on, otherwise downloaded and
 // saved there.
-async function serveLocalMap(request) {
+async function serveLocalMap(request, ctx) {
   const body = new URLSearchParams(await request.clone().text());
   if (body.get('rq') !== 'cmap') return null;
   const id = (body.get('cmap') || '').trim();
-  if (!id.toLowerCase().startsWith(LOCAL_MAP_PREFIX)) return serveServerMap(request, id);
+  if (!id.toLowerCase().startsWith(LOCAL_MAP_PREFIX)) return serveServerMap(request, id, ctx);
   const file = await findLocalMap(id.slice(LOCAL_MAP_PREFIX.length));
   if (!file) {
     log.error(`Local map not found: ${id} (looked in ${MAPS_DIR})`);
@@ -273,7 +284,7 @@ async function serveLocalMap(request) {
   return new Response(text, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
 }
 
-async function serveServerMap(request, id) {
+async function serveServerMap(request, id, ctx) {
   if (!id) return null;
   if (fastMapsOn()) {
     const saved = await readSavedMap(id);
@@ -282,7 +293,7 @@ async function serveServerMap(request, id) {
       return new Response(saved, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
     }
   }
-  const res = await net.fetch(request, { bypassCustomProtocolHandlers: true });
+  const res = await ctx.fetch(request);
   if (!res.ok) return res;
   const text = await res.text();
   saveMap(id, text).catch((e) => {
@@ -306,9 +317,9 @@ async function serveConsoleFile(rel) {
 // The dev console's files, and its local key-value store (desktop/dev-overrides.json).
 // The window as it looks now, as screenshots/pb2-<date>_<time>.png. Returns the path
 // from the repository root.
-async function saveScreenshot() {
-  if (!mainWindow) throw new Error('no game window');
-  const png = (await mainWindow.webContents.capturePage()).toPNG();
+async function saveScreenshot(win) {
+  if (!win) throw new Error('no game window');
+  const png = (await win.webContents.capturePage()).toPNG();
   await fs.mkdir(SCREENSHOT_DIR, { recursive: true });
   const d = new Date();
   const two = (n) => String(n).padStart(2, '0');
@@ -325,7 +336,7 @@ async function saveScreenshot() {
   }
 }
 
-async function serveDev(request, url) {
+async function serveDev(request, url, ctx) {
   const name = decodeURIComponent(url.pathname.slice(DEV_PREFIX.length));
   if (name.startsWith(ROUTE.console)) {
     const res = await serveConsoleFile(name.slice(ROUTE.console.length));
@@ -378,7 +389,7 @@ async function serveDev(request, url) {
   }
   if (name === ROUTE.screenshot && request.method === 'POST') {
     try {
-      return new Response(JSON.stringify({ file: await saveScreenshot() }), { headers: { 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ file: await saveScreenshot(ctx.window) }), { headers: { 'Content-Type': 'application/json' } });
     } catch (e) {
       return new Response(e.message, { status: 500 });
     }
@@ -394,12 +405,12 @@ async function serveDev(request, url) {
       if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
         return new Response('Expected a JSON object', { status: 400 });
       }
-      if (!(await kvFile.write(obj))) {
+      if (!(await ctx.kvFile.write(obj))) {
         return new Response('dev-overrides.json was edited; the console reloads it instead', { status: 409 });
       }
       return new Response('ok');
     }
-    return new Response(await kvFile.read(), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+    return new Response(await ctx.kvFile.read(), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
   }
   return new Response('Not found', { status: 404 });
 }
@@ -439,10 +450,10 @@ async function serveHooks(request, url) {
   return new Response('Not found', { status: 404 });
 }
 
-async function serveLocal(url) {
+async function serveLocal(url, ctx) {
   let rel = decodeURIComponent(url.pathname.slice(PREFIX.length));
   if (rel === '' || rel.endsWith('/')) rel += 'index.html';
-  if ((DEV_ENABLED || HOOKS_ENABLED) && rel === 'index.html') {
+  if ((DEV_ENABLED || HOOKS_ENABLED || ctx.remote) && rel === 'index.html') {
     const html = await fs.readFile(path.join(ROOT, 'index.html'), 'utf8');
     let out = html;
     if (HOOKS_ENABLED) {
@@ -467,6 +478,16 @@ async function serveLocal(url) {
     if (log.on('debug')) {
       if (out.includes(FLASH_SCRIPT_TAG)) out = out.replace(FLASH_SCRIPT_TAG, FLASH_SCRIPT_TAG + TRACE_SCRIPT_TAG);
       else log.warn('Verbose: scripts/flash.js not found in index.html; the game\'s trace() stays silent');
+    }
+    if (ctx.remote) {
+      // A tester's game: PB2_REMOTE before every other script (desktop/remote/lockdown.js).
+      // Without it the console would show "js" and the host's paths: no page at all then.
+      const at = out.search(/<script\b/i);
+      if (at < 0) {
+        log.error('Remote play: could not mark index.html as remote (no <script> tag); not serving it');
+        return new Response('Not available', { status: 503 });
+      }
+      out = out.slice(0, at) + REMOTE_PAGE_SCRIPT + out.slice(at);
     }
     return new Response(out, { headers: { 'Content-Type': types['.html'] } });
   }
@@ -503,28 +524,7 @@ app.whenReady().then(async () => {
   if (DEV_ENABLED) checkNamesFile();
   await applyCredentials();
 
-  // Debug level: every request, where it was answered from, its status and how long.
-  protocol.handle('https', async (request) => {
-    if (!log.on('debug')) return handleRequest(request);
-    const started = Date.now();
-    const res = await handleRequest(request);
-    log.debug(`[net] ${request.method} ${request.url} -> ${res.status} (${Date.now() - started} ms)`);
-    return res;
-  });
-
-  async function handleRequest(request) {
-    const url = new URL(request.url);
-    if (url.hostname === HOST && url.pathname === '/pb2/server.php' && request.method === 'POST') {
-      const local = await serveLocalMap(request);
-      if (local) return local;
-    }
-    if (url.hostname === HOST && url.pathname.startsWith(PREFIX)) {
-      if (DEV_ENABLED && url.pathname.startsWith(DEV_PREFIX)) return serveDev(request, url);
-      if (HOOKS_ENABLED && url.pathname.startsWith(HOOKS_PREFIX)) return serveHooks(request, url);
-      return serveLocal(url);
-    }
-    return net.fetch(request, { bypassCustomProtocolHandlers: true });
-  }
+  protocol.handle('https', (request) => handleRequestLogged(request, LOCAL_CTX));
 
   // Electron's default menu without Window > Close, whose Ctrl+W closed the game. The
   // rest stays: Quit (Ctrl+Q), copy/paste, reload, DevTools, zoom, full screen.
@@ -535,6 +535,11 @@ app.whenReady().then(async () => {
     { label: 'Window', submenu: [{ role: 'minimize' }] },
   ]));
 
+  if (HOST_MODE) {
+    await startRemoteHost();
+    return;
+  }
+
   const win = mainWindow = new BrowserWindow({
     width: 1280,
     height: 720,
@@ -542,20 +547,7 @@ app.whenReady().then(async () => {
     title: 'Plazma Burst 2',
     webPreferences: { backgroundThrottling: false },
   });
-  // The page's console (the game's and the dev console's) in this terminal, by level:
-  // console.debug and trace() only with --verbose.
-  const PAGE_LEVEL = Object.freeze({ error: 'error', warning: 'warn', info: 'info', log: 'info', debug: 'debug', verbose: 'debug' });
-  win.webContents.on('console-message', (e) => {
-    const src = e.sourceId ? ` (${e.sourceId.split('/').pop()}:${e.lineNumber})` : '';
-    log[PAGE_LEVEL[e.level] || 'info'](`[page:${e.level}] ${e.message}${src}`);
-  });
-  // The window itself: loads, failed loads, crashes, hangs.
-  win.webContents.on('did-fail-load', (e, code, desc, url) => log.error(`[window] failed to load ${url}: ${desc} (${code})`));
-  win.webContents.on('render-process-gone', (e, d) => log.error(`[window] the page's process is gone: ${d.reason} (exit code ${d.exitCode})`));
-  win.on('unresponsive', () => log.warn('[window] the page stopped responding'));
-  win.on('responsive', () => log.info('[window] the page responds again'));
-  win.webContents.on('did-navigate', (e, url) => log.debug(`[window] navigated to ${url}`));
-  win.webContents.on('did-finish-load', () => log.debug('[window] page loaded'));
+  logPage(win, '');
 
   if (DEV_ENABLED) {
     try { kvFile.watch(); } catch (e) { log.warn(`Not watching ${DEV_KV_FILE}: ${e.message}`); }
@@ -563,4 +555,151 @@ app.whenReady().then(async () => {
   win.loadURL(START_URL);
 });
 
-app.on('window-all-closed', () => app.quit());
+// Who a request comes from. The local window: the default session, the shared
+// dev-overrides.json. A tester's game: their own session, settings file and window.
+const LOCAL_CTX = Object.freeze({
+  remote: false,
+  name: '',
+  fetch: (request) => net.fetch(request, { bypassCustomProtocolHandlers: true }),
+  kvFile,
+  get window() { return mainWindow; },
+});
+
+// Every request of a game page: local game files, the console's and the hooks' routes,
+// map downloads. Everything else goes to the network.
+async function handleRequest(request, ctx) {
+  const url = new URL(request.url);
+  if (url.hostname === HOST && url.pathname === '/pb2/server.php' && request.method === 'POST') {
+    const local = await serveLocalMap(request, ctx);
+    if (local) return local;
+  }
+  if (url.hostname === HOST && url.pathname.startsWith(PREFIX)) {
+    if (DEV_ENABLED && url.pathname.startsWith(DEV_PREFIX)) return serveDev(request, url, ctx);
+    if (HOOKS_ENABLED && url.pathname.startsWith(HOOKS_PREFIX)) return serveHooks(request, url);
+    return serveLocal(url, ctx);
+  }
+  return ctx.fetch(request);
+}
+
+// Debug level: every request, where it was answered from, its status and how long.
+async function handleRequestLogged(request, ctx) {
+  if (!log.on('debug')) return handleRequest(request, ctx);
+  const started = Date.now();
+  const res = await handleRequest(request, ctx);
+  log.debug(`[net]${ctx.name ? ` [${ctx.name}]` : ''} ${request.method} ${request.url} -> ${res.status} (${Date.now() - started} ms)`);
+  return res;
+}
+
+// The page's console (the game's and the dev console's) in this terminal, by level
+// (console.debug and trace() only with --verbose), and the window's own events.
+// who: '' for the local window, a tester's name for theirs.
+const PAGE_LEVEL = Object.freeze({ error: 'error', warning: 'warn', info: 'info', log: 'info', debug: 'debug', verbose: 'debug' });
+function logPage(win, who) {
+  const tag = who ? ` ${who}` : '';
+  win.webContents.on('console-message', (e) => {
+    const src = e.sourceId ? ` (${e.sourceId.split('/').pop()}:${e.lineNumber})` : '';
+    log[PAGE_LEVEL[e.level] || 'info'](`[page${tag}:${e.level}] ${e.message}${src}`);
+  });
+  win.webContents.on('did-fail-load', (e, code, desc, url) => log.error(`[window${tag}] failed to load ${url}: ${desc} (${code})`));
+  win.webContents.on('render-process-gone', (e, d) => log.error(`[window${tag}] the page's process is gone: ${d.reason} (exit code ${d.exitCode})`));
+  win.on('unresponsive', () => log.warn(`[window${tag}] the page stopped responding`));
+  win.on('responsive', () => log.info(`[window${tag}] the page responds again`));
+  win.webContents.on('did-navigate', (e, url) => log.debug(`[window${tag}] navigated to ${url}`));
+  win.webContents.on('did-finish-load', () => log.debug(`[window${tag}] page loaded`));
+}
+
+// ---------------------------------------------------------------------------
+// Remote play host (desktop/remote/)
+// ---------------------------------------------------------------------------
+const remoteCtx = new Map(); // tester name -> their request context (read by their session's handler)
+
+// A tester's session: its own cookies and storage (persist:remote-<name>, so saves and
+// settings survive), locked down, logged in like the local window, and its requests
+// answered with their context.
+async function remoteSession(name) {
+  const ses = session.fromPartition(`persist:remote-${name}`);
+  let ctx = remoteCtx.get(name);
+  if (!ctx) {
+    lockDownSession(ses);
+    const dir = path.join(REMOTE_DATA_DIR, name);
+    await fs.mkdir(dir, { recursive: true });
+    ctx = {
+      remote: true,
+      name,
+      window: null,
+      fetch: (request) => ses.fetch(request, { bypassCustomProtocolHandlers: true }),
+      kvFile: createKvFile(path.join(dir, 'dev-overrides.json'), { onChange() {}, onError() {} }),
+    };
+    remoteCtx.set(name, ctx);
+    ses.protocol.handle('https', (request) => handleRequestLogged(request, ctx));
+  }
+  await applyLogin(ses.cookies, loadCredentials(path.join(__dirname, 'credentials.json')), HOST);
+  return { ses, ctx };
+}
+
+// One tester's game: an offscreen, muted, locked-down game window. Returns the game
+// object desktop/remote/host.js expects.
+async function createRemoteGame(tester, opt) {
+  const { ses, ctx } = await remoteSession(tester.name);
+  const win = new BrowserWindow({
+    show: false,
+    width: opt.width,
+    height: opt.height,
+    useContentSize: true,
+    title: `Plazma Burst 2 (${tester.name})`,
+    webPreferences: { ...REMOTE_WEB_PREFERENCES, session: ses, offscreen: true },
+  });
+  lockDownWindow(win, START_URL);
+  win.webContents.setAudioMuted(true);
+  win.webContents.setFrameRate(opt.fps);
+  logPage(win, tester.name);
+  ctx.window = win;
+
+  const frameFns = new Set();
+  win.webContents.on('paint', (e, dirty, image) => {
+    if (!frameFns.size) return;
+    let jpeg = null;
+    const encode = () => (jpeg = jpeg || image.toJPEG(opt.quality));
+    for (const fn of frameFns) fn(encode);
+  });
+  const goneFns = [];
+  let gone = false;
+  const markGone = () => { if (gone) return; gone = true; for (const fn of goneFns) fn(); };
+  win.webContents.on('render-process-gone', markGone);
+  win.on('closed', markGone);
+
+  await win.loadURL(START_URL);
+  return {
+    size: { width: opt.width, height: opt.height },
+    onFrame(fn) { frameFns.add(fn); return () => frameFns.delete(fn); },
+    sendInput(event) { if (!win.isDestroyed()) win.webContents.sendInputEvent(event); },
+    focus() { if (!win.isDestroyed()) win.webContents.focus(); },
+    refresh() { if (!win.isDestroyed()) win.webContents.invalidate(); },
+    destroy() { gone = true; if (ctx.window === win) ctx.window = null; if (!win.isDestroyed()) win.destroy(); },
+    onGone(fn) { goneFns.push(fn); },
+  };
+}
+
+async function startRemoteHost() {
+  const { options, problems } = parseHostArgs(process.argv);
+  for (const p of problems) log.warn(`Host: ${p}`);
+  const host = startHost({
+    ...options,
+    testersFile: REMOTE_TESTERS_FILE,
+    createGame: (tester) => createRemoteGame(tester, options),
+    log,
+  });
+  try {
+    const port = await host.ready;
+    const local = `http://${options.bind === '0.0.0.0' ? 'localhost' : options.bind}:${port}`;
+    log.info(`Remote play: listening on ${options.bind}:${port} (${options.width}x${options.height}, ${options.fps} fps, JPEG quality ${options.quality}, up to ${options.maxGames} games)`);
+    log.info(`Remote play: testers open their link, e.g. ${local}/#t=<token>. Add one: npm run testers -- add <name>`);
+    if (options.bind !== '0.0.0.0') log.info('Remote play: only this machine can connect. For the internet, use a tunnel (desktop/remote/README.md) or --public.');
+  } catch (e) {
+    log.error(`Remote play: could not listen on ${options.bind}:${options.port}: ${e.message}`);
+    app.quit();
+  }
+}
+
+// Host mode has no window of its own; the testers' games come and go.
+app.on('window-all-closed', () => { if (!HOST_MODE) app.quit(); });

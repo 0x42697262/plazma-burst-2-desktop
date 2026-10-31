@@ -24,3 +24,7 @@ desktop/maps/*
 !/hooks/README.md
 !/hooks/REFERENCE.md
 !/hooks/*.example.js
+
+# Remote play (desktop/remote/): tester links, and each tester's console settings.
+desktop/remote-testers.json
+desktop/remote-data/
