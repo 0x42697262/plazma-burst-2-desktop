@@ -152,6 +152,29 @@ export function resetEdits() {
   return { undone, notBack };
 }
 
+// What the editor keeps against the map as it loaded: { changed, added, deleted } object
+// counts, and whether the running level has them now; null when it keeps nothing.
+export function editSummary() {
+  const doc = editorDoc();
+  const original = doc && MapDoc.of(doc.source);
+  if (!original) return null;
+  const byIndex = new Map(original.elements.map((e) => [`${e.tag}#${e.live.index}`, e]));
+  const seen = new Set();
+  let changed = 0;
+  let added = 0;
+  for (const e of doc.elements) {
+    const key = e.live && e.live.index !== undefined ? `${e.tag}#${e.live.index}` : null;
+    const was = key && !seen.has(key) ? byIndex.get(key) : null;
+    if (!was) { added++; continue; }
+    seen.add(key);
+    const attrs = new Set([...Object.keys(e.attrs), ...Object.keys(was.attrs)]);
+    if ([...attrs].some((a) => e.attrs[a] !== was.attrs[a])) changed++;
+  }
+  const deleted = byIndex.size - seen.size;
+  if (!changed && !added && !deleted) return null;
+  return { changed, added, deleted, inLevel: docInLevel() };
+}
+
 // Each returns false when there is nothing to undo or redo.
 export function undo() { const entry = takeUndo(); if (entry) play(entry, true); return !!entry; }
 export function redo() { const entry = takeRedo(); if (entry) play(entry, false); return !!entry; }

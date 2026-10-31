@@ -13,6 +13,15 @@ const MAX = 1500;
 const DEFAULT = 100;
 
 let locked = null; // percent, or null
+let setOnce = null; // percent last set without --lock, while the game still has it
+
+// For "list": what "zoom" changed, as rows, or null when nothing.
+export function zoomChanges() {
+  if (locked !== null) return [`  locked at ${locked}%  ("zoom --unlock" lets go)`];
+  if (setOnce !== null && isActive() && game.zoom() === setOnce / PERCENT) return [`  ${setOnce}%  (once: the map can change it)`];
+  setOnce = null;
+  return null;
+}
 
 // Once per frame: a held zoom puts back whatever else set it (a map trigger, a vehicle,
 // the map's gamescale mark).
@@ -32,6 +41,7 @@ function zoom(args) {
   if (!rest.length) {
     if (how === 'unlock') {
       locked = null;
+      setOnce = null;
       print('Zoom unlocked: the game and the map can change it again', COLOR.ok);
       return;
     }
@@ -46,6 +56,7 @@ function zoom(args) {
   if (!Number.isFinite(pct) || pct < MIN || pct > MAX) throw new Error(usage);
   if (how === 'lock') {
     locked = pct;
+    setOnce = null;
     if (game.inLevelFrame()) game.setZoom(pct / PERCENT);
     print(`Zoom ${pct}%, locked: map triggers, vehicles and engine marks cannot change it ("zoom --unlock")`, COLOR.ok);
     return;
@@ -54,6 +65,7 @@ function zoom(args) {
   const wasLocked = locked !== null;
   locked = null; // a held zoom would take it back
   game.setZoom(pct / PERCENT);
+  setOnce = pct === DEFAULT ? null : pct;
   print(`Zoom ${pct}%${wasLocked ? ' (unlocked)' : ''}`, COLOR.ok);
 }
 

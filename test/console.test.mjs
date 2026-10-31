@@ -2301,8 +2301,9 @@ test('zoom: any amount once, or locked so the map cannot change it', () => {
     c.frame();
     assert.equal(G[N.zoom], 0.5, 'put back');
     assert.deepEqual(run('zoom'), ['Zoom: 50%, locked at 50%']);
-    assert.ok(!c.run('list').some((l) => /zoom/.test(l)), 'the command\'s own, not a setting');
+    assert.deepEqual(c.run('list zoom'), ['[zoom]', '  locked at 50%  ("zoom --unlock" lets go)']);
     assert.deepEqual(run('zoom 80'), ['Zoom 80% (unlocked)']);
+    assert.deepEqual(c.run('list zoom'), ['[zoom]', '  80%  (once: the map can change it)']);
     G[N.zoom] = 1;
     c.frame();
     assert.equal(G[N.zoom], 1);
@@ -2312,6 +2313,7 @@ test('zoom: any amount once, or locked so the map cannot change it', () => {
     c.frame();
     assert.equal(G[N.zoom], 1);
     assert.deepEqual(run('zoom default'), ['Zoom 100%']);
+    assert.deepEqual(c.run('list zoom'), ['[zoom] nothing']);
     for (const bad of ['zoom 0', 'zoom 2000', 'zoom abc', 'zoom --lock', 'zoom 50 --lock --unlock']) {
       assert.match(run(bad).join(' '), /usage|do not go together/, bad);
     }
@@ -2341,8 +2343,11 @@ test('editor reset: every edit undone in the running level and forgotten, nothin
     quiet('editor set x 77');
     assert.deepEqual([regions[i].y, regions[i].x], [30, 77]);
     c.run('editor off');
+    assert.deepEqual(c.run('list editor'), ['[editor: 1 changed]',
+      '  in the running level; put in again when the level starts over on this map', '  ("editor reset" undoes and forgets them)']);
     assert.match(quiet('editor reset')[0], /^Reset: 2 edits undone in the running level, every edit forgotten/);
     assert.equal(regions[i].y, y0, 'the map\'s again');
+    assert.deepEqual(c.run('list editor'), ['[editor] nothing']);
     // On again: the map as the game has it, no history, nothing to put in.
     c.run('editor on');
     assert.notEqual(session.editorDoc(), doc);

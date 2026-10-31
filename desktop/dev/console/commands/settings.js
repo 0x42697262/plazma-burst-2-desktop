@@ -12,6 +12,9 @@ import { groupOptions } from './trace.js';
 import { editedVars, showVar } from '../triggers/vars.js';
 import { levelWasActive } from '../overrides/frame.js';
 import { CLIENT_TAG } from './help.js';
+import { REMOTE } from '../core/remote.js';
+import { zoomChanges } from './zoom.js';
+import { editSummary } from '../editor/edit.js';
 
 const RESET_WORDS = ['default', 'reset', 'unset'];
 const KEY_WIDTH = 14;
@@ -93,6 +96,23 @@ const EXTRAS = Object.freeze({
     ];
     return [`profile: ${p.name} (map ${currentMap()})`, rows.length ? rows : ['  (sets nothing yet)']];
   },
+  zoom: () => { const rows = zoomChanges(); return rows && ['zoom', rows]; },
+  editor: () => {
+    const sum = editSummary();
+    if (!sum) return null;
+    const parts = [['changed', sum.changed], ['added', sum.added], ['deleted', sum.deleted]].filter(([, n]) => n).map(([w, n]) => `${n} ${w}`);
+    return [`editor: ${parts.join(', ')}`, [
+      `  ${sum.inLevel ? 'in the running level' : 'kept, not in the running level'}; put in again when the level starts over on this map`,
+      '  ("editor reset" undoes and forgets them)',
+    ]];
+  },
+  // The host's hooks are not a remote tester's business (core/remote.js).
+  ...(REMOTE ? {} : {
+    hooks: () => {
+      const loaded = (globalThis.PB2Hooks?.status?.() || []).filter((h) => h.status === 'loaded');
+      return loaded.length && [`hooks: ${loaded.length} loaded`, loaded.map((h) => `  ${h.name}${h.activeNow === false ? '  (paused now: multiplayer)' : ''}`)];
+    },
+  }),
   vars: () => {
     const changed = isActive() ? editedVars() : [];
     return changed.length && [`vars you changed: ${changed.length}`,
@@ -138,14 +158,15 @@ export const settingsCommands = [
     name: 'list',
     aliases: ['ls'],
     usage: 'list [group]',
-    desc: 'Show all keys and values, then binds, traces, logic view, changed vars',
+    desc: `Show all keys and values, then binds, traces, logic view, zoom, editor edits,${REMOTE ? '' : ' hooks,'} changed vars`,
     help: {
       about: [
         'Every key with its current value and what it does. Keys you have set are',
         'green, the rest show "default". A value from this map\'s profile is tagged',
         '[profile <name>, yours: <value>]. After the keys, everything else you changed:',
-        'key binds, traced players, the logic view, and map variables you set or',
-        'removed with "vars" in this level (with the value before).',
+        'key binds, traced players, the logic view, the map\'s profile, the zoom you set',
+        `with "zoom", the map editor's edits,${REMOTE ? '' : ' the hooks that are loaded,'} and map variables`,
+        'you set or removed with "vars" in this level (with the value before).',
       ],
       args: [
         ['[group]', `only this group: ${LIST_GROUPS.join(', ')}`],
