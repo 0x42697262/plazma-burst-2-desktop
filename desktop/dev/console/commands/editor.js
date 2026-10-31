@@ -19,6 +19,7 @@ import { player } from '../game/level.js';
 import { inputStatus } from '../editor/input.js';
 import { panelsOnPage } from '../editor/panels.js';
 import { hasLayer } from '../ui/overlay.js';
+import { REMOTE } from '../core/remote.js';
 
 const ON_WORDS = ['on', '1', 'true', 'yes'];
 const OFF_WORDS = ['off', '0', 'false', 'no'];
@@ -209,8 +210,9 @@ export const editorCommand = {
     notes: [
       'Edits go into the running level: walls (with their trims), backgrounds\' places,',
       'water, pushers, movables, regions, decorations, lamps, guns, triggers and timers.',
-      'Walls, water and pushers live in arrays the game\'s integrity check watches: it',
-      'reports the client and reloads the page when it sees them change.',
+      // How the anti-cheat works is not shown to remote testers (core/remote.js).
+      ...(REMOTE ? [] : ['Walls, water and pushers live in arrays the game\'s integrity check watches: it',
+        'reports the client and reloads the page when it sees them change.']),
       'Edits nothing finer takes (a movable\'s settings, water\'s damage, what an object',
       'is attached to, a decoration\'s model, ...) build the object again with the',
       'game\'s own map loader code, and run its later steps for it (textures, the water',

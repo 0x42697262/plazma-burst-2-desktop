@@ -11,7 +11,9 @@ const { loadCredentials, applyLogin } = require('./login');
 const { createKvFile } = require('./kv-file');
 const { parseLogLevel, createLogger } = require('./log');
 const hooks = require('./hooks');
-const { REMOTE_PAGE_SCRIPT, REMOTE_WEB_PREFERENCES, lockDownSession, lockDownWindow } = require('./remote/lockdown');
+const { REMOTE_PAGE_SCRIPT, REMOTE_WEB_PREFERENCES, isGamePage, lockDownSession, lockDownWindow } = require('./remote/lockdown');
+// A tester's screenshot key writes a file here each press: one per this many ms per tester.
+const REMOTE_SCREENSHOT_MS = 2000;
 const { startHost, parseHostArgs } = require('./remote/host');
 
 // Remote play host: "npm run host" (electron . --host). No window here: every tester who
@@ -388,6 +390,10 @@ async function serveDev(request, url, ctx) {
       : new Response('Not found', { status: 404 });
   }
   if (name === ROUTE.screenshot && request.method === 'POST') {
+    if (ctx.remote) {
+      if (Date.now() - (ctx.lastShot || 0) < REMOTE_SCREENSHOT_MS) return new Response('one screenshot every 2 s', { status: 429 });
+      ctx.lastShot = Date.now();
+    }
     try {
       return new Response(JSON.stringify({ file: await saveScreenshot(ctx.window) }), { headers: { 'Content-Type': 'application/json' } });
     } catch (e) {
@@ -569,6 +575,12 @@ const LOCAL_CTX = Object.freeze({
 // map downloads. Everything else goes to the network.
 async function handleRequest(request, ctx) {
   const url = new URL(request.url);
+  // A tester's window shows the game's start page and nothing else: a page load of any
+  // other file (the console's source, a hook) is refused here too, not only by the lockdown.
+  if (ctx.remote && ['document', 'iframe', 'frame', 'embed', 'object'].includes(request.headers.get('sec-fetch-dest'))
+    && !isGamePage(request.url, START_URL)) {
+    return new Response('Not available', { status: 403 });
+  }
   if (url.hostname === HOST && url.pathname === '/pb2/server.php' && request.method === 'POST') {
     const local = await serveLocalMap(request, ctx);
     if (local) return local;

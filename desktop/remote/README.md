@@ -39,6 +39,9 @@ can play at once (`--max`, default 4).
 - The token sits after `#` in the link, so browsers never send it in a URL and tunnels
   don't log it. The page sends it once, over the WebSocket.
 - Anyone who has a link can play as that tester. Send links privately.
+- 10 wrong links from one address within a minute: that address is refused for a minute,
+  and the terminal shows `[remote] wrong link from <address>`. Through a tunnel on this
+  machine, the tunnel's forwarded address counts.
 
 ## Reaching testers on the internet
 
@@ -83,11 +86,17 @@ tester's connection falls behind, so the game doesn't lag.
 - **Read paths, file names or game internals:** everything the console prints is
   scrubbed of host paths, file names, and the game's obfuscated names (shown as `‹hidden›`).
   Explanations of how the anti-cheat works are left out.
-- **Leave the game:** no navigation, no new windows, no downloads, every permission
-  refused (camera, clipboard, ...).
-- **Read your clipboard:** paste is blocked.
+- **Leave the game:** the window only ever loads the game's start page (never a file served
+  next to it), with no new windows, no downloads, and every permission refused (camera,
+  clipboard, ...).
+- **Touch your clipboard:** paste is blocked, so they can't read it. Copy and cut are blocked
+  too, so they can't put text in it for you to paste later.
 - **Disturb others:** each game is its own session (cookies, saves, console settings in
   `desktop/remote-data/<name>/`). The machine plays no sound from their games.
+
+**Can affect your machine, within limits:**
+- Their screenshot key (F12) saves to your `screenshots/`, at most one every 2 seconds per tester.
+- A broken or oversized message only drops that tester's connection, never the host.
 
 **What they share with you:**
 - Your **PB2 login** (`desktop/credentials.json`): online they play as your account.

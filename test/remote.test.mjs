@@ -8,7 +8,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 
 const REPO = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { isBlockedKey, REMOTE_PAGE_SCRIPT } = createRequire(import.meta.url)('../desktop/remote/lockdown.js');
+const { isBlockedKey, isGamePage, REMOTE_PAGE_SCRIPT } = createRequire(import.meta.url)('../desktop/remote/lockdown.js');
 const { makeRedactor, HIDDEN } = await import(pathToFileURL(path.join(REPO, 'desktop/dev/console/core/remote.js')).href);
 
 test('redactor: host paths, file names and game names are hidden; game text is not', () => {
@@ -39,9 +39,19 @@ test('blocked keys: paste and host tools, not game keys', () => {
   ]) assert.equal(isBlockedKey(k), false, JSON.stringify(k));
 });
 
-test('the page script sets PB2_REMOTE without making it enumerable', () => {
+test('the page script sets PB2_REMOTE without making it enumerable, and shuts the clipboard both ways', () => {
   assert.match(REMOTE_PAGE_SCRIPT, /Object\.defineProperty\(globalThis, "PB2_REMOTE", \{ value: true \}\)/);
-  assert.match(REMOTE_PAGE_SCRIPT, /addEventListener\("paste"/);
+  assert.match(REMOTE_PAGE_SCRIPT, /\["paste", "copy", "cut"\]/);
+  assert.match(REMOTE_PAGE_SCRIPT, /"writeText"/);
+});
+
+test('a remote window may only load the game\'s start page', () => {
+  const start = 'https://www.plazmaburst2.com/h5/versions/v1/';
+  for (const ok of [start, `${start}?x=1`, `${start}#a`]) assert.equal(isGamePage(ok, start), true, ok);
+  for (const no of [`${start}__dev/console/index.js`, `${start}__hooks/hook/a.js`, `${start}scripts/frame2.js`,
+    'https://www.plazmaburst2.com/', 'https://evil.example/h5/versions/v1/', 'javascript:alert(1)', 'file:///etc/passwd', 'nonsense']) {
+    assert.equal(isGamePage(no, start), false, no);
+  }
 });
 
 // Remote mode is decided when the console's modules load, so it runs in its own process.
@@ -178,8 +188,12 @@ async function hostFixture(opts = {}) {
   const t = tempTesters();
   const games = [];
   const logs = [];
-  const log = { info: (m) => logs.push(m), warn: (m) => logs.push(m), error: (m) => logs.push(m) };
-  const host = startHost({ port: 0, testersFile: t.file, createGame: async (tester) => fakeGame(tester.name, games), log, fps: 1000, ...opts });
+  const log = { info: (m) => logs.push(m), warn: (m) => logs.push(m), error: (m) => logs.push(m), debug: (m) => logs.push(m) };
+  const startMs = opts.startMs || 0;
+  const host = startHost({
+    port: 0, testersFile: t.file, log, fps: 1000, ...opts,
+    createGame: async (tester) => { await new Promise((r) => setTimeout(r, startMs)); return fakeGame(tester.name, games); },
+  });
   const port = await host.ready;
   const base = `http://127.0.0.1:${port}`;
   const open = (token) => new Promise((resolve) => {
@@ -260,6 +274,21 @@ test('host: a reconnect continues the same game; a second tab takes it over', as
   } finally { await f.cleanup(); }
 });
 
+test('host: connecting while the game starts waits for it (a reload, a second tab); the newest wins', async () => {
+  const f = await hostFixture({ startMs: 300 });
+  try {
+    const { token } = addTester(f.t.file, 'eve');
+    const a = await f.open(token);
+    await new Promise((r) => setTimeout(r, 50));
+    const b = await f.open(token); // the game is still starting
+    await f.until(() => b.got.json.some((m) => m.t === 'ready') && a.got.closed);
+    assert.equal(f.games.length, 1);
+    assert.equal(a.got.closed, CLOSE.replaced);
+    assert.equal(f.games[0].paint(), 1);
+    await f.until(() => b.got.binary.length);
+  } finally { await f.cleanup(); }
+});
+
 test('host: full means full; an idle game is closed; a crashed game tells the tester', async () => {
   const f = await hostFixture({ maxGames: 1, idleMs: 50 });
   try {
@@ -281,6 +310,50 @@ test('host: full means full; an idle game is closed; a crashed game tells the te
   } finally { await f.cleanup(); }
 });
 
+test('host: an oversized or broken message drops that connection, never the host (no uncaught error)', async () => {
+  const f = await hostFixture();
+  try {
+    // Before any hello (anyone who can connect), and after a good one.
+    const anon = new WebSocket(f.base.replace('http', 'ws') + '/ws');
+    const anonClosed = new Promise((r) => anon.on('close', (code) => r(code)));
+    await new Promise((r) => anon.on('open', r));
+    anon.send('x'.repeat(10000));
+    assert.equal(await anonClosed, 1009);
+    const { token } = addTester(f.t.file, 'big');
+    const c = await f.open(token);
+    await f.until(() => c.got.json.length);
+    c.ws.send('x'.repeat(10000));
+    await f.until(() => c.got.closed);
+    assert.equal(c.got.closed, 1009);
+    const raw = await import('node:net');
+    await new Promise((resolve) => {
+      const s = raw.connect(Number(new URL(f.base).port), '127.0.0.1', () => {
+        s.write('GET /ws HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n');
+        setTimeout(() => { s.write(Buffer.from([0x8f, 0xff, 1, 2, 3])); setTimeout(() => { s.destroy(); resolve(); }, 100); }, 100); // a broken frame
+      });
+      s.on('error', resolve);
+    });
+    assert.equal((await fetch(`${f.base}/`)).status, 200);
+  } finally { await f.cleanup(); }
+});
+
+test('host: wrong links are limited per address and logged', async () => {
+  const f = await hostFixture();
+  try {
+    const { token } = addTester(f.t.file, 'dan');
+    for (let i = 0; i < 10; i++) {
+      const c = await f.open('wrong' + i);
+      await f.until(() => c.got.closed);
+      assert.match(c.got.json[0].message, /not valid/);
+    }
+    const blocked = await f.open(token); // even the right link waits now, from that address
+    await f.until(() => blocked.got.closed);
+    assert.match(blocked.got.json[0].message, /Too many wrong links/);
+    assert.equal(f.games.length, 0);
+    assert.equal(f.logs.filter((l) => /wrong link from/.test(l)).length, 2); // first one, and the limit
+  } finally { await f.cleanup(); }
+});
+
 test('host: no hello, or a wrong first message, is dropped', async () => {
   const f = await hostFixture();
   try {
@@ -290,4 +363,45 @@ test('host: no hello, or a wrong first message, is dropped', async () => {
     ws.send(JSON.stringify({ t: 'kd', code: 'KeyA' }));
     assert.equal(await closed, CLOSE.protocol);
   } finally { await f.cleanup(); }
+});
+
+// Everything every command and help page shows in remote mode, scanned for the host's
+// internals: code, paths, file names, obfuscated names, the anti-cheat, hooks, eval.
+const SWEEP_CHILD = `
+  globalThis.PB2_REMOTE = true;
+  const { bootConsole } = await import(${JSON.stringify(pathToFileURL(path.join(REPO, 'test/fake-game.mjs')).href)});
+  const c = await bootConsole();
+  const at = (rel) => new URL(rel, ${JSON.stringify(pathToFileURL(path.join(REPO, 'desktop/dev/console/')).href)}).href;
+  const { attachLog } = await import(at('ui/log.js'));
+  const { helpEntries } = await import(at('commands/registry.js'));
+  const pane = { childNodes: [], append(n) { this.childNodes.push(n); }, get firstChild() { return this.childNodes[0]; }, scrollTop: 0, scrollHeight: 0 };
+  attachLog(pane);
+  const out = [];
+  const cmds = ['help', 'list', 'maps', 'screenshot', 'game help', 'guns', 'chars', 'triggers', 'triggers 1', 'triggers history',
+    'vars', 'logic', 'regions', 'trace', 'profile list', 'binds', 'keyname', 'editor status', 'more', 'nonsense', 'set nope 1', 'help nope',
+    ...helpEntries().map((e) => 'help ' + e.id)];
+  for (const cmd of cmds) {
+    pane.childNodes.length = 0;
+    c.run(cmd);
+    for (const l of pane.childNodes) out.push([cmd, (l.childNodes || []).map((s) => s.text).join('')]);
+  }
+  process.stdout.write(JSON.stringify(out));
+`;
+
+test('remote mode: no command or help page shows code, paths, file names, game names, the anti-cheat, hooks or eval', () => {
+  const lines = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', SWEEP_CHILD], { cwd: REPO, encoding: 'utf8', maxBuffer: 64e6 }));
+  assert.ok(lines.length > 500, `only ${lines.length} lines`);
+  const LEAK = [
+    [/\$[0-9A-Za-z_\u0400-\u04FF]{3,}/, 'obfuscated-looking name'],
+    [/__pb2_|PB2_[A-Z]|pb2dev\./, 'internal global'],
+    [/\.(js|mjs|cjs|json|md)\b/, 'file name'],
+    [/\b(desktop|hooks|tools|scripts|game|__dev|__hooks)\//, 'path'],
+    [/=>|function\s*\(|\bconst \w|\bimport /, 'code'],
+    [/anti-?cheat|anti-tamper|tamper|ANTICHEAT|integrity|stack check/i, 'anti-cheat'],
+    [/\bhooks?\b/i, 'hooks'],
+    [/\beval\b|devtools/i, 'eval or DevTools'],
+  ];
+  const hits = [];
+  for (const [cmd, text] of lines) for (const [re, why] of LEAK) if (re.test(text)) hits.push(`${why} [${cmd}] ${text}`);
+  assert.deepEqual(hits, []);
 });

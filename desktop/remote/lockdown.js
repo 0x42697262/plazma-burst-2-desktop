@@ -10,13 +10,14 @@
 'use strict';
 
 // Before the game's first script. Not enumerable, so the game's for...in walks over
-// globalThis (quicksave, the anti-tamper scan) do not see it. Paste would put the host's
-// clipboard in front of the tester: refused before any page handler sees it.
+// globalThis (quicksave, the anti-tamper scan) do not see it. The host's clipboard is off
+// limits both ways: paste would show it to the tester, copy and cut would let a tester
+// plant text in it. Refused before any page handler sees them.
 const REMOTE_PAGE_SCRIPT = '<script>(() => {'
   + 'Object.defineProperty(globalThis, "PB2_REMOTE", { value: true });'
   + 'const stop = (e) => { e.preventDefault(); e.stopImmediatePropagation(); };'
-  + 'window.addEventListener("paste", stop, true);'
-  + 'try { for (const m of ["read", "readText"]) Object.defineProperty(navigator.clipboard, m, { value: () => Promise.reject(new Error("not in remote play")) }); } catch {}'
+  + 'for (const t of ["paste", "copy", "cut"]) window.addEventListener(t, stop, true);'
+  + 'try { for (const m of ["read", "readText", "write", "writeText"]) Object.defineProperty(navigator.clipboard, m, { value: () => Promise.reject(new Error("not in remote play")) }); } catch {}'
   + '})();</script>';
 
 // Keys a tester may not send: { key (KeyboardEvent.key), code, ctrl, meta, shift, alt }.
@@ -44,13 +45,25 @@ function lockDownSession(ses) {
   ses.on('will-download', (e, item) => item.cancel()); // nothing a tester does writes downloads here
 }
 
-// gamePrefix: the game's own URL prefix (https://host/h5/versions/<v>/); the page may
-// reload itself (the game does after its checks) but not go anywhere else.
-function lockDownWindow(win, gamePrefix) {
+// Whether a page load may happen: only the game's start page (with any query or #), so
+// the window can never show one of the files served next to it (the console's, hooks').
+function isGamePage(url, startUrl) {
+  try {
+    const u = new URL(url);
+    const s = new URL(startUrl);
+    return u.origin === s.origin && u.pathname === s.pathname;
+  } catch {
+    return false;
+  }
+}
+
+// startUrl: the game's start page (https://host/h5/versions/<v>/). The page may reload
+// itself (the game does after its checks) but not go anywhere else.
+function lockDownWindow(win, startUrl) {
   const wc = win.webContents;
   win.setMenu(null);
   wc.setWindowOpenHandler(() => ({ action: 'deny' }));
-  const stayHome = (e, url) => { if (!String(url).startsWith(gamePrefix)) e.preventDefault(); };
+  const stayHome = (e, url) => { if (!isGamePage(url, startUrl)) e.preventDefault(); };
   wc.on('will-navigate', stayHome);
   wc.on('will-redirect', stayHome);
   wc.on('will-attach-webview', (e) => e.preventDefault());
@@ -69,4 +82,4 @@ const REMOTE_WEB_PREFERENCES = Object.freeze({
   backgroundThrottling: false,
 });
 
-module.exports = { REMOTE_PAGE_SCRIPT, REMOTE_WEB_PREFERENCES, isBlockedKey, lockDownSession, lockDownWindow };
+module.exports = { REMOTE_PAGE_SCRIPT, REMOTE_WEB_PREFERENCES, isBlockedKey, isGamePage, lockDownSession, lockDownWindow };

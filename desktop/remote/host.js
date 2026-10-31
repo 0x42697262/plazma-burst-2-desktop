@@ -43,6 +43,8 @@ const PING_MS = 20000;             // dead connections are dropped after one mis
 const MAX_PAYLOAD = 4096;          // input messages are tiny
 const MAX_INPUT_PER_S = 600;       // more is dropped (a stuck or hostile client)
 const MAX_BUFFERED = 1.5e6;        // bytes waiting to go out: frames are skipped above this
+const BAD_TOKENS_MAX = 10;         // wrong links per address per window, then that address waits
+const BAD_TOKENS_WINDOW_MS = 60000;
 
 const CLOSE = Object.freeze({ badToken: 4001, replaced: 4002, full: 4003, gone: 4004, protocol: 4005 });
 
@@ -51,8 +53,12 @@ const DEFAULTS = Object.freeze({ port: 8787, bind: '127.0.0.1', maxGames: 4, fps
 function startHost(options) {
   const opt = { ...DEFAULTS, ...options };
   const { testersFile, createGame, log } = opt;
+  const debug = (msg) => (log.debug ? log.debug(msg) : undefined);
   const games = new Map(); // tester name -> { name, game, ws, idleTimer, pressed: Set, starting }
   const minFrameMs = 1000 / opt.fps;
+  // Wrong links per address: { count, since }. Tokens cannot be guessed (192 bits), but
+  // nobody gets to try fast, and the host sees that someone tries.
+  const badTokens = new Map();
 
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, 'http://x');
@@ -122,15 +128,25 @@ function startHost(options) {
     ws.on('close', () => detach(entry, ws));
   }
 
-  async function welcome(ws, token) {
-    const tester = findTester(testersFile, token);
-    if (!tester) { refuse(ws, CLOSE.badToken, 'This link is not valid. Ask the host for a new one.'); return; }
-    let entry = games.get(tester.name);
-    if (entry && entry.ws) {
-      sendJson(entry.ws, { t: 'error', message: 'This game was opened somewhere else.' });
-      entry.ws.close(CLOSE.replaced, 'opened somewhere else');
-      detach(entry, entry.ws);
+  function tooManyBad(addr) {
+    const b = badTokens.get(addr);
+    if (b && Date.now() - b.since > BAD_TOKENS_WINDOW_MS) badTokens.delete(addr);
+    return (badTokens.get(addr)?.count || 0) >= BAD_TOKENS_MAX;
+  }
+  function noteBad(addr) {
+    const b = badTokens.get(addr) || { count: 0, since: Date.now() };
+    b.count++;
+    badTokens.set(addr, b);
+    if (b.count === 1 || b.count === BAD_TOKENS_MAX) {
+      log.warn(`[remote] wrong link from ${addr}${b.count === BAD_TOKENS_MAX ? ` (${BAD_TOKENS_MAX} times: refused for ${BAD_TOKENS_WINDOW_MS / 1000} s)` : ''}`);
     }
+  }
+
+  async function welcome(ws, token, addr) {
+    if (tooManyBad(addr)) { refuse(ws, CLOSE.badToken, 'Too many wrong links. Wait a minute.'); return; }
+    const tester = findTester(testersFile, token);
+    if (!tester) { noteBad(addr); refuse(ws, CLOSE.badToken, 'This link is not valid. Ask the host for a new one.'); return; }
+    let entry = games.get(tester.name);
     if (!entry) {
       if (games.size >= opt.maxGames) {
         refuse(ws, CLOSE.full, `The host is full (${opt.maxGames} players). Try again later.`);
@@ -139,30 +155,46 @@ function startHost(options) {
       }
       entry = { name: tester.name, game: null, ws: null, idleTimer: null, pressed: new Set(), unsubscribe: null, closed: false };
       games.set(tester.name, entry);
-      try {
-        entry.game = await createGame(tester);
-      } catch (e) {
-        games.delete(tester.name);
-        log.error(`[remote] ${tester.name}: could not start a game: ${e.message}`);
-        refuse(ws, CLOSE.gone, 'The game could not start. Tell the host.');
-        return;
-      }
-      entry.game.onGone(() => {
-        if (entry.ws) refuse(entry.ws, CLOSE.gone, 'The game stopped. Reload this page to start a new one.');
-        closeGame(entry, 'the game process ended');
-      });
-      log.info(`[remote] ${tester.name}: game started (${games.size}/${opt.maxGames})`);
-    } else if (!entry.game) {
-      refuse(ws, CLOSE.protocol, 'The game is still starting. Reload in a moment.');
-      return;
+      // Every connect while it starts (a reload, a second tab) waits for this same start.
+      entry.starting = (async () => {
+        try {
+          entry.game = await createGame(tester);
+        } catch (e) {
+          games.delete(tester.name);
+          log.error(`[remote] ${tester.name}: could not start a game: ${e.message}`);
+          throw e;
+        }
+        entry.game.onGone(() => {
+          if (entry.ws) refuse(entry.ws, CLOSE.gone, 'The game stopped. Reload this page to start a new one.');
+          closeGame(entry, 'the game process ended');
+        });
+        log.info(`[remote] ${tester.name}: game started (${games.size}/${opt.maxGames})`);
+        if (!entry.ws) detach(entry, null); // nobody waiting any more: the idle clock starts
+      })();
     }
-    if (ws.readyState !== WebSocket.OPEN) { detach(entry, null); return; }
+    if (!entry.game) {
+      try { await entry.starting; } catch { refuse(ws, CLOSE.gone, 'The game could not start. Tell the host.'); return; }
+    }
+    if (ws.readyState !== WebSocket.OPEN || entry.closed) return;
+    // The newest tab wins: an older connection to this game is told and closed.
+    if (entry.ws && entry.ws !== ws) {
+      const old = entry.ws;
+      sendJson(old, { t: 'error', message: 'This game was opened somewhere else.' });
+      old.close(CLOSE.replaced, 'opened somewhere else');
+      detach(entry, old);
+    }
     log.info(`[remote] ${tester.name}: connected`);
     attach(entry, ws);
     ws.on('close', () => log.info(`[remote] ${tester.name}: disconnected`));
   }
 
-  wss.on('connection', (ws) => {
+  // A socket error (a message over MAX_PAYLOAD, a broken frame, a reset) must never be
+  // unhandled: in Electron that is a dialog on the host's screen, for anyone who can connect.
+  wss.on('error', (e) => log.warn(`[remote] server: ${e.message}`));
+
+  wss.on('connection', (ws, req) => {
+    const addr = clientAddress(req);
+    ws.on('error', (e) => { debug(`[remote] connection dropped: ${e.message}`); ws.terminate(); });
     ws.isAlive = true;
     ws.on('pong', () => { ws.isAlive = true; });
     const timer = setTimeout(() => refuse(ws, CLOSE.protocol, 'No hello.'), HELLO_TIMEOUT_MS);
@@ -172,7 +204,7 @@ function startHost(options) {
       let msg = null;
       try { msg = isBinary ? null : JSON.parse(String(data)); } catch {}
       if (!msg || msg.t !== 'hello') { refuse(ws, CLOSE.protocol, 'Expected hello.'); return; }
-      welcome(ws, msg.token).catch((e) => { log.error(`[remote] ${e.stack || e}`); refuse(ws, CLOSE.gone, 'Host error.'); });
+      welcome(ws, msg.token, addr).catch((e) => { log.error(`[remote] ${e.stack || e}`); refuse(ws, CLOSE.gone, 'Host error.'); });
     });
   });
 
@@ -199,6 +231,17 @@ function startHost(options) {
       await new Promise((r) => wss.close(() => { server.close(() => r()); server.closeAllConnections(); }));
     },
   };
+}
+
+// Who is connecting. Through a tunnel on this machine every connection comes from
+// 127.0.0.1, so the tunnel's forwarded address counts then; a header from anywhere else is
+// ignored (anyone could send one).
+function clientAddress(req) {
+  const direct = req.socket.remoteAddress || '?';
+  const local = direct === '127.0.0.1' || direct === '::1' || direct === '::ffff:127.0.0.1';
+  if (!local) return direct;
+  const fwd = req.headers['cf-connecting-ip'] || String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  return fwd || direct;
 }
 
 // --host options from the command line: --port=N --bind=ADDR --public --max=N --fps=N
