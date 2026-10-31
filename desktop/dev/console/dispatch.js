@@ -105,6 +105,14 @@ function runOne(text, extra) {
   }
 }
 
+// The line as it may be kept and shown: a command's `mask` hides what it must not keep
+// (the server password in "servers add ... password=..."), in the history and the log.
+export function maskLine(line) {
+  const text = String(line || '');
+  const cmd = findRunnable(text.trim().split(/\s+/)[0]);
+  return cmd && typeof cmd.mask === 'function' ? cmd.mask(text) : text;
+}
+
 // `source` labels a line that was not typed, e.g. "bind f".
 export function run(line, source) {
   const text = String(line || '').trim();
@@ -114,7 +122,7 @@ export function run(line, source) {
   // is what code from DevTools or eval has. A line run from such code (pb2dev.run in
   // DevTools, "js pb2dev.run(...)") runs from a clean timer instead.
   if (new Error().stack.includes(ANONYMOUS_FRAME)) { setTimeout(() => run(line, source), 0); return; }
-  print(source ? `[${source}] > ${text}` : `> ${text}`, COLOR.title);
+  print(source ? `[${source}] > ${maskLine(text)}` : `> ${maskLine(text)}`, COLOR.title);
   // The answer to "bypass checks": the next typed line, compared as typed (keys and
   // binds run as usual meanwhile). Any other line is not run.
   if (!source && askingToBypass()) {

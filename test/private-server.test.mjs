@@ -204,3 +204,56 @@ test('maps: this server\'s first, then the site (unpacked to plain XML and kept)
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('console "servers": lists with ping, adds (fetching the fingerprint), keeps the password out of the history, connects', () => {
+  const out = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', `
+    const { bootConsole } = await import(${JSON.stringify(pathToFileURL(path.join(REPO, 'test/fake-game.mjs')).href)});
+    const c = await bootConsole();
+    const saved = [];
+    const calls = [];
+    // The wrapper's servers route (desktop/main.js serverListApi), as a stand-in.
+    globalThis.fetch = async (url, opt) => {
+      const { op, arg } = JSON.parse(opt.body);
+      calls.push(op);
+      const value = {
+        list: () => ({ official: { id: 'official', name: 'PlazmaBurst2.com', host: 'vvvv.plazmaburst2.com', port: 2053, description: 'The official servers' }, servers: saved, last: null, gameVersion: 'v1', problems: [] }),
+        check: () => (arg === 'official' ? { ping: 180 } : { ping: 4, status: { name: 'Paulbase', description: 'Friends', players: 2, max_players: 64, version: 'v1', password: true } }),
+        fingerprint: () => 'AA:BB',
+        save: () => { const s = { id: 'abc123', name: arg.name, address: arg.address, fingerprint: arg.fingerprint, nickname: arg.nickname, hasPassword: !!arg.password }; saved.push(s); calls.push(JSON.stringify(arg)); return { server: s }; },
+        play: () => true,
+      }[op]();
+      return { status: 200, json: async () => ({ ok: true, value }) };
+    };
+    const settle = () => new Promise((r) => setTimeout(r, 20));
+    const { history } = await import(${JSON.stringify(pathToFileURL(path.join(REPO, 'desktop/dev/console/state/store.js')).href)});
+    const { maskLine } = await import(${JSON.stringify(pathToFileURL(path.join(REPO, 'desktop/dev/console/dispatch.js')).href)});
+    const line = 'servers add address=192.168.1.20:2053 fingerprint=fetch nickname=Pal password=s3cret name="Pal base"';
+    history.add(maskLine(line));
+    c.log.printed.length = 0;
+    c.G.pb2dev.run(line);
+    await settle();
+    const added = c.log.printed.slice();
+    c.log.printed.length = 0;
+    c.G.pb2dev.run('servers');
+    await settle();
+    const listed = c.log.printed.slice();
+    c.log.printed.length = 0;
+    c.G.pb2dev.run('servers connect pal');
+    await settle();
+    const connected = c.log.printed.slice();
+    c.G.pb2dev.run('servers edit 1 nonsense=1');
+    await settle();
+    process.stdout.write(JSON.stringify({ added, listed, connected, calls, history: history.lines.slice(-1), errors: c.log.printed.filter((l) => /^error/.test(l)) }));
+  `], { cwd: REPO, encoding: 'utf8' }));
+  assert.deepEqual(out.history, ['servers add address=192.168.1.20:2053 fingerprint=fetch nickname=Pal password=••• name="Pal base"']);
+  assert.ok(out.added.every((l) => !l.includes('s3cret')), 'not in the log either');
+  assert.ok(out.added.some((l) => /fingerprint AA:BB/.test(l)), 'fetched, with the warning to compare');
+  assert.ok(out.added.some((l) => /Saved Pal base \(192\.168\.1\.20:2053, as Pal, password saved\)/.test(l)), out.added.join('\n'));
+  assert.deepEqual(JSON.parse(out.calls.find((c) => c.startsWith('{'))), { name: 'Pal base', address: '192.168.1.20:2053', fingerprint: 'AA:BB', nickname: 'Pal', password: 's3cret' }, 'the wrapper gets the real password');
+  assert.ok(out.listed.some((l) => /official\s+PlazmaBurst2\.com\s+vvvv\.plazmaburst2\.com:2053\s+180 ms/.test(l)), out.listed.join('\n'));
+  assert.ok(out.listed.some((l) => /1\s+Paulbase\s+192\.168\.1\.20:2053\s+4 ms\s+2\/64/.test(l)), out.listed.join('\n'));
+  assert.ok(out.listed.some((l) => /Friends · as Pal/.test(l)));
+  assert.ok(out.connected.some((l) => /Connecting to Pal base/.test(l)));
+  assert.equal(out.calls.filter((c) => c === 'play').length, 1);
+  assert.match(out.errors.join(' '), /unknown "nonsense="/);
+});

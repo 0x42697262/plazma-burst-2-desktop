@@ -23,6 +23,7 @@ import { hooksCommand } from './hooks.js';
 import { netlogCommand } from './netlog.js';
 import { bypassCommand } from './bypass.js';
 import { serverCommand, serverShortcuts } from './server.js';
+import { serversCommand } from './servers.js';
 
 const [list, set, get, unset, reset, builtin] = settingsCommands;
 
@@ -31,5 +32,5 @@ register(
   helpCommand, list, set, get, unset, reset, profileCommand,
   ...playerCommands, gunsCommand, tpCommand, posCommand, ...gunCommands, charsCommand, traceCommand,
   ...bindCommands, keynameCommand, triggersCommand, regionsCommand, varsCommand, logicCommand, editorCommand, chainTopic, moreCommand,
-  gameCommand, zoomCommand, builtin, mapsCommand, screenshotCommand, netlogCommand, bypassCommand, jsCommand, hooksCommand, ...consoleCommands,
+  gameCommand, zoomCommand, builtin, mapsCommand, serversCommand, screenshotCommand, netlogCommand, bypassCommand, jsCommand, hooksCommand, ...consoleCommands,
 );

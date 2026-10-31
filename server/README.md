@@ -45,8 +45,24 @@ official "USA, ARIZONA (TCP)" matches, only closer. A player's ping is to your c
 4. Double-click a server (or select it and press Play / Enter), then **Multiplayer**. The
    match browser lists that server's matches; creating and joining work as usual.
 
-Back to the list from the game: **Servers > Server list** (Ctrl+Shift+L). A
-`desktop/join.json` from before the list is imported once.
+Back to the list from the game: `servers page` in the dev console, or **Servers > Server
+list** in the menu (Alt shows it). There's no shortcut key, so every key stays free for
+your `bind`s. Everything the list does also works from the console, if you'd rather skip
+the page:
+
+| | |
+|---|---|
+| `servers` | the list: number, name, address, ping, players, description |
+| `servers connect <server>` | play there (`official`, a number from the list, or a name or address) |
+| `servers add address=… fingerprint=… nickname=… [password=…] [name="…"]` | save a server; `fingerprint=fetch` asks the server for it |
+| `servers edit <server> key=value …` | change any of those |
+| `servers remove <server>` | forget it |
+| `servers fingerprint <address>` | what certificate a server shows |
+| `servers page` | back to the list page |
+
+A typed `password=` is kept out of the console's history and log (shown as `•••`).
+
+A `desktop/join.json` from before the list is imported once.
 
 What playing on a private server does:
 - **The game starts logged out.** Your PB2 account (`desktop/credentials.json`) isn't

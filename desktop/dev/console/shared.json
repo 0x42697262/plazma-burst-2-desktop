@@ -13,7 +13,8 @@
     "screenshot": "screenshot",
     "netLog": "netlog",
     "netRuns": "netruns",
-    "netRead": "netread"
+    "netRead": "netread",
+    "servers": "servers"
   },
   "map": {
     "compressedPrefix": "<q.",

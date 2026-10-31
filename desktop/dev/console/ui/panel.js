@@ -11,7 +11,7 @@ import { eventKeyName, showKey, baseKey, TOGGLE_KEY } from '../state/keys.js';
 import { binds, history } from '../state/store.js';
 import { hotkeyOf } from '../state/hotkeys.js';
 import { levelWasActive } from '../overrides/frame.js';
-import { run } from '../dispatch.js';
+import { run, maskLine } from '../dispatch.js';
 import { looksLikeScript } from '../triggers/script.js';
 import { editorKey } from '../editor/index.js';
 
@@ -73,7 +73,7 @@ function onInputKey(e) {
   if (e.key === 'Enter') {
     const line = inputEl.value;
     inputEl.value = '';
-    history.add(line);
+    history.add(maskLine(line));
     historyPos = history.lines.length;
     run(line);
   } else if (e.key === 'ArrowUp') {

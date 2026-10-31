@@ -466,6 +466,7 @@ async function serveDev(request, url, ctx) {
   }
   const net = await serveNetLog(name, request, url, ctx);
   if (net) return net;
+  if (name === ROUTE.servers) return serveServerListRoute(request, ctx);
   if (name === ROUTE.kv) {
     if (request.method === 'PUT') {
       let obj;
@@ -622,7 +623,8 @@ app.whenReady().then(async () => {
   // rest stays: Quit (Ctrl+Q), copy/paste, reload, DevTools, zoom, full screen.
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     { role: 'fileMenu' },
-    ...(HOST_MODE || SERVER_MODE ? [] : [{ label: 'Servers', submenu: [{ label: 'Server list', accelerator: 'CmdOrCtrl+Shift+L', click: () => showServerList() }] }]),
+    // No shortcut: every key is the player's to bind in the dev console. Also "servers page".
+    ...(HOST_MODE || SERVER_MODE ? [] : [{ label: 'Servers', submenu: [{ label: 'Server list', click: () => showServerList() }] }]),
     { role: 'editMenu' },
     { role: 'viewMenu' },
     { label: 'Window', submenu: [{ role: 'minimize' }] },
@@ -678,54 +680,51 @@ function importOldJoinFile() {
   }
 }
 
-// What the list page may ask, and only the list page.
-function serveServerList() {
-  const fromList = (e) => e.senderFrame && e.senderFrame.url.split('#')[0] === LAUNCHER_URL;
-  const handle = (channel, fn) => ipcMain.handle(channel, async (e, ...args) => {
-    if (!fromList(e)) throw new Error('not allowed here');
-    return fn(...args);
-  });
-  const load = () => servers.loadServers(SERVERS_FILE);
-  // Passwords stay in the main process; the page only learns whether one is set.
-  const shown = (s) => ({ id: s.id, name: s.name, address: s.address, fingerprint: s.fingerprint, nickname: s.nickname, hasPassword: !!s.password });
-
-  handle('servers:list', () => {
-    const { servers: list, last, problems } = load();
+// What the server list can do, for the list page (IPC) and the dev console's "servers"
+// (the servers route). Passwords stay in this process; callers learn whether one is set.
+const loadServerList = () => servers.loadServers(SERVERS_FILE);
+const shownServer = (s) => ({ id: s.id, name: s.name, address: s.address, fingerprint: s.fingerprint, nickname: s.nickname, hasPassword: !!s.password });
+const serverListApi = {
+  list() {
+    const { servers: list, last, problems } = loadServerList();
     for (const p of problems) log.warn(`desktop/servers.json: ${p}`);
-    return { official: { ...servers.OFFICIAL }, servers: list.map(shown), last, gameVersion: VERSION, problems };
-  });
+    return { official: { ...servers.OFFICIAL }, servers: list.map(shownServer), last, gameVersion: VERSION, problems };
+  },
   // entry: { id?, name, address, fingerprint, nickname, password? } (no password: keep the saved one).
-  handle('servers:save', (entry) => {
-    const { servers: list, last } = load();
+  save(entry) {
+    const { servers: list, last } = loadServerList();
     const old = entry && entry.id ? list.find((s) => s.id === entry.id) : null;
+    if (entry && entry.id && !old) return { errors: ['that server is not saved'] };
     const { server, errors } = servers.checkServer({ ...entry, password: entry && typeof entry.password === 'string' ? entry.password : old ? old.password : '' });
     if (!server) return { errors };
     const next = old ? list.map((s) => (s.id === old.id ? server : s)) : [...list, server];
     servers.saveServers(SERVERS_FILE, next, last);
-    return { server: shown(server) };
-  });
-  handle('servers:remove', (id) => {
-    const { servers: list, last } = load();
+    return { server: shownServer(server) };
+  },
+  remove(id) {
+    const { servers: list, last } = loadServerList();
+    if (!list.some((s) => s.id === id)) return false;
     servers.saveServers(SERVERS_FILE, list.filter((s) => s.id !== id), last === id ? null : last);
     return true;
-  });
+  },
   // { ping (ms or null), status ({ name, description, players, ... }) or error }
-  handle('servers:check', async (id) => {
+  async check(id) {
     if (id === servers.OFFICIAL.id) return { ping: await servers.ping(servers.OFFICIAL.host, servers.OFFICIAL.port) };
-    const s = load().servers.find((x) => x.id === id);
+    const s = loadServerList().servers.find((x) => x.id === id);
     if (!s) return { error: 'not saved' };
     const [ping, status] = await Promise.all([
       servers.ping(s.host, s.port),
       servers.fetchStatus(s).then((v) => ({ v }), (e) => ({ e })),
     ]);
     return status.v ? { ping, status: status.v } : { ping, error: status.e.message, pinned: status.e.pinned !== false };
-  });
-  handle('servers:fingerprint', async (address) => {
+  },
+  async fingerprint(address) {
     const a = servers.parseAddress(address);
     return servers.fetchFingerprint(a.host, a.port);
-  });
-  handle('servers:play', async (id) => {
-    const { servers: list } = load();
+  },
+  // Plays on that server: its session (your login, or logged out and its certificate), then the game.
+  async play(id) {
+    const { servers: list } = loadServerList();
     const target = id === servers.OFFICIAL.id ? null : list.find((s) => s.id === id);
     if (id !== servers.OFFICIAL.id && !target) throw new Error('that server is not saved');
     servers.saveServers(SERVERS_FILE, list, id);
@@ -739,9 +738,44 @@ function serveServerList() {
       await applyCredentials();
       mainWindow.setTitle('Plazma Burst 2');
     }
-    mainWindow.loadURL(START_URL);
+    setTimeout(() => mainWindow.loadURL(START_URL), 0); // after the answer, which the reload would cut off
     return true;
+  },
+  openList() {
+    setTimeout(showServerList, 0);
+    return true;
+  },
+};
+
+// The list page's bridge (desktop/launcher/preload.js): only that page may ask.
+function serveServerList() {
+  const fromList = (e) => e.senderFrame && e.senderFrame.url.split('#')[0] === LAUNCHER_URL;
+  const handle = (channel, fn) => ipcMain.handle(channel, async (e, ...args) => {
+    if (!fromList(e)) throw new Error('not allowed here');
+    return fn(...args);
   });
+  handle('servers:list', () => serverListApi.list());
+  handle('servers:save', (entry) => serverListApi.save(entry));
+  handle('servers:remove', (id) => serverListApi.remove(id));
+  handle('servers:check', (id) => serverListApi.check(id));
+  handle('servers:fingerprint', (address) => serverListApi.fingerprint(address));
+  handle('servers:play', (id) => serverListApi.play(id));
+}
+
+// The dev console's "servers": POST { op, arg } on the servers route. Not for a remote
+// play tester's window or the player-hosted host, which play on the official server only.
+const SERVER_LIST_OPS = Object.freeze(['list', 'save', 'remove', 'check', 'fingerprint', 'play', 'openList']);
+async function serveServerListRoute(request, ctx) {
+  if (ctx.remote || ctx.server || HOST_MODE || SERVER_MODE) return new Response('Not available', { status: 403 });
+  if (request.method !== 'POST') return new Response('POST { op, arg }', { status: 405 });
+  let body;
+  try { body = JSON.parse(await request.text()); } catch { return new Response('Invalid JSON', { status: 400 }); }
+  if (!body || !SERVER_LIST_OPS.includes(body.op)) return new Response('unknown op', { status: 400 });
+  try {
+    return json({ ok: true, value: await serverListApi[body.op](body.arg) });
+  } catch (e) {
+    return json({ ok: false, error: e.message });
+  }
 }
 
 // Who a request comes from. The local window: the default session, the shared
