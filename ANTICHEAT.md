@@ -1324,7 +1324,7 @@ The same `$с0A.$Т0ОcpT` also gets `"HealthAltering"` when a player's HP goes 
 | The game's View logs | No: skipped (`MPLogs.js:232–234`) |
 | DevTools → Network → WS → the game's socket | Yes: the last frame before the reload |
 | The dev console's terminal output (`net/scan-report.js`) | Yes: logged as a warning |
-| The network log (`netlogs/`, `netlog show type:ping`) | Yes: `OUT REL #<uid> RELIABLE_PING  undefined \| <code> \| <detail>`, recorded as it is sent |
+| The network log (`netlogs/`, `netlog show type:ping`) | Yes: `OUT REL #<uid> PING("undefined", "<code>", "<detail>")`, recorded as it is sent |
 
 ### 13.6 Traces
 

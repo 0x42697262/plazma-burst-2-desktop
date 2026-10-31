@@ -218,20 +218,22 @@ A second copy of the app started in the same second gets `..._local-2.log`. Page
 **A line:** time, connection, direction (`OUT` sent, `IN` received, `---` neither), kind, details. The header of each file explains every column.
 
 ```
-05:30:14.200  c1 server     OUT  REL    #5 RELIABLE_CHAT  hello there | #12
-05:30:16.300  c1 server     OUT  LOSS   resend #5 RELIABLE_CHAT (try 2, first sent 2100 ms ago, not acknowledged yet)
+05:30:14.200  c1 server     OUT  PKT    41 chars | ack #3 | #5 CHAT
+05:30:14.200  c1 server     OUT  REL    #5 CHAT("hello there", 12)
+05:30:14.460  c1 server     IN   REL    #4 RESPONSE(100, "ok", [{"uid":1,"map_id":"a-b"}])
+05:30:16.300  c1 server     OUT  LOSS   resend #5 CHAT (try 2, first sent 2100 ms ago, not acknowledged yet)
 05:30:16.500  c1 server     IN   LOSS   gap: #11 arrived before #9-#10 (2 missing: lost or out of order)
-05:30:17.000  c1 server     ---  STAT   ping 45 ms | out 60 packets 3174 chars (2 reliable, 58 state) | in 61 packets 12.4K chars (3 reliable, 58 state) | loss: 1 resend, 0 dropped, 1 gap, 0 late, 0 duplicates
+05:30:17.000  c1 server     ---  STAT   ping 45 ms | out 60 packets 3174 chars (2 reliable, 58 state) | in 61 packets 12.4K chars (3 reliable, 58 state) | loss: 1 resend, 1 gap
 ```
 
 | Kind | What |
 |---|---|
-| `REL` | A reliable message: its sequence number, its type (`RELIABLE_...`), then its parts. `#<n>` is a number the game sent in its own encoding, decoded |
+| `REL` | A reliable message, written like a call: `#<sequence number> TYPE(part, part, ...)`. Text is in quotes, numbers are bare (the game sends them encoded; they are decoded), JSON is shown as it is. The type is the game's `RELIABLE_<TYPE>` name without `RELIABLE_`. `#<n>` is always a sequence number |
 | `LOSS` | `resend` (not acknowledged in time), `dropped` (socket.io dropped it, the socket was busy), `gap` (a later message arrived first), `late` (a missing one arrived), `duplicate` |
-| `STAT` | Once a second per busy connection: ping, packets, bytes, losses |
+| `STAT` | Once a second per busy connection: ping, packets, characters, losses (`loss: none` when there were none) |
 | `CONN` | Connected, disconnected (with the game's reason and the connection's totals) |
-| `STATE` | Every unreliable state update, its parts decoded. Off by default (60 to 250 a second); only counted in `STAT`. On with `net_log_state` or `net_log_all` |
-| `PKT` | Every packet, also ack-only ones: size in characters, ack, how many parts its state has, which reliable messages it carries, then `raw "..."`: the packet exactly as sent, `\x01` between fields, `\x02` between parts, other control characters (the game's number digits) as `\xNN`. Only with `net_log_all` |
+| `STATE` | Every unreliable state update, its parts decoded: `(1, 250, "x")`. Off by default (60 to 250 a second); only counted in `STAT`. On with `net_log_state` or `net_log_all` |
+| `PKT` | Every packet, also ack-only ones (`ack #0 \| nothing else`): its size in characters, its ack, and what it carries (`state (3 parts), #5 CHAT`). The `REL` and `STATE` lines after it show the contents. Only with `net_log_all` |
 
 **In the console:**
 
