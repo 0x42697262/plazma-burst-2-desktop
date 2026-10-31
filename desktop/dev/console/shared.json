@@ -10,7 +10,10 @@
     "saveMap": "savemap",
     "saveEdited": "saveedited",
     "mapFile": "mapfile",
-    "screenshot": "screenshot"
+    "screenshot": "screenshot",
+    "netLog": "netlog",
+    "netRuns": "netruns",
+    "netRead": "netread"
   },
   "map": {
     "compressedPrefix": "<q.",

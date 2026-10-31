@@ -11,6 +11,7 @@ const { loadCredentials, applyLogin } = require('./login');
 const { createKvFile } = require('./kv-file');
 const { parseLogLevel, createLogger } = require('./log');
 const hooks = require('./hooks');
+const { createNetLog } = require('./netlog');
 const { REMOTE_PAGE_SCRIPT, REMOTE_WEB_PREFERENCES, isGamePage, lockDownSession, lockDownWindow } = require('./remote/lockdown');
 // A tester's screenshot key writes a file here each press: one per this many ms per tester.
 const REMOTE_SCREENSHOT_MS = 2000;
@@ -112,6 +113,51 @@ function checkNamesFile() {
 const MAPS_DIR = path.join(__dirname, 'maps');
 const SCREENSHOT_DIR = path.join(__dirname, '..', 'screenshots');
 const LOCAL_MAP_PREFIX = 'local-';
+
+// Network logs: the dev console records the game's connections (console key net_log, on
+// by default) and sends the lines here. One file per run and game instance, in
+// netlogs/ (desktop/netlog.js). The local window is instance "local"; a remote play
+// tester's game is "tester-<name>" and only ever sees its own file.
+const NETLOG_DIR = path.join(__dirname, '..', 'netlogs');
+const netLog = createNetLog({ dir: NETLOG_DIR, version: VERSION });
+const netInstance = (ctx) => (ctx.remote ? `tester-${ctx.name}` : 'local');
+const json = (obj, status = 200) => new Response(JSON.stringify(obj), {
+  status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+});
+
+// "netlog" in the console: append lines, list the runs, read one.
+async function serveNetLog(name, request, url, ctx) {
+  const instance = netInstance(ctx);
+  if (name === ROUTE.netLog && request.method === 'POST') {
+    let lines;
+    try {
+      lines = JSON.parse(await request.text());
+      const run = await netLog.append(instance, lines);
+      return json({ run, file: path.relative(path.join(__dirname, '..'), path.join(NETLOG_DIR, run + '.log')) });
+    } catch (e) {
+      if (lines !== undefined) log.warn(`Network log not written: ${e.message}`);
+      return new Response(e.message, { status: lines === undefined ? 400 : 500 });
+    }
+  }
+  const own = netLog.runName(instance);
+  if (name === ROUTE.netRuns) {
+    const runs = await netLog.list();
+    // A tester sees their own file and nothing else.
+    return json(ctx.remote ? runs.filter((r) => r.mine && r.name === own).map((r) => ({ ...r, current: true })) : runs.map((r) => ({ ...r, current: r.name === own })));
+  }
+  if (name === ROUTE.netRead) {
+    const run = url.searchParams.get('run') || own;
+    if (!run) return new Response('nothing recorded yet in this run', { status: 404 });
+    if (ctx.remote && run !== own) return new Response('not available', { status: 403 });
+    try {
+      const lines = await netLog.read(run, Number(url.searchParams.get('lines')) || undefined);
+      return new Response(lines.join('\n'), { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } });
+    } catch (e) {
+      return new Response(e.message, { status: e.status || 500 });
+    }
+  }
+  return null;
+}
 const MAP_EXTS = ['.xml', '.txt', ''];
 
 // Map cache: every map the game downloads (single-player custom maps over HTTP,
@@ -400,6 +446,8 @@ async function serveDev(request, url, ctx) {
       return new Response(e.message, { status: 500 });
     }
   }
+  const net = await serveNetLog(name, request, url, ctx);
+  if (net) return net;
   if (name === ROUTE.kv) {
     if (request.method === 'PUT') {
       let obj;

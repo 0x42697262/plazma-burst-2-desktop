@@ -28,3 +28,6 @@ desktop/maps/*
 # Remote play (desktop/remote/): tester links, and each tester's console settings.
 desktop/remote-testers.json
 desktop/remote-data/
+
+# Network logs from the dev console's recorder (console key net_log), one file per run and game instance.
+/netlogs/
