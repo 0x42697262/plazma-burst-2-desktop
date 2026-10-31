@@ -230,18 +230,20 @@ A second copy of the app started in the same second gets `..._local-2.log`. Page
 | `LOSS` | `resend` (not acknowledged in time), `dropped` (socket.io dropped it, the socket was busy), `gap` (a later message arrived first), `late` (a missing one arrived), `duplicate` |
 | `STAT` | Once a second per busy connection: ping, packets, bytes, losses |
 | `CONN` | Connected, disconnected (with the game's reason and the connection's totals) |
-| `STATE` | Every unreliable state update. Off by default (60 to 250 a second); only counted in `STAT` |
+| `STATE` | Every unreliable state update, its parts decoded. Off by default (60 to 250 a second); only counted in `STAT`. On with `net_log_state` or `net_log_all` |
+| `PKT` | Every packet, also ack-only ones: size, ack, how many parts its state has, which reliable messages it carries. Only with `net_log_all` |
 
 **In the console:**
 
 | Command | What |
 |---|---|
 | `netlog` | On or off, the file, each connection's ping and losses |
-| `netlog show [filters]` | The last lines. Filters: `--loss`, `--in` / `--out`, `--rel` / `--stat` / `--conn` / `--state`, `type:chat`, `conn:c1`, `last:<n>`, any text |
+| `netlog show [filters]` | The last lines. Filters: `--loss`, `--in` / `--out`, `--rel` / `--stat` / `--conn` / `--state` / `--pkt`, `type:chat`, `conn:c1`, `last:<n>`, any text |
 | `netlog runs` | Every log in `netlogs/`: this window, other instances running now, earlier runs |
 | `netlog show run:<n> [filters]` | Another instance's log, by its number in `netlog runs` or its name |
 | `netlog off` / `netlog on` | Stop or start recording (the key `net_log`) |
 | `net_log_state on` | Also write every state update |
+| `netlog all on` | Log everything: every packet (`PKT`) and every state update (the key `net_log_all`, off by default; large files). `netlog show --pkt` shows the packets |
 
 **What is recorded and how:** the protocol is in [ANTICHEAT.md §13.3](ANTICHEAT.md#133-on-the-wire). The recorder wraps three methods on each connection object, only while `net_log` is on: the receive method, the socket's `emit` and the P2P peer's `send`. No global and nothing on the network class is replaced, so the anti-tamper scan is not affected. State updates carry no sequence number, so their loss cannot be seen one by one; compare the `state` counts per second in `STAT`.
 
