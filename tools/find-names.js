@@ -31,6 +31,7 @@ const FILES = {
   ui: 'scripts/ui.js',
   flash: 'scripts/libs/flash.js',
   tools: 'scripts/libs/tools.js',
+  connection: 'scripts/connection.js',
 };
 
 // Each rule: `keys` are the names captured by ⟨ID⟩ in order ('_' = ignore), `file` is a
@@ -214,6 +215,28 @@ const RULES = [
   { file: 'flash', keys: ['netLog'],
     what: ['net property: recent network messages, oldest first: { type, parts, time }'],
     re: String.raw`if\(TRACK_MP_LOGS\)\s*\{\s*⟨net⟩\.⟨ID⟩\.push\(⟨_⟩\);` },
+  // ----- Network recorder (desktop/dev/console/net/recorder.js) -----
+  // A connection's raw packet in (socket "m" event or P2P data), its P2P peer, and the
+  // text it gives when it closes.
+  { file: 'connection', keys: ['connRecv'],
+    what: ['connection method(text): one raw packet received'],
+    re: String.raw`this\.socket\.on\("m",\(⟨_⟩\)=>\s*\{\s*this\.⟨ID⟩\(⟨_⟩\);` },
+  { file: 'connection', keys: ['connPeer'],
+    what: ['connection property: P2P peer (SimplePeer, .send(text)); null on a socket connection'],
+    re: String.raw`this\.⟨ID⟩=new SimplePeer\(` },
+  { file: 'connection', keys: ['connReason'],
+    what: ['connection property: why it closed or could not connect (text)'],
+    re: String.raw`this\.⟨ID⟩="No data was ever received, timed out";` },
+  // Numbers in messages are written in base N with this alphabet (built at load).
+  { file: 'flash', keys: ['netDigits'],
+    what: ['net property: the digits of the encoded numbers in network messages'],
+    re: String.raw`⟨net⟩\.⟨ID⟩\+=c;` },
+  { file: 'flash', keys: ['netTypeNames'],
+    what: ['net property: reliable message type number -> name ("RELIABLE_...")'],
+    re: String.raw`if\(prop\.substring\(0,[\x60"]RELIABLE_[\x60"]\.length\)===[\x60"]RELIABLE_[\x60"]\)\s*⟨net⟩\.⟨ID⟩\[⟨net⟩\[prop\]\]=prop;` },
+  { file: 'flash', keys: ['p2pConn'],
+    what: ['net property: connection to the player-hosted (P2P) match you joined'],
+    re: String.raw`⟨net⟩\.connections\.push\(c\);\s*c\.⟨_⟩\(⟨_⟩\);\s*⟨net⟩\.⟨ID⟩=c;` },
   // The anti-cheat's locked arrays (ANTICHEAT.md §7). The scan's code 3 report sends an
   // index into this list.
   { file: 'tools', keys: ['lockedArrays'],
