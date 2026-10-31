@@ -1,7 +1,7 @@
 # Your own server
 
 `npm run server` runs a Plazma Burst 2 lobby server on your computer. Your friends
-connect to it with `npm run join`. The official site and its servers are not part of
+pick it in the app's server list. The official site and its servers are not part of
 it: it has its own match list, matches, chat and bans.
 
 It's the game's own server. Every copy of the game includes the official lobby server's
@@ -26,8 +26,9 @@ official "USA, ARIZONA (TCP)" matches, only closer. A player's ping is to your c
 2. Copy `server/server.example.json` to `server/server.json` and set a `password`.
 3. Run `npm run server`. On first start it makes a certificate (`server/data/`) and
    prints what players need:
-   ```json
-   { "address": "192.168.1.20:2053", "fingerprint": "0B:3A:…", "nickname": "<their nickname>", "password": "<the server password>" }
+   ```
+   address:     192.168.1.20:2053
+   fingerprint: 0B:3A:52:…
    ```
    `join` in the terminal prints it again.
 4. For friends outside your network, forward **TCP port 2053** on your router to this
@@ -36,20 +37,27 @@ official "USA, ARIZONA (TCP)" matches, only closer. A player's ping is to your c
 ## Joining (each player)
 
 1. Get this project and the game: `npm install`, then `npm run fetch-game`.
-2. Copy `desktop/join.example.json` to `desktop/join.json` and fill it in from the
-   server's lines: address, fingerprint, your nickname, the server password.
-3. `npm run join`, then **Multiplayer**. The match browser lists the server's matches,
-   and creating or joining a match works as usual.
+2. `npm start` opens the server list: PlazmaBurst2.com and your private servers, each
+   with its address, ping, players and description.
+3. **Add server**: the address, the fingerprint (the host sends it, or "Get from server"
+   asks the server; compare the two), your nickname, the server password. Saved in
+   `desktop/servers.json`; add as many servers as you like.
+4. Double-click a server (or select it and press Play / Enter), then **Multiplayer**. The
+   match browser lists that server's matches; creating and joining work as usual.
 
-`npm start` still plays on the official servers; only `npm run join` goes to yours.
+Back to the list from the game: **Servers > Server list** (Ctrl+Shift+L). A
+`desktop/join.json` from before the list is imported once.
 
-What join mode does:
+What playing on a private server does:
 - **The game starts logged out.** Your PB2 account (`desktop/credentials.json`) isn't
   loaded, so it is never sent anywhere. The nickname and server password are given to
-  the game only after start-up, and only the lobby uses them.
-- **The game connects to the address in `join.json` only if the certificate there is
-  exactly the one in `fingerprint`.** Nobody else can pose as the server, and the
-  connection is encrypted.
+  the game only after start-up, and only the lobby uses them. The list page never gets
+  the password back from the app either.
+- **The game connects to that address only if the certificate there is exactly the
+  saved fingerprint.** Nobody else can pose as the server, and the connection is
+  encrypted. The list says so when a server's certificate has changed.
+- **The ping is the time to open a connection, one round trip.** Players, description and
+  game version come from the server's `/status`, which names no one.
 - **Everything else is unchanged.** Game files are local and the dev console works.
 
 ## Terminal
@@ -64,7 +72,7 @@ What join mode does:
 | `ban <nickname>` / `unban` / `bans` | keep someone out; kept in `server/data/bans.json` |
 | `end <match>` | end a match (its number from `matches`) |
 | `map <match> <map ID>` | change a match's map |
-| `join` | what players put in `desktop/join.json` |
+| `join` | what players need to add the server |
 | `quit` (Ctrl+C) | close the server |
 
 Logins, matches created, joins, leaves, chat and anti-cheat reports are printed as
@@ -76,7 +84,9 @@ they happen. Players can be named by the start of their nickname.
 |---|---|---|
 | `port` | 2053 | TCP port (the game's own lobby port) |
 | `bind` | `0.0.0.0` | address to listen on |
-| `password` | `""` | the server password players put in `join.json` |
+| `name` | `"Plazma Burst 2 server"` | the server's name in players' server lists |
+| `description` | `""` | a line under it there |
+| `password` | `""` | the server password players enter when they add the server |
 | `nicknames` | `[]` | if set, only these nicknames may log in |
 | `admins` | `[]` | nicknames with the game's staff rights: `-announce`, ending any match, kicking from any match, the in-game ban (a server ban) |
 | `max_players` | 64 | players online at once |
@@ -105,7 +115,7 @@ Players don't need the map file: the server sends each map to whoever joins.
 | Anti-cheat reports | the server disconnects the player | printed (`cheat_reports: "kick"` disconnects too). The game still reloads the page of a player whose own scan trips, as it always does |
 | Location on the Tab scoreboard | "USA, Arizona" | "Private server, <address>": the game writes "USA, Arizona" for every match not hosted by a player, and join mode replaces it |
 | Game version | the site's | the server and every player must run the **same game version**. After `npm run fetch-game` brings a new one, update all of them |
-| Who can connect | anyone | only `npm run join` with your fingerprint and password; ordinary copies of the game never come here |
+| Who can connect | anyone | only this app, with your fingerprint and password saved in its server list; ordinary copies of the game never come here |
 
 Player-hosted ("THIS DEVICE (UDP)") matches use the same server code, so they should
 work too, but they haven't been tried.

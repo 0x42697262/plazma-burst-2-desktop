@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Your own Plazma Burst 2 lobby server: "npm run server". The game's own server code
-// (server/game.js) behind TLS on one port, run from this terminal. Players connect with
-// the desktop wrapper's "npm run join" (desktop/join.json), never with the official site.
+// (server/game.js) behind TLS on one port, run from this terminal. Players pick it in the
+// desktop app's server list (npm start), never through the official site.
 // Guide: server/README.md.
 //
 // Usage: node server/index.js [--config file] [--game dir] [--data dir] [--verbose]
@@ -66,6 +66,10 @@ function writeBans(DATA, list) {
   fs.writeFileSync(path.join(DATA, 'bans.json'), JSON.stringify(list, null, 1) + '\n');
 }
 
+function gameVersion(dir) {
+  try { return JSON.parse(fs.readFileSync(path.join(dir, 'pb2-version.json'), 'utf8')).version || null; } catch { return null; }
+}
+
 function addresses() {
   const out = [];
   for (const list of Object.values(os.networkInterfaces())) {
@@ -86,7 +90,7 @@ const HELP = [
   '  bans                    the ban list',
   '  end <match>             end a match (its number from "matches")',
   '  map <match> <map ID>    change a match\'s map (desktop/maps, or a published ID)',
-  '  join                    what players put in desktop/join.json',
+  '  join                    what players need to add this server',
   '  quit                    close the server (Ctrl+C)',
 ];
 
@@ -114,22 +118,39 @@ function main() {
   game.onBans = (list) => writeBans(DATA, list);
 
   const tls = certificate(DATA, log);
-  const web = https.createServer({ cert: tls.cert, key: tls.key }, (req, res) => { res.writeHead(404); res.end(); });
+  const version = gameVersion(args.game);
+  // What a player's server list shows: GET /status. Nothing private: no names, no addresses.
+  const status = () => JSON.stringify({
+    name: config.name, description: config.description, version, password: !!config.password,
+    players: game.online().length, max_players: config.max_players, matches: game.matches().length,
+  });
+  const web = https.createServer({ cert: tls.cert, key: tls.key }, (req, res) => {
+    if (req.method === 'GET' && req.url === '/status') {
+      const body = status();
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body), 'Cache-Control': 'no-store' });
+      res.end(body);
+      return;
+    }
+    res.writeHead(404);
+    res.end();
+  });
   const io = new Server(web, { cors: { origin: ORIGIN, credentials: true }, serveClient: false });
   io.on('connection', (socket) => { try { game.accept(socket); } catch (e) { log.error(`connection: ${e.message}`); socket.disconnect(true); } });
   web.on('error', (e) => { log.error(`Cannot listen on ${config.bind}:${config.port}: ${e.message}`); process.exit(1); });
   web.listen(config.port, config.bind, () => {
     game.start();
     config.port = web.address().port;
-    log.info(`Plazma Burst 2 server on ${config.bind}:${config.port}${config.password ? ', password set' : ''}`);
+    log.info(`"${config.name}" on ${config.bind}:${config.port}${config.password ? ', password set' : ''}, game ${version || 'version unknown'}`);
     printJoin();
     log.info('Type "help" for commands.');
   });
 
   function printJoin() {
     const ips = addresses();
-    log.info('Players put this in desktop/join.json (and their own nickname), then "npm run join":');
-    log.info(JSON.stringify({ address: `${ips[0] || '<this computer\'s address>'}:${config.port}`, fingerprint: tls.fingerprint, nickname: '<their nickname>', password: config.password ? '<the server password>' : '' }, null, 2));
+    log.info('Players add this server in the app\'s server list (npm start > Add server):');
+    log.info(`  address:     ${ips[0] || '<this computer\'s address>'}:${config.port}`);
+    log.info(`  fingerprint: ${tls.fingerprint}`);
+    log.info(`  password:    ${config.password ? '(the one in your server.json)' : '(none)'}`);
     if (ips.length > 1) log.info(`This computer's other addresses: ${ips.slice(1).join(', ')}`);
     log.info(`From outside your network: your public address, with TCP port ${config.port} forwarded to this computer.`);
   }

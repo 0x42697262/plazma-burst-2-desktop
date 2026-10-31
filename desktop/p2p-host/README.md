@@ -1,7 +1,7 @@
 # Player-hosted dedicated host
 
 > For a server of your own that the official site is not part of at all, see
-> [server/README.md](../../server/README.md) (`npm run server` and `npm run join`). This
+> [server/README.md](../../server/README.md) (`npm run server`, and the app's server list). This
 > host is for a match listed by the official lobby, that any copy of the game can join.
 
 `npm run p2p-host` runs the game with no window and nobody playing on it. It hosts one

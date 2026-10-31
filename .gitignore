@@ -34,7 +34,9 @@ desktop/p2p-host.json
 desktop/server.json
 desktop/p2p-host-overrides.json
 
-# A private server to join (desktop/join.js): its address, your nickname, its password.
+# The server list's private servers (desktop/servers.js): addresses, your nicknames, their passwords.
+desktop/servers.json
+desktop/servers.json.tmp
 desktop/join.json
 
 # Your own server (server/): its settings, and its certificate, bans and downloaded maps.

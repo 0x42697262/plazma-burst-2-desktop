@@ -2,7 +2,7 @@
 // Serves the local game copy under its real URL so the game behaves exactly
 // like the official site (main server, login cookies, multiplayer).
 // Every other request is passed through to the real network.
-const { app, BrowserWindow, Menu, dialog, protocol, net, session } = require('electron');
+const { app, BrowserWindow, Menu, dialog, protocol, net, session, ipcMain } = require('electron');
 const fs = require('fs/promises');
 const fsSync = require('fs');
 const path = require('path');
@@ -17,7 +17,7 @@ const { REMOTE_PAGE_SCRIPT, REMOTE_WEB_PREFERENCES, isGamePage, lockDownSession,
 const REMOTE_SCREENSHOT_MS = 2000;
 const { startHost, parseHostArgs } = require('./remote/host');
 const serverConfig = require('./p2p-host/config');
-const { loadJoin } = require('./join');
+const servers = require('./servers');
 
 // Remote play host: "npm run host" (electron . --host). No window here: every tester who
 // opens their link gets an offscreen game instance on this machine, streamed to their
@@ -36,13 +36,16 @@ const SERVER_MODE = process.argv.includes('--p2p-host') && !HOST_MODE;
 const SERVER_CONFIG_FILE = path.join(__dirname, 'p2p-host.json');
 const SERVER_KV_FILE = path.join(__dirname, 'p2p-host-overrides.json');
 
-// A private server: "npm run join" (electron . --join). The game's lobby connection goes
-// to the server in desktop/join.json (server/, "npm run server") instead of the official
-// one, trusting only that server's certificate. The game starts logged out: the server
-// gets the nickname and its password from join.json, never your PB2 account.
-const JOIN_MODE = process.argv.includes('--join') && !HOST_MODE && !SERVER_MODE;
-const JOIN_FILE = path.join(__dirname, 'join.json');
-let joinTarget = null; // desktop/join.js checkJoin().join
+// The server list (desktop/launcher/): "npm start" opens it before the game. The official
+// server, and private servers (server/, "npm run server") saved in desktop/servers.json.
+// On a private server the game's lobby connection goes there instead, trusting only that
+// server's certificate, and the game starts logged out: the server gets a nickname and
+// its password, never your PB2 account.
+const SERVERS_FILE = path.join(__dirname, 'servers.json');
+const OLD_JOIN_FILE = path.join(__dirname, 'join.json'); // before the server list; imported once
+const LAUNCHER_FILE = path.join(__dirname, 'launcher', 'index.html');
+const LAUNCHER_URL = require('url').pathToFileURL(LAUNCHER_FILE).href;
+let joinTarget = null; // the private server being played on (desktop/servers.js checkServer), or null
 let serverPage = null; // the checked config the page gets as PB2_SERVER
 
 // The terminal log: --verbose / --log-level=<error|warn|info|debug> / PB2_LOG_LEVEL.
@@ -103,7 +106,7 @@ const SERVER_TRACE_SCRIPT_TAG = '<script>trace = function (...a) {'
 // settings cannot end the script.
 const serverPageScript = (config) => '<script>Object.defineProperty(globalThis, "PB2_SERVER", { value: Object.freeze('
   + JSON.stringify(config).replace(/</g, '\\u003c') + ') });</script>';
-// Join mode: where the lobby connection goes and who logs in there (dev console, join/).
+// A private server: where the lobby connection goes and who logs in there (dev console, join/).
 const joinPageScript = (join) => '<script>Object.defineProperty(globalThis, "PB2_JOIN", { value: Object.freeze('
   + JSON.stringify({ address: join.hostPort, nickname: join.nickname, password: join.password }).replace(/</g, '\\u003c') + ') });</script>';
 const DEV_SCRIPT_TAG = `<script src="${SHARED.devDir}${ROUTE.names}"></script>`
@@ -306,33 +309,35 @@ const types = {
   '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg', '.ttf': 'font/ttf', '.otf': 'font/otf',
 };
 
-// Login: every start clears the site's cookies, then sets the credentials, if any
-// (env vars PB2_LOGIN, PB2_PASSWORD, PB2_UID win over desktop/credentials.json).
-// Without them the game starts logged out. See desktop/login.js.
-// Join mode: the site's cookies cleared and none set, so the page never has your login.
+// A private server: the site's cookies cleared and none set, so the page never has your login.
 async function startLoggedOut() {
   const { removed } = await applyLogin(session.defaultSession.cookies, {}, HOST);
   if (removed.length) log.info(`Cleared saved site cookies: ${removed.join(', ')} (your PB2 account is not used on a private server)`);
 }
 
-// Join mode: the private server's address is trusted with exactly the certificate in
-// join.json, and with nothing else. Every other site is checked as usual.
-function pinServerCertificate(join) {
+// The private server being played on is trusted with exactly its saved certificate, and
+// with nothing else. Every other site, and that address when no private server is
+// chosen, is checked as usual.
+function pinServerCertificates() {
   const { X509Certificate } = require('crypto');
-  let warned = false;
+  let warned = null;
   session.defaultSession.setCertificateVerifyProc((request, callback) => {
-    if (request.hostname !== join.host) { callback(-3); return; }
+    const target = joinTarget;
+    if (!target || request.hostname !== target.host) { callback(-3); return; }
     let fingerprint = '';
     try { fingerprint = new X509Certificate(request.certificate.data).fingerprint256; } catch {}
-    if (fingerprint === join.fingerprint) { callback(0); return; }
-    if (!warned) {
-      warned = true;
-      log.error(`Private server: the certificate at ${join.hostPort} is not the one in desktop/join.json (got ${fingerprint || 'none'}); not connecting`);
+    if (fingerprint === target.fingerprint) { callback(0); return; }
+    if (warned !== target.id) {
+      warned = target.id;
+      log.error(`Private server: the certificate at ${target.hostPort} is not the saved one (got ${fingerprint || 'none'}); not connecting`);
     }
     callback(-2);
   });
 }
 
+// Login: each time the official server is chosen, the site's cookies are cleared, then
+// the credentials, if any, are set (env vars PB2_LOGIN, PB2_PASSWORD, PB2_UID win over
+// desktop/credentials.json). Without them the game starts logged out. See desktop/login.js.
 async function applyCredentials() {
   const credentials = loadCredentials(path.join(__dirname, 'credentials.json'));
   const { removed, set } = await applyLogin(session.defaultSession.cookies, credentials, HOST);
@@ -561,7 +566,7 @@ async function serveHooks(request, url) {
 async function serveLocal(url, ctx) {
   let rel = decodeURIComponent(url.pathname.slice(PREFIX.length));
   if (rel === '' || rel.endsWith('/')) rel += 'index.html';
-  if ((DEV_ENABLED || HOOKS_ENABLED || ctx.remote || ctx.server || JOIN_MODE) && rel === 'index.html') {
+  if ((DEV_ENABLED || HOOKS_ENABLED || ctx.remote || ctx.server || joinTarget) && rel === 'index.html') {
     const html = await fs.readFile(path.join(ROOT, 'index.html'), 'utf8');
     let out = html;
     if (HOOKS_ENABLED) {
@@ -583,7 +588,7 @@ async function serveLocal(url, ctx) {
         : out.replace(/<\/body>/i, DEV_SCRIPT_TAG + '</body>');
       if (out === before) log.error('Dev console: could not inject into index.html');
     }
-    if (JOIN_MODE && !ctx.remote && !ctx.server) {
+    if (joinTarget && !ctx.remote && !ctx.server) {
       const at = out.search(/<script\b/i);
       if (at < 0) {
         log.error('Private server: could not prepare index.html (no <script> tag); not serving it');
@@ -648,22 +653,9 @@ app.whenReady().then(async () => {
   log.info(`Game ${VERSION} from ${ROOT}`);
   log.debug(`Log level: debug (requests, window events, the game's trace() output)`);
   if (DEV_ENABLED) checkNamesFile();
-  if (JOIN_MODE) {
-    const { join, errors } = loadJoin(JOIN_FILE);
-    if (!join) {
-      const msg = `Cannot join a private server:\n${errors.join('\n')}\n\nGuide: server/README.md`;
-      log.error(msg);
-      dialog.showErrorBox('Plazma Burst 2: desktop/join.json', msg);
-      app.quit();
-      return;
-    }
-    joinTarget = join;
-    await startLoggedOut();
-    pinServerCertificate(join);
-    log.info(`Private server: ${join.hostPort} as ${join.nickname}`);
-  } else {
-    await applyCredentials();
-  }
+  // Remote play and the player-hosted host play on the official server; the window picks.
+  if (HOST_MODE || SERVER_MODE) await applyCredentials();
+  else pinServerCertificates();
 
   protocol.handle('https', (request) => handleRequestLogged(request, SERVER_MODE ? SERVER_CTX : LOCAL_CTX));
 
@@ -671,6 +663,7 @@ app.whenReady().then(async () => {
   // rest stays: Quit (Ctrl+Q), copy/paste, reload, DevTools, zoom, full screen.
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     { role: 'fileMenu' },
+    ...(HOST_MODE || SERVER_MODE ? [] : [{ label: 'Servers', submenu: [{ label: 'Server list', accelerator: 'CmdOrCtrl+Shift+L', click: () => showServerList() }] }]),
     { role: 'editMenu' },
     { role: 'viewMenu' },
     { label: 'Window', submenu: [{ role: 'minimize' }] },
@@ -689,16 +682,108 @@ app.whenReady().then(async () => {
     width: 1280,
     height: 720,
     autoHideMenuBar: true,
-    title: JOIN_MODE ? `Plazma Burst 2 (${joinTarget.hostPort})` : 'Plazma Burst 2',
-    webPreferences: { backgroundThrottling: false },
+    title: 'Plazma Burst 2',
+    // The server list's bridge (desktop/launcher/preload.js); it exposes nothing to the game's page.
+    webPreferences: { backgroundThrottling: false, preload: path.join(__dirname, 'launcher', 'preload.js') },
   });
   logPage(win, '');
 
   if (DEV_ENABLED) {
     try { kvFile.watch(); } catch (e) { log.warn(`Not watching ${DEV_KV_FILE}: ${e.message}`); }
   }
-  win.loadURL(START_URL);
+  importOldJoinFile();
+  serveServerList();
+  showServerList();
 });
+
+// ---------------------------------------------------------------------------
+// Server list (desktop/launcher/, desktop/servers.js)
+// ---------------------------------------------------------------------------
+function showServerList() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  joinTarget = null;
+  mainWindow.setTitle('Plazma Burst 2');
+  mainWindow.loadFile(LAUNCHER_FILE);
+}
+
+// desktop/join.json from before the server list becomes a saved server, once.
+function importOldJoinFile() {
+  if (fsSync.existsSync(SERVERS_FILE) || !fsSync.existsSync(OLD_JOIN_FILE)) return;
+  try {
+    const { server } = servers.checkServer(JSON.parse(fsSync.readFileSync(OLD_JOIN_FILE, 'utf8')));
+    if (!server) return;
+    servers.saveServers(SERVERS_FILE, [server], null);
+    log.info(`Imported desktop/join.json into ${path.relative(path.join(__dirname, '..'), SERVERS_FILE)}; join.json is no longer used`);
+  } catch (e) {
+    log.warn(`desktop/join.json not imported: ${e.message}`);
+  }
+}
+
+// What the list page may ask, and only the list page.
+function serveServerList() {
+  const fromList = (e) => e.senderFrame && e.senderFrame.url.split('#')[0] === LAUNCHER_URL;
+  const handle = (channel, fn) => ipcMain.handle(channel, async (e, ...args) => {
+    if (!fromList(e)) throw new Error('not allowed here');
+    return fn(...args);
+  });
+  const load = () => servers.loadServers(SERVERS_FILE);
+  // Passwords stay in the main process; the page only learns whether one is set.
+  const shown = (s) => ({ id: s.id, name: s.name, address: s.address, fingerprint: s.fingerprint, nickname: s.nickname, hasPassword: !!s.password });
+
+  handle('servers:list', () => {
+    const { servers: list, last, problems } = load();
+    for (const p of problems) log.warn(`desktop/servers.json: ${p}`);
+    return { official: { ...servers.OFFICIAL }, servers: list.map(shown), last, gameVersion: VERSION, problems };
+  });
+  // entry: { id?, name, address, fingerprint, nickname, password? } (no password: keep the saved one).
+  handle('servers:save', (entry) => {
+    const { servers: list, last } = load();
+    const old = entry && entry.id ? list.find((s) => s.id === entry.id) : null;
+    const { server, errors } = servers.checkServer({ ...entry, password: entry && typeof entry.password === 'string' ? entry.password : old ? old.password : '' });
+    if (!server) return { errors };
+    const next = old ? list.map((s) => (s.id === old.id ? server : s)) : [...list, server];
+    servers.saveServers(SERVERS_FILE, next, last);
+    return { server: shown(server) };
+  });
+  handle('servers:remove', (id) => {
+    const { servers: list, last } = load();
+    servers.saveServers(SERVERS_FILE, list.filter((s) => s.id !== id), last === id ? null : last);
+    return true;
+  });
+  // { ping (ms or null), status ({ name, description, players, ... }) or error }
+  handle('servers:check', async (id) => {
+    if (id === servers.OFFICIAL.id) return { ping: await servers.ping(servers.OFFICIAL.host, servers.OFFICIAL.port) };
+    const s = load().servers.find((x) => x.id === id);
+    if (!s) return { error: 'not saved' };
+    const [ping, status] = await Promise.all([
+      servers.ping(s.host, s.port),
+      servers.fetchStatus(s).then((v) => ({ v }), (e) => ({ e })),
+    ]);
+    return status.v ? { ping, status: status.v } : { ping, error: status.e.message, pinned: status.e.pinned !== false };
+  });
+  handle('servers:fingerprint', async (address) => {
+    const a = servers.parseAddress(address);
+    return servers.fetchFingerprint(a.host, a.port);
+  });
+  handle('servers:play', async (id) => {
+    const { servers: list } = load();
+    const target = id === servers.OFFICIAL.id ? null : list.find((s) => s.id === id);
+    if (id !== servers.OFFICIAL.id && !target) throw new Error('that server is not saved');
+    servers.saveServers(SERVERS_FILE, list, id);
+    if (target) {
+      await startLoggedOut();
+      joinTarget = target;
+      log.info(`Private server: ${target.name} (${target.hostPort}) as ${target.nickname}`);
+      mainWindow.setTitle(`Plazma Burst 2 (${target.name})`);
+    } else {
+      joinTarget = null;
+      await applyCredentials();
+      mainWindow.setTitle('Plazma Burst 2');
+    }
+    mainWindow.loadURL(START_URL);
+    return true;
+  });
+}
 
 // Who a request comes from. The local window: the default session, the shared
 // dev-overrides.json. A tester's game: their own session, settings file and window.

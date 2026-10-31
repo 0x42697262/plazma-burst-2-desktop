@@ -1,5 +1,6 @@
-// Your own server ("npm run server", server/) and joining it ("npm run join"): their
-// settings, and the game's own server code run against the game's own client code.
+// Your own server ("npm run server", server/) and joining it from the app's server list
+// (desktop/servers.js): their settings, the list's checks (ping, the pinned /status, the
+// fingerprint), and the game's own server code run against the game's own client code.
 // The end-to-end test needs the game files (game/) and is skipped without them.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -14,7 +15,8 @@ const REPO = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
 const { checkConfig } = require('../server/config.js');
 const { memberShapes } = require('../server/game.js');
-const { checkJoin, parseAddress, normalFingerprint } = require('../desktop/join.js');
+const servers = require('../desktop/servers.js');
+const { checkServer, parseAddress, normalFingerprint } = servers;
 const HAS_GAME = fs.existsSync(path.join(REPO, 'game', 'scripts', 'libs', 'flash.js'));
 
 const FP = Array.from({ length: 32 }, (_, i) => i.toString(16).padStart(2, '0').toUpperCase()).join(':');
@@ -32,18 +34,36 @@ test('server config: defaults, checks, the open-server warning', () => {
   for (const want of [/port/, /nicknames/, /cheat_reports/, /download_maps/, /skin/]) assert.ok(bad.errors.some((e) => want.test(e)), String(want));
 });
 
-test('join config: address, pinned fingerprint, nickname', () => {
+test('server list entries: address, pinned fingerprint, nickname; saved without anything else', () => {
   assert.deepEqual(parseAddress('203.0.113.5:2054'), { host: '203.0.113.5', port: 2054, hostPort: '203.0.113.5:2054' });
   assert.equal(parseAddress('my.host').port, 2053);
   assert.equal(parseAddress('[::1]:9').host, '::1');
   assert.throws(() => parseAddress('a b:1'));
   assert.equal(normalFingerprint(FP.toLowerCase().replace(/:/g, '')), FP);
-  const ok = checkJoin({ address: 'https://1.2.3.4:2053/', fingerprint: FP.toLowerCase(), nickname: ' Pal ', password: 'pw' });
+  const ok = checkServer({ address: 'https://1.2.3.4:2053/', fingerprint: FP.toLowerCase(), nickname: ' Pal ', password: 'pw' });
   assert.deepEqual(ok.errors, []);
-  assert.equal(ok.join.hostPort, '1.2.3.4:2053');
-  assert.equal(ok.join.nickname, 'Pal');
-  const bad = checkJoin({ address: '', fingerprint: 'abc', nickname: '' });
-  assert.equal(bad.errors.length, 3);
+  assert.equal(ok.server.hostPort, '1.2.3.4:2053');
+  assert.equal(ok.server.name, '1.2.3.4:2053', 'no name: the address');
+  assert.equal(ok.server.nickname, 'Pal');
+  assert.match(ok.server.id, /^[a-f0-9]{12}$/);
+  assert.equal(checkServer({ address: '', fingerprint: 'abc', nickname: '' }).errors.length, 3);
+
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-servers-'));
+  const file = path.join(dir, 'servers.json');
+  try {
+    assert.deepEqual(servers.loadServers(file), { servers: [], last: null, problems: [] });
+    servers.saveServers(file, [ok.server], ok.server.id);
+    const saved = JSON.parse(fs.readFileSync(file, 'utf8'));
+    assert.deepEqual(Object.keys(saved.servers[0]).sort(), ['address', 'fingerprint', 'id', 'name', 'nickname', 'password']);
+    fs.writeFileSync(file, JSON.stringify({ servers: [...saved.servers, { address: 'x y' }], last: saved.last }));
+    const back = servers.loadServers(file);
+    assert.equal(back.servers.length, 1);
+    assert.equal(back.servers[0].id, ok.server.id);
+    assert.equal(back.last, ok.server.id);
+    assert.match(back.problems[0], /^server 2: /);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('the account module is built from how the game uses it', () => {
@@ -97,12 +117,23 @@ test('own server: the game\'s server code logs players in, lists, creates and jo
   const until = async (fn, ms = 8000) => { for (let t = 0; t < ms; t += 50) { if (fn()) return true; await wait(50); } return false; };
   const clients = [];
   try {
-    assert.ok(await until(() => /server on 127\.0\.0\.1:\d+/.test(out)), out);
-    const url = `https://127.0.0.1:${out.match(/server on 127\.0\.0\.1:(\d+)/)[1]}`;
+    assert.ok(await until(() => /" on 127\.0\.0\.1:\d+/.test(out)), out);
+    const url = `https://127.0.0.1:${out.match(/" on 127\.0\.0\.1:(\d+)/)[1]}`;
+    const port = Number(out.match(/" on 127\.0\.0\.1:(\d+)/)[1]);
+    const fingerprint = out.match(/fingerprint: ([0-9A-F:]{95})/)[1];
+    assert.equal(await servers.fetchFingerprint('127.0.0.1', port), fingerprint);
+    const entry = checkServer({ address: `127.0.0.1:${port}`, fingerprint, nickname: 'Pal' }).server;
+    const st = await servers.fetchStatus(entry);
+    assert.equal(st.password, true);
+    assert.equal(st.players, 0);
+    assert.equal(typeof st.name, 'string');
+    assert.ok(Object.keys(st).every((k) => ['name', 'description', 'version', 'password', 'players', 'max_players', 'matches'].includes(k)), 'nothing private');
+    await assert.rejects(servers.fetchStatus({ ...entry, fingerprint: FP }), (e) => e.pinned === false, 'another certificate: no status');
+    assert.equal(typeof await servers.ping('127.0.0.1', port), 'number');
     const client = () => { const c = createClient({ gameDir: path.join(REPO, 'game'), names: N, url }); clients.push(c); return c; };
     const a = client();
     const b = client();
-    assert.deepEqual(await b.login('Bob', 'nope'), ['fail', 'Server: Wrong server password (desktop/join.json "password")']);
+    assert.deepEqual(await b.login('Bob', 'nope'), ['fail', 'Server: Wrong server password (Servers > Server list > Edit)']);
     assert.equal((await a.login('Alice', 'pw'))[0], 'ok');
     assert.deepEqual(await client().login('alice', 'pw'), ['fail', 'Server: That nickname is already playing here']);
     await wait(3100); // the game allows one login per connection every 3 s

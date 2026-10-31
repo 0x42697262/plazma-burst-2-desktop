@@ -15,7 +15,7 @@
 // overrides/ (per-frame forcing), triggers/ (map triggers and variables), maps/ (the map
 // cache), editor/ (the in-game map editor), net/ (the anti-cheat scan's report and the
 // network recorder for netlogs/), server/ (the player-hosted dedicated host, "npm run p2p-host"),
-// join/ (a private server, "npm run join"), ui/
+// join/ (a private server from the server list), ui/
 // (panel, log, pager), commands/ (one module per command group, all in the registry),
 // dispatch.js (running a typed line).
 import './commands/index.js';

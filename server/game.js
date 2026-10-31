@@ -138,9 +138,9 @@ class GameServer {
   login(conn, login, password) {
     const N = this.N;
     const c = this.config;
-    if (c.password && password !== c.password) return 'Server: Wrong server password (desktop/join.json "password")';
+    if (c.password && password !== c.password) return 'Server: Wrong server password (Servers > Server list > Edit)';
     const nickname = login.trim();
-    if (!nickname || nickname === '.guest') return 'Server: This server needs a nickname (desktop/join.json "nickname")';
+    if (!nickname || nickname === '.guest') return 'Server: This server needs a nickname (Servers > Server list > Edit)';
     if (nickname.length > MAX_NICKNAME || !NICKNAME.test(nickname)) return `Server: Nicknames are 1-${MAX_NICKNAME} letters, digits, spaces and _ . -`;
     const key = nickname.toLowerCase();
     if (c.nicknames.length && !c.nicknames.includes(key)) return 'Server: This nickname is not on the server\'s list';

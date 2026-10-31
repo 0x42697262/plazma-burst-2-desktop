@@ -13,7 +13,6 @@
     "test": "node --test test/",
     "host": "electron . --host",
     "server": "node server/index.js",
-    "join": "electron . --join",
     "p2p-host": "electron . --p2p-host",
     "testers": "node tools/remote-testers.js"
   },

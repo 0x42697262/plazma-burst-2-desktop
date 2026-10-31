@@ -1,4 +1,4 @@
-// "npm run join": the game's lobby connection goes to a private server (server/) instead
+// A private server from the server list: the game's lobby connection goes there (server/) instead
 // of the official one. The lobby address is the game's own list of address starts, put
 // together as <start> + "plazmaburst2.com:" + port (screens/MPLobby.js); every start
 // becomes "https://<address>/?", so what follows is only a query the server ignores.

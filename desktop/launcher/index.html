@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'">
+<title>Plazma Burst 2: servers</title>
+<link rel="stylesheet" href="launcher.css">
+</head>
+<body>
+<main>
+  <header>
+    <h1>Plazma Burst 2</h1>
+    <p class="sub">Choose a server. Double-click a row or press Enter to play.</p>
+  </header>
+
+  <table id="servers">
+    <thead>
+      <tr><th>Server</th><th>Address</th><th class="num">Ping</th><th class="num">Players</th><th>Description</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <p id="note" class="note" hidden></p>
+
+  <div class="actions">
+    <button id="play" class="primary">Play</button>
+    <span class="gap"></span>
+    <button id="add">Add server</button>
+    <button id="edit">Edit</button>
+    <button id="remove">Remove</button>
+    <button id="refresh">Refresh</button>
+  </div>
+  <p class="hint">Private servers run with <code>npm run server</code> (server/README.md). Back here from the game: Servers &gt; Server list (Ctrl+Shift+L).</p>
+</main>
+
+<dialog id="form">
+  <form method="dialog">
+    <h2 id="form-title">Add a private server</h2>
+    <label>Name <input name="name" maxlength="40" placeholder="(the server's address)"></label>
+    <label>Address <input name="address" required placeholder="203.0.113.5:2053"></label>
+    <label>Fingerprint
+      <span class="row"><input name="fingerprint" required placeholder="0B:3A:52:…" spellcheck="false"><button type="button" id="get-fp">Get from server</button></span>
+    </label>
+    <p class="small" id="fp-note">The server prints it when it starts. "Get from server" asks the server for it; compare it with the one the host sent you.</p>
+    <label>Your nickname <input name="nickname" required maxlength="20" placeholder="Letters, digits, spaces, _ . -"></label>
+    <label>Server password <input name="password" type="password" autocomplete="off"></label>
+    <ul id="errors" class="errors" hidden></ul>
+    <div class="actions">
+      <button type="button" id="cancel">Cancel</button>
+      <span class="gap"></span>
+      <button id="save" value="save" class="primary">Save</button>
+    </div>
+  </form>
+</dialog>
+<script src="launcher.js"></script>
+</body>
+</html>

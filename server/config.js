@@ -5,9 +5,11 @@
 const fs = require('fs');
 
 const DEFAULTS = Object.freeze({
+  name: 'Plazma Burst 2 server', // shown in the players' server list
+  description: '', // a line under it there
   port: 2053, // the game's own lobby port
   bind: '0.0.0.0',
-  password: '', // players put it in desktop/join.json
+  password: '', // players enter it when they add the server to their server list
   nicknames: [], // who may log in; [] = anyone with the password
   admins: [], // nicknames with staff rights: -announce, end any match, kick or ban anyone
   max_players: 64,
@@ -44,6 +46,8 @@ function checkConfig(obj) {
   if (typeof server.download_maps !== 'boolean') errors.push('download_maps: true or false');
   if (!CHEAT.includes(server.cheat_reports)) errors.push(`cheat_reports: ${CHEAT.join(' or ')}`);
   if (typeof server.welcome !== 'string') errors.push('welcome: text');
+  if (typeof server.name !== 'string' || !server.name.trim() || server.name.length > 40) errors.push('name: text, 1-40 characters');
+  if (typeof server.description !== 'string' || server.description.length > 200) errors.push('description: text, at most 200 characters');
   if (!errors.length && !server.password && !server.nicknames.length) {
     problems.push('no "password" and no "nicknames": anyone who can reach this address and port can log in');
   }
