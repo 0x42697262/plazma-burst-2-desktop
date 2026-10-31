@@ -6,12 +6,12 @@ const { app, BrowserWindow, Menu, dialog, protocol, net, session, ipcMain } = re
 const fs = require('fs/promises');
 const fsSync = require('fs');
 const path = require('path');
-const vm = require('vm');
 const { loadCredentials, applyLogin } = require('./login');
 const { createKvFile } = require('./kv-file');
 const { parseLogLevel, createLogger } = require('./log');
 const hooks = require('./hooks');
 const { createNetLog } = require('./netlog');
+const { makeUnpacker, beautifyMap } = require('./map-text');
 const { REMOTE_PAGE_SCRIPT, REMOTE_WEB_PREFERENCES, isGamePage, lockDownSession, lockDownWindow } = require('./remote/lockdown');
 // A tester's screenshot key writes a file here each press: one per this many ms per tester.
 const REMOTE_SCREENSHOT_MS = 2000;
@@ -212,50 +212,9 @@ const fastMapsOn = () => readDevKv().fast_maps === true;
 // not safe in a file name becomes %XX.
 const mapFileName = (id) => id.replace(/[^A-Za-z0-9 _.\-]/g, (c) => '%' + c.charCodeAt(0).toString(16).padStart(2, '0')) + '.xml';
 
-// The server sends maps in a compressed "<q." text format. It is unpacked with the
-// game's own function from scripts/libs/xml.js, run in a sandbox.
-let unpackMap = null;
-function decompressMap(text) {
-  if (!text.startsWith(SHARED.map.compressedPrefix)) return text;
-  if (!unpackMap) {
-    const ctx = {};
-    ctx.globalThis = ctx;
-    vm.createContext(ctx);
-    vm.runInContext(fsSync.readFileSync(path.join(ROOT, '_strings.js'), 'utf8'), ctx);
-    const src = fsSync.readFileSync(path.join(ROOT, 'scripts', 'libs', 'xml.js'), 'utf8');
-    vm.runInContext(src, ctx);
-    const m = src.match(/function (\$[^\s(]+)\(str\)\s*\{\s*for\(i=/);
-    if (!m) throw new Error('map decompressor not found in scripts/libs/xml.js');
-    unpackMap = vm.runInContext(m[1], ctx);
-  }
-  const out = unpackMap(text);
-  if (out.startsWith(SHARED.map.compressedPrefix)) throw new Error('map is still compressed after unpacking');
-  return out;
-}
-
-// The server sends a map as one long line of self-closing tags. It is saved one tag
-// per line so the files are readable and diff cleanly: the game's parser skips whatever
-// sits between tags. Quoted attribute values are left alone, brackets inside them too.
-function beautifyMap(text) {
-  const lines = [];
-  let line = '';
-  let quoted = false;
-  for (const c of text) {
-    if (quoted) {
-      line += c;
-      if (c === '"') quoted = false;
-      continue;
-    }
-    if (c === '<' && line.trim()) {
-      lines.push(line.trim());
-      line = '';
-    }
-    line += c;
-    if (c === '"') quoted = true;
-  }
-  if (line.trim()) lines.push(line.trim());
-  return lines.length ? lines.join('\n') + '\n' : '';
-}
+// Maps from the site come compressed ("<q."): unpacked with the game's own function, and
+// saved one tag per line (desktop/map-text.js).
+const decompressMap = makeUnpacker(ROOT);
 
 // Returns one of SHARED.saveResult: saved, same or off. Throws on bad input.
 async function saveMap(id, raw) {

@@ -208,7 +208,10 @@ class GameServer {
     const fail = (why) => ['x', why].join(MAP_JOIN);
     let id = asked;
     const answer = (text) => {
-      const players = Math.min(MAX_MAP_PLAYERS, Math.max(1, (text.match(/<player\b/g) || []).length));
+      // One slot per player start; a map with none (an add-on such as "nanotech-cht")
+      // leaves it to the match's own max players.
+      const starts = (text.match(/<player\b/g) || []).length;
+      const players = Math.min(MAX_MAP_PLAYERS, starts || MAX_MAP_PLAYERS);
       return [text, id, '0', String(players), id].join(MAP_JOIN);
     };
     (async () => {
@@ -219,14 +222,21 @@ class GameServer {
       } else if (String(asked).includes(',')) {
         return fail('Merging maps ("a,b") is done by the official map service; this server plays one map ID at a time');
       }
+      // 1. this server's maps; 2. the site's; only then is it missing.
       const local = this.maps.local(id);
-      if (local) { this.log.info(`Map ${id} from desktop/maps`); return answer(local); }
-      if (!this.config.download_maps) return fail(`Map "${id}" is not in desktop/maps on this server`);
-      const text = await this.maps.download(id);
-      if (!text) return fail(`Map "${id}" was not found`);
-      this.log.info(`Map ${id} downloaded`);
+      if (local) { this.log.info(`Map ${id} from this server`); return answer(local); }
+      if (!this.config.download_maps) return fail(`Map "${id}" is not on this server (it downloads no maps)`);
+      let text;
+      try {
+        text = await this.maps.download(id);
+      } catch (e) {
+        this.log.warn(`Map ${id}: plazmaburst2.com could not be asked (${e.message})`);
+        return fail(`Map "${id}" is not on this server, and plazmaburst2.com could not be reached`);
+      }
+      if (!text) { this.log.info(`Map ${id}: not on this server nor on plazmaburst2.com`); return fail(`Map "${id}" does not exist (not on this server, not on plazmaburst2.com)`); }
+      this.log.info(`Map ${id} downloaded from plazmaburst2.com`);
       return answer(text);
-    })().then(done, (e) => { this.log.warn(`Map ${id}: ${e.message}`); done(['x', `Map "${id}" could not be loaded`].join(MAP_JOIN)); });
+    })().then(done, (e) => { this.log.warn(`Map ${id}: ${e.message}`); done(fail(`Map "${id}" could not be loaded`)); });
   }
 
   // A socket.io socket that just connected.

@@ -19,6 +19,7 @@ const { createLogger, parseLogLevel } = require('../desktop/log');
 const { findNames } = require('../tools/find-names');
 const { loadConfig } = require('./config');
 const { createMaps } = require('./maps');
+const { makeUnpacker } = require('../desktop/map-text');
 const { GameServer } = require('./game');
 
 const REPO = path.join(__dirname, '..');
@@ -113,7 +114,7 @@ function main() {
     process.exitCode = 1;
     return;
   }
-  const maps = createMaps({ mapsDir: path.join(REPO, 'desktop', 'maps'), cacheDir: path.join(DATA, 'maps') });
+  const maps = createMaps({ mapsDir: path.join(REPO, 'desktop', 'maps'), cacheDir: path.join(DATA, 'maps'), unpack: makeUnpacker(args.game) });
   const game = new GameServer({ gameDir: args.game, names: found.found, config, log, maps });
   game.onBans = (list) => writeBans(DATA, list);
 

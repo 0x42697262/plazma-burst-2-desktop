@@ -101,8 +101,12 @@ they happen. Players can be named by the start of their nickname.
 A match's map ID is looked up on the server's computer:
 - **`local-<name>` or `<name>`:** `desktop/maps/<name>.xml` (or `.txt`), the same local
   maps as the wrapper's.
-- **Any other ID:** a published map, downloaded from plazmaburst2.com once and then kept.
-  This is the only time the server contacts the site, and it sends no login.
+- **Any other ID:** a published map, downloaded from plazmaburst2.com (no login needed),
+  unpacked to plain XML with the game's own function, and kept in `server/data/maps`, so
+  each map is downloaded once. This is the only time the server contacts the site.
+- **Only if the site doesn't have it either** does the match get an error ("does not exist:
+  not on this server, not on plazmaburst2.com"). A map without player starts (an add-on
+  such as `nanotech-cht`) leaves the player count to the match's own setting.
 
 - **`random approved`, `random approved in rotation`:** the create screen's default IDs. The
   official map service picks a random approved map for them; this server picks one from
