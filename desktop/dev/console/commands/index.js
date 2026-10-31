@@ -20,6 +20,7 @@ import { screenshotCommand } from './screenshot.js';
 import { editorCommand } from './editor.js';
 import { jsCommand } from './js.js';
 import { hooksCommand } from './hooks.js';
+import { netlogCommand } from './netlog.js';
 
 const [list, set, get, unset, reset, builtin] = settingsCommands;
 
@@ -27,5 +28,5 @@ register(
   helpCommand, list, set, get, unset, reset, profileCommand,
   ...playerCommands, gunsCommand, tpCommand, posCommand, ...gunCommands, charsCommand, traceCommand,
   ...bindCommands, keynameCommand, triggersCommand, regionsCommand, varsCommand, logicCommand, editorCommand, chainTopic, moreCommand,
-  gameCommand, zoomCommand, builtin, mapsCommand, screenshotCommand, jsCommand, hooksCommand, ...consoleCommands,
+  gameCommand, zoomCommand, builtin, mapsCommand, screenshotCommand, netlogCommand, jsCommand, hooksCommand, ...consoleCommands,
 );

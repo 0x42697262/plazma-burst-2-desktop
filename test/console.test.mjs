@@ -2486,3 +2486,80 @@ test('net_log off unwraps every connection and stops recording; on starts again'
     rec.netTick(t + 50);
   }
 });
+
+test('netlog: status, the last lines with filters, other instances and on/off', async () => {
+  const { G, N } = c;
+  const rec = await consoleModule('net/recorder.js');
+  const net = G[N.net];
+  net[N.netDigits] = NET_DIGITS;
+  net[N.netTypeNames] = { 5: 'RELIABLE_CHAT', 9: 'RELIABLE_SHOT' };
+  const conn = fakeConnection(N);
+  net.connections = [conn];
+  net[N.lobbyConn] = conn;
+  const realFetch = G.fetch;
+  let t = Date.now() + 200000;
+  const since = rec.netlog.lines().length;
+  const last = () => `last:${rec.netlog.lines().length - since}`; // this test's lines only
+  try {
+    rec.netTick(t);
+    conn.socket.connected = true;
+    conn.ping = 45;
+    rec.netTick(t += 50);
+    conn.socket.volatile.emit('m', netPacket(-1, '', [[0, netMsg(5, 'hello there')], [1, netMsg(9, encNum(3))]]));
+    conn[N.connRecv](netPacket(1, '', [[0, netMsg(5, 'hi back')], [2, netMsg(9, encNum(4))]]));
+
+    const st = c.run('netlog');
+    assert.match(st[0], /^Network log: on \(net_log\)\. State updates: counted only/);
+    assert.ok(st.some((l) => /^ {2}c\d+ server +connected, ping 45 ms, out 1 packets, in 1 packets \| loss: 0 resends, 0 dropped, 1 gap, 0 late, 0 duplicates \| 1 missing$/.test(l)), st.join('\n'));
+
+    const chat = c.run(`netlog show type:chat ${last()}`);
+    assert.match(chat[0], /^Network log, this page: 2 of the last \d+ lines match\.$/);
+    assert.match(chat[1], /OUT +REL +#0 RELIABLE_CHAT {2}hello there$/);
+    assert.match(chat[2], /IN +REL +#0 RELIABLE_CHAT {2}hi back$/);
+    const back = c.run(`net show --in hi ${last()}`);
+    assert.equal(back.length, 3, back.join('\n'));
+    assert.match(c.run(`netlog show --loss ${last()}`)[1], /LOSS +gap: #2 arrived before #1/);
+    assert.match(c.run(`netlog show --out type:shot ${last()}`)[1], /RELIABLE_SHOT {2}#3$/);
+    assert.match(c.run('netlog show --in --out')[0], /^error: --in and --out do not go together/);
+    assert.match(c.run('netlog show nothing-like-this')[1], /Nothing matches/);
+
+    // Other instances: listed by the wrapper, read by name or by their number in the list.
+    const asked = [];
+    G.fetch = (url) => {
+      asked.push(url);
+      if (url.includes('netruns')) {
+        return Promise.resolve({ ok: true, json: async () => [
+          { name: '2026-11-01_05-30-12_local', size: 2048, updated: Date.now(), active: true, mine: true, current: true },
+          { name: '2026-11-01_05-31-00_local', size: 4096, updated: Date.now() - 2000, active: true, mine: false, current: false },
+        ] });
+      }
+      return Promise.resolve({ ok: true, text: async () => [
+        '05:31:01.000  c1 server     OUT  REL    #0 RELIABLE_CHAT  from the other app',
+        '05:31:02.000  c1 server     OUT  LOSS   resend #0 RELIABLE_CHAT (try 2, first sent 2001 ms ago, not acknowledged yet)',
+      ].join('\n') });
+    };
+    c.run('netlog runs');
+    await new Promise((r) => setImmediate(r));
+    const list = c.log.printed.filter((l) => !l.startsWith('> '));
+    assert.match(list[0], /^Network logs in netlogs\/, newest first \(2\)/);
+    assert.match(list[1], /^ +1 {2}2026-11-01_05-30-12_local +this window +2\.0 KB {2}updated now$/);
+    assert.match(list[2], /^ +2 {2}2026-11-01_05-31-00_local +other app, running/);
+    c.run('netlog show run:2 --loss');
+    await new Promise((r) => setImmediate(r));
+    assert.match(asked.at(-1), /netread\?run=2026-11-01_05-31-00_local&lines=1000$/);
+    const other = c.log.printed.filter((l) => !l.startsWith('> '));
+    assert.match(other[0], /^Network log 2026-11-01_05-31-00_local: 1 of the last 2 lines match\.$/);
+    assert.match(other[1], /LOSS +resend #0 RELIABLE_CHAT/);
+    assert.match(c.run('netlog show run:9')[0], /^error: no run 9/);
+
+    assert.match(c.run('netlog off')[0], /net_log = off/);
+    rec.netTick(t += 50);
+    assert.match(c.run('netlog')[0], /^Network log: off/);
+    c.run('netlog on');
+  } finally {
+    G.fetch = realFetch;
+    c.run('unset net_log');
+    net.connections = [];
+    rec.netTick(t + 50);
+  }
+});
