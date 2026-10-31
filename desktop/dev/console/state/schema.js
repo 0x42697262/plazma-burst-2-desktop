@@ -45,13 +45,7 @@ export const SCHEMA = Object.freeze({
     type: 'number', group: GROUP.world, min: -5, max: 5, desc: 'Gravity for everything (map default is usually 0.5)',
     about: ['Applies to everything, not just you. Most maps use 0.5.'], example: '0.2',
   },
-  zoom_lock: {
-    type: 'number', group: GROUP.world, min: 1, max: 1500,
-    desc: 'Camera zoom in percent, held there: map triggers, vehicles and engine marks cannot change it ("zoom 50 --lock")',
-    about: ['Keeps the camera at this zoom: whatever else sets it (a map trigger, getting', 'into a vehicle, the map\'s gamescale mark) is put back. "zoom --unlock" lets go.'],
-    example: '50',
-  },
-    bullet_damage: { type: 'number', group: GROUP.bullets, min: 0, max: 1000, desc: 'Damage multiplier for your bullets', example: '5' },
+  bullet_damage: { type: 'number', group: GROUP.bullets, min: 0, max: 1000, desc: 'Damage multiplier for your bullets', example: '5' },
   bullet_speed: { type: 'number', group: GROUP.bullets, min: 0.05, max: 20, desc: 'Speed multiplier for your bullets' },
   bullet_life: { type: 'number', group: GROUP.bullets, min: 0.05, max: 50, desc: 'Lifetime/range multiplier for your bullets' },
   penetration: {

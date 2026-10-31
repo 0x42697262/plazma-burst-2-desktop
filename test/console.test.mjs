@@ -2301,6 +2301,7 @@ test('zoom: any amount once, or locked so the map cannot change it', () => {
     c.frame();
     assert.equal(G[N.zoom], 0.5, 'put back');
     assert.deepEqual(run('zoom'), ['Zoom: 50%, locked at 50%']);
+    assert.ok(!c.run('list').some((l) => /zoom/.test(l)), 'the command\'s own, not a setting');
     assert.deepEqual(run('zoom 80'), ['Zoom 80% (unlocked)']);
     G[N.zoom] = 1;
     c.frame();
