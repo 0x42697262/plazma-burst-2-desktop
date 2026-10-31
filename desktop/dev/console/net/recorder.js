@@ -9,7 +9,7 @@
 // - ack: the highest reliable sequence number (uid) received in order.
 // - state: one unreliable message, the newest; an unsent older one is replaced.
 // - reliable messages: numbered 0, 1, 2 ... per connection and sent again until the other
-//   side acknowledges them (after 2 s, 6 s for a big one). A message's parts are split by
+//   side acknowledges them (once 2 s pass with nothing sent, 6 s after a big one). Parts are split by
 //   \x02 (escaped "$.2"); part 0 is its type, an encoded number (net type names map it to
 //   "RELIABLE_...").
 // - numbers inside messages are written in base N with the game's digits: the characters

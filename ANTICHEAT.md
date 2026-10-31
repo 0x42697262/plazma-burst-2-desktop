@@ -359,7 +359,7 @@ To see which one it was:
 2. Network → filter **WS** → the game's socket → **Messages**. A scan failure leaves the `RELIABLE_PING` frame just before the reload, with the code and the detail. No such frame: it was a stack check (or the canary).
 3. For code `3`, the detail is the index into `$pAТAMI`. In the Console, `$pAТAMI.indexOf(<array>)` gives an array's index, e.g. with the wall x array (`$сАоОo`, copied from `frame2.js:4499`; do not retype the look-alike letters). Only **read** there: calling `$oITOo`, `$oIeeol` or `$T0OMое` from the Console is itself a stack-check reload.
 
-The desktop wrapper's `--verbose` log does not show the report: it goes over the game's socket connection, and once that is a WebSocket its messages do not pass through the wrapper's request handler (only the HTTP requests do). What the log shows is the page starting again: the game's files requested from the top, then `[window] page loaded`.
+The desktop wrapper's `--verbose` log does not show the report: it goes over the game's socket connection, and once that is a WebSocket its messages do not pass through the wrapper's request handler (only the HTTP requests do). What the log shows is the page starting again: the game's files requested from the top, then `[window] page loaded`. The dev console's network log does show it: `netlog show type:ping` ([README.md §7](README.md#7-network-log)).
 
 ### 7.4 Leaving to the campaign screen is not the anti-cheat
 
@@ -1208,6 +1208,10 @@ Every reliable message goes through `connection.$OMeTо(channel, parts, callback
 
 On arrival, `$ММ.$pOeрМ` / `$ММ.$c0рlc` split the text at `\x02`, undo the escaping, and decode part 0 back to `26`.
 
+**The packet around the messages** (`connection.js`, `$AОAcc` sends, `$AoH1e` receives): one text per network tick, fields split by `\x01` (escaped `$.1`): `ack`, the newest unreliable state, then `uid`, message, `uid`, message, ... for every reliable message not yet acknowledged. `ack` is the highest uid received in order. Unacknowledged messages are sent again once 2 s pass with no reliable message going out (6 s when the last one was over 1000 characters). Over a socket the packet goes out with `socket.volatile.emit("m", text)`, which socket.io drops when the socket is busy; peer to peer it goes over an unordered data channel with no retransmits.
+
+The dev console's network log ([README.md §7](README.md#7-network-log), `desktop/dev/console/net/recorder.js`) decodes all of this into `netlogs/`: each reliable message with its type name and decoded numbers, and every resend, dropped packet, gap, late and duplicate message.
+
 ### 13.4 Keep-alive: start, run, end
 
 **What drives it (every network tick):**
@@ -1320,6 +1324,7 @@ The same `$с0A.$Т0ОcpT` also gets `"HealthAltering"` when a player's HP goes 
 | The game's View logs | No: skipped (`MPLogs.js:232–234`) |
 | DevTools → Network → WS → the game's socket | Yes: the last frame before the reload |
 | The dev console's terminal output (`net/scan-report.js`) | Yes: logged as a warning |
+| The network log (`netlogs/`, `netlog show type:ping`) | Yes: `OUT REL #<uid> RELIABLE_PING  undefined \| <code> \| <detail>`, recorded as it is sent |
 
 ### 13.6 Traces
 

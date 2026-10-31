@@ -14,7 +14,8 @@ The game files are **not** in this repository. You download them with a script.
 4. [Updating to a new game version](#4-updating-to-a-new-game-version)
 5. [Finding the obfuscated names](#5-finding-the-obfuscated-names)
 6. [Configuration](#6-configuration)
-7. [Troubleshooting](#7-troubleshooting)
+7. [Network log](#7-network-log)
+8. [Troubleshooting](#8-troubleshooting)
 
 ## 1. Quick start
 
@@ -45,6 +46,8 @@ In the game, press Shift+`` ` `` (`~`) for the dev console and type `help`.
 | `desktop/remote/` | Remote play: testers play a game running on this machine from their browser (`npm run host`). Guide: `desktop/remote/README.md` | yes |
 | `desktop/remote-testers.json`, `desktop/remote-data/` | Remote play: tester links, and each tester's console settings | no |
 | `desktop/hooks.js`, `desktop/hooks-runtime.js` | The hooks loader (dry run, patches, trampolines) and its in-page runtime | yes |
+| `netlogs/` | Network logs: every message the game sends and receives, and its packet losses, as plain text. One file per run and game instance (console key `net_log`, command `netlog`; see [section 7](#7-network-log)) | no |
+| `desktop/netlog.js`, `desktop/dev/console/net/recorder.js` | The network log: the files (wrapper), and the recorder on the game's connections (console) | yes |
 | `screenshots/` | Screenshots from the dev console: F12 (console key `screenshot_key`) or `screenshot` | no |
 | `tools/fetch-game.js` | Downloads the game | yes |
 | `tools/find-names.js` | Generates `desktop/dev/names.js` | yes |
@@ -201,11 +204,55 @@ If names are missing, the dev console still opens and lists them in red. Only co
 
 Every start clears the game site's cookies before the game loads, then logs in with the credentials above. Without credentials the game starts logged out, even if an account logged in last time; with them, only that account's cookies are set. Saved games and settings (localStorage) are kept.
 
-## 7. Troubleshooting
+## 7. Network log
+
+The dev console records the game's network traffic while it runs: on by default, in every game window. Each run of the app writes one plain-text file per game instance:
+
+```
+netlogs/<date>_<time>_local.log          this window
+netlogs/<date>_<time>_tester-<name>.log  a remote play tester's game (desktop/remote/)
+```
+
+A second copy of the app started in the same second gets `..._local-2.log`. Page reloads append to the same file, after a `PAGE` line.
+
+**A line:** time, connection, direction (`OUT` sent, `IN` received, `---` neither), kind, details. The header of each file explains every column.
+
+```
+05:30:14.200  c1 server     OUT  REL    #5 RELIABLE_CHAT  hello there | #12
+05:30:16.300  c1 server     OUT  LOSS   resend #5 RELIABLE_CHAT (try 2, first sent 2100 ms ago, not acknowledged yet)
+05:30:16.500  c1 server     IN   LOSS   gap: #11 arrived before #9-#10 (2 missing: lost or out of order)
+05:30:17.000  c1 server     ---  STAT   ping 45 ms | out 60 packets 3.1 KB (2 reliable, 58 state) | in 61 packets 12.4 KB (3 reliable, 58 state) | loss: 1 resend, 0 dropped, 1 gap, 0 late, 0 duplicates
+```
+
+| Kind | What |
+|---|---|
+| `REL` | A reliable message: its sequence number, its type (`RELIABLE_...`), then its parts. `#<n>` is a number the game sent in its own encoding, decoded |
+| `LOSS` | `resend` (not acknowledged in time), `dropped` (socket.io dropped it, the socket was busy), `gap` (a later message arrived first), `late` (a missing one arrived), `duplicate` |
+| `STAT` | Once a second per busy connection: ping, packets, bytes, losses |
+| `CONN` | Connected, disconnected (with the game's reason and the connection's totals) |
+| `STATE` | Every unreliable state update. Off by default (60 to 250 a second); only counted in `STAT` |
+
+**In the console:**
+
+| Command | What |
+|---|---|
+| `netlog` | On or off, the file, each connection's ping and losses |
+| `netlog show [filters]` | The last lines. Filters: `--loss`, `--in` / `--out`, `--rel` / `--stat` / `--conn` / `--state`, `type:chat`, `conn:c1`, `last:<n>`, any text |
+| `netlog runs` | Every log in `netlogs/`: this window, other instances running now, earlier runs |
+| `netlog show run:<n> [filters]` | Another instance's log, by its number in `netlog runs` or its name |
+| `netlog off` / `netlog on` | Stop or start recording (the key `net_log`) |
+| `net_log_state on` | Also write every state update |
+
+**What is recorded and how:** the protocol is in [ANTICHEAT.md §13.3](ANTICHEAT.md#133-on-the-wire). The recorder wraps three methods on each connection object, only while `net_log` is on: the receive method, the socket's `emit` and the P2P peer's `send`. No global and nothing on the network class is replaced, so the anti-tamper scan is not affected. State updates carry no sequence number, so their loss cannot be seen one by one; compare the `state` counts per second in `STAT`.
+
+Remote play testers have no `netlog runs` and no `run:`: they only see their own game's log. `PB2_DEV=0` turns the console off, and the network log with it.
+
+## 8. Troubleshooting
 
 - **"No game files found"** when starting: run `npm run fetch-game`.
 - **"Downloading Electron binary..."** on the first `npm start`: normal. Electron 45 downloads its binary on first use, not during `npm install`.
 - **`npm install` fails with `ENOENT package.json`**: run it in the repository root, not in `desktop/`.
 - **"names.js is for game vX but the game is vY"** in the terminal: run `npm run find-names`.
 - **Dev console says names were not found**: see [section 5](#5-finding-the-obfuscated-names).
+- **Lag, rubber-banding, messages that never arrive**: `netlog show --loss` in the console, or the `LOSS` and `STAT` lines in `netlogs/` ([section 7](#7-network-log)).
 - **Game console output**: the game page's `console.log` is printed in the terminal running `npm start`; `npm start -- --verbose` adds requests, window events and the game's `trace()` output. Press `Ctrl+Shift+I` in the window for DevTools.

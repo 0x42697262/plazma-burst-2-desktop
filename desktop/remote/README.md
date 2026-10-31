@@ -83,6 +83,7 @@ tester's connection falls behind, so the game doesn't lag.
   everything else is a 404. They receive pixels, never game or project code.
 - **Run code:** the console's `js` command doesn't exist in their game, and there are no DevTools.
 - **See your hooks:** the `hooks` command doesn't exist in their game.
+- **See other network logs:** their game writes `netlogs/<date>_<time>_tester-<name>.log` on your machine, and their `netlog` shows only that one: no `netlog runs`, no `run:` ([README.md §7](../../README.md#7-network-log)).
 - **Read paths, file names or game internals:** everything the console prints is
   scrubbed of host paths, file names, and the game's obfuscated names (shown as `‹hidden›`).
   Explanations of how the anti-cheat works are left out.
