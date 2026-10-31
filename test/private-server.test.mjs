@@ -108,7 +108,8 @@ test('own server: the game\'s server code logs players in, lists, creates and jo
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-server-'));
   fs.mkdirSync(path.join(dir, 'maps'));
   const cfg = path.join(dir, 'server.json');
-  fs.writeFileSync(cfg, JSON.stringify({ port: 0, bind: '127.0.0.1', password: 'pw', welcome: 'hi there', download_maps: false }));
+  const map = fs.readdirSync(path.join(REPO, 'desktop', 'maps')).find((f) => f.endsWith('.xml'));
+  fs.writeFileSync(cfg, JSON.stringify({ port: 0, bind: '127.0.0.1', password: 'pw', welcome: 'hi there', download_maps: false, random_maps: map ? [map.slice(0, -4)] : [] }));
   const srv = spawn(process.execPath, [path.join(REPO, 'server/index.js'), '--config', cfg, '--data', dir], { stdio: ['pipe', 'pipe', 'pipe'] });
   let out = '';
   srv.stdout.on('data', (d) => { out += d; });
@@ -141,13 +142,14 @@ test('own server: the game\'s server code logs players in, lists, creates and jo
     assert.equal(bob[0], 'ok');
     assert.equal(JSON.parse(bob[1]).nickname, 'Bob');
 
-    const map = fs.readdirSync(path.join(REPO, 'desktop', 'maps')).find((f) => f.endsWith('.xml'));
-    const preset = { ranked: false, max_players: 8, game_type: 'DM', min_reputation: 0, map_rotation: '', title: 'Friends', map_id: `local-${map ? map.slice(0, -4) : 'none'}`, password: '', gameplay_modifications: '', ping_limit: '', rounds_until_rotation: '15', round_duration_str: 'default', round_duration: 0, p2p: false, p2p_region: '', exclude_inactive_players: true, allow_vpn_guests: 1, ping_limit_action: 'spectate', respawn_model: 'v2', accept_connections_manually: false };
+    // The create screen's default map ID: the server picks from random_maps.
+    const preset = { ranked: false, max_players: 8, game_type: 'DM', min_reputation: 0, title: 'Friends', map_id: 'random approved in rotation', map_rotation: 'random approved in rotation', password: '', gameplay_modifications: '', ping_limit: '', rounds_until_rotation: '15', round_duration_str: 'default', round_duration: 0, p2p: false, p2p_region: '', exclude_inactive_players: true, allow_vpn_guests: 1, ping_limit_action: 'spectate', respawn_model: 'v2', accept_connections_manually: false };
     if (map) {
       assert.deepEqual((await a.create(preset)).slice(0, 1), ['ok']);
       const list = JSON.parse((await b.list())[1]);
       assert.equal(list.length, 1);
       assert.equal(list[0].title, 'Friends');
+      assert.equal(list[0].map_id, map.slice(0, -4), '"random approved in rotation" became the map from random_maps');
       assert.equal(list[0].can_join, true);
       assert.equal((await b.join(list[0].uid))[0], 'ok');
       assert.ok(await until(() => b.net[N.mapChunks] && b.net[N.mapChunks].length > 0), 'Bob gets the map');

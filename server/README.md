@@ -92,6 +92,7 @@ they happen. Players can be named by the start of their nickname.
 | `max_players` | 64 | players online at once |
 | `skin` | 1 | the skin everyone starts with; players change it in the game as usual |
 | `download_maps` | `true` | published map IDs are downloaded from the site's public map download (and kept in `server/data/maps`); `false` = only `desktop/maps` |
+| `random_maps` | `[]` | your list of map IDs that `random approved` and `random approved in rotation` pick from (the example has one); empty = every map in `desktop/maps` |
 | `cheat_reports` | `"log"` | the game's anti-cheat reports: `"log"` them, or `"kick"` the player too |
 | `welcome` | `""` | a line each player gets in chat after logging in |
 
@@ -102,6 +103,12 @@ A match's map ID is looked up on the server's computer:
   maps as the wrapper's.
 - **Any other ID:** a published map, downloaded from plazmaburst2.com once and then kept.
   This is the only time the server contacts the site, and it sends no login.
+
+- **`random approved`, `random approved in rotation`:** the create screen's default IDs. The
+  official map service picks a random approved map for them; this server picks one from
+  `random_maps`, or every map in `desktop/maps` (your local maps and the ones the wrapper
+  saved from play), not the one playing now. With rotation on, each round picks again.
+- **IDs joined with a comma** (`a,b`, the official service merges them) are not supported.
 
 Players don't need the map file: the server sends each map to whoever joins.
 

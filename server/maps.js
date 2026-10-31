@@ -27,8 +27,19 @@ function readIn(dir, name) {
   return null;
 }
 
+// File name -> map ID (the reverse of fileName; a local map's name is its ID too).
+const idOf = (file) => file.replace(/\.(xml|txt)$/i, '').replace(/%([0-9a-f]{2})/gi, (m, h) => String.fromCharCode(parseInt(h, 16)));
+
+function mapFiles(dir) {
+  try { return fs.readdirSync(dir).filter((f) => !f.startsWith('.') && EXTS.includes(path.extname(f).toLowerCase())); } catch { return []; }
+}
+
 function createMaps({ mapsDir, cacheDir, fetch = globalThis.fetch }) {
   return {
+    // Every map ID the server has a file for, desktop/maps first.
+    list() {
+      return [...new Set([...mapFiles(mapsDir), ...mapFiles(cacheDir)].map(idOf))];
+    },
     // The map's text, or null.
     local(id) {
       const s = String(id || '').trim();
@@ -52,4 +63,4 @@ function createMaps({ mapsDir, cacheDir, fetch = globalThis.fetch }) {
   };
 }
 
-module.exports = { createMaps, fileName };
+module.exports = { createMaps, fileName, idOf };

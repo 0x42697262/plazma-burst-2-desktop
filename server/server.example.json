@@ -10,6 +10,7 @@
   "max_players": 64,
   "skin": 1,
   "download_maps": true,
+  "random_maps": ["diegox124-paulbase", "nanotech-cht"],
   "cheat_reports": "log",
   "welcome": "Welcome!"
 }

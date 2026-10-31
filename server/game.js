@@ -28,6 +28,10 @@ const MAP_SPLIT = '[^c]';
 const MAP_JOIN = '[^#]';
 const MAX_MAP_PLAYERS = 64;
 const SITE_MAPS = 'https://www.plazmaburst2.com/pb2/server.php';
+// Map IDs the create screen offers that are not maps: the official map service picks a
+// random approved map for them. With rotation on, the rotation list is the same word, so
+// every round asks again.
+const RANDOM = Object.freeze(['random approved', 'random approved in rotation']);
 
 const ID = '[0-9A-Za-z_\\u0400-\\u04FF$]';
 
@@ -189,19 +193,37 @@ class GameServer {
     if (this.config.cheat_reports === 'kick' && conn) this.kickConnection(conn, 'Server: Disconnected by the anti-cheat');
   }
 
+  // "random approved": a map from random_maps, or else any map in desktop/maps (the
+  // wrapper's local maps and every map it saved from play), not the one playing now.
+  randomMap(title) {
+    const pool = this.config.random_maps.length ? this.config.random_maps : this.maps.list();
+    const playing = (this.matches().find((m) => m.title === title) || {}).map_id;
+    const choices = pool.length > 1 ? pool.filter((id) => id !== playing) : pool;
+    return choices.length ? choices[Math.floor(Math.random() * choices.length)] : null;
+  }
+
   // A match's map: [map ID, "h5", title, ip] -> "text[^#]name[^#]approved[^#]max players[^#]ID".
   mapRequest(fields, done) {
-    const [id] = String(fields && fields.data || '').split(MAP_SPLIT);
+    const [asked, , title] = String(fields && fields.data || '').split(MAP_SPLIT);
+    const fail = (why) => ['x', why].join(MAP_JOIN);
+    let id = asked;
     const answer = (text) => {
       const players = Math.min(MAX_MAP_PLAYERS, Math.max(1, (text.match(/<player\b/g) || []).length));
       return [text, id, '0', String(players), id].join(MAP_JOIN);
     };
     (async () => {
+      if (RANDOM.includes(String(asked).trim().toLowerCase())) {
+        id = this.randomMap(title);
+        if (!id) return fail(`This server has no maps to pick from for "${asked}": put maps in desktop/maps on the server, or list some in its "random_maps"`);
+        this.log.info(`"${asked}": ${id}`);
+      } else if (String(asked).includes(',')) {
+        return fail('Merging maps ("a,b") is done by the official map service; this server plays one map ID at a time');
+      }
       const local = this.maps.local(id);
       if (local) { this.log.info(`Map ${id} from desktop/maps`); return answer(local); }
-      if (!this.config.download_maps) return ['x', `Map "${id}" is not in desktop/maps on this server`].join(MAP_JOIN);
+      if (!this.config.download_maps) return fail(`Map "${id}" is not in desktop/maps on this server`);
       const text = await this.maps.download(id);
-      if (!text) return ['x', `Map "${id}" was not found`].join(MAP_JOIN);
+      if (!text) return fail(`Map "${id}" was not found`);
       this.log.info(`Map ${id} downloaded`);
       return answer(text);
     })().then(done, (e) => { this.log.warn(`Map ${id}: ${e.message}`); done(['x', `Map "${id}" could not be loaded`].join(MAP_JOIN)); });

@@ -15,6 +15,7 @@ const DEFAULTS = Object.freeze({
   max_players: 64,
   skin: 1, // the skin everyone starts with (they can change it in the game)
   download_maps: true, // published map IDs come from the site; false = desktop/maps only
+  random_maps: [], // your list of map IDs "random approved" picks from; empty = every map in desktop/maps
   cheat_reports: 'log', // the game's anti-cheat reports: "log" them, or "kick" the player too
   welcome: '', // a server line each player gets after logging in
 });
@@ -44,6 +45,8 @@ function checkConfig(obj) {
   server.skin = Number(server.skin);
   if (!Number.isInteger(server.skin) || server.skin < 0) errors.push('skin: a skin number');
   if (typeof server.download_maps !== 'boolean') errors.push('download_maps: true or false');
+  if (!Array.isArray(server.random_maps) || !server.random_maps.every((m) => typeof m === 'string' && m.trim() && !m.includes(','))) errors.push('random_maps: a list of map IDs');
+  else server.random_maps = [...new Set(server.random_maps.map((m) => m.trim()))];
   if (!CHEAT.includes(server.cheat_reports)) errors.push(`cheat_reports: ${CHEAT.join(' or ')}`);
   if (typeof server.welcome !== 'string') errors.push('welcome: text');
   if (typeof server.name !== 'string' || !server.name.trim() || server.name.length > 40) errors.push('name: text, 1-40 characters');
