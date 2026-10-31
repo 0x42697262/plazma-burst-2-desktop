@@ -1,6 +1,7 @@
 # Client Anti-Cheat: How It Works
 
 > Status: **broken / bypassable**. This document explains the obfuscated client-side anti-cheat. It does not change any code.
+> **Exception: [section 14](#14-server-side-state-checks-ммpoeрм) is server-side.** Those checks run on the match's server, not on the player being checked. Their code is in the game files only because a player can host a match.
 > All line numbers refer to the current files in `game/scripts/…`; a bare name like `frame2.js:123` is relative to that folder. `_strings.js` is the exception: it is `game/_strings.js`.
 
 ---
@@ -20,7 +21,7 @@
 11. [More Improvements to Come](#11-more-improvements-to-come)
 12. [Appendix](#12-appendix)
 13. [`RELIABLE_PING` Reference](#13-reliable_ping-reference)
-14. [Server-Side State Checks (`$ММ.$pOeрМ`)](#14-server-side-state-checks-ммpoeрм)
+14. [Server-Side State Checks (`$ММ.$pOeрМ`)](#14-server-side-state-checks-ммpoeрм) (**server side**: they run on the match's server)
 
 ---
 
@@ -1404,6 +1405,15 @@ So with this copy **no report is ever sent**, and the value guard never runs. Ev
 
 > **Line numbers:** `libs/flash.js` and `connection.js` are the current files (`v1769098419`). `node tools/find-names.js --decode scripts/libs/flash.js` prints the file with its string constants filled in, on the same line numbers.
 
+> **These are server-side checks.** They run on the machine that is the server for the match, never in the game of the player being checked:
+>
+> | Match | Runs the checks |
+> |---|---|
+> | On the official server | The official server |
+> | Player-hosted (P2P) | The host's game, for the players who joined it |
+>
+> Their code is in the game files (`libs/flash.js`) because any player can host a match, and the host's game then needs the server code. Reading it tells you the exact rules; it does not mean your own game checks you. Details: [14.1](#141-where-this-code-runs).
+
 Everything in sections 3–7 runs on the cheater's own machine. This section covers the opposite side: what the **server** does with the state your game sends it ~60 times a second. Three checks look at that state:
 
 | Check | Looks at | Effect in the shipped code | Seen by you? |
@@ -1683,6 +1693,8 @@ if (samples.length === 0 || now > samples.at(-1).server + 500) {   // one sample
 - **Why it can't be missed:** the server sends `RELIABLE_SERVICE_MESSAGE("Server and client time mismatch")`, then disconnects you 500 ms later. On the client, socket.io reports `io server disconnect`. In the network log that shows as an `IN REL SERVICE_MESSAGE(...)` line just before `CONN closed: io server disconnect`. **A disconnect without that line came from somewhere else.**
 
 ### 14.8 Summary for players
+
+All four run on the match's server (14.1), on what your game reports.
 
 | You did | Check | What happens |
 |---|---|---|

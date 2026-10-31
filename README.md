@@ -243,7 +243,7 @@ A second copy of the app started in the same second gets `..._local-2.log`. Page
 
 **Repeats are not loss.** The game repeats every message that is not acknowledged yet in every packet it sends (about every 16 ms), until the ack arrives, about one ping later. So each reliable message goes out several times, and arrives several times, on a perfect connection. `STAT` counts them (`repeated 41 out, 26 in`); only a slow or missing ack is loss.
 
-**Why a connection closed:** the `CONN closed:` line gives socket.io's reason and what it means. `io server disconnect` is the server closing it on purpose; `transport close` and `ping timeout` are the network. What the server checks in your state updates, and which of those checks disconnect you: [ANTICHEAT.md §14](ANTICHEAT.md#14-server-side-state-checks-ммpoeрм).
+**Why a connection closed:** the `CONN closed:` line gives socket.io's reason and what it means. `io server disconnect` is the server closing it on purpose; `transport close` and `ping timeout` are the network. What the server checks in your state updates (server-side checks: they run on the match's server, not in your game), and which of those checks disconnect you: [ANTICHEAT.md §14](ANTICHEAT.md#14-server-side-state-checks-ммpoeрм).
 
 **In the console:**
 
