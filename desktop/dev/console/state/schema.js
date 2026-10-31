@@ -7,9 +7,9 @@ import { parseKeyName, showKey } from './keys.js';
 // Groups that only configure the console itself: they need no level and are not
 // client-only. Every other group changes your own game client.
 export const GROUP = Object.freeze({
-  player: 'player', world: 'world', bullets: 'bullets', gun: 'gun', console: 'console', maps: 'maps',
+  player: 'player', world: 'world', bullets: 'bullets', gun: 'gun', console: 'console', maps: 'maps', network: 'network',
 });
-const CONSOLE_GROUPS = new Set([GROUP.console, GROUP.maps]);
+const CONSOLE_GROUPS = new Set([GROUP.console, GROUP.maps, GROUP.network]);
 
 export const CLIENT_ONLY_REASON = 'it runs in your game client only, not through the server';
 
@@ -100,6 +100,21 @@ export const SCHEMA = Object.freeze({
       'are handed to the game as it joins a match.'],
     phrases: [/^fast\s+load(\s+maps?)?(?=\s|$)/i],
   },
+  net_log: {
+    type: 'bool', group: GROUP.network, default: true,
+    desc: 'Record the game\'s network messages and packet losses to netlogs/, one readable file per run ' +
+      '("netlog" shows it)',
+    about: ['Every message the game sends and receives on its connections, packet losses',
+      '(resends, gaps, late and duplicate messages, dropped packets) and once a second',
+      'the ping and traffic of each connection, as plain text in netlogs/: one file per',
+      'run and game window. "netlog" shows it here, "netlog runs" lists other instances.'],
+  },
+  net_log_state: {
+    type: 'bool', group: GROUP.network, default: false,
+    desc: 'Also record every unreliable state update (player state, 60 to 250 a second: large files)',
+    about: ['State updates are sent every 16 ms over a socket and every 4 ms peer to peer.',
+      'Off, they are only counted (STAT lines); on, each one is written too.'],
+  },
 });
 
 // KEY.MAX_HP === 'max_hp'. Reading a key that does not exist throws, so a typo fails
@@ -119,6 +134,7 @@ export const ALIASES = Object.freeze({
   editorkey: KEY.EDITOR_KEY, edit_key: KEY.EDITOR_KEY,
   savemaps: KEY.SAVE_MAPS, mapsave: KEY.SAVE_MAPS, fastmaps: KEY.FAST_MAPS, fastload: KEY.FAST_MAPS,
   fast_load: KEY.FAST_MAPS, fastloadmaps: KEY.FAST_MAPS, fast_load_maps: KEY.FAST_MAPS,
+  net_logs: KEY.NET_LOG, packet_log: KEY.NET_LOG, netlog_state: KEY.NET_LOG_STATE,
 });
 
 export const GROUPS = Object.freeze([...new Set(Object.values(SCHEMA).map((s) => s.group))]);

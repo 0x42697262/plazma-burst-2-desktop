@@ -233,6 +233,18 @@ export const game = {
   // Recent network messages, oldest first: { type, parts, time }. Every message sent is
   // added (parts as sent, as strings); received ones only with the game's TRACK_MP_LOGS.
   netLog: () => { const net = read('net'); return (net && net[nameOf('netLog')]) || []; },
+  // ----- Connections, for the network recorder (net/recorder.js) -----
+  // Every open connection (scripts/connection.js): the lobby/main server, the P2P host of
+  // a match you joined, or a player of a match you host.
+  connections: () => { const net = read('net'); return (net && Array.isArray(net.connections)) ? net.connections : []; },
+  p2pConnection: () => { const net = read('net'); return (net && net[nameOf('p2pConn')]) || null; },
+  // The connection method every raw packet received goes through: (text).
+  recvMethodName: () => nameOf('connRecv'),
+  connPeer: (c) => c[nameOf('connPeer')] || null, // P2P: SimplePeer, .send(text)
+  connReason: (c) => c[nameOf('connReason')] || null, // why it closed
+  // Numbers in messages are written in base N with these digits (built at load).
+  netDigits: () => { const net = read('net'); return (net && net[nameOf('netDigits')]) || ''; },
+  netTypeName: (type) => { const net = read('net'); const m = net && net[nameOf('netTypeNames')]; return (m && m[type]) || null; },
 
   // ----- Anti-cheat -----
   // The console name of locked array i (the scan's code 3 detail), or null.

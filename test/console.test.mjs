@@ -2368,3 +2368,121 @@ test('editor reset: every edit undone in the running level and forgotten, nothin
     G[N.regionCount] = count;
   }
 });
+
+// ---------------------------------------------------------------------------
+// Network recorder (net/recorder.js) and "netlog"
+// ---------------------------------------------------------------------------
+// The game's number digits: characters 1-126 without "-", "~" and the two separators.
+const NET_DIGITS = [...Array(126)].map((_, i) => String.fromCharCode(i + 1)).filter((ch) => !['-', '~', '\x01', '\x02'].includes(ch)).join('');
+const encNum = (n) => { let s = ''; do { s = NET_DIGITS[n % NET_DIGITS.length] + s; n = Math.floor(n / NET_DIGITS.length); } while (n > 0); return s; };
+const netMsg = (type, ...parts) => [encNum(type), ...parts].join('\x02');
+const netPacket = (ack, state, rel = []) => [String(ack), state, ...rel.flatMap(([u, d]) => [String(u), d])].join('\x01');
+
+// A connection like scripts/connection.js makes: a receive method on its class, a
+// socket.io socket with volatile emit.
+function fakeConnection(N) {
+  class Conn { [N.connRecv](text) { this.got.push(text); } }
+  const c = new Conn();
+  c.got = [];
+  c.ping = 1000;
+  c.socket = {
+    connected: false, flags: {}, sent: [], io: { engine: { transport: { writable: true, name: 'websocket' } } },
+    get volatile() { this.flags.volatile = true; return this; },
+    emit(event, data) { if (!(this.flags.volatile && !this.io.engine.transport.writable)) this.sent.push(data); this.flags = {}; },
+  };
+  return c;
+}
+
+test('the network recorder logs messages readably and every kind of packet loss', async () => {
+  const { G, N } = c;
+  const rec = await consoleModule('net/recorder.js');
+  const net = G[N.net];
+  net[N.netDigits] = NET_DIGITS;
+  net[N.netTypeNames] = { 0: 'RELIABLE_RESPONSE', 5: 'RELIABLE_CHAT' };
+  const conn = fakeConnection(N);
+  const emit = conn.socket.emit;
+  net.connections = [];
+  rec.netTick(); // the page line, first time
+  net.connections = [conn];
+  net[N.lobbyConn] = conn;
+  const since = rec.netlog.lines().length;
+  const fresh = () => rec.netlog.lines().slice(since).map((l) => l.slice(14)); // without the time
+  let t = Date.now();
+  try {
+    rec.netTick(t);
+    conn.socket.connected = true;
+    rec.netTick(t += 50);
+    // Sent: a chat message with text that needs quotes and an encoded number; then the
+    // same message again (not acknowledged); then a packet the busy socket drops.
+    conn.socket.volatile.emit('m', netPacket(-1, '', [[0, netMsg(5, 'hello | world', encNum(7), 'plain text')]]));
+    conn.socket.volatile.emit('m', netPacket(-1, '', [[0, netMsg(5, 'hello | world', encNum(7), 'plain text')]]));
+    conn.socket.io.engine.transport.writable = false;
+    conn.socket.volatile.emit('m', netPacket(-1, netMsg(1, 'x'), []));
+    conn.socket.io.engine.transport.writable = true;
+    // Received: #0, then #2 before #1 (a gap), then #1 (late), then #1 again (duplicate).
+    conn[N.connRecv](netPacket(0, '', [[0, netMsg(0, encNum(150))], [2, netMsg(5, 'b')]]));
+    conn[N.connRecv](netPacket(0, '', [[1, netMsg(5, 'a')]]));
+    conn[N.connRecv](netPacket(0, '', [[1, netMsg(5, 'a')]]));
+    assert.equal(conn.got.length, 3, 'the game still gets every packet');
+    assert.equal(conn.socket.sent.length, 2, 'and the socket still sends');
+    rec.netTick(t += 1000);
+    conn[N.connReason] = 'transport close';
+    net.connections = [];
+    rec.netTick(t += 50);
+    const out = fresh();
+    const want = [
+      /^c\d+ server +--- +CONN +new connection \(socket\.io over websocket\)$/,
+      /^c\d+ server +--- +CONN +connected/,
+      /^c\d+ server +OUT +REL +#0 RELIABLE_CHAT {2}"hello \| world" \| #7 \| plain text$/,
+      /^c\d+ server +OUT +LOSS +resend #0 RELIABLE_CHAT \(try 2, first sent \d+ ms ago, not acknowledged yet\)$/,
+      /^c\d+ server +OUT +LOSS +dropped: the socket was busy.*0 reliable messages.*its state update is lost\)$/,
+      /^c\d+ server +IN +REL +#0 RELIABLE_RESPONSE {2}#150$/,
+      /^c\d+ server +IN +REL +#2 RELIABLE_CHAT {2}b$/,
+      /^c\d+ server +IN +LOSS +gap: #2 arrived before #1 \(1 missing: lost or out of order\)$/,
+      /^c\d+ server +IN +REL +#1 RELIABLE_CHAT {2}a$/,
+      /^c\d+ server +IN +LOSS +late #1 arrived \d+ ms after the gap was seen$/,
+      /^c\d+ server +IN +LOSS +duplicate #1 RELIABLE_CHAT/,
+      /^c\d+ server +--- +STAT +ping 1000 ms \| out 3 packets .* \| in 3 packets .* \| loss: 1 resend, 1 dropped, 1 gap, 1 late, 1 duplicate$/,
+      /^c\d+ server +--- +CONN +closed: transport close \| after .* loss: 1 resend, 1 dropped, 1 gap, 1 late, 1 duplicate$/,
+    ];
+    assert.equal(out.length, want.length, out.join('\n'));
+    want.forEach((re, i) => assert.match(out[i], re));
+    assert.ok(!Object.hasOwn(conn, N.connRecv) && conn.socket.emit === emit, 'a closed connection is unwrapped');
+  } finally {
+    net.connections = [];
+  }
+});
+
+test('net_log off unwraps every connection and stops recording; on starts again', async () => {
+  const { G, N } = c;
+  const rec = await consoleModule('net/recorder.js');
+  const net = G[N.net];
+  const conn = fakeConnection(N);
+  const emit = conn.socket.emit;
+  conn.socket.connected = true;
+  net.connections = [conn];
+  let t = Date.now() + 100000;
+  try {
+    rec.netTick(t);
+    assert.ok(Object.hasOwn(conn, N.connRecv), 'wrapped while on');
+    c.run('net_log off');
+    rec.netTick(t += 50);
+    assert.ok(!Object.hasOwn(conn, N.connRecv) && conn.socket.emit === emit, 'unwrapped when off');
+    assert.match(rec.netlog.lines().at(-1), /PAGE +recording off \(net_log off\)$/);
+    const n = rec.netlog.lines().length;
+    conn[N.connRecv](netPacket(0, '', [[0, netMsg(5, 'x')]]));
+    assert.equal(rec.netlog.lines().length, n, 'nothing recorded while off');
+    c.run('net_log on');
+    rec.netTick(t += 50);
+    const back = rec.netlog.lines().slice(n).join('\n');
+    assert.match(back, /PAGE +recording on/);
+    assert.match(back, /CONN +already connected when recording started/);
+    // Recording started mid-stream: the first message seen is not a gap.
+    conn[N.connRecv](netPacket(0, '', [[40, netMsg(5, 'y')]]));
+    assert.doesNotMatch(rec.netlog.lines().slice(n).join('\n'), /gap/);
+  } finally {
+    c.run('unset net_log');
+    net.connections = [];
+    rec.netTick(t + 50);
+  }
+});

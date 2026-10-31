@@ -13,9 +13,9 @@
 //
 // Layout: core/ (helpers), game/ (the game adapter), state/ (settings, binds, history),
 // overrides/ (per-frame forcing), triggers/ (map triggers and variables), maps/ (the map
-// cache), editor/ (the in-game map editor), net/ (the anti-cheat scan's report), ui/
-// (panel, log, pager), commands/ (one module per command group, all in the registry),
-// dispatch.js (running a typed line).
+// cache), editor/ (the in-game map editor), net/ (the anti-cheat scan's report and the
+// network recorder for netlogs/), ui/ (panel, log, pager), commands/ (one module per
+// command group, all in the registry), dispatch.js (running a typed line).
 import './commands/index.js';
 import { print, TAG } from './ui/log.js';
 import { buildPanel, updateStatus, updateStatusIfOpen, openPanel, closePanel, onKeyDownCapture, onKeyUpCapture } from './ui/panel.js';
@@ -33,6 +33,7 @@ import { mapTick } from './maps/cache.js';
 import { editorTick } from './editor/index.js';
 import { zoomTick } from './commands/zoom.js';
 import { scanReportTick } from './net/scan-report.js';
+import { netTick, NET_TICK_MS } from './net/recorder.js';
 import { run } from './dispatch.js';
 
 const BOOT_POLL_MS = 200; // how often to look for the game's stage while it loads
@@ -40,6 +41,7 @@ const STATUS_EVERY_MS = 500;
 const MAP_TICK_MS = 250;
 const FRAME_ERRORS_SHOWN = 5;
 const MAP_ERRORS_SHOWN = 3;
+const NET_ERRORS_SHOWN = 3;
 
 const reportError = (msg) => print(msg, COLOR.error);
 
@@ -48,6 +50,7 @@ function printProblems() {
 }
 const frameGuard = errorBudget(FRAME_ERRORS_SHOWN, reportError);
 const mapGuard = errorBudget(MAP_ERRORS_SHOWN, reportError);
+const netGuard = errorBudget(NET_ERRORS_SHOWN, reportError);
 
 function onFrame() {
   frameGuard('Trigger history', syncTriggerHooks);
@@ -76,6 +79,8 @@ function start(source) {
   printProblems();
   setInterval(updateStatusIfOpen, STATUS_EVERY_MS);
   setInterval(() => { mapGuard('Map cache', mapTick); mapGuard('Profiles', profileTick); }, MAP_TICK_MS);
+  // Not per frame: connections are made and packets arrive in menus too.
+  setInterval(() => netGuard('Network log', netTick), NET_TICK_MS);
 }
 
 async function boot() {
