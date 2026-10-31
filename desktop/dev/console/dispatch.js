@@ -8,6 +8,8 @@ import { SCHEMA, resolveKey, keyClientOnly, unphrase } from './state/schema.js';
 import { findRunnable, findSubcommand, reachOf } from './commands/registry.js';
 import { printTopicHelp } from './commands/help.js';
 import { runKey } from './commands/settings.js';
+import { askingToBypass, answerBypass } from './state/danger.js';
+import { BYPASSED_LINES, NOT_BYPASSED_LINE } from './commands/bypass.js';
 
 // How Chrome marks a stack frame from DevTools or eval.
 const ANONYMOUS_FRAME = 'at <anonymous>:';
@@ -71,7 +73,9 @@ function noteReach(cmd, word, args) {
   if (reach) print([[`Note: "${reach[0]}" is client-only: ${reach[1]}.`, COLOR.warn, true]]);
 }
 
-function dispatch(cmd, word, args, rest) {
+// extra: { source, chained }: where the line came from (undefined: typed) and whether it
+// is one part of a ";" chain. "bypass checks" uses it to accept only a typed line.
+function dispatch(cmd, word, args, rest, extra) {
   if (!cmd) {
     const key = resolveKey(word);
     if (!key) throw new Error(`unknown command "${word}". Type "help".`);
@@ -81,19 +85,19 @@ function dispatch(cmd, word, args, rest) {
   // "<command> help" is "help <command>", unless the command has its own.
   if (isHelpArg(args) && !cmd.handlesHelp) { printTopicHelp(cmd.name); return; }
   const sub = findSubcommand(cmd, args[0]);
-  if (sub) sub.run(args.slice(1), { rest, verb: args[0].toLowerCase() });
-  else cmd.run(args, { rest });
+  if (sub) sub.run(args.slice(1), { rest, verb: args[0].toLowerCase(), ...extra });
+  else cmd.run(args, { rest, ...extra });
 }
 
 // One command. Returns false when it failed (its error is already printed).
-function runOne(text) {
+function runOne(text, extra) {
   const [first, ...args] = text.split(/\s+/);
   const word = first.toLowerCase();
   const rest = text.slice(first.length).trim();
   const cmd = findRunnable(word);
   try { noteReach(cmd, word, args); } catch {}
   try {
-    dispatch(cmd, word, args, rest);
+    dispatch(cmd, word, args, rest, extra);
     return true;
   } catch (e) {
     print(`error: ${e && e.message}`, COLOR.error);
@@ -111,10 +115,17 @@ export function run(line, source) {
   // DevTools, "js pb2dev.run(...)") runs from a clean timer instead.
   if (new Error().stack.includes(ANONYMOUS_FRAME)) { setTimeout(() => run(line, source), 0); return; }
   print(source ? `[${source}] > ${text}` : `> ${text}`, COLOR.title);
+  // The answer to "bypass checks": the next typed line, compared as typed (keys and
+  // binds run as usual meanwhile). Any other line is not run.
+  if (!source && askingToBypass()) {
+    if (answerBypass(text)) for (const l of BYPASSED_LINES) print(l, COLOR.error);
+    else print(NOT_BYPASSED_LINE, COLOR.notice);
+    return;
+  }
   const parts = splitCommands(text);
   for (let i = 0; i < parts.length; i++) {
     if (parts.length > 1) print(`[${i + 1}/${parts.length}] ${parts[i]}`, COLOR.muted);
-    if (!runOne(unphrase(parts[i]))) {
+    if (!runOne(unphrase(parts[i]), { source, chained: parts.length > 1 })) {
       const left = parts.length - 1 - i;
       if (left) print(`Stopped: ${plural(left, 'command')} after this one did not run.`, COLOR.warn);
       return;

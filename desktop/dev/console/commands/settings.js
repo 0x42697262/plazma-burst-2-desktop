@@ -16,6 +16,7 @@ import { CLIENT_TAG } from './help.js';
 import { REMOTE } from '../core/remote.js';
 import { zoomChanges } from './zoom.js';
 import { editSummary } from '../editor/edit.js';
+import { checksBypassed } from '../state/danger.js';
 
 const RESET_WORDS = ['default', 'reset', 'unset'];
 const KEY_WIDTH = 14;
@@ -100,6 +101,7 @@ const EXTRAS = Object.freeze({
     return [`profile: ${p.name} (map ${currentMap()})`, rows.length ? rows : ['  (sets nothing yet)']];
   },
   zoom: () => { const rows = zoomChanges(); return rows && ['zoom', rows]; },
+  checks: () => checksBypassed() && ['multiplayer protection: OFF ("bypass checks")', ['  nothing is held back in multiplayer; "bypass off" turns it back on']],
   editor: () => {
     const sum = editSummary();
     if (!sum) return null;

@@ -2724,3 +2724,43 @@ test('settings you had are not applied in multiplayer, even with god on, and com
   assert.equal(c.G[c.N.zoom], 0.4);
   c.run('zoom --unlock');
 });
+
+test('bypass checks: a red warning, then only the exact phrase typed on its own line turns the protection off', async (t) => {
+  const { run } = await consoleModule('dispatch.js');
+  const danger = await consoleModule('state/danger.js');
+  t.after(() => { danger.protectAgain(); c.run('reset'); c.frame(); });
+  assert.match(c.run('bypass')[0], /^Protection: on\. In multiplayer \(now\)/);
+
+  const warning = c.run('bypass checks');
+  assert.match(warning[0], /^WARNING: DANGEROUS\./);
+  assert.ok(warning.some((l) => l === 'To go ahead, type exactly: ALLOW DANGEROUS COMMANDS'), warning.join('\n'));
+  // Anything else turns it down and is not run, wrong capitals included.
+  assert.deepEqual(c.run('allow dangerous commands'), ['Not turned off: that was not the phrase. The protection stays on, and the line was not run.']);
+  assert.match(errorOf(c.run('max_hp 500')), REFUSED);
+  c.run('bypass checks');
+  assert.deepEqual(c.run('list').slice(0, 1), ['Not turned off: that was not the phrase. The protection stays on, and the line was not run.'], 'a command is not run either');
+  assert.equal(danger.checksBypassed(), false);
+
+  // Not from a bind, a profile or a chain.
+  c.log.printed.length = 0;
+  run('bypass checks', 'bind f5');
+  assert.match(c.log.printed.join('\n'), /error: type "bypass checks" yourself, on a line of its own/);
+  assert.match(c.run('bypass checks; list')[1], /error: type "bypass checks" yourself/);
+  // A bind pressed while it waits runs as usual, and is not the answer.
+  c.run('bypass checks');
+  c.log.printed.length = 0;
+  run('ALLOW DANGEROUS COMMANDS', 'bind f5');
+  assert.equal(danger.checksBypassed(), false, 'a bind cannot answer');
+  const yes = c.run('ALLOW DANGEROUS COMMANDS');
+  assert.match(yes[0], /^Protection OFF/);
+  assert.equal(danger.checksBypassed(), true);
+
+  assert.ok(c.run('max_hp 500').includes('max_hp = 500'));
+  c.frame();
+  assert.equal(c.player.hmax, 500, 'applied in multiplayer now');
+  assert.match(c.run('bypass')[0], /^Protection: OFF/);
+  assert.ok(c.run('list').some((l) => /multiplayer protection: OFF/.test(l)));
+  assert.match(c.run('bypass off')[0], /^Protection on again/);
+  c.frame();
+  assert.notEqual(c.player.hmax, 500, 'held back again');
+});
