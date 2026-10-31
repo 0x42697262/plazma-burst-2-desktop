@@ -19,6 +19,7 @@
 10. [How to Prevent It](#10-how-to-prevent-it)
 11. [More Improvements to Come](#11-more-improvements-to-come)
 12. [Appendix](#12-appendix)
+13. [`RELIABLE_PING` Reference](#13-reliable_ping-reference)
 
 ---
 
@@ -1162,3 +1163,231 @@ grep -n '\$еHоНH=' game/scripts -r               # where the custom-map flag 
 grep -n 'stack.indexOf' game/scripts -r          # stack checks
 grep -n '\$MеOHОe()' game/scripts -r             # every punishment call
 ```
+
+---
+
+## 13. `RELIABLE_PING` Reference
+
+> **Line numbers:** `libs/flash.js`, `connection.js`, `screens/MPLogs.js` and `frame2.js` are the current files. **`main.js` lines refer to the original file of this game version (`v1769098419`).** The copy in `game/scripts/main.js` has been edited locally (see [13.9](#139-the-local-mainjs-is-modified)), and its scan code is gone. To read the original: `curl -o /tmp/main.orig.js https://www.plazmaburst2.com/h5/versions/v1769098419/scripts/main.js`.
+
+### 13.1 What it is
+
+`RELIABLE_PING` is one of the game's network message types: message type **26**, sent on the **reliable** channel (acknowledged and re-sent until it arrives). It has two jobs that have nothing to do with each other:
+
+| Job | Direction | When | Payload (`parts`) | Answer |
+|---|---|---|---|---|
+| **Keep-alive** | server → client | the connection has been quiet for 3 s | `[26, <callback id>]` | client sends `RELIABLE_RESPONSE` |
+| **Anti-cheat report** | client → server | once, when the integrity scan ([§6](#6-layer-d-function--array-integrity-scan-mainjs)) finds a change | `[26, "undefined", <code>, <detail>]` | none; the page reloads 300 ms later |
+
+A client never sends `RELIABLE_PING` for any other reason. So to the server, **any** `RELIABLE_PING` from a client is a report, and the literal text `"undefined"` where a callback id belongs marks it.
+
+"Server" here means whatever runs the match's server side of this same code. That's the official server, or **this game itself when it hosts a player-hosted (P2P) match**. The code tells the sides apart with `connection.$с0А0О`, which is true on the server side of a connection.
+
+### 13.2 Where it is
+
+The name never appears in the code as text. It is built from the string variable `$еIНpА` in `_strings.js`, so searching the scripts for `RELIABLE_PING` finds nothing. Search `\$еIНpА` instead, or the decoded files (`node tools/find-names.js --decode scripts/libs/flash.js`).
+
+| Place | Side | What |
+|---|---|---|
+| `_strings.js` | both | `$еIНpА = "RELIABLE_PING"` |
+| `libs/flash.js:114` | both | `$ММ[$еIНpА] = $сеMlO();` gives the type id: a counter in declaration order (`RELIABLE_RESPONSE` 0, `RELIABLE_EXEC_TRIGGER` 1, …, `RELIABLE_PING` **26**). The reverse map `$ММ.$lНАMН[26] = "RELIABLE_PING"` is built right after the list |
+| `libs/flash.js:857–863` | server | Sends the keep-alive ([13.4](#134-keep-alive-start-run-end)) |
+| `libs/flash.js:3066–3077` | both | Receives it, inside `$ММ.$c0рlc` (the reliable message handler, `:1864`) |
+| `main.js:1038` (original) | client | Sends the anti-cheat report ([13.5](#135-anti-cheat-report-start-run-end)) |
+| `screens/MPLogs.js:232–234` | client | The game's **View logs** screen skips it (and `RELIABLE_RESPONSE`), so a report never shows there |
+
+### 13.3 On the wire
+
+Every reliable message goes through `connection.$OMeTо(channel, parts, callback)` (`connection.js:677`), with channel `$ММ.$МеoрО = 1` (reliable; `$ММ.$ОAA0р = 0` is unreliable):
+
+1. If there is a callback, the part equal to `$ММ.$p1еeс` (the callback placeholder) is replaced by a new callback id (counter `$lсIсM`, encoded with `$ММ.$Oоolр`). The callback is kept in `connection.$pА1АН` until a `RELIABLE_RESPONSE` with that id comes back.
+2. Every part is escaped with `$рсНAе.$eIеIс` (`connection.js:99`). Anything that isn't a string becomes text first (`value += ""`), so **`undefined` becomes `"undefined"`**. Then `\x01` → `$.1` and `\x02` → `$.2`.
+3. Part 0, the type, is encoded with `$ММ.$Oоolр` (a compact number code). The parts are joined with `\x02`.
+4. The message gets the next sequence number (`$eеcА1`) and the send time, and waits in `connection.$ОOe0A` until the other side acknowledges that number.
+5. On a client (not a dedicated server), every reliable message sent is also logged in `$ММ.$НеAAO` as `{ type, parts, time }`. The View logs screen and the dev console's scan report (`desktop/dev/console/net/scan-report.js`) read this log.
+
+On arrival, `$ММ.$pOeрМ` / `$ММ.$c0рlc` split the text at `\x02`, undo the escaping, and decode part 0 back to `26`.
+
+### 13.4 Keep-alive: start, run, end
+
+**What drives it (every network tick):**
+
+```
+frame loop (main.js $T0MМAT)
+  → $ММ.$AОAcc(t)                          libs/flash.js, the network tick
+    → connection.$AОAcc(time)              each connection
+      → every 16 ms (socket) / 4 ms (P2P)  connection.js:1061, $рсНAе.$НТIТc = 16, $HeоIе = 4
+        → $ММ.$ТеeАp(connection)           connection.js:1080 → libs/flash.js:421
+```
+
+**Inside `$ТеeАp`, server side only** (`connection.$с0А0О`), after the match state for that client has been sent (`libs/flash.js:857–863`):
+
+```js
+if (now > connection.$ОcО1p + 3000) {                    // at most every ~3 s
+  connection.$ОcО1p = now + Math.random() * 100;         // spread the clients apart
+  if (connection.$cМOАA.length === 0 ||                  // no round-trip samples, or
+      connection.$cМOАA.at(-1).time < now - 3000)        // the newest is over 3 s old
+    connection.$OMeTо(RELIABLE, [RELIABLE_PING, CALLBACK_PLACEHOLDER], () => {});
+}
+```
+
+- **Starts** when the connection is in a match (`connection.$eоIIH`); the block runs only then.
+- **Runs** only while the connection is **quiet**. In a busy match, other reliable messages are acknowledged all the time and keep the samples fresh, so no ping is sent.
+- **Ends** when the client leaves the match or disconnects.
+
+**The client answers** (`libs/flash.js:3066–3077`, client side):
+
+```js
+let callbackId = parts[1];
+respond(callbackId, []);   // $АpА1рO, :1868 → [RELIABLE_RESPONSE, callbackId]
+```
+
+`$АpА1рO` throws if called twice for one message, or with no id. **The server** gets the `RELIABLE_RESPONSE` (`libs/flash.js:1963`), finds the callback in `$pА1АН`, deletes it and calls it. It's the empty `() => {}`.
+
+**Where the ping number comes from** (`connection.js:1020–1051`): not from the callback. Whenever the other side acknowledges reliable messages, every acknowledged message's round trip (`now − its send time`) is added to `connection.$cМOАA` (`:1026`). Samples older than 3 s are dropped. Then:
+
+| Case | `connection.ping` |
+|---|---|
+| Dedicated server (`$ММ.$T0еcр`) | average of the last 3 s of samples (`:1046`) |
+| Anyone else | the newest sample |
+| No samples | `9999` |
+| Before the first sample | `1000` (`connection.js:456`) |
+
+So `RELIABLE_PING` exists to make sure there is **always something to acknowledge**. Without it, an idle connection would have no samples and its ping would read 9999.
+
+**Timeout:** a dedicated server disconnects a client when its oldest unacknowledged reliable message is more than **30 s** old (`$рсНAе.$pIсpo`, `connection.js:15`, checked at `:888`). The match is told "User … has been disconnected due to either high ping or too many events happening in a match".
+
+**Where the ping value goes:**
+- The server puts every player's ping in the state it sends (`libs/flash.js:843`, as `ping~skill~reputation`), and clients store it (`libs/flash.js:1295`).
+- The scoreboard shows it (`frame2.js:20728`).
+- Lag compensation uses it (`frame2.js:21099`, `21161`, `32245`, `35602`).
+- A match's ping limit (`ping_limit`, `ping_limit_action`) acts on it.
+
+### 13.5 Anti-cheat report: start, run, end
+
+**Setup:** `window.onload` (`main.js:1140`) calls `$HHOеоH` (`main.js:903`). It saves the source of every non-native function on `globalThis` and `$ММ`, registers the locked arrays, and defines the scan tick `$сMlcА1` (`main.js:939`). See [§6](#6-layer-d-function--array-integrity-scan-mainjs).
+
+**Tick:** `$сMlcА1()` is called once per frame from the frame loop (`main.js:166`). It works only when:
+
+- `isCompiled` (the URL has no `/game/`), **or** `btoa(login) !== "RXJpYyBHdXJ0"` (not "Eric Gurt") and the URL contains `/h5/` (`main.js:945`), **and**
+- `isCompiled`, **or** in a match (`$pMМ1`) (`main.js:950–951`), **and**
+- at least 300 ms since the last pass (`main.js:956`). Each pass does about 1 ms of work.
+
+**Failure:** when a pass finds a change, it sets a code and a detail:
+
+| Code | Found | Detail |
+|---|---|---|
+| `1` | a registered array was replaced | the target's index |
+| `2` | a function's source changed | `index/old/new`: the target's index, then the first 50 characters of the old and the new source, separated by `/` |
+| `3` | a locked array's contents changed ([§7](#7-layer-e-locked-array-snapshots-toolsjs)) | the array's index (`$eOMАер()`) |
+
+**Send** (`main.js:1037–1038`):
+
+```js
+if ($ММ.$ceTOI)   // only with a server connection
+  $ММ.$ceTOI.$OMeTо($ММ.$МеoрО, [$ММ[$еIНpА], undefined, code, detail]);
+```
+
+There's no callback and no placeholder: `undefined` sits where a callback id would be, and travels as `"undefined"` ([13.3](#133-on-the-wire)).
+
+**End** (`main.js:1040–1044`): `$1eoAНl = Infinity`, so this page never scans again. 300 ms later the page reloads, through `location.reload` saved at setup (`r.call(l)`), so replacing `location.reload` afterwards doesn't stop it.
+
+**The server side** (`libs/flash.js:3066–3072`):
+
+```js
+if (connection.$с0А0О) {                       // server side of the connection
+  if (parts[1] === "undefined")
+    $с0A.$Т0ОcpT(connection, undefined, parseInt(parts[2]), parts[3]);
+  return;                                      // any other ping from a client: ignored
+}
+```
+
+`$с0A` is the server's reporting module, and **its real code isn't in the client**:
+
+- On the official server it is the server's own.
+- In the shipped client, `$с0A` is a stub with three empty functions and **no `$Т0ОcpT`** (`libs/flash.js:345`). `$AOIе0o` installs it when this game starts hosting a P2P match (`libs/flash.js:3178`).
+- On a P2P host, a report therefore **throws**. The reliable loop catches it (`connection.js:913–930`) and:
+  - logs "Received reliable message resulted in an error" on the host's console,
+  - sends an error report (`net_process_reliable`),
+  - tells the match "Server: Reliable messsage error from <login>, user will be disconnected". On a P2P host they aren't actually disconnected, because `$ММ.$T0еcр` is false there.
+
+The same `$с0A.$Т0ОcpT` also gets `"HealthAltering"` when a player's HP goes above the match's `hmax` (`libs/flash.js:942`).
+
+**Visibility:**
+
+| Where | Shows the report? |
+|---|---|
+| The game's View logs | No: skipped (`MPLogs.js:232–234`) |
+| DevTools → Network → WS → the game's socket | Yes: the last frame before the reload |
+| The dev console's terminal output (`net/scan-report.js`) | Yes: logged as a warning |
+
+### 13.6 Traces
+
+**Keep-alive, idle match, official server:**
+
+```
+t=0      server  $ТеeАp: no sample for 3 s → send [26, cb=17]        queued in $ОOe0A (uid 942, sent t=0)
+t=45     client  $c0рlc: type 26, not server side → $АpА1рO("17", [])
+                 send [0 RELIABLE_RESPONSE, "17"]                     also acknowledges uid 942
+t=90     server  ack for uid 942 → sample 90 ms in $cМOАA → ping = avg(last 3 s)
+         server  $c0рlc: type 0 → $pА1АН.get(17) → () => {} → deleted
+t≈3000+  server  next check; sends again only if still quiet
+```
+
+**Report, client in an online match:**
+
+```
+t=0      client  frame loop → $сMlcА1(): 300 ms passed → compare targets
+                 target 211 changed (a function) → code 2, detail "211/function a(){…/function a(){…"
+         client  $ММ.$ceTOI.$OMeTо(1, [26, undefined, 2, "211/…/…"])     logged in $ММ.$НеAAO
+                 $1eoAНl = Infinity; setTimeout(reload, 300)
+t≈30     server  $c0рlc: type 26, server side, parts[1] === "undefined" → $с0A.$Т0ОcpT(conn, undefined, 2, "211/…")
+t=300    client  location.reload()
+```
+
+### 13.7 When it happens
+
+| Situation | Keep-alive | Report |
+|---|---|---|
+| Single-player, campaign, no server connection | No (no match connection) | The scan can still find a change and reload, but **nothing is sent** (no `$ММ.$ceTOI`) |
+| Connected to the lobby, not in a match | No (needs a match) | Sent if the scan finds a change |
+| Busy online match | Rarely: acknowledgements keep samples fresh | Sent on a change |
+| Online match, quiet for 3 s | Every ~3–3.1 s | Sent on a change |
+| This game hosts a P2P match | The host sends it to each player | A player's report reaches the host and throws (stub `$с0A`) |
+| Logged in as "Eric Gurt" on `/h5/` | Unchanged | Never: the scan is skipped (`main.js:945`) |
+| After one report | Unchanged | Never again on this page (`$1eoAНl = Infinity`), and the page reloads |
+
+### 13.8 Names in this section
+
+| Obfuscated | Meaning |
+|---|---|
+| `$еIНpА` | the string `"RELIABLE_PING"` (`_strings.js`) |
+| `$ММ` | the network class |
+| `$ММ.$МеoрО` / `$ММ.$ОAA0р` | reliable (1) / unreliable (0) channel |
+| `$ММ.$p1еeс` | callback placeholder in `parts` |
+| `$ММ.$ceTOI` | the client's server connection |
+| `$ММ.$T0еcр` | true on a dedicated server |
+| `$ММ.$НеAAO` | log of messages sent (client) |
+| `$ММ.$c0рlc` / `$ММ.$pOeрМ` | handler for reliable / unreliable messages |
+| `$ММ.$ТеeАp` | per-connection send step (state, keep-alive) |
+| `$ММ.$AOIе0o` | starts hosting a P2P match (installs the `$с0A` stub) |
+| `$рсНAе` | the connection class (`connection.js`) |
+| `connection.$OMeTо` | send a message |
+| `connection.$с0А0О` | this is the server side of the connection |
+| `connection.$ОOe0A` | reliable messages waiting for acknowledgement |
+| `connection.$cМOАA` | round-trip samples `{ value, time }` |
+| `connection.$pА1АН` | callbacks waiting for a `RELIABLE_RESPONSE` |
+| `connection.$ОcО1p` | when the next keep-alive check may run |
+| `$АpА1рO` | answer a request (sends `RELIABLE_RESPONSE`) |
+| `$с0A.$Т0ОcpT` | server: handle a cheat report |
+| `$HHOеоH` / `$сMlcА1` | integrity scan setup / tick |
+| `$1eoAНl` | time of the last scan pass (`Infinity` = stopped) |
+
+### 13.9 The local `main.js` is modified
+
+`game/scripts/main.js` in this checkout (changed 2026-10-30, after the download on 2026-10-26) differs from the original:
+
+- Added at the top: `globalThis.$еl1НсI()` (turns off the error reporter, [9.15](#915-the-error-reporting-kill-switch-еl1нсi)), `$еHоНH = true` (forces `isCustomMapSession`, which skips the value guard, [§3.2](#32-early-exits-in-pмоct-frame2js38010)), and `console.log` lines.
+- Removed: the scan's whole body (original lines 941–1059). `$сMlcА1` is an empty function.
+
+So with this copy **no report is ever sent**, and the value guard never runs. Everything above describes the original. To get it back: `npm run fetch-game` (it re-downloads; the current copy moves to `game.previous/`).
