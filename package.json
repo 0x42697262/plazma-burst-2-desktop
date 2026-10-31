@@ -12,7 +12,9 @@
     "fetch-opcodes": "node tools/fetch-opcodes.js",
     "test": "node --test test/",
     "host": "electron . --host",
-    "server": "electron . --server",
+    "server": "node server/index.js",
+    "join": "electron . --join",
+    "p2p-host": "electron . --p2p-host",
     "testers": "node tools/remote-testers.js"
   },
   "type": "commonjs",
@@ -23,6 +25,8 @@
     "electron": "^45.0.0"
   },
   "dependencies": {
+    "selfsigned": "^2.4.1",
+    "socket.io": "^4.8.1",
     "ws": "^8.22.0"
   }
 }

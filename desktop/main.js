@@ -16,7 +16,8 @@ const { REMOTE_PAGE_SCRIPT, REMOTE_WEB_PREFERENCES, isGamePage, lockDownSession,
 // A tester's screenshot key writes a file here each press: one per this many ms per tester.
 const REMOTE_SCREENSHOT_MS = 2000;
 const { startHost, parseHostArgs } = require('./remote/host');
-const serverConfig = require('./server/config');
+const serverConfig = require('./p2p-host/config');
+const { loadJoin } = require('./join');
 
 // Remote play host: "npm run host" (electron . --host). No window here: every tester who
 // opens their link gets an offscreen game instance on this machine, streamed to their
@@ -27,12 +28,21 @@ const REMOTE_DATA_DIR = path.join(__dirname, 'remote-data'); // per tester: thei
 // Frames are exactly the window's size, whatever this screen's scaling.
 if (HOST_MODE) app.commandLine.appendSwitch('force-device-scale-factor', '1');
 
-// Dedicated host: "npm run server" (electron . --server). One offscreen game window hosts
-// a player-hosted match from desktop/server.json and is driven from this terminal
-// (desktop/server/README.md). Its console settings are its own file.
-const SERVER_MODE = process.argv.includes('--server') && !HOST_MODE;
-const SERVER_CONFIG_FILE = path.join(__dirname, 'server.json');
-const SERVER_KV_FILE = path.join(__dirname, 'server-overrides.json');
+// Player-hosted dedicated host: "npm run p2p-host" (electron . --p2p-host). One offscreen
+// game window hosts a player-hosted match, listed by the official lobby, from
+// desktop/p2p-host.json and is driven from this terminal (desktop/p2p-host/README.md).
+// Its console settings are its own file.
+const SERVER_MODE = process.argv.includes('--p2p-host') && !HOST_MODE;
+const SERVER_CONFIG_FILE = path.join(__dirname, 'p2p-host.json');
+const SERVER_KV_FILE = path.join(__dirname, 'p2p-host-overrides.json');
+
+// A private server: "npm run join" (electron . --join). The game's lobby connection goes
+// to the server in desktop/join.json (server/, "npm run server") instead of the official
+// one, trusting only that server's certificate. The game starts logged out: the server
+// gets the nickname and its password from join.json, never your PB2 account.
+const JOIN_MODE = process.argv.includes('--join') && !HOST_MODE && !SERVER_MODE;
+const JOIN_FILE = path.join(__dirname, 'join.json');
+let joinTarget = null; // desktop/join.js checkJoin().join
 let serverPage = null; // the checked config the page gets as PB2_SERVER
 
 // The terminal log: --verbose / --log-level=<error|warn|info|debug> / PB2_LOG_LEVEL.
@@ -93,6 +103,9 @@ const SERVER_TRACE_SCRIPT_TAG = '<script>trace = function (...a) {'
 // settings cannot end the script.
 const serverPageScript = (config) => '<script>Object.defineProperty(globalThis, "PB2_SERVER", { value: Object.freeze('
   + JSON.stringify(config).replace(/</g, '\\u003c') + ') });</script>';
+// Join mode: where the lobby connection goes and who logs in there (dev console, join/).
+const joinPageScript = (join) => '<script>Object.defineProperty(globalThis, "PB2_JOIN", { value: Object.freeze('
+  + JSON.stringify({ address: join.hostPort, nickname: join.nickname, password: join.password }).replace(/</g, '\\u003c') + ') });</script>';
 const DEV_SCRIPT_TAG = `<script src="${SHARED.devDir}${ROUTE.names}"></script>`
   + `<script src="${SHARED.devDir}${ROUTE.opcodes}"></script>`
   + `<script type="module" src="${SHARED.devDir}${ROUTE.console}${DEV_CONSOLE_ENTRY}"></script>`;
@@ -296,6 +309,30 @@ const types = {
 // Login: every start clears the site's cookies, then sets the credentials, if any
 // (env vars PB2_LOGIN, PB2_PASSWORD, PB2_UID win over desktop/credentials.json).
 // Without them the game starts logged out. See desktop/login.js.
+// Join mode: the site's cookies cleared and none set, so the page never has your login.
+async function startLoggedOut() {
+  const { removed } = await applyLogin(session.defaultSession.cookies, {}, HOST);
+  if (removed.length) log.info(`Cleared saved site cookies: ${removed.join(', ')} (your PB2 account is not used on a private server)`);
+}
+
+// Join mode: the private server's address is trusted with exactly the certificate in
+// join.json, and with nothing else. Every other site is checked as usual.
+function pinServerCertificate(join) {
+  const { X509Certificate } = require('crypto');
+  let warned = false;
+  session.defaultSession.setCertificateVerifyProc((request, callback) => {
+    if (request.hostname !== join.host) { callback(-3); return; }
+    let fingerprint = '';
+    try { fingerprint = new X509Certificate(request.certificate.data).fingerprint256; } catch {}
+    if (fingerprint === join.fingerprint) { callback(0); return; }
+    if (!warned) {
+      warned = true;
+      log.error(`Private server: the certificate at ${join.hostPort} is not the one in desktop/join.json (got ${fingerprint || 'none'}); not connecting`);
+    }
+    callback(-2);
+  });
+}
+
 async function applyCredentials() {
   const credentials = loadCredentials(path.join(__dirname, 'credentials.json'));
   const { removed, set } = await applyLogin(session.defaultSession.cookies, credentials, HOST);
@@ -524,7 +561,7 @@ async function serveHooks(request, url) {
 async function serveLocal(url, ctx) {
   let rel = decodeURIComponent(url.pathname.slice(PREFIX.length));
   if (rel === '' || rel.endsWith('/')) rel += 'index.html';
-  if ((DEV_ENABLED || HOOKS_ENABLED || ctx.remote || ctx.server) && rel === 'index.html') {
+  if ((DEV_ENABLED || HOOKS_ENABLED || ctx.remote || ctx.server || JOIN_MODE) && rel === 'index.html') {
     const html = await fs.readFile(path.join(ROOT, 'index.html'), 'utf8');
     let out = html;
     if (HOOKS_ENABLED) {
@@ -545,6 +582,14 @@ async function serveLocal(url, ctx) {
         ? out.replace(MAIN_SCRIPT_TAG, MAIN_SCRIPT_TAG + DEV_SCRIPT_TAG)
         : out.replace(/<\/body>/i, DEV_SCRIPT_TAG + '</body>');
       if (out === before) log.error('Dev console: could not inject into index.html');
+    }
+    if (JOIN_MODE && !ctx.remote && !ctx.server) {
+      const at = out.search(/<script\b/i);
+      if (at < 0) {
+        log.error('Private server: could not prepare index.html (no <script> tag); not serving it');
+        return new Response('Not available', { status: 503 });
+      }
+      out = out.slice(0, at) + joinPageScript(joinTarget) + out.slice(at);
     }
     if (ctx.server) {
       // The dedicated host: PB2_SERVER before every other script, and chat lines (the
@@ -603,7 +648,22 @@ app.whenReady().then(async () => {
   log.info(`Game ${VERSION} from ${ROOT}`);
   log.debug(`Log level: debug (requests, window events, the game's trace() output)`);
   if (DEV_ENABLED) checkNamesFile();
-  await applyCredentials();
+  if (JOIN_MODE) {
+    const { join, errors } = loadJoin(JOIN_FILE);
+    if (!join) {
+      const msg = `Cannot join a private server:\n${errors.join('\n')}\n\nGuide: server/README.md`;
+      log.error(msg);
+      dialog.showErrorBox('Plazma Burst 2: desktop/join.json', msg);
+      app.quit();
+      return;
+    }
+    joinTarget = join;
+    await startLoggedOut();
+    pinServerCertificate(join);
+    log.info(`Private server: ${join.hostPort} as ${join.nickname}`);
+  } else {
+    await applyCredentials();
+  }
 
   protocol.handle('https', (request) => handleRequestLogged(request, SERVER_MODE ? SERVER_CTX : LOCAL_CTX));
 
@@ -629,7 +689,7 @@ app.whenReady().then(async () => {
     width: 1280,
     height: 720,
     autoHideMenuBar: true,
-    title: 'Plazma Burst 2',
+    title: JOIN_MODE ? `Plazma Burst 2 (${joinTarget.hostPort})` : 'Plazma Burst 2',
     webPreferences: { backgroundThrottling: false },
   });
   logPage(win, '');
@@ -793,7 +853,7 @@ async function startRemoteHost() {
 }
 
 // ---------------------------------------------------------------------------
-// Dedicated host (desktop/server/)
+// Player-hosted dedicated host (desktop/p2p-host/)
 // ---------------------------------------------------------------------------
 // The host's window: the default session (logged in like "npm start"), its own console
 // settings file, and PB2_SERVER on its page.
@@ -839,7 +899,7 @@ async function startDedicatedServer() {
   const file = config ? path.resolve(config) : SERVER_CONFIG_FILE;
   const loaded = serverConfig.loadConfig(file);
   if (loaded.missing) {
-    log.error(`Host: no ${file}. Copy desktop/server.example.json there and set "match.map_id" (guide: desktop/server/README.md).`);
+    log.error(`Host: no ${file}. Copy desktop/p2p-host.example.json there and set "match.map_id" (guide: desktop/p2p-host/README.md).`);
     app.quit();
     return;
   }

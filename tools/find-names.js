@@ -240,7 +240,7 @@ const RULES = [
   { file: 'flash', keys: ['p2pConn'],
     what: ['net property: connection to the player-hosted (P2P) match you joined'],
     re: String.raw`⟨net⟩\.connections\.push\(c\);\s*c\.⟨_⟩\(⟨_⟩\);\s*⟨net⟩\.⟨ID⟩=c;` },
-  // ----- Dedicated host (desktop/dev/console/server/, "npm run server") -----
+  // ----- Dedicated host (desktop/dev/console/server/, "npm run p2p-host") -----
   // Leaving a match: [type, -1, where the reply goes, slot -1, "", ""] on the reliable channel.
   { file: 'flash', keys: ['netChannel', 'netReplyTo'],
     what: ['net property: the channel reliable messages are sent on',
@@ -260,7 +260,7 @@ const RULES = [
   { file: 'flash', keys: ['connUser', 'connStats', 'p2pAuth', 'p2pAuthIds'],
     what: ['connection property: the account ({ login, nickname, uid, is_guest, ... }); on net: your own',
       'connection property: the account\'s standing ({ reputation, ... })',
-      'globalThis property: the host\'s player records (.p2pAuthIds)',
+      'globalThis property: the lobby server\'s account module (players, logs, reports); a stand-in on clients and player hosts',
       'p2pAuth property: WeakMap connection -> { id: auth id }'],
     re: String.raw`c\.⟨ID⟩=⟨_⟩;\s*c\.⟨ID⟩=⟨_⟩;\s*⟨ID⟩\.⟨ID⟩\.set\(c,\{id:` },
   // The match's inactivity check, per slot: spectators are only excluded when spectating is full.
@@ -313,6 +313,62 @@ const RULES = [
     re: String.raw`let ⟨_⟩=⟨_⟩\(parts\[⟨net⟩\.⟨ID⟩\]\);\s*if\(connection\.⟨_⟩\.length===0\|\|` },
   { file: 'flash', keys: ['stateVelScale'], what: ['net property: velocity multiplier in a state update (tox, toy are sent times this)'],
     re: String.raw`let ⟨_⟩=Math\.round\(⟨_⟩\.⟨_⟩\*100\);\s*let ⟨_⟩=⟨net⟩\.⟨ID⟩;\s*parts\.push\(` },
+  // ----- Own lobby server (server/, "npm run server"): the game's server code, run in Node -----
+  { file: 'flash', keys: ['connClass'], what: ['connection class (new ...({ url }) on a client, ({ socket, ip }) on a server)'],
+    re: String.raw`static ⟨_⟩\(url\)\s*\{\s*let c=new ⟨ID⟩\(\{url: url\}\);` },
+  { file: 'flash', keys: ['serverFlag'], what: ['net property: true when this code runs as the lobby server'],
+    re: String.raw`static init_class\(\)\s*\{\s*⟨net⟩\.⟨ID⟩=false;\s*⟨net⟩\.⟨_⟩=true;` },
+  // Run once at start: builds the digits of encoded numbers (and, with arguments, the
+  // device ID the client sends).
+  { file: 'flash', keys: ['setupClass', 'setupMethod'],
+    what: ['class with the start-up setup', 'its method(JSON, save data): digits of encoded numbers, device ID (none on a server)'],
+    re: String.raw`⟨ID⟩\.⟨ID⟩\(JSON,⟨_⟩\["data"\]\);` },
+  { file: 'flash', keys: ['serverStats'], what: ['globalThis property: the lobby server\'s timing statistics (only a server has it)'],
+    re: String.raw`else\s*\{\s*⟨ID⟩\.⟨_⟩\(⟨_⟩\.⟨_⟩\.⟨_⟩,\{dt:⟨_⟩,` },
+  // A match loading its map: POST [map ID, "h5", title, ip] joined by "[^c]", answered
+  // "map text[^#]name[^#]approved[^#]max players[^#]map ID" or "x[^#]why".
+  { file: 'flash', keys: ['webRequests', 'webRequest', 'mapUrl', 'mapKey', 'mapRequest'],
+    what: ['globalThis property: the lobby server\'s web requests (only a server has it)', 'its method(null, url, method, fields, done(text), ...)',
+      'global: the map service URL', 'global: the map service key (also the field\'s name)', 'global: the map request\'s type'],
+    re: String.raw`⟨ID⟩\.⟨ID⟩\(\s*null,\s*⟨ID⟩,"POST",\s*\{\s*⟨_⟩: ⟨ID⟩,\s*request: ⟨ID⟩,` },
+  { file: 'flash', keys: ['netTick'], what: ['net function(time): the network tick, every connection\'s sending and receiving'],
+    re: String.raw`static ⟨ID⟩\(time\)\s*\{\s*let ⟨_⟩=0;\s*let ⟨_⟩=⟨net⟩\.connections\.length;` },
+  { file: 'connection', keys: ['connClosed'], what: ['connection property: closed'],
+    re: String.raw`Disconnect\(\)\s*\{\s*if\(this\.⟨ID⟩\)\s*return;` },
+  { file: 'connection', keys: ['socketConn'], what: ['server socket property: its engine.io connection (socket.io calls it .conn)'],
+    re: String.raw`return this\.socket\.⟨ID⟩\.transport\.writable;` },
+  { file: 'flash', keys: ['connDevice', 'deviceId'], what: ['connection property: the device it logged in from', 'device method(): its ID, or null'],
+    re: String.raw`if\(⟨_⟩\.⟨ID⟩\.⟨ID⟩\)\s*if\(⟨_⟩\.⟨_⟩\.⟨_⟩\(\)\)\s*this\.⟨_⟩\.add` },
+  { file: 'flash', keys: ['authLogin'], what: ['account method(connection, version, hash, login, password, uid, device, build, done(error))'],
+    re: String.raw`⟨p2pAuth⟩\.⟨ID⟩\(\s*connection,version,hash,login,password,` },
+  { file: 'flash', keys: ['authRecords'], what: ['account property: Map auth id -> { connection, entry: { login } }'],
+    re: String.raw`let ⟨_⟩=⟨p2pAuth⟩\.⟨ID⟩\.get\(⟨_⟩\);\s*let ⟨_⟩=⟨_⟩\.entry;` },
+  { file: 'flash', keys: ['authReport', 'authEndorse'], what: ['account method(target id, by id): report a player; returns the reply', 'account method(target id, by id): mark a player a good fit; returns the reply'],
+    re: String.raw`r=⟨p2pAuth⟩\.⟨ID⟩\(⟨_⟩,⟨_⟩\);\s*else\s*if\(type===⟨net⟩\["RELIABLE_ENDORDSE_USER"\]\)\s*r=⟨p2pAuth⟩\.⟨ID⟩\(⟨_⟩,⟨_⟩\);` },
+  { file: 'flash', keys: ['authBan'], what: ['account method(target id, by id): a staff ban; returns the reply'],
+    re: String.raw`if\(connection\.⟨connUser⟩\["is_staff"\]\)\s*r=⟨p2pAuth⟩\.⟨ID⟩\(` },
+  { file: 'flash', keys: ['authCheat'], what: ['account method(connection, reason, code, detail): an anti-cheat report'],
+    re: String.raw`⟨p2pAuth⟩\.⟨ID⟩\(connection,"HealthAltering"\);` },
+  { file: 'connection', keys: ['authLog', 'logDisconnect'], what: ['account method(connection, kind, text, match): the server\'s event log', 'log kind: disconnected'],
+    re: String.raw`Disconnect\(\)\s*\{\s*if\(this\.⟨_⟩\)\s*return;\s*if\(⟨net⟩\.⟨_⟩\)\s*⟨p2pAuth⟩\.⟨ID⟩\(this,⟨p2pAuth⟩\.⟨ID⟩,"",null\);` },
+  { file: 'flash', keys: ['logChat'], what: ['log kind: chat'], re: String.raw`⟨p2pAuth⟩\.⟨authLog⟩\(connection,⟨p2pAuth⟩\.⟨ID⟩,text,match\);` },
+  { file: 'flash', keys: ['logCreate'], what: ['log kind: match created'], re: String.raw`⟨p2pAuth⟩\.⟨authLog⟩\(connection,⟨p2pAuth⟩\.⟨ID⟩,JSON\.stringify` },
+  { file: 'flash', keys: ['logSpectate', 'logJoin'], what: ['log kind: joined a match to spectate', 'log kind: joined a match to play'],
+    re: String.raw`⟨p2pAuth⟩\.⟨authLog⟩\(connection,⟨_⟩ \? ⟨p2pAuth⟩\.⟨ID⟩ : ⟨p2pAuth⟩\.⟨ID⟩,"",this\);` },
+  { file: 'flash', keys: ['logLeave'], what: ['log kind: left a match'], re: String.raw`⟨p2pAuth⟩\.⟨authLog⟩\(connection,⟨p2pAuth⟩\.⟨ID⟩,"",this\);` },
+  { file: 'flash', keys: ['matchEnd'], what: ['match method(reason): ends it, everyone back to the lobby'],
+    re: String.raw`match\.⟨ID⟩\("Server: Match has been terminated by match owner"\)` },
+  { file: 'flash', keys: ['matchExclude'], what: ['match method(connection, reason, by, all guests): removes a player and keeps them out'],
+    re: String.raw`match\.⟨ID⟩\(⟨_⟩,"Server: Excluded from match by match owner",connection,⟨_⟩\);` },
+  { file: 'flash', keys: ['connMatch'], what: ['connection property: the match it is in (server side)'],
+    re: String.raw`let match=connection\.⟨ID⟩;\s*if\(match\)\s*\{\s*if\(connection\.⟨connUser⟩\["is_staff"\]\)` },
+  { file: 'flash', keys: ['matchSay'], what: ['match method(text, color): a server line in everyone\'s chat'],
+    re: String.raw`match\.⟨ID⟩\("Server: Minimum reputation to access this match was set to "` },
+  { file: 'flash', keys: ['matchLoadMap'], what: ['match method(map ID, done(ok, message)): loads a map and moves everyone to it'],
+    re: String.raw`match\.⟨ID⟩\(match\["map_id"\],\(success,message\)=>` },
+  // The lobby address: hosts[CONNECTION_SERVER_ID] + "plazmaburst2.com" + ":" + port.
+  { file: 'lobby', keys: ['lobbyHosts', 'lobbyPort'], what: ['net property: lobby server address starts ("https://vvvv.")', 'net property: lobby server port'],
+    re: String.raw`"localhost" : ⟨net⟩\.⟨ID⟩\[CONNECTION_SERVER_ID\]\+"plazmaburst2\.com"\)\+":"\+⟨net⟩\.⟨ID⟩;` },
   // The anti-cheat's locked arrays (ANTICHEAT.md §7). The scan's code 3 report sends an
   // index into this list.
   { file: 'tools', keys: ['lockedArrays'],
@@ -411,7 +467,7 @@ function decode(src, strings) {
 
 function compile(source, found) {
   const captures = [];
-  const re = source.replace(/⟨([A-Za-z_]+)⟩/g, (m, k) => {
+  const re = source.replace(/⟨([A-Za-z0-9_]+)⟩/g, (m, k) => {
     if (k === 'ID') { captures.push(true); return `(\\$[${ID_CHARS}]+)`; }
     if (k === '_') return `\\$[${ID_CHARS}]+`;
     if (!found[k]) throw new Error(`needs "${k}" first`);

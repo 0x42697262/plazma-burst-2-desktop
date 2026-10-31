@@ -1,4 +1,4 @@
-// The dedicated host's settings ("npm run server"): desktop/server.json, or the file
+// The dedicated host's settings ("npm run p2p-host"): desktop/p2p-host.json, or the file
 // given with --config. Two parts:
 //   match   the game's own match preset, the JSON its create screen copies with
 //           "Copy Preset as text" (title, map_id, max_players, password, ...). Sent to
@@ -6,7 +6,7 @@
 //           ("THIS DEVICE (UDP)") match that is not ranked.
 //   the rest  what only the host does: who may stay, which local map it serves, the
 //           UDP ports and ICE servers its WebRTC uses, the frame rate it runs at.
-// See desktop/server/README.md.
+// See desktop/p2p-host/README.md.
 'use strict';
 
 const fs = require('fs');
@@ -216,7 +216,7 @@ function loadConfig(file) {
   return { ...checkConfig(obj), missing: false };
 }
 
-// npm run server -- [--config file]. Returns { config, problems }.
+// npm run p2p-host -- [--config file]. Returns { config, problems }.
 function parseServerArgs(argv) {
   const problems = [];
   let config = null;

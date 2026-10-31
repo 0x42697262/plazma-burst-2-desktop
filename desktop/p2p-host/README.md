@@ -1,15 +1,19 @@
-# Dedicated host
+# Player-hosted dedicated host
 
-`npm run server` runs the game with no window and nobody playing on it. It hosts one
+> For a server of your own that the official site is not part of at all, see
+> [server/README.md](../../server/README.md) (`npm run server` and `npm run join`). This
+> host is for a match listed by the official lobby, that any copy of the game can join.
+
+`npm run p2p-host` runs the game with no window and nobody playing on it. It hosts one
 match with the game's **MATCH LOCATION: THIS DEVICE (UDP)** setting, and you control it
 from the terminal. Your friends join from the normal match browser in any copy of the
 game (browser or desktop). They play against this computer, not the official server in
 Arizona.
 
 ```
-npm run server                         # desktop/server.json
-npm run server -- --config other.json
-npm run server -- --verbose            # also the game's own debug output
+npm run p2p-host                       # desktop/p2p-host.json
+npm run p2p-host -- --config other.json
+npm run p2p-host -- --verbose          # also the game's own debug output
 ```
 
 ## Setup
@@ -17,12 +21,12 @@ npm run server -- --verbose            # also the game's own debug output
 1. Log in with an account in `desktop/credentials.json`, as for `npm start`. A guest
    can host, but only an account can change maps, kick players or use the other match
    owner commands.
-2. Copy `desktop/server.example.json` to `desktop/server.json`, then set at least
+2. Copy `desktop/p2p-host.example.json` to `desktop/p2p-host.json`, then set at least
    `match.map_id` and `match.password`.
-3. Run `npm run server`. Once the terminal says `Host: running`, the match is listed in
+3. Run `npm run p2p-host`. Once the terminal says `Host: running`, the match is listed in
    the browser as *"<your region>, player-hosted"*.
 
-## Settings (`desktop/server.json`)
+## Settings (`desktop/p2p-host.json`)
 
 `match` is the game's own preset, the same JSON as **Create New Match > Copy Preset as
 text**, so you can paste one in. The host always sets `p2p: true`, `ranked: false` and

@@ -1,4 +1,4 @@
-// "server": the dedicated host's commands ("npm run server", server/host.js), typed in
+// "server": the dedicated host's commands ("npm run p2p-host", server/host.js), typed in
 // its terminal. Only on the dedicated host (`server: true`, core/server.js). "who",
 // "kick" and "say" are the same as their "server" subcommands, for short.
 import { print } from '../ui/log.js';
@@ -164,7 +164,7 @@ export const serverCommand = {
   desc: 'The dedicated host: its match, players and match owner commands',
   help: {
     about: [
-      'This window hosts one player-hosted match, set up from desktop/server.json.',
+      'This window hosts one player-hosted match, set up from desktop/p2p-host.json.',
       'Players find it in the game\'s match browser and play over WebRTC with this',
       'host; the lobby server lists it and passes their connections along.',
       'Commands that change the match are the match owner\'s own chat commands, sent',

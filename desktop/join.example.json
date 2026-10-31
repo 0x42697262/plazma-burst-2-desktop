@@ -1,0 +1,7 @@
+{
+  "_comment": "Copy to desktop/join.json, then \"npm run join\". The server's terminal prints the address and fingerprint. Guide: server/README.md.",
+  "address": "203.0.113.5:2053",
+  "fingerprint": "paste the server's fingerprint here",
+  "nickname": "YourName",
+  "password": "the server's password"
+}

@@ -1,12 +1,12 @@
-// The dedicated host's driver ("npm run server"): logs in to the lobby server, starts the
-// match from desktop/server.json as a player-hosted ("THIS DEVICE (UDP)") one, moves
+// The dedicated host's driver ("npm run p2p-host"): logs in to the lobby server, starts the
+// match from desktop/p2p-host.json as a player-hosted ("THIS DEVICE (UDP)") one, moves
 // itself to the spectators, and keeps the match going: who joins and leaves, the
 // "allow" list, the local map, and starting again when the match is gone.
 // Every step is one the game takes itself: its lobby screen logs in, the create screen's
 // message makes the match, the "Spectate" button's message moves the host, the match
 // owner's chat commands ("-map", "-pause", ...) and kick button do the rest. The players
 // play over WebRTC with this game; the lobby server lists the match, checks who may
-// join and passes their connection offers along (desktop/server/README.md).
+// join and passes their connection offers along (desktop/p2p-host/README.md).
 import { print } from '../ui/log.js';
 import { COLOR } from '../core/colors.js';
 import { MAP } from '../core/shared.js';

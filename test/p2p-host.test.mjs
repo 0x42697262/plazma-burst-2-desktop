@@ -1,4 +1,4 @@
-// The dedicated host ("npm run server"): its config file, and its driver in the page
+// The dedicated host ("npm run p2p-host"): its config file, and its driver in the page
 // (desktop/dev/console/server/host.js) against the fake game.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -9,7 +9,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const REPO = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
-const { checkConfig, roundDurationMs, parsePorts, parseServerArgs } = require('../desktop/server/config.js');
+const { checkConfig, roundDurationMs, parsePorts, parseServerArgs } = require('../desktop/p2p-host/config.js');
 
 test('config: the game\'s preset, made player-hosted and unranked, with the host\'s own settings', () => {
   const r = checkConfig({
@@ -59,7 +59,7 @@ test('config: round duration like the create screen, ports, arguments', () => {
   assert.equal(parsePorts(''), null);
   assert.deepEqual(parsePorts('50000'), { min: 50000, max: 50000 });
   assert.throws(() => parsePorts('9-1'));
-  assert.equal(parseServerArgs(['electron', '.', '--server', '--config', 'my.json']).config, 'my.json');
+  assert.equal(parseServerArgs(['electron', '.', '--p2p-host', '--config', 'my.json']).config, 'my.json');
   assert.equal(parseServerArgs(['--config=x.json']).config, 'x.json');
 });
 
@@ -80,7 +80,7 @@ test('not on the dedicated host: no "server", "who", "kick" or "say"', () => {
 const HOST_CHILD = `
   const { createRequire } = await import('node:module');
   const require = createRequire(${JSON.stringify(at('test/server.test.mjs'))});
-  const { checkConfig } = require('../desktop/server/config.js');
+  const { checkConfig } = require('../desktop/p2p-host/config.js');
   const cfg = checkConfig({ match: { map_id: 'nanotech-cht', password: 'pw' }, allow: ['friend'], region: 'Asia', restart_after_s: 5 });
   Object.defineProperty(globalThis, 'PB2_SERVER', { value: { match: cfg.match, server: cfg.server } });
   const { bootConsole } = await import(${JSON.stringify(at('test/fake-game.mjs'))});

@@ -14,7 +14,8 @@
 // Layout: core/ (helpers), game/ (the game adapter), state/ (settings, binds, history),
 // overrides/ (per-frame forcing), triggers/ (map triggers and variables), maps/ (the map
 // cache), editor/ (the in-game map editor), net/ (the anti-cheat scan's report and the
-// network recorder for netlogs/), server/ (the dedicated host, "npm run server"), ui/
+// network recorder for netlogs/), server/ (the player-hosted dedicated host, "npm run p2p-host"),
+// join/ (a private server, "npm run join"), ui/
 // (panel, log, pager), commands/ (one module per command group, all in the registry),
 // dispatch.js (running a typed line).
 import './commands/index.js';
@@ -38,6 +39,7 @@ import { netTick, NET_TICK_MS } from './net/recorder.js';
 import { run } from './dispatch.js';
 import { SERVER } from './core/server.js';
 import { startHost } from './server/host.js';
+import { startJoin } from './join/client.js';
 
 const BOOT_POLL_MS = 200; // how often to look for the game's stage while it loads
 const STATUS_EVERY_MS = 500;
@@ -85,6 +87,7 @@ function start(source) {
   // Not per frame: connections are made and packets arrive in menus too.
   setInterval(() => netGuard('Network log', netTick), NET_TICK_MS);
   if (SERVER) startHost();
+  startJoin();
 }
 
 async function boot() {

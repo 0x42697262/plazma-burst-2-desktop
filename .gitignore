@@ -29,9 +29,17 @@ desktop/maps/*
 desktop/remote-testers.json
 desktop/remote-data/
 
-# The dedicated host (desktop/server/): its settings (they hold the match password) and its console settings.
+# The player-hosted dedicated host (desktop/p2p-host/): its settings (they hold the match password) and its console settings.
+desktop/p2p-host.json
 desktop/server.json
-desktop/server-overrides.json
+desktop/p2p-host-overrides.json
+
+# A private server to join (desktop/join.js): its address, your nickname, its password.
+desktop/join.json
+
+# Your own server (server/): its settings, and its certificate, bans and downloaded maps.
+server/server.json
+server/data/
 
 # Network logs from the dev console's recorder (console key net_log), one file per run and game instance.
 /netlogs/

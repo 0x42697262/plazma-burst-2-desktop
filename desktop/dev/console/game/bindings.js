@@ -267,6 +267,20 @@ export const game = {
   },
   netTypeName: (type) => { const net = read('net'); const m = net && net[nameOf('netTypeNames')]; return (m && m[type]) || null; },
 
+  // ----- Private server (join/) -----
+  // Every lobby address start (the game picks one by CONNECTION_SERVER_ID).
+  setLobbyAddress: (start) => {
+    const hosts = read('net')[nameOf('lobbyHosts')];
+    for (let i = 0; i < hosts.length; i++) if (hosts[i] !== start) hosts[i] = start;
+  },
+  // The login the lobby sends (the game reads its login cookies into these).
+  setLoginParams: (login, password) => {
+    const p = globalThis.loaderInfo && globalThis.loaderInfo.parameters;
+    if (!p) throw new Error('the game has no login parameters yet');
+    p.l = login;
+    p.p = password;
+  },
+
   // ----- Dedicated host (server/) -----
   frameLabel: () => { const st = stageOrNull(); return st ? st.currentFrameLabel : null; },
   goToScreen: (label) => gotoAndStop(label), // the game's own global: the stage's frame

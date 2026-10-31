@@ -29,8 +29,8 @@ npm start
 
 In the game, press Shift+`` ` `` (`~`) for the dev console and type `help`.
 
-To host a match for friends without playing it yourself, see the dedicated host:
-`npm run server` ([desktop/server/README.md](desktop/server/README.md)).
+To run a server of your own for friends, without the official site: `npm run server`, and
+they join with `npm run join` ([server/README.md](server/README.md)).
 
 ## 2. Folder layout
 
@@ -48,8 +48,11 @@ To host a match for friends without playing it yourself, see the dedicated host:
 | `hooks/` | Your hooks: Frida-style scripts that change the game's code as it loads. Guide: `hooks/README.md`, reference: `hooks/REFERENCE.md` | only `README.md`, `REFERENCE.md` and `*.example.js` |
 | `desktop/remote/` | Remote play: testers play a game running on this machine from their browser (`npm run host`). Guide: `desktop/remote/README.md` | yes |
 | `desktop/remote-testers.json`, `desktop/remote-data/` | Remote play: tester links, and each tester's console settings | no |
-| `desktop/server/` | Dedicated host: hosts a player-hosted ("THIS DEVICE (UDP)") match with no window, run from the terminal (`npm run server`). Guide, and what player-hosted matches lack next to the official server: `desktop/server/README.md` | yes |
-| `desktop/server.json`, `desktop/server-overrides.json` | Dedicated host: its settings (copy `desktop/server.example.json`), and its console settings | no |
+| `server/` | Your own lobby server: the game's own server code in Node, TLS on one port, run from the terminal (`npm run server`). Players join with `npm run join`. Guide: `server/README.md` | yes |
+| `server/server.json`, `server/data/` | Your server: its settings (copy `server/server.example.json`), its certificate, bans and downloaded maps | no |
+| `desktop/join.js`, `desktop/join.json` | Joining a private server: where, its certificate fingerprint, your nickname (copy `desktop/join.example.json`) | `join.js` yes, `join.json` no |
+| `desktop/p2p-host/` | Player-hosted dedicated host: a "THIS DEVICE (UDP)" match listed by the official lobby, with no window (`npm run p2p-host`). Guide: `desktop/p2p-host/README.md` | yes |
+| `desktop/p2p-host.json`, `desktop/p2p-host-overrides.json` | Player-hosted dedicated host: its settings (copy `desktop/p2p-host.example.json`), and its console settings | no |
 | `desktop/hooks.js`, `desktop/hooks-runtime.js` | The hooks loader (dry run, patches, trampolines) and its in-page runtime | yes |
 | `netlogs/` | Network logs: every message the game sends and receives, and its packet losses, as plain text. One file per run and game instance (console key `net_log`, command `netlog`; see [section 7](#7-network-log)) | no |
 | `desktop/netlog.js`, `desktop/dev/console/net/recorder.js` | The network log: the files (wrapper), and the recorder on the game's connections (console) | yes |

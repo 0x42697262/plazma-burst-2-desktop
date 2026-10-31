@@ -1,0 +1,13 @@
+{
+  "_comment": "Copy to server/server.json. Guide: server/README.md. Every key is optional.",
+  "port": 2053,
+  "bind": "0.0.0.0",
+  "password": "change-me",
+  "nicknames": [],
+  "admins": [],
+  "max_players": 64,
+  "skin": 1,
+  "download_maps": true,
+  "cheat_reports": "log",
+  "welcome": "Welcome!"
+}
