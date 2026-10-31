@@ -1,9 +1,9 @@
-// "bypass checks": the console's multiplayer protection, and the one way to turn it off.
-// By default, in multiplayer the console holds back what the match's server checks
-// (overrides/server-checks.js). "bypass checks" prints a warning and waits for the next
-// line typed into the console: exactly UNLOCK_PHRASE (case-sensitive) turns the
-// protection off for this page load; any other line turns the question down and is not
-// run. Never saved: a reload, or "bypass off", turns the protection back on.
+// "bypass checks": the console's ranked match protection, and the one way to turn it
+// off. By default, in approved, ranked matches the console holds back what the match's
+// server checks (overrides/server-checks.js). "bypass checks" prints a warning and waits
+// for the next line typed into the console: exactly UNLOCK_PHRASE (case-sensitive) turns
+// the protection off for this page load; any other line turns the question down and is
+// not run. Never saved: a reload, or "bypass off", turns the protection back on.
 
 export const UNLOCK_PHRASE = 'ALLOW DANGEROUS COMMANDS';
 

@@ -101,7 +101,7 @@ const EXTRAS = Object.freeze({
     return [`profile: ${p.name} (map ${currentMap()})`, rows.length ? rows : ['  (sets nothing yet)']];
   },
   zoom: () => { const rows = zoomChanges(); return rows && ['zoom', rows]; },
-  checks: () => checksBypassed() && ['multiplayer protection: OFF ("bypass checks")', ['  nothing is held back in multiplayer; "bypass off" turns it back on']],
+  checks: () => checksBypassed() && ['ranked match protection: OFF ("bypass checks")', ['  nothing is held back in ranked matches; "bypass off" turns it back on']],
   editor: () => {
     const sum = editSummary();
     if (!sum) return null;

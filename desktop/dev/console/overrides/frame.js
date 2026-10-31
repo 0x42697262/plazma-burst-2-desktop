@@ -36,7 +36,7 @@ const val = (key) => settings.get(key);
 
 // Total bonus for a character whose own (game) max HP is `base`: flat plus a percent of
 // base. Percents add up (+50% twice = +100% of base), they do not compound.
-// A bonus held back in multiplayer (server-checks.js) counts as 0.
+// A bonus held back in a ranked match (server-checks.js) counts as 0.
 export function hpBonusFor(base) {
   const flat = settings.effective(KEY.HP_BONUS) ?? 0;
   const pct = settings.effective(KEY.HP_BONUS_PCT) ?? 0;
@@ -58,7 +58,7 @@ function noteHeld(p) {
   const held = [KEY.MAX_HP, KEY.HP_BONUS, KEY.HP_BONUS_PCT]
     .filter((k) => settings.has(k) && heldBack(k, val(k), gameMaxOf(p)));
   const note = held.join(', ');
-  if (note && note !== heldNote) print(`Multiplayer: not applying ${note}: ${REASON.hp}. Your saved values are kept. ${BYPASS_HINT}.`, COLOR.warn);
+  if (note && note !== heldNote) print(`Ranked match: not applying ${note}: ${REASON.hp}. Your saved values are kept. ${BYPASS_HINT}.`, COLOR.warn);
   heldNote = note;
 }
 
@@ -120,7 +120,7 @@ function applyPlayer(p, running, dt) {
   applyGod(p);
   applyMaxHp(p);
   applyHpBonus(p);
-  // Multiplayer: never more HP than your max (what was held back above lowered it). God
+  // Ranked match: never more HP than your max (what was held back above lowered it). God
   // ignores decreases, so it steps aside for this one write; it is put back next frame.
   if (guarding() && p[F.HP] > p[F.MAX_HP]) { uninstallGodExcept(null); p[F.HP] = p[F.MAX_HP]; }
   applySpeed(p, running, dt);

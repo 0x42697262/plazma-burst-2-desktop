@@ -12,8 +12,6 @@ const errorsOf = (out) => out.filter((l) => l.startsWith('error: '));
 
 let c;
 before(async () => { c = await bootConsole({ sayTrigger: '#chat_in' }); });
-// The fake game is in multiplayer; a test of what the console does offline leaves it.
-const offline = (t) => { c.setMP(false); t.after(() => c.setMP(true)); };
 
 test('every command and subcommand has help, and every "Related" topic exists', async () => {
   const { helpEntries } = await consoleModule('commands/registry.js');
@@ -102,8 +100,7 @@ test('the run log records runs through the game\'s runner', () => {
   assert.ok(c.run('triggers history').some((l) => l.includes('#open_door') && l.includes('ran x2')));
 });
 
-test('settings are forced every frame and put back when removed', (t) => {
-  offline(t); // single-player: nothing is held back (overrides/server-checks.js)
+test('settings are forced every frame and put back when removed', () => {
   const p = c.player;
   c.run('max_hp 500; jump 3; swords off');
   c.frame();
@@ -137,8 +134,7 @@ test('typed commands are saved with the settings', async () => {
   assert.equal(saved.history.filter((l) => l === 'vars').length, 1);
 });
 
-test('leaving the level puts every forced value back', (t) => {
-  offline(t); // single-player: nothing is held back (overrides/server-checks.js)
+test('leaving the level puts every forced value back', () => {
   const p = c.player;
   c.run('max_hp 400; jump 2; world_gravity 0.1');
   c.frame();
@@ -684,8 +680,7 @@ test('shifted characters are Shift and their US key; keyname names the key you p
   c.run('unbind --all');
 });
 
-test('profiles: a map\'s profile wins over your settings there, and is checked when the file is edited', async (t) => {
-  offline(t); // single-player: nothing is held back (overrides/server-checks.js)
+test('profiles: a map\'s profile wins over your settings there, and is checked when the file is edited', async () => {
   const { profileTick } = await consoleModule('commands/profile.js');
   const atMap = (id) => { c.G[c.N.mapId] = id; };
   const saved = () => JSON.parse(c.store.get('pb2dev_kv'));
@@ -2290,8 +2285,7 @@ $makeVehicle(mc,n,1);
   }
 });
 
-test('zoom: any amount once, or locked so the map cannot change it', (t) => {
-  offline(t); // single-player: nothing is held back (overrides/server-checks.js)
+test('zoom: any amount once, or locked so the map cannot change it', () => {
   const { G, N } = c;
   const run = (line) => c.run(line).filter((l) => !l.startsWith('Note:'));
   const was = G[N.zoom];
@@ -2668,17 +2662,31 @@ test('a RESPONSE says which request it answers, and the PKT line adds up to the 
 });
 
 // ---------------------------------------------------------------------------
-// Multiplayer protection (overrides/server-checks.js) and "bypass checks"
+// Ranked match protection (overrides/server-checks.js) and "bypass checks"
 // ---------------------------------------------------------------------------
-const REFUSED = /^error: refused in multiplayer: .*"bypass checks" turns this protection off \(dangerous\)\.$/;
+const REFUSED = /^error: refused in a ranked match: .*"bypass checks" turns this protection off \(dangerous\)\.$/;
 // The error line of a command's output (a client-only note can come first).
 const errorOf = (out) => out.find((l) => l.startsWith('error: ')) || out.join(' | ');
+// The match you are in, as MATCH_JOIN_RESPONSE gives it ("approved" is a number).
+const inMatch = (t, details) => {
+  const net = c.G[c.N.net];
+  net.match_details = details;
+  t.after(() => { delete net.match_details; });
+};
+const RANKED = Object.freeze({ approved: 2, ranked: true, map_id: 'zynther-alaska' });
 
-test('in multiplayer, what the server checks is refused: raising HP and zooming out; the rest still works', (t) => {
+test('only in an approved, ranked match: raising HP and zooming out are refused; the rest still works', (t) => {
   const p = c.player;
-  t.after(() => { c.run('reset'); c.frame(); });
+  t.after(() => { c.run('reset'); c.run('zoom default'); c.frame(); });
   c.frame();
   const own = p.hmax;
+  // Unranked, unapproved, or not in a match: nothing is held back.
+  for (const details of [{ approved: 2, ranked: false }, { approved: 0, ranked: false }, null]) {
+    c.G[c.N.net].match_details = details;
+    assert.ok(c.run('max_hp 500').includes('max_hp = 500'), JSON.stringify(details));
+    c.run('unset max_hp');
+  }
+  inMatch(t, RANKED);
   for (const line of ['max_hp 500', 'hp +100', 'hp +50%', 'hp_bonus 20', 'hp_bonus_pct 10', 'zoom 50', 'zoom 30 --lock', 'game god', 'game god 1', 'game grow', 'game zoom 25']) {
     assert.match(errorOf(c.run(line)), REFUSED, line);
   }
@@ -2688,15 +2696,14 @@ test('in multiplayer, what the server checks is refused: raising HP and zooming 
   // Lowering HP, zooming in, other game commands and other keys are not the server's business.
   assert.ok(c.run(`max_hp ${own - 30}`).includes(`max_hp = ${own - 30}`));
   assert.ok(c.run('zoom 150').some((l) => l.startsWith('Zoom 150%')));
-  assert.doesNotMatch(c.run('game grow enemies').join(' '), /refused in multiplayer/);
+  assert.doesNotMatch(c.run('game grow enemies').join(' '), /refused/);
   assert.ok(c.run('speed 2').includes('speed = 2'));
-  c.run('zoom default');
 });
 
-test('settings you had are not applied in multiplayer, even with god on, and come back offline', (t) => {
+test('settings you had are not applied in a ranked match, even with god on, and come back in an unranked one', (t) => {
   const p = c.player;
-  t.after(() => { c.setMP(true); c.run('reset'); c.frame(); });
-  c.setMP(false);
+  inMatch(t, { approved: 2, ranked: false });
+  t.after(() => { c.run('reset'); c.run('zoom --unlock'); c.frame(); });
   c.frame();
   const own = p.hmax;
   c.run('max_hp 470; god on; zoom 40 --lock');
@@ -2705,61 +2712,60 @@ test('settings you had are not applied in multiplayer, even with god on, and com
   assert.equal(p.hea, 470);
   assert.equal(c.G[c.N.zoom], 0.4);
   c.log.printed.length = 0;
-  c.setMP(true);
+  c.G[c.N.net].match_details = { ...RANKED };
   c.frame();
   assert.equal(p.hmax, own, 'max HP back to the game\'s');
   assert.equal(p.hea, own, 'HP down to it, past god');
   assert.equal(c.G[c.N.zoom], 1, 'zoom back to 100%');
   const notes = c.log.printed.join('\n');
-  assert.match(notes, /Multiplayer: not applying max_hp: .*HealthAltering.*Your saved values are kept/);
-  assert.match(notes, /Multiplayer: not applying your zoom 40%/);
+  assert.match(notes, /Ranked match: not applying max_hp: .*HealthAltering.*Your saved values are kept/);
+  assert.match(notes, /Ranked match: not applying your zoom 40%/);
   c.log.printed.length = 0;
   c.frame(3);
   assert.deepEqual(c.log.printed, [], 'said once');
   p.hea = 1;
   assert.equal(p.hea, own, 'god itself still works');
-  c.setMP(false);
+  c.G[c.N.net].match_details = { approved: 2, ranked: false };
   c.frame();
-  assert.equal(p.hmax, 470, 'offline again: applied again');
+  assert.equal(p.hmax, 470, 'unranked again: applied again');
   assert.equal(c.G[c.N.zoom], 0.4);
-  c.run('zoom --unlock');
 });
 
 test('bypass checks: a red warning, then only the exact phrase typed on its own line turns the protection off', async (t) => {
   const { run } = await consoleModule('dispatch.js');
   const danger = await consoleModule('state/danger.js');
+  inMatch(t, RANKED);
   t.after(() => { danger.protectAgain(); c.run('reset'); c.frame(); });
-  assert.match(c.run('bypass')[0], /^Protection: on\. In multiplayer \(now\)/);
+  assert.match(c.run('bypass')[0], /^Protection: on\. In approved, ranked matches \(you are in one now\)/);
 
   const warning = c.run('bypass checks');
   assert.match(warning[0], /^WARNING: DANGEROUS\./);
-  assert.ok(warning.some((l) => l === 'To go ahead, type exactly: ALLOW DANGEROUS COMMANDS'), warning.join('\n'));
+  assert.ok(warning.includes('To go ahead, type exactly: ALLOW DANGEROUS COMMANDS'), warning.join('\n'));
+  const NO = 'Not turned off: that was not the phrase. The protection stays on, and the line was not run.';
   // Anything else turns it down and is not run, wrong capitals included.
-  assert.deepEqual(c.run('allow dangerous commands'), ['Not turned off: that was not the phrase. The protection stays on, and the line was not run.']);
+  assert.deepEqual(c.run('allow dangerous commands'), [NO]);
   assert.match(errorOf(c.run('max_hp 500')), REFUSED);
   c.run('bypass checks');
-  assert.deepEqual(c.run('list').slice(0, 1), ['Not turned off: that was not the phrase. The protection stays on, and the line was not run.'], 'a command is not run either');
+  assert.deepEqual(c.run('list'), [NO], 'a command is not run either');
   assert.equal(danger.checksBypassed(), false);
 
   // Not from a bind, a profile or a chain.
   c.log.printed.length = 0;
   run('bypass checks', 'bind f5');
   assert.match(c.log.printed.join('\n'), /error: type "bypass checks" yourself, on a line of its own/);
-  assert.match(c.run('bypass checks; list')[1], /error: type "bypass checks" yourself/);
+  assert.match(errorOf(c.run('bypass checks; list')), /error: type "bypass checks" yourself/);
   // A bind pressed while it waits runs as usual, and is not the answer.
   c.run('bypass checks');
-  c.log.printed.length = 0;
   run('ALLOW DANGEROUS COMMANDS', 'bind f5');
   assert.equal(danger.checksBypassed(), false, 'a bind cannot answer');
-  const yes = c.run('ALLOW DANGEROUS COMMANDS');
-  assert.match(yes[0], /^Protection OFF/);
+  assert.match(c.run('ALLOW DANGEROUS COMMANDS')[0], /^Protection OFF/);
   assert.equal(danger.checksBypassed(), true);
 
   assert.ok(c.run('max_hp 500').includes('max_hp = 500'));
   c.frame();
-  assert.equal(c.player.hmax, 500, 'applied in multiplayer now');
+  assert.equal(c.player.hmax, 500, 'applied in the ranked match now');
   assert.match(c.run('bypass')[0], /^Protection: OFF/);
-  assert.ok(c.run('list').some((l) => /multiplayer protection: OFF/.test(l)));
+  assert.ok(c.run('list').some((l) => /ranked match protection: OFF/.test(l)));
   assert.match(c.run('bypass off')[0], /^Protection on again/);
   c.frame();
   assert.notEqual(c.player.hmax, 500, 'held back again');

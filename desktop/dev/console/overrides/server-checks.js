@@ -1,5 +1,6 @@
-// What the console holds back in multiplayer because the match's server checks it
-// (ANTICHEAT.md §14, server-side checks on the state your game sends):
+// What the console holds back in approved, ranked matches because the match's server
+// checks it (ANTICHEAT.md §14, server-side checks on the state your game sends). Other
+// matches (unapproved maps, unranked) and single-player are left alone:
 //   - your HP above the map's limit: reported as "HealthAltering" (§14.4). Held back:
 //     max_hp above your character's own max, any hp_bonus / hp_bonus_pct above 0, the
 //     game's "god" and "grow" chat commands.
@@ -21,8 +22,16 @@ export const REASON = Object.freeze({
 export const BYPASS_HINT = '"bypass checks" turns this protection off (dangerous)';
 export const NORMAL_ZOOM_PCT = 100;
 
-// The protection is on now: in multiplayer and not bypassed.
-export const guarding = () => !checksBypassed() && game.isMP() === true;
+// The match you are in is on an approved map and ranked: match_details as the server
+// sent it when you joined (MATCH_JOIN_RESPONSE: "approved" is a number, 0 = not).
+export function rankedMatch() {
+  if (game.isMP() !== true) return false;
+  const d = game.matchDetails();
+  return !!(d && Number(d.approved) > 0 && d.ranked === true);
+}
+
+// The protection is on now: in an approved, ranked match and not bypassed.
+export const guarding = () => !checksBypassed() && rankedMatch();
 
 // Why a key's value is held back now, or null. gameMax: your character's own max HP
 // (without the console's changes), or null outside a level.
@@ -47,4 +56,4 @@ export function gameCommandHeldBack(text) {
   return hit ? hit[1] : null;
 }
 
-export const refusal = (what, reason) => new Error(`refused in multiplayer: ${what}: ${reason}. ${BYPASS_HINT}.`);
+export const refusal = (what, reason) => new Error(`refused in a ranked match: ${what}: ${reason}. ${BYPASS_HINT}.`);

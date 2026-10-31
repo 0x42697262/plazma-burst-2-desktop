@@ -25,7 +25,7 @@ export function zoomChanges() {
 }
 
 // Once per frame: a held zoom puts back whatever else set it (a map trigger, a vehicle,
-// the map's gamescale mark). In multiplayer a zoom out of yours is held back
+// the map's gamescale mark). In a ranked match a zoom out of yours is held back
 // (overrides/server-checks.js): the lock stays, but is not applied, and the zoom it set
 // goes back to 100%.
 let heldNoted = false;
@@ -36,7 +36,7 @@ export function zoomTick() {
   if (why) {
     if (game.zoom() === mine / PERCENT) game.setZoom(DEFAULT / PERCENT);
     if (locked === null) setOnce = null;
-    if (!heldNoted) print(`Multiplayer: not applying your zoom ${mine}%: ${why}. ${BYPASS_HINT}.`, COLOR.warn);
+    if (!heldNoted) print(`Ranked match: not applying your zoom ${mine}%: ${why}. ${BYPASS_HINT}.`, COLOR.warn);
     heldNoted = true;
     return;
   }
