@@ -76,7 +76,7 @@ const TYPE_PREFIX = 'RELIABLE_'; // every reliable type name starts with it; lef
 // Parts that are always an encoded number, even when it looks like a letter (values 29 to
 // 121 are one ordinary character): (index, part count) => true. The callback ID a RESPONSE
 // answers (the counter starts at 100), and every part of the messages that carry HP or the
-// respawn count (ANTICHEAT.md §14.10). HIT_PLAYER from the server has one more part at the
+// respawn count (ANTICHEAT.md §14.9). HIT_PLAYER from the server has one more part at the
 // end, its kill flag ("1" or ""), which stays text.
 const ALL = () => true;
 const HIT_PLAYER_SENT = 15; // parts as the shooter sends them (type + 14 numbers)

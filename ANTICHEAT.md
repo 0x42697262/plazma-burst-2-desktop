@@ -1463,6 +1463,8 @@ So the same function runs in three places:
 | 19 | `$ММ.$ОHIАAA` = 19 | `:593` | **Client clock**: `performance.now() - $ММ.$1МАTMH` |
 | 20 | `$ММ.$TТoМоА` = 20 | `:595` | **Respawn count**: `char["respawns"]` |
 
+The network log labels these values in its `STATE` lines (`net_log_state on`): `hp 150 | respawns 1 | aim +212,-40 | pos 1264,-520 | ...` (14.9, `desktop/dev/console/net/state.js`).
+
 **Receiving (server):** packets arrive in `connection.$AoH1e` (`connection.js:763`), which keeps only the newest state in `connection.$eМОсM`. Once per tick `connection.$AОAcc` first runs every reliable message in order, then the state, through `$ММ.$pOeрМ(data, connection)` (`connection.js:982`, `libs/flash.js:869`). So a reliable message (like `RESPAWN`) and a state in the **same packet** are handled reliable first.
 
 `$pOeрМ`, server side, step by step (`libs/flash.js:869–1199`):
@@ -1707,7 +1709,106 @@ All four run on the match's server (14.1), on what your game reports.
 
 `bypass checks` turns this off: a red warning, then the next line typed into the console must be exactly `ALLOW DANGEROUS COMMANDS` (case-sensitive); any other line turns it down and is not run. It is refused from binds, profiles and `;` chains, does not exist in remote play, and lasts until the page reloads or `bypass off`.
 
-### 14.9 Names in this section
+### 14.9 How HP travels
+
+> **Line numbers:** `v1769098419`, as in the rest of section 14. The last part of this section, [Finding it in another game version](#finding-it-in-another-game-version), says how to find each piece again when the numbers move.
+
+**Who owns HP.** There are three copies of a player's HP, and none of them is authoritative on its own:
+
+| Copy | Where | Written by |
+|---|---|---|
+| Your own HP | `chars[me].hea` in your game (`$0Ме1А[$НAlНc]["hea"]`) | Your game only. The server's copy of you is never applied back to you, except as a forced 0 (below) |
+| The server's copy | `connection.$HАНeT["hea"]` per player | Your state updates (overwrite it), and hits other players report (subtract from it) |
+| Everyone else's view of you | `chars[slot].hea` in their game | The server's copy, from its snapshot, smoothed by their own hit predictions |
+
+**Max HP is never sent.** `hmax` exists only in each game and in the map. The server compares your HP against the map's `hmax` (14.4); it never learns your character's own `hmax`.
+
+#### Every message that carries HP
+
+| # | Message | Direction | Where HP is | Encoding | Built at | Read at |
+|---|---|---|---|---|---|---|
+| 1 | State update (unreliable) | you → server | part `stateHp` (6) | `Math.ceil(hea)`, network number (`$Oоolр`, 0 sent as a digit, not `""`) | `libs/flash.js:480` (`$ТеeАp`) | `:928–1094` (checks, stores) |
+| 2 | `RESPAWN(x, y, hp)` / `RESSURECT(x, y, hp)` (reliable) | you → server | part 3 | network number | `frame2.js:42923` / `:16070` | `libs/flash.js:3851` |
+| 3 | `RESPAWN(slot, x, y, hp, respawns)` | server → everyone, you too | part 4 | as sent; the server adds the slot and the count | `:3857`, `:4056` | `:4095–4110` |
+| 4 | `HIT_PLAYER(..., damage×100, target's respawns)` (reliable) | shooter → server | part 13: HP the shooter's game took off the target, × 100 | network number | `frame2.js:30493–30527` | `libs/flash.js:3866–3930` |
+| 5 | `HIT_PLAYER(shooter slot, ..., damage×100, respawns, killed)` | server → everyone | part 14 (after the slot); the last part is `"1"` when the server's copy reached 0 | as sent, plus the kill flag | `:3929`, `:4056` | `:4314–4383` |
+| 6 | `DAMAGE_PLAYERS_VIA_EXPLOSION` (reliable) | exploder → server → everyone | per target: `hea_damage` (× 1, not × 100) after 5 other numbers | network number; the server blanks it (`""`) for a target its copy says is dead | `libs/flash.js:650–688` | `:3934–3988`, `:4386` |
+| 7 | The server's snapshot (unreliable) | server → each client | per changed player, right after the slot: **the server's copy** | network number | `:820–850` | `:1274–1360` |
+| 8 | `YOU_ARE_STILL_DEAD()` (reliable) | server → you | no value: it means "your HP is 0" | none | `:1096–1112` | `:3511–3523` |
+
+Heals do not carry HP. `HEAL_PLAYER(power×100, healer, target, respawns)` and a `HIT_PLAYER` with negative power (a heal hit) are relayed with damage 0. The healed player's own game applies the heal and reports the result in its next state update. On the server they only open the revive window (14.4).
+
+#### The life of one value
+
+```text
+your game                         server                                  other games
+---------                         ------                                  -----------
+hea changes (damage, heal, cheat)
+every tick: state part 6 = ceil(hea) ─────►  dropped if over hmax (14.4)
+                                             else $HАНeT.hea = value       (:1059)
+                                             blank part 6, keep the state  (:1119, :1192)
+                                             snapshot to each client:
+                                               slot, $HАНeT.hea, ping...  ─────► other players: chars[slot].hea
+                                                                                  = $TlpНI(player, server value)
+                                                                                  your own entry: ignored (:1339)
+you shoot B: your game simulates the hit
+HIT_PLAYER(... (before-after)×100 ...) ────► B.$HАНeT.hea -= damage       (:6979)
+                                             <= 0: B dies on the server,
+                                             kill flag "1"                 (:3929)
+                                             relayed with your slot  ─────► B's game: its own hit simulation,
+                                                                            then hea = min(hea, before - damage) (:4375)
+                                                                            kill flag: hea = 0                    (:4380)
+                                                                            B's next state reports the result
+```
+
+**Your own HP is never set from the network, except to 0.** It is set to 0 by a kill flag on a hit (`:4380–4383`) or by `YOU_ARE_STILL_DEAD` (`:3519–3522`). Otherwise the server's copy and the snapshot do not touch it (`:1339`: `if (slot !== me || spectating)`), and the server overwrites its copy with whatever you report next. The server's own subtraction (row 4) only matters until your next state update arrives, and for deciding kills.
+
+**Other players' HP in your game** comes from the snapshot, through `$TlpНI(player, value)` (`frame2.js:2285`). If you hit that player in the last `150 + their ping × 3 + your ping × 3` ms, your game keeps the lower value it predicted (`$ррТcе`, `frame2.js:2256`), so a late snapshot does not refill a bar you just hit. A drop of more than 10 calls `$оo1pO(slot)` (`libs/flash.js:1350`).
+
+**What this means for the checks:**
+
+- The server's HP check (14.4) can only see row 1. Rows 2 and 3 carry HP at respawn without a limit check; the next state update repeats it and is checked.
+- A game that ignores damage (the console's `god`) keeps reporting full HP. Row 4 lowers the server's copy, but your next state update, one tick later, writes your full HP back over it. Only damage that takes the server's copy to 0 between two of your updates (a burst, a one-shot) kills you there. Then the kill flag arrives, which the `god` accessor ignores, and the server treats your updates as "alive on the client, dead on the server": no HP check, no stored HP, `YOU_ARE_STILL_DEAD` every second (14.2), which `god` ignores as well.
+- `max_hp` above the map's `hmax` shows up in row 1 the first time your HP is above it (14.4).
+- Row 1 is the only place your HP goes to the server for checking. Damage reported by others (rows 4–6) never pushes it above `hmax`, and heals are applied by your own game.
+
+#### In the network log
+
+| Row | Shows as | Needs |
+|---|---|---|
+| 1 | `OUT STATE hp 150 \| respawns 1 \| aim ... \| ...` | `net_log_state on` or `netlog all on` |
+| 2, 3 | `OUT REL RESPAWN(1264, -520, 150)`, `IN REL RESPAWN(0, 1264, -520, 150, 1)` | Always |
+| 4, 5 | `OUT REL HIT_PLAYER(target, ..., 2500, 3)` (25 HP), `IN REL HIT_PLAYER(shooter, ..., 2500, 3, "1")` | Always |
+| 6 | `DAMAGE_PLAYERS_VIA_EXPLOSION(...)`, one group of numbers per target | Always |
+| 7 | `IN STATE #3 hp 80 ping 45 ms [...]` | `net_log_state on` or `netlog all on` |
+| 8 | `IN REL YOU_ARE_STILL_DEAD()` | Always |
+
+Numbers from 29 to 121 travel as one ordinary character. The log decodes rows 1–5 and 7 by position (`net/state.js`, and `NUMBER_PARTS` in `net/recorder.js`), so HP 100 shows as `100`, not `"h"`. Row 6 is decoded part by part, and a value in that range can still show as a letter there.
+
+#### Finding it in another game version
+
+The obfuscated names change with every version; the structure and the string constants have not so far. Decode a file first (`node tools/find-names.js --decode scripts/libs/flash.js`), then search for the anchor:
+
+| Piece | Anchor to search for | Tracked by `npm run find-names` |
+|---|---|---|
+| State update builder | `performance.now()-` in `libs/flash.js`; the HP line is the `Math.ceil(...["hea"])` push before the two `["tarx"]-` / `["tary"]-` pushes | |
+| Index of each value | the server's `parts[<net>.<name>]` reads in the state handler | `stateHp`, `stateRespawns`, `stateAimX`, `stateAimY`, `stateHeadHp`, `stateFaceHp`, `stateX`, `stateY`, `stateKiller`, `stateClock`, `stateVelScale` |
+| HP check | `"HealthAltering"` | |
+| Server stores your HP | `["hea"]=` a few lines after `"HealthAltering"` | |
+| HP blanked before relaying | `parts[<net>.<stateHp>]="";` | |
+| Snapshot | `["skill"]*100` (builder), `["reputation"]=` (reader) | |
+| Snapshot applied to others | the `["hea"]=` call right after `["reputation"]=` | |
+| Respawn | `["RELIABLE_RESPAWN"]` (in `frame2.js`: sender; in `libs/flash.js`: server, then client) | |
+| Hits | `["RELIABLE_HIT_PLAYER"],` in `frame2.js` (sender; the damage is the `[13]=` write a few lines later); `"provided_health_delta"` in `libs/flash.js` (receiver) | |
+| Server-side damage | `["hea"]-=params["hea_damage"]` | |
+| Kill flag | `parts[15]=(` near `RELIABLE_HIT_PLAYER` in the server branch | |
+| Relay with the sender's slot | `parts.splice(1,0,` | |
+| Forced 0 | `["RELIABLE_YOU_ARE_STILL_DEAD"]` | |
+| Network numbers | `$ММ.$Oоolр` / `$ММ.$OНННО`: the functions called on every part above; the digits are built by `+=c` in a `for(let i=1;i<127;i++)` loop | `netDigits` |
+
+When a `find-names` pattern stops matching, the run says which key (`problem: stateHp: pattern not found`). The network log keeps working: a missing position is simply not labelled, and a layout that no longer matches this version's (21 parts, the positions above) is shown with only the server's positions named (`net/state.js`).
+
+### 14.10 Names in this section
 
 | Obfuscated | Meaning |
 |---|---|
@@ -1736,3 +1837,7 @@ All four run on the match's server (14.1), on what your game reports.
 | `$ММ.$ОeрoT`, `$оорoсH`, `$ОоcОMH` | `coop_state`: 0 playing, 1 round ended, 2 warmup |
 | `$с0A.$Т0ОcpT` / `$с0A.$оlеоН` | Cheat report / event log (14.3) |
 | `$с0A.$0ААр0c` | Event kind of the aim report |
+| `$TlpНI(player, hp)` | Applies the server's HP for another player, kept at or under your own recent hit prediction (14.9) |
+| `$ррТcе(player)` | Your recent hit prediction for that player, if still fresh |
+| `$1eMМеТ(params)` | Server: accept a hit or heal (respawn count must match), subtract the damage |
+| `$cpТОpО(connection)` | Server: a player dies |
