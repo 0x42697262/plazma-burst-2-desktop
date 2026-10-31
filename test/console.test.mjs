@@ -2198,3 +2198,88 @@ test('editor: every parameter the game reads is in the params panel, and every o
     }
   }
 });
+
+test('editor: a wall\'s grab points go with it, where there is room beside its corners, as the loader gives them', async () => {
+  const session = await consoleModule('editor/session.js');
+  const loader = await consoleModule('editor/loader.js');
+  const G = c.G, N = c.N;
+  const original = G[N.mapText];
+  const quiet = (line) => c.run(line).filter((l) => !l.startsWith('Note:'));
+  const level = (on) => { G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; c.frame(); };
+  G.$tagBox = 'box';
+  // The loader's loop over the walls: a grab point (veh_hh, made a vehicle of model 6) at
+  // each top corner the game's line test finds room beside.
+  const frame2 = `
+for(var $el of $doc.children())
+{
+if(a==$tagBox)
+{
+$wallsBuilt++;
+}
+}
+for(i=0;i<${N.wallCount};i++)
+{
+$HОpcl=75;
+if($clear(${N.wallX}[i]-15,${N.wallY}[i]-30,${N.wallX}[i]-15,${N.wallY}[i]+$HОpcl))
+if($clear(${N.wallX}[i]+5,${N.wallY}[i]-5,${N.wallX}[i]+5,${N.wallY}[i]-50))
+{
+mc=game.addChildAt(new veh_hh,game.numChildren);
+n=6;
+mc["x"]=parseFloat(${N.wallX}[i]);
+mc["y"]=parseFloat(${N.wallY}[i]);
+$makeVehicle(mc,n,1);
+}
+}
+`;
+  const layer = () => ({ children: [], get numChildren() { return this.children.length; },
+    addChildAt(o, at) { this.children.splice(at, 0, o); o.parent = this; return o; }, removeChild(o) { this.children.splice(this.children.indexOf(o), 1); } });
+  const saved = { game: G.game, graphics_3d: G.graphics_3d };
+  const world = Object.assign(layer(), { x: saved.game.x, y: saved.game.y, scaleX: saved.game.scaleX, scaleY: saved.game.scaleY, parent: saved.game.parent });
+  const made = [];
+  Object.assign(G, {
+    game: world, graphics_3d: layer(), $wallsBuilt: 0, veh_hh: class {},
+    // No room at x >= 900 (another wall there).
+    $clear: (x1, y1, x2) => x1 < 900 && x2 < 900,
+    $makeVehicle: (mc, model, side) => { Object.assign(mc, { model, side, io: true }); made.push(mc); },
+    [N.displayInit]: () => {},
+    [N.wallX]: [100], [N.wallY]: [100], [N.wallW]: [200], [N.wallH]: [20], [N.wallCount]: 1, [N.wallMaterial]: ['0'],
+    [N.gridCell]: 100, [N.gridMinX]: -200, [N.gridMinY]: -200, [N.gridCols]: 14, [N.gridRows]: 6,
+  });
+  G[N.grid] = Array.from({ length: 14 }, () => Array.from({ length: 6 }, () => []));
+  G[N.gridAddWall] = () => {};
+  await loader.readLoader(async () => ({ ok: true, status: 200, text: async () => frame2 }));
+  // The level as loaded: both corners of the wall have one.
+  const left = Object.assign(world.addChildAt(new G.veh_hh(), 0), { x: 100, y: 100, io: true, side: 1 });
+  const right = Object.assign(world.addChildAt(new G.veh_hh(), 1), { x: 300, y: 100, io: true, side: -1 });
+  const at = (h) => (h.io ? [h.x, h.y] : 'out');
+  try {
+    G[N.mapText] = '<box x="100" y="100" w="200" h="20" m="0" />';
+    c.run('editor on');
+    level(false); level(true);
+    session.select(session.editorDoc().byTag('box')[0]);
+    // Moved: the same two go along.
+    assert.deepEqual(quiet('editor set x 400'), ['wall #0: x = "400", live now']);
+    assert.deepEqual([at(left), at(right), made.length], [[400, 100], [600, 100], 0]);
+    quiet('editor set y 150');
+    assert.deepEqual([at(left), at(right)], [[400, 150], [600, 150]]);
+    // Its right corner against another wall: no room, that one is taken out.
+    quiet('editor set x 750');
+    assert.deepEqual([at(left), at(right)], [[750, 150], 'out']);
+    // Room again: a new one, made as the loader makes it.
+    quiet('editor set x 400');
+    assert.equal(made.length, 1);
+    assert.deepEqual([made[0].x, made[0].y, made[0].model, made[0].side], [600, 150, 6, -1]);
+    // Deleted: both out of play.
+    c.press('Delete');
+    assert.deepEqual([at(left), at(made[0])], ['out', 'out']);
+    c.run('editor undo');
+    // Added: one at each corner with room.
+    assert.match(quiet('editor add wall 0 0 100 20')[0], /; in the running level$/);
+    assert.deepEqual(made.slice(1).map((h) => [h.x, h.y, h.side]), [[0, 0, 1], [100, 0, -1]]);
+  } finally {
+    session.setEditor(false); session.forgetDocument();
+    G[N.mapText] = original;
+    Object.assign(G, saved);
+    for (const k of ['$tagBox', '$wallsBuilt', 'veh_hh', '$clear', '$makeVehicle', '$HОpcl']) delete G[k];
+  }
+});

@@ -15,7 +15,7 @@ import { rebuildable, rebuildLive } from './rebuild.js';
 import { moveGun, remakeGun } from './guns.js';
 import { placeLamp } from './lamps.js';
 import { setStart } from './start.js';
-import { doorTexture, followMovable } from './later.js';
+import { doorTexture, followMovable, placeWallEdges } from './later.js';
 
 // Activation modes the loader rewrites: hidden use keys become the plain ones.
 const LOADER_USE_ON = Object.freeze({ 8: 1, 11: 9, 12: 10, 15: 1 });
@@ -127,7 +127,10 @@ const rectOf = (tag, attrs) => boundsOf({ tag, attrs });
 const wallPlace = (i) => (v, attrs) => {
   const r = rectOf('box', attrs);
   if (!r) return false;
+  const w = game.walls();
+  const from = { x: w.x[i], y: w.y[i], w: w.w[i], h: w.h[i] };
   moveWall(i, r);
+  placeWallEdges(from, r); // its grab points
   return true;
 };
 

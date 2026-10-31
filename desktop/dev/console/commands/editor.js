@@ -208,7 +208,8 @@ export const editorCommand = {
       ['editor_key f7', 'F7 turns it on and off (F8 is the default)'],
     ],
     notes: [
-      'Edits go into the running level: walls (with their trims), backgrounds\' places,',
+      'Edits go into the running level: walls (with their trims and the corners players',
+      'grab), backgrounds\' places,',
       'water, pushers, movables, regions, decorations, lamps, guns, triggers and timers.',
       // How the anti-cheat works is not shown to remote testers (core/remote.js).
       ...(REMOTE ? [] : ['Walls, water and pushers live in arrays the game\'s integrity check watches: it',

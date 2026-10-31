@@ -34,6 +34,15 @@ function read(src) {
   const tie = src.match(new RegExp(String.raw`function ${escapeRe(follows)}\(clip,(${ID})\)\s*\{\s*${ID}=(${ID})\.length;\s*\2\[${ID}\]=clip;\s*(${ID})\[${ID}\]=\1;`));
   out.tied = tie ? { clips: tie[2], door: tie[3] } : null;
   out.edgeOf = out.doorEdges?.body.match(new RegExp(String.raw`mc\.(${ID})=i;`))?.[1] || null;
+  // A wall's grab points: the loop that makes them, the game's line test it asks
+  // whether there is room beside a corner, the function that makes a vehicle of one,
+  // and the model it gives it.
+  const wallEdges = loopWith(src, 'new veh_hh', (body) => !new RegExp(`${doors}\\[i\\]`).test(body) && /\(mc,n,1\)/.test(body));
+  out.wallEdge = wallEdges && {
+    clear: wallEdges.body.match(new RegExp(String.raw`if\((${ID})\(`))?.[1],
+    make: wallEdges.body.match(new RegExp(String.raw`(${ID})\(mc,n,1\)`))?.[1],
+    model: Number(wallEdges.body.match(/n=(\d+);/)?.[1]),
+  };
   // The function that moves what is attached to movable i: (i, speed, interpolation).
   out.moveAttached = src.match(new RegExp(String.raw`function (${ID})\(i,${ID},${ID}=0\)\s*\{\s*for\(var (${ID})=0;\2<attachments\.length`))?.[1] || null;
   return out;
@@ -126,4 +135,65 @@ export function doorEdges(i) {
 
 export function makeDoorEdges(i) {
   if (!runStep(stepsNow()?.doorEdges, i, 'door-edges')) throw new Error('the game\'s code that gives a movable its edges was not found');
+}
+
+// ----- walls: the points characters grab -----
+
+// The loader gives a wall a grab point at each top corner (a "Hand holder" vehicle,
+// veh_hh) where there is room beside it: a line from 15 out, 30 above to 75 below
+// the corner, and one from 5 in, 5 to 50 above it, cross no wall (frame2.js).
+const EDGE_TESTS = Object.freeze([
+  [-15, -30, -15, 75],
+  [5, -5, 5, -50],
+]);
+const FAR = 1e7;
+
+function roomAt(clear, x, y, side) {
+  return EDGE_TESTS.every(([dx1, dy1, dx2, dy2]) => clear(x + dx1 * side, y + dy1, x + dx2 * side, y + dy2));
+}
+
+// The grab points standing at a wall's top corners: { left, right } (null where none).
+function edgesAt(r) {
+  const Holder = globalThis.veh_hh;
+  const world = game.worldLayer();
+  const tie = stepsNow()?.edgeOf;
+  const out = { left: null, right: null };
+  if (!Holder || !world || !r) return out;
+  for (const c of world.children || []) {
+    if (!(c instanceof Holder) || c.io === false || (tie && c[tie] !== undefined && c[tie] !== -1) || c.y !== r.y) continue;
+    if (c.x === r.x && !out.left) out.left = c;
+    else if (c.x === r.x + r.w && !out.right) out.right = c;
+  }
+  return out;
+}
+
+const retire = (c) => { if (c) Object.assign(c, { io: false, visible: false, x: FAR, y: FAR }); };
+
+// A wall's grab points after it moved from `from` to `to` (either null: added, or
+// taken out): the ones it had go along where there is room, the others are taken out
+// of play, and a corner that has room and none gets one, as the loader makes it.
+// Returns false when this game version's code for them was not found (the wall's old
+// ones are taken out then).
+export function placeWallEdges(from, to) {
+  const step = stepsNow()?.wallEdge;
+  const clear = step?.clear && globalThis[step.clear];
+  const make = step?.make && globalThis[step.make];
+  const had = edgesAt(from);
+  if (!to) { retire(had.left); retire(had.right); return true; }
+  if (typeof clear !== 'function' || typeof make !== 'function' || !Number.isFinite(step.model)) {
+    retire(had.left); retire(had.right);
+    return false;
+  }
+  const world = game.worldLayer();
+  for (const [key, x, side] of [['left', to.x, 1], ['right', to.x + to.w, -1]]) {
+    const old = had[key];
+    if (!roomAt(clear, x, to.y, side)) { retire(old); continue; }
+    if (old) { old.x = x; old.y = to.y; old.clearMCInterpolationData?.(); continue; }
+    const mc = world.addChildAt(new globalThis.veh_hh(), world.numChildren);
+    game.initDisplay(mc);
+    mc.x = x;
+    mc.y = to.y;
+    make(mc, step.model, side);
+  }
+  return true;
 }

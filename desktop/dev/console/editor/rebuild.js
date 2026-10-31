@@ -18,7 +18,7 @@ import { placeLamp, removeLamp } from './lamps.js';
 import { setStart } from './start.js';
 import {
   attachMark, dropAttachments, resolveAttachments, moveAttachments, followMovable,
-  showWater, doorTexture, makeDoorTexture, doorEdges, makeDoorEdges,
+  showWater, doorTexture, makeDoorTexture, doorEdges, makeDoorEdges, placeWallEdges,
 } from './later.js';
 
 const detach = (shown) => { if (shown && shown.parent && shown.parent.removeChild) shown.parent.removeChild(shown); };
@@ -91,7 +91,11 @@ const NOT_ADDED = Object.freeze({
 // throws why it cannot be added.
 export function addLive(e) {
   if (NOT_ADDED[e.tag]) throw new Error(NOT_ADDED[e.tag]);
-  if (e.tag === 'box') return { index: addWall(boundsOf(e), e.attrs.m ?? '0') };
+  if (e.tag === 'box') {
+    const r = boundsOf(e);
+    const index = addWall(r, e.attrs.m ?? '0');
+    return placeWallEdges(null, r) ? { index } : { index, problem: 'the game\'s code that gives walls their grab points was not found' };
+  }
   if (e.tag === 'lamp') { const index = builtCount('lamp'); placeLamp(e); return { index }; }
   if (!canBuild(e.tag)) throw new Error(loaderProblem() || `the game's loader has no ${e.tag}`);
   const index = builtCount(e.tag);
@@ -118,7 +122,11 @@ const hide = (shown) => { detach(shown); };
 // For each kind: how to take object i out of play without moving the others (the
 // game's arrays keep their order).
 const REMOVE = Object.freeze({
-  box: (i) => removeWall(i),
+  box: (i) => {
+    const w = game.walls();
+    placeWallEdges({ x: w.x[i], y: w.y[i], w: w.w[i], h: w.h[i] }, null);
+    removeWall(i);
+  },
   region: (i) => { const r = game.regions()[i]; detach(r.mc); r.mc = undefined; r.x = r.y = FAR; r[F.R_USE_ON] = 0; },
   trigger: (i) => { const t = unwrap(game.triggers()[i]); t[F.T_ENABLED] = false; t[F.T_CALLS] = t[F.T_MAX_CALLS] = 0; setStart('trigger', t, 'enabled', false); },
   timer: (i) => { const t = game.timers()[i]; t[F.T_ENABLED] = false; t[F.T_CALLS] = t[F.T_MAX_CALLS] = 0; setStart('timer', t, 'enabled', false); },
