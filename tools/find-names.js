@@ -291,6 +291,28 @@ const RULES = [
     re: String.raw`\(⟨_⟩===⟨net⟩\.⟨_⟩&&!⟨spectating⟩\)\? ⟨ID⟩ : ⟨_⟩\),\s*TextField\.QuickReplaceMyEmojis` },
   { file: 'frame2', keys: ['chatTrace'], what: ['flag: every chat line also goes to trace()'],
     re: String.raw`var ⟨ID⟩=false;\s*function ChatNewMsg\(` },
+  // ----- The state update (ANTICHEAT.md §14.2): where each value sits -----
+  // The server reads parts of your state update by these indices (numbers on the network
+  // class). The recorder labels STATE lines with them, so a new layout follows by itself.
+  { file: 'flash', keys: ['stateHp'], what: ['net property: index of your HP in a state update'],
+    re: String.raw`if\(parts\[⟨net⟩\.⟨ID⟩\]\.length>0\)\s*\{\s*let ⟨_⟩=\(connection\.⟨_⟩\["hea"\]>0\);` },
+  { file: 'flash', keys: ['stateRespawns'], what: ['net property: index of your respawn count in a state update'],
+    re: String.raw`let ⟨_⟩=⟨_⟩\(parts\[⟨net⟩\.⟨ID⟩\]\);\s*if\(⟨_⟩!==connection\.⟨_⟩\["respawns"\]\)` },
+  { file: 'flash', keys: ['stateAimX', 'stateAimY'],
+    what: ['net property: index of your aim x (crosshair minus position) in a state update', 'net property: index of your aim y in a state update'],
+    re: String.raw`let ⟨_⟩=⟨_⟩\(parts\[⟨net⟩\.⟨ID⟩\]\);\s*let ⟨_⟩=⟨_⟩\(parts\[⟨net⟩\.⟨ID⟩\]\);\s*if\(⟨_⟩!==connection\.⟨_⟩\|\|` },
+  { file: 'flash', keys: ['stateHeadHp', 'stateFaceHp'],
+    what: ['net property: index of your head HP in a state update', 'net property: index of your face HP in a state update'],
+    re: String.raw`\.⟨_⟩=\(\s*⟨_⟩\(parts\[⟨net⟩\.⟨ID⟩\]\)>0&&\s*⟨_⟩\(parts\[⟨net⟩\.⟨ID⟩\]\)>0\);` },
+  { file: 'flash', keys: ['stateX', 'stateY'],
+    what: ['net property: index of your x in a state update', 'net property: index of your y in a state update'],
+    re: String.raw`let x=⟨_⟩\(parts\[⟨net⟩\.⟨ID⟩\]\);\s*let y=⟨_⟩\(parts\[⟨net⟩\.⟨ID⟩\]\);` },
+  { file: 'flash', keys: ['stateKiller'], what: ['net property: index of who killed you (dead) or crouch (alive) in a state update'],
+    re: String.raw`let source=⟨_⟩\(parts\[⟨net⟩\.⟨ID⟩\]\);\s*connection\.` },
+  { file: 'flash', keys: ['stateClock'], what: ['net property: index of your game clock (ms) in a state update'],
+    re: String.raw`let ⟨_⟩=⟨_⟩\(parts\[⟨net⟩\.⟨ID⟩\]\);\s*if\(connection\.⟨_⟩\.length===0\|\|` },
+  { file: 'flash', keys: ['stateVelScale'], what: ['net property: velocity multiplier in a state update (tox, toy are sent times this)'],
+    re: String.raw`let ⟨_⟩=Math\.round\(⟨_⟩\.⟨_⟩\*100\);\s*let ⟨_⟩=⟨net⟩\.⟨ID⟩;\s*parts\.push\(` },
   // The anti-cheat's locked arrays (ANTICHEAT.md §7). The scan's code 3 report sends an
   // index into this list.
   { file: 'tools', keys: ['lockedArrays'],
