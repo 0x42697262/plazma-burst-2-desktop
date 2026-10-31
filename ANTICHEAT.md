@@ -1703,6 +1703,10 @@ All four run on the match's server (14.1), on what your game reports.
 | Aimed more than 1000 units right or 600 down, moving, for ~0.5 s, on an approved map mid-round | 3 | "aims outside of their view area" to the other players (not you, not your IP); a logged report once a minute |
 | Page clock running ≥ 1.2 % off the server's | clock | "Server and client time mismatch", then disconnected |
 
+**The dev console holds these back in multiplayer** (`desktop/dev/console/overrides/server-checks.js`). It refuses raising your HP (`max_hp` above your normal max, `hp_bonus`, `hp_bonus_pct`, `hp +<n>`, `game god`, `game grow`) and zooming out (`zoom` below 100%, `game zoom 25` / `50`). A setting you already had is not applied there and your saved value is kept. Whole kinds are held back, not values tuned to stay under a limit. No console command changes the respawn count or the page clock, so check 2 and the clock check have nothing to hold back.
+
+`bypass checks` turns this off: a red warning, then the next line typed into the console must be exactly `ALLOW DANGEROUS COMMANDS` (case-sensitive); any other line turns it down and is not run. It is refused from binds, profiles and `;` chains, does not exist in remote play, and lasts until the page reloads or `bypass off`.
+
 ### 14.9 Names in this section
 
 | Obfuscated | Meaning |
