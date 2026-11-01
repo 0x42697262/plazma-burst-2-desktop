@@ -39,6 +39,7 @@
 - [zoom.md](features/zoom.md): `zoom`
 
 ## Operations
+- [running.md](operations/running.md): start modes, settings, checks
 - [find-names.md](operations/find-names.md): how the obfuscated game names are found (`npm run find-names`)
 - [private-server.md](operations/private-server.md): running your own server (`npm run server`)
 - [p2p-host.md](operations/p2p-host.md): the player-hosted dedicated host (`npm run p2p-host`)
