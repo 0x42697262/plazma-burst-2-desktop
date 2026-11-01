@@ -1,7 +1,7 @@
 import { FEATURE } from '#shared/features/keys.ts';
 import type { ConsoleFeature } from '#console/feature-types.ts';
 import type { ListSection } from '#console/kernel/list-sections.ts';
-import { triggersCommand } from '../../../desktop/dev/console/commands/triggers.js';
+import { triggersCommand } from './entry/triggers-command.ts';
 import { regionsCommand } from './entry/regions-command.ts';
 import { varsCommand } from './entry/vars-command.ts';
 import { logicCommand } from './entry/logic-command.ts';
