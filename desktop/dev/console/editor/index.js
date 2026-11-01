@@ -11,9 +11,9 @@
 // input.js    presses in the world: select, drag, resize, place
 // Views listen to the session; the session never draws.
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
-import { showKey, eventKeyName } from '../state/keys.js';
-import { KEY } from '../state/schema.js';
-import { settings } from '../state/store.js';
+import { showKey, eventKeyName } from '../../../../src/console/kernel/state/key-names.ts';
+import { KEY } from '../../../../src/console/kernel/state/schema.ts';
+import { settings } from '../../../../src/console/kernel/state/store.ts';
 import {
   setEditor, editorOn, editorShown, selected, select, onChange, editorTick, currentTool, setTool, TOOL, cancelPick,
 } from './session.js';

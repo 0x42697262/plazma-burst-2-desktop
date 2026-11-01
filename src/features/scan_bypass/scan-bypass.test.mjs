@@ -46,7 +46,7 @@ test('the anti-cheat scan report is logged as the game sends it, once', () => {
 
 test('bypass checks: a red warning, then only the exact phrase typed on its own line turns the protection off', async (t) => {
   const { run } = await consoleModule('dispatch.js');
-  const danger = await consoleModule('state/danger.js');
+  const danger = await consoleModule('../../../src/console/kernel/danger/bypass.ts');
   inMatch(t, RANKED);
   t.after(() => { danger.protectAgain(); game.run('reset'); game.frame(); });
   assert.match(game.run('bypass')[0], /^Protection: on\. In approved, ranked matches \(you are in one now\)/);

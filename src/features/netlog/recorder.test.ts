@@ -16,7 +16,7 @@ let gameNetwork: GameNetwork;
 before(async () => {
   game = await bootConsole();
   ({ gameNetwork } = await import('#console/kernel/game/network.ts'));
-  const store = await import('../../../desktop/dev/console/state/store.js');
+  const store = await import('#console/kernel/state/store.ts');
   settingsOf = (key) => (store.settings as { effective(key: string): unknown }).effective(key);
 });
 

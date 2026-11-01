@@ -1,6 +1,6 @@
-import { SCHEMA, resolveKey, parseValue, affectsGame, showValue } from '../../../../desktop/dev/console/state/schema.js';
-import { settings, profiles, activeProfile, currentMap } from '../../../../desktop/dev/console/state/store.js';
-import { parseKeyName, showKey } from '../../../../desktop/dev/console/state/keys.js';
+import { SCHEMA, resolveKey, parseValue, affectsGame, showValue } from '#console/kernel/state/schema.ts';
+import { settings, profiles, activeProfile, currentMap } from '#console/kernel/state/store.ts';
+import { parseKeyName, showKey } from '#console/kernel/state/key-names.ts';
 import { isActive } from '../../../../desktop/dev/console/game/level.js';
 import { commandText, warnKeyUses } from '#console/kernel/commands/command-text.ts';
 import { run } from '../../../../desktop/dev/console/dispatch.js';
@@ -26,15 +26,15 @@ export const profileContext = {
   ownSetting: (key: string): unknown => ownSettings.own(key),
   resolveKey: (word: string): string | null => (resolveKey as (word: string) => string | null)(word),
   parseValue: (key: string, raw: string): unknown => (parseValue as (key: string, raw: string) => unknown)(key, raw),
-  affectsGame: (key: string): boolean => (affectsGame as (key: string) => boolean)(key),
-  showValue: (key: string, value: unknown): string => (showValue as (key: string, value: unknown) => string)(key, value),
+  affectsGame: (key: string): boolean => affectsGame(key),
+  showValue: (key: string, value: unknown): string => showValue(key, value),
   parseKeyName: (word: string): string => (parseKeyName as (word: string) => string)(word),
-  showKey: (key: string): string => (showKey as (key: string) => string)(key),
+  showKey: (key: string): string => showKey(key),
   commandText,
   warnKeyUses,
   isLevelActive: (): boolean => isActive(),
   run: (line: string, source: string): void => { (run as (line: string, source: string) => void)(line, source); },
-  gameKeyGroups: (): string[] => [...new Set(Object.entries(SCHEMA as Record<string, { group: string }>).filter(([key]) => (affectsGame as (key: string) => boolean)(key)).map(([, schema]) => schema.group))],
+  gameKeyGroups: (): string[] => [...new Set(Object.entries(SCHEMA as Record<string, { group: string }>).filter(([key]) => affectsGame(key)).map(([, schema]) => schema.group))],
 };
 
 export type ProfileContext = typeof profileContext;

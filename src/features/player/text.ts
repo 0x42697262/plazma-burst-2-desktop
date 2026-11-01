@@ -1,4 +1,4 @@
-import { CLIENT_ONLY_REASON } from '../../../desktop/dev/console/state/schema.js';
+import { CLIENT_ONLY_REASON } from '#console/kernel/state/schema.ts';
 
 const plural = (count: number, word: string): string => `${count} ${word}${count === 1 ? '' : 's'}`;
 export const CLIENT_ONLY = CLIENT_ONLY_REASON as string;

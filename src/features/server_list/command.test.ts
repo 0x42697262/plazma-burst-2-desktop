@@ -26,7 +26,7 @@ test('console "servers": lists with ping, adds (fetching the fingerprint), keeps
     return { status: 200, json: async () => ({ ok: true, value: answers[op]?.() }) };
   };
   const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
-  const { history } = await import('../../../desktop/dev/console/state/store.js') as { history: { add(line: string): void; lines: string[] } };
+  const { history } = await import('#console/kernel/state/store.ts') as { history: { add(line: string): void; lines: string[] } };
   const { maskLine } = await import('../../../desktop/dev/console/dispatch.js') as { maskLine(line: string): string };
   const line = 'servers add address=192.168.1.20:2053 fingerprint=fetch nickname=Pal password=s3cret name="Pal base"';
   history.add(maskLine(line));

@@ -1,6 +1,6 @@
 // Tab completion: the first word from commands and keys, later words from what the
 // command offers for that argument (gun models for "give"), otherwise from keys.
-import { SCHEMA } from '../state/schema.js';
+import { SCHEMA } from '../../../../src/console/kernel/state/schema.ts';
 import { commandNames, findRunnable } from '../commands/registry.js';
 
 // Returns { value } when one word fits, { hits } when several do, or {} for none.

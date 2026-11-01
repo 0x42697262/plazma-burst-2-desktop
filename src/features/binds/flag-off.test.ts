@@ -10,7 +10,7 @@ test('with the binds flag off there are no bind commands, and a saved bind does 
   const game = await bootConsole();
   assert.match(game.run('bind f heal')[0] ?? '', /unknown command "bind"/);
   assert.match(game.run('keyname')[0] ?? '', /unknown command "keyname"/);
-  const { binds } = await import('../../../desktop/dev/console/state/store.js') as { binds: { set(key: string, command: string): void } };
+  const { binds } = await import('#console/kernel/state/store.ts') as { binds: { set(key: string, command: string): void } };
   binds.set('f', 'god on');
   game.G.stage.currentFrameLabel = 'gaming';
   game.frame();

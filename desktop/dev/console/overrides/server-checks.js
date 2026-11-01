@@ -12,8 +12,8 @@
 // The respawn counter (§14.5) and the clock check (§14.7): no console command changes
 // either, so there is nothing to hold back.
 import { game } from '../game/bindings.js';
-import { KEY } from '../state/schema.js';
-import { checksBypassed } from '../state/danger.js';
+import { KEY } from '../../../../src/console/kernel/state/schema.ts';
+import { checksBypassed } from '../../../../src/console/kernel/danger/bypass.ts';
 
 export const REASON = Object.freeze({
   hp: 'the server reports HP above the map\'s limit as "HealthAltering" (docs/research/anticheat.md §14.4)',

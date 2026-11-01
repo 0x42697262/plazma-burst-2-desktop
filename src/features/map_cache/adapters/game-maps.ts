@@ -1,7 +1,7 @@
 import { game, NET } from '../../../../desktop/dev/console/game/bindings.js';
 import { isActive } from '../../../../desktop/dev/console/game/level.js';
-import { KEY } from '../../../../desktop/dev/console/state/schema.js';
-import { settings } from '../../../../desktop/dev/console/state/store.js';
+import { KEY } from '#console/kernel/state/schema.ts';
+import { settings } from '#console/kernel/state/store.ts';
 
 type MapBindings = {
   isMP(): boolean; mapText(): unknown; matchMapId(): unknown; lobbyConnection(): Record<string, unknown> | null;

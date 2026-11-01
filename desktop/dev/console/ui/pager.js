@@ -4,8 +4,8 @@
 import { print } from './log.js';
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { pluralSuffix } from '../../../../src/console/kernel/core/words.ts';
-import { KEY } from '../state/schema.js';
-import { settings } from '../state/store.js';
+import { KEY } from '../../../../src/console/kernel/state/schema.ts';
+import { settings } from '../../../../src/console/kernel/state/store.ts';
 
 const PAGE_WORDS = ['page', 'pg'];
 let pager = null; // { title, rows, cmd, hint, empty, color, page, pages, size }

@@ -26,7 +26,7 @@ import { errorBudget } from '../../../src/console/kernel/core/guard.ts';
 import { plural } from '../../../src/console/kernel/core/words.ts';
 import { game } from './game/bindings.js';
 import { namesMissing, CLIENT_TITLE, FIND_NAMES, SADBURST } from './game/names.js';
-import { load, reload as reloadStore, settings, binds, profiles, loadProblems, setMapSource } from './state/store.js';
+import { load, reload as reloadStore, settings, binds, profiles, loadProblems, setMapSource } from '../../../src/console/kernel/state/store.ts';
 import { currentMapId } from './game/level.js';
 import { applyOverrides, onActiveChange } from './overrides/frame.js';
 import { run } from './dispatch.js';

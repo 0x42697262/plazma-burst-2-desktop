@@ -2,16 +2,16 @@
 // ("speed 1.8", "god").
 import { print } from '../ui/log.js';
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
-import { SCHEMA, GROUPS, KEY, resolveKey, parseValue, affectsGame, keyClientOnly, describeKey, showValue } from '../state/schema.js';
-import { settings, binds, activeProfile, currentMap } from '../state/store.js';
-import { showKey } from '../state/keys.js';
+import { SCHEMA, GROUPS, KEY, resolveKey, parseValue, affectsGame, keyClientOnly, describeKey, showValue } from '../../../../src/console/kernel/state/schema.ts';
+import { settings, binds, activeProfile, currentMap } from '../../../../src/console/kernel/state/store.ts';
+import { showKey } from '../../../../src/console/kernel/state/key-names.ts';
 import { isActive } from '../game/level.js';
 import { levelWasActive, gameMaxHp } from '../overrides/frame.js';
 import { heldBack, refusal } from '../overrides/server-checks.js';
 import { CLIENT_TAG } from './help.js';
 import { REMOTE } from '../../../../src/console/kernel/core/mode.ts';
 import { listSections } from '../../../../src/console/kernel/list-sections.ts';
-import { checksBypassed } from '../state/danger.js';
+import { checksBypassed } from '../../../../src/console/kernel/danger/bypass.ts';
 
 const RESET_WORDS = ['default', 'reset', 'unset'];
 const KEY_WIDTH = 14;

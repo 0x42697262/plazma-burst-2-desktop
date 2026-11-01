@@ -10,8 +10,8 @@
 import { game } from '../game/bindings.js';
 import { F } from '../game/fields.js';
 import { isActive } from '../game/level.js';
-import { KEY } from '../state/schema.js';
-import { settings } from '../state/store.js';
+import { KEY } from '../../../../src/console/kernel/state/schema.ts';
+import { settings } from '../../../../src/console/kernel/state/store.ts';
 
 export const TRIG_HISTORY_MAX = 1000;
 // A refused attempt is merged with one this many entries back: regions retry every frame.

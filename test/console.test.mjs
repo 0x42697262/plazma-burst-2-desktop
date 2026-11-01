@@ -120,7 +120,7 @@ test('settings are forced every frame and put back when removed', () => {
 
 
 test('typed commands are saved with the settings', async () => {
-  const { history } = await consoleModule('state/store.js');
+  const { history } = await consoleModule('../../../src/console/kernel/state/store.ts');
   history.add('vars');
   history.add('vars'); // a repeat is kept once
   const saved = JSON.parse(c.store.get('pb2dev_kv'));

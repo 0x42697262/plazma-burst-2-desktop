@@ -1,8 +1,8 @@
 import { game } from '../../../../desktop/dev/console/game/bindings.js';
 import { LEVEL_REQUIRED } from '../../../../desktop/dev/console/game/level.js';
 import { F } from '../../../../desktop/dev/console/game/fields.js';
-import { KEY } from '../../../../desktop/dev/console/state/schema.js';
-import { settings } from '../../../../desktop/dev/console/state/store.js';
+import { KEY } from '#console/kernel/state/schema.ts';
+import { settings } from '#console/kernel/state/store.ts';
 import { gameCommandHeldBack, refusal } from '../../../../desktop/dev/console/overrides/server-checks.js';
 import { stripHtml } from '#console/kernel/core/words.ts';
 

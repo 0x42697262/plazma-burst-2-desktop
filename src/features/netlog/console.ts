@@ -1,7 +1,7 @@
 import { FEATURE } from '#shared/features/keys.ts';
 import type { ConsoleFeature } from '#console/feature-types.ts';
-import { KEY } from '../../../desktop/dev/console/state/schema.js';
-import { settings } from '../../../desktop/dev/console/state/store.js';
+import { KEY } from '#console/kernel/state/schema.ts';
+import { settings } from '#console/kernel/state/store.ts';
 import { REMOTE } from '#console/kernel/core/mode.ts';
 import { runKey } from '../../../desktop/dev/console/commands/settings.js';
 import { NET_TICK_MS, TICK_ERRORS_SHOWN } from './constants.ts';

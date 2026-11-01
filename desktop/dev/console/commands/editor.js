@@ -1,9 +1,9 @@
 // "editor": the in-game map editor, on and off (also its hotkey, editor_key).
 import { print } from '../ui/log.js';
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
-import { showKey } from '../state/keys.js';
-import { KEY } from '../state/schema.js';
-import { settings } from '../state/store.js';
+import { showKey } from '../../../../src/console/kernel/state/key-names.ts';
+import { KEY } from '../../../../src/console/kernel/state/schema.ts';
+import { settings } from '../../../../src/console/kernel/state/store.ts';
 import { takeOptions } from '../../../../src/console/kernel/core/args.ts';
 import { game } from '../game/bindings.js';
 import { editorOn, setEditorOn } from '../editor/index.js';

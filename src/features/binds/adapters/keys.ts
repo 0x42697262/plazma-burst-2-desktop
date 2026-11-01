@@ -1,6 +1,6 @@
-import { parseKeyName, showKey, baseKey, eventKeyName, GAME_KEYS, TOGGLE_KEY } from '../../../../desktop/dev/console/state/keys.js';
-import { binds, activeProfile } from '../../../../desktop/dev/console/state/store.js';
-import { hotkeyOf } from '../../../../desktop/dev/console/state/hotkeys.js';
+import { parseKeyName, showKey, baseKey, eventKeyName, GAME_KEYS, TOGGLE_KEY } from '#console/kernel/state/key-names.ts';
+import { binds, activeProfile } from '#console/kernel/state/store.ts';
+import { hotkeyOf } from '#console/kernel/state/hotkeys.ts';
 import { catchNextKey } from '../../../../desktop/dev/console/ui/panel.js';
 
 export type ActiveBind = { command: string; profile: string | null } | null;
@@ -14,9 +14,9 @@ export const bindStore: BindStore = binds;
 
 export const keyNames = {
   parse: (word: string): string => (parseKeyName as (word: string) => string)(word),
-  show: (key: string): string => (showKey as (key: string) => string)(key),
-  base: (key: string): string => (baseKey as (key: string) => string)(key),
-  ofEvent: (event: KeyEvent): string => (eventKeyName as (event: KeyEvent) => string)(event),
+  show: (key: string): string => showKey(key),
+  base: (key: string): string => baseKey(key),
+  ofEvent: (event: KeyEvent): string => eventKeyName(event),
   gameUse: (key: string): string | undefined => (GAME_KEYS as Record<string, string | undefined>)[key],
   toggle: TOGGLE_KEY as string,
   hotkey: (key: string): { what: string; key: string } | null => (hotkeyOf as (key: string) => { what: string; key: string } | null)(key),
