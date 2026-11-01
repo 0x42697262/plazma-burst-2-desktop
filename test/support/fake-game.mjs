@@ -1,24 +1,18 @@
 // A fake Plazma Burst 2 runtime for testing the dev console without the game. Every
-// game name is "__pb2_<key>"; the keys come from tools/find-names.js (the same RULES
+// game name is "__pb2_<key>"; the keys come from src/tools/find-names (the same RULES
 // that generate desktop/dev/names.js), so a fresh clone needs neither names.js nor the
 // game. Triggers, regions, timers and players come from a map file.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { expectedKeys } from '../../src/tools/find-names/find-names.ts';
 
 const REPO = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const CONSOLE_ENTRY = path.join(REPO, 'src/console/index.ts');
 export const LEGACY_CONSOLE_DIR = path.join(REPO, 'desktop/dev/console');
 
-// Every key the console can ask names.js for: the "keys" of find-names.js RULES.
-function nameKeys() {
-  const src = fs.readFileSync(path.join(REPO, 'tools/find-names.js'), 'utf8');
-  const keys = new Set();
-  for (const m of src.matchAll(/keys:\s*\[([^\]]*)\]/g)) {
-    for (const k of m[1].matchAll(/'([^']+)'/g)) if (k[1] !== '_') keys.add(k[1]);
-  }
-  return [...keys];
-}
+// Every key the console can ask names.js for: the keys of find-names' RULES.
+const nameKeys = () => expectedKeys();
 
 // Region modes the map loader rewrites (frame2.js): 8, 11, 12 and 15 are use keys.
 const LOADER_MODES = Object.freeze({ 8: 1, 11: 9, 12: 10, 15: 1 });

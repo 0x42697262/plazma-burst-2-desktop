@@ -1,4 +1,3 @@
-// tools/find-names-sadburst.js on a tiny Sad Burst 2 copy in a temp folder: "npm test".
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -7,7 +6,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const sb = require('../tools/find-names-sadburst.js');
+const sb = require('./sadburst.ts');
 
 function copy(files) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-sb-'));
@@ -43,7 +42,7 @@ test('a name is the official one when it is in the Sad Burst code; missing ones 
 });
 
 test('fetch-game --sadburst finds the page script\'s modules and the game\'s scripts', () => {
-  const { htmlRefs, moduleRefs, manifestFiles } = require('../tools/fetch-sadburst.js');
+  const { htmlRefs, moduleRefs, manifestFiles } = require('../fetch-game/sadburst.ts');
   assert.deepEqual(htmlRefs('<link href="logo.png"><script src="./assets/index-X.js"></script><img src="/static/a.png"><a href="https://x/">'),
     ['logo.png', './assets/index-X.js']);
   assert.deepEqual(moduleRefs('m.f=["./a-1.js","./b-2.css"];import(`./c-3.js`);fetch("other.js")'), ['a-1.js', 'b-2.css', 'c-3.js']);
@@ -53,7 +52,7 @@ test('fetch-game --sadburst finds the page script\'s modules and the game\'s scr
 });
 
 test('fetch-game --sadburst knows what the game loads: its lists, its sprite loader, paths in its code, kept.txt', () => {
-  const { assetPaths } = require('../tools/fetch-sadburst.js');
+  const { assetPaths } = require('../fetch-game/sadburst.ts');
   const strings = new Map([['$o', 'images/asphalt.png'], ['$s', 'flash_export/sky']]);
   const paths = assetPaths({
     texts: [

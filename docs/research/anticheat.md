@@ -1189,7 +1189,7 @@ A client never sends `RELIABLE_PING` for any other reason. So to the server, **a
 
 ### 13.2 Where it is
 
-The name never appears in the code as text. It is built from the string variable `$еIНpА` in `_strings.js`, so searching the scripts for `RELIABLE_PING` finds nothing. Search `\$еIНpА` instead, or the decoded files (`node tools/find-names.js --decode scripts/libs/flash.js`).
+The name never appears in the code as text. It is built from the string variable `$еIНpА` in `_strings.js`, so searching the scripts for `RELIABLE_PING` finds nothing. Search `\$еIНpА` instead, or the decoded files (`node src/tools/find-names --decode scripts/libs/flash.js`).
 
 | Place | Side | What |
 |---|---|---|
@@ -1405,7 +1405,7 @@ So with this copy **no report is ever sent**, and the value guard never runs. Ev
 
 ## 14. Server-Side State Checks (`$ММ.$pOeрМ`)
 
-> **Line numbers:** `libs/flash.js` and `connection.js` are the current files (`v1769098419`). `node tools/find-names.js --decode scripts/libs/flash.js` prints the file with its string constants filled in, on the same line numbers.
+> **Line numbers:** `libs/flash.js` and `connection.js` are the current files (`v1769098419`). `node src/tools/find-names --decode scripts/libs/flash.js` prints the file with its string constants filled in, on the same line numbers.
 
 > **These are server-side checks.** They run on the machine that is the server for the match, never in the game of the player being checked:
 >
@@ -1789,7 +1789,7 @@ Numbers from 29 to 121 travel as one ordinary character. The log decodes rows 1�
 
 #### Finding it in another game version
 
-The obfuscated names change with every version; the structure and the string constants have not so far. Decode a file first (`node tools/find-names.js --decode scripts/libs/flash.js`), then search for the anchor:
+The obfuscated names change with every version; the structure and the string constants have not so far. Decode a file first (`node src/tools/find-names --decode scripts/libs/flash.js`), then search for the anchor:
 
 | Piece | Anchor to search for | Tracked by `npm run find-names` |
 |---|---|---|
@@ -1850,7 +1850,7 @@ When a `find-names` pattern stops matching, the run says which key (`problem: st
 
 > **Scope:** Sad Burst 2 build `20261030020533` (client version `1.23`), fetched with `npm run fetch-game -- --sadburst` into `game.sadburst/`, compared with the official client `v1769098419`. Hashed file names change with every Sad Burst build; each row below also names a text anchor that survives a rebuild.
 >
-> **Reading the code:** every Sad Burst script is minified onto one line. `node tools/find-names.js --sadburst --decode gamelogic/<file>.js` fills in its string constants (from the strings file `gamelogic/09094c58e1872195.js`); pipe it through a formatter to read it. The obfuscated names are the official ones, so sections 2–14 apply name for name.
+> **Reading the code:** every Sad Burst script is minified onto one line. `node src/tools/find-names --sadburst --decode gamelogic/<file>.js` fills in its string constants (from the strings file `gamelogic/09094c58e1872195.js`); pipe it through a formatter to read it. The obfuscated names are the official ones, so sections 2–14 apply name for name.
 
 Sad Burst 2 is a fork of the official client: same obfuscated names, same code underneath, bundled and minified, with its own loader, servers, accounts and site around it. **Every client-side anti-cheat layer of sections 3–7 is present and unchanged in logic.** What differs is around them: how the code is loaded, what is global, what is reported where, and one addition that the official client does not have, the build hash sent with every login ([section 16](#16-the-client-build-hash-sad-burst-2)).
 

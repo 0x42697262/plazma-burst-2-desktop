@@ -45,7 +45,7 @@ test('the account module is built from how the game uses it', () => {
 
 test('own server: the game\'s server code logs players in, lists, creates and joins matches, and obeys its terminal', { skip: !HAS_GAME && 'no game files' }, async () => {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'; // the client trusts the test server's self-signed certificate
-  const { findNames } = require('../../tools/find-names.js');
+  const { findNames } = require('../tools/find-names/find-names.ts');
   const { createClient } = require('../../test/support/game-client.cjs');
   const N = findNames(path.join(REPO, 'game')).found;
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-server-'));

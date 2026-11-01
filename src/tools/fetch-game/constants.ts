@@ -1,0 +1,16 @@
+export const TRIES = 4;
+export const RETRY_BASE_MS = 500;
+export const RETRY_GROWTH = 2;
+export const OK = 200;
+export const CLIENT_ERRORS = Object.freeze({ min: 400, max: 500 });
+export const REDIRECTS = Object.freeze({ min: 300, max: 500 });
+export const MAX_FRAMES = 999;
+export const FRAME_DIGITS = 4;
+export const JOBS = 8;
+export const PROGRESS_EVERY = 200;
+export const FILE_PROGRESS_EVERY = 50;
+export const BYTES_PER_MEGABYTE = 1048576;
+export const MEGABYTE_DECIMALS = 1;
+export const JSON_INDENT = 2;
+export const FIRST_USER_ARGUMENT = 2;
+export const FAILED_EXIT_CODE = 2;

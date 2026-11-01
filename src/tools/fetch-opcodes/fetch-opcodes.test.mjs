@@ -1,9 +1,6 @@
-// tools/fetch-opcodes.js: reading the map editor's action list (lib_params.js).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRequire } from 'node:module';
-
-const { parseParams, parseParamTable, parseCategories, parseMarkPairs, check } = createRequire(import.meta.url)('../tools/fetch-opcodes.js');
+import { parseParams, parseParamTable, parseCategories, parseMarkPairs, check } from './parse.ts';
 
 const SRC = `
 function addTrigger(trigger_type_id, description, paramA, paramB ) { /* the editor's own */ }
@@ -87,7 +84,6 @@ mark_pairs['mark_watercolor']="string";`;
 // Sad Burst 2's editor bundles the same file minified: statements joined by commas and
 // a.b for a["b"].
 test('fetch-opcodes reads the minified editor bundle too', () => {
-  const { parseParams, parseParamTable, parseMarkPairs } = createRequire(import.meta.url)('../tools/fetch-opcodes.js');
   const src = 'addTrigger(0,"Movable &#8250; Force Movable \'A\' move to region \'B\'","door","region"),AddOpcodeAlias("MovableTo"),'
     + 'param_type[23]=["use_on","region_activation","Activation on","When it runs","region"],'
     + 'special_values_table.region_activation[1]="\'\'USE\'\' key",special_values_table["textmsg"]["[color]"]="Custom color",'

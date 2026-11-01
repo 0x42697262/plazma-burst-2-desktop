@@ -115,7 +115,7 @@ Notes from P2 for the feature steps:
 
 ## P5. Server and tools
 - [x] P5.1 The private server is `src/server/` (config, maps, the game server's stand-ins, the entry with TLS, status page and terminal); `npm run server` runs `src/server/index.ts`. Its settings and data stay in `server/` (`server.json`, `data/`). The map text helper is `src/kernel/maps/map-text.ts`, shared with the map cache; `desktop/log.js` and `desktop/map-text.js` are gone. Tests: `src/server/server.test.mjs`.
-- [ ] P5.2 `tools/*.ts`
+- [x] P5.2 Tools in `src/tools/`: `find-names/` (the rule table in `constants.ts`, its notes in `docs/operations/find-names.md`, the logic, the Sad Burst variant, the command line), `fetch-game/` (official and Sad Burst downloads, the command line), `fetch-opcodes/` (parsing and the command line). The fake game, the `NAME_KEYS` test and the server read the rules from there. `tools/` is gone; the generated `names.js` is identical.
 
 ## P6. Finish
 - [ ] P6.1 `allowJs` off; lint everywhere at zero warnings; the gated JavaScript (triggers, map editor, console kernel) converted into its feature folders; the `src/**/*.test.mjs` integration tests converted to TypeScript

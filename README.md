@@ -54,7 +54,7 @@ The community client Sad Burst 2 has commands of its own; the ones above never t
 | `hooks/` | Your hooks: Frida-style scripts that change the game's code as it loads. Guide: `docs/features/hooks.md`, reference: `docs/features/hooks-reference.md` | only `README.md`, `REFERENCE.md` and `*.example.js` |
 | `src/features/remote_play/` | Remote play: testers play a game running on this machine from their browser (`npm run host`). Guide: `docs/operations/remote-play.md` | yes |
 | `desktop/remote-testers.json`, `desktop/remote-data/` | Remote play: tester links, and each tester's console settings | no |
-| `server/` | Your own lobby server: the game's own server code in Node, TLS on one port, run from the terminal (`npm run server`). Players pick it in the app's server list. Guide: `docs/operations/private-server.md` | yes |
+| `src/server/` | Your own lobby server: the game's own server code in Node, TLS on one port, run from the terminal (`npm run server`). Players pick it in the app's server list. Guide: `docs/operations/private-server.md` | yes |
 | `server/server.json`, `server/data/` | Your server: its settings (copy `server/server.example.json`), its certificate, bans and downloaded maps | no |
 | `src/features/server_list/` | The server list `npm start` opens: the official server and your private servers, with address, ping, players and description | yes |
 | `desktop/servers.json` | Your saved private servers: address, certificate fingerprint, your nickname, the server password (edited from the server list) | no |
@@ -64,15 +64,15 @@ The community client Sad Burst 2 has commands of its own; the ones above never t
 | `netlogs/` | Network logs: every message the game sends and receives, and its packet losses, as plain text. One file per run and game instance (console key `net_log`, command `netlog`; see [section 7](#7-network-log)) | no |
 | `src/features/netlog/` | The network log: the files (wrapper), and the recorder on the game's connections (console) | yes |
 | `screenshots/` | Screenshots from the dev console: F12 (console key `screenshot_key`) or `screenshot` | no |
-| `tools/fetch-game.js` | Downloads the game | yes |
-| `tools/find-names.js` | Generates `desktop/dev/names.js` | yes |
-| `tools/fetch-opcodes.js` | Generates `desktop/dev/opcodes.js` from the editor's public `lib_params.js` | yes |
+| `src/tools/fetch-game/` | Downloads the game (`npm run fetch-game`) | yes |
+| `src/tools/find-names/` | Generates `desktop/dev/names.js` (`npm run find-names`; how: `docs/operations/find-names.md`) | yes |
+| `src/tools/fetch-opcodes/` | Generates `desktop/dev/opcodes.js` from the editor's public `lib_params.js` | yes |
 | `game/` | The downloaded game | no |
 | `src/shared/clients/`, `src/kernel/config/clients.ts` | The game clients (official, Sad Burst 2) and which one a command is for | yes |
 | `game.sadburst/`, `desktop/dev/names.sadburst.js`, `desktop/dev/opcodes.sadburst.js` | Sad Burst 2: its game page, names and editor action names ([section 9](#9-sad-burst-2-community-client)) | no |
-| `tools/fetch-sadburst.js`, `tools/find-names-sadburst.js` | Sad Burst 2: its download and its names (called by `fetch-game` and `find-names` with `--sadburst`) | yes |
+| `src/tools/fetch-game/sadburst.ts`, `src/tools/find-names/sadburst.ts` | Sad Burst 2: its download and its names (called by `fetch-game` and `find-names` with `--sadburst`) | yes |
 | `game.previous/` | The copy before the last update | no |
-| `test/` | Dev console tests against a fake game (`npm test`, Node 20.10+, no game files needed) | yes |
+| `src/**/*.test.*`, `test/support/` | Tests next to the code they test, and the fake game they share (`npm test`) | yes |
 
 ## 3. Getting the game files
 
@@ -163,8 +163,8 @@ globalThis.PB2_NAMES = {
 
 ```bash
 npm run find-names                    # reads game/, writes desktop/dev/names.js
-node tools/find-names.js --check      # only report
-node tools/find-names.js game.previous --out /tmp/old-names.js   # another copy
+npm run find-names -- --check      # only report
+npm run find-names -- game.previous --out /tmp/old-names.js   # another copy
 ```
 
 How it works, assuming the code structure stays the same:
@@ -181,18 +181,18 @@ How it works, assuming the code structure stays the same:
 3. A name must give the same result at every place the pattern matches, or it is reported as ambiguous.
 4. A few extra checks confirm related names belong together (e.g. each body part's HP with its "broken" flag).
 
-The patterns are the `RULES` list in `tools/find-names.js`. They were tested by renaming all 7579 obfuscated names in the game at random: all of them were still found correctly.
+The patterns are the `RULES` list in `src/tools/find-names/constants.ts` (notes: `docs/operations/find-names.md`). They were tested by renaming all 7579 obfuscated names in the game at random: all of them were still found correctly.
 
 ### When a name is not found
 
 The output says which one, e.g. `problem: gunRecoil: pattern not found in scripts/frame2.js`.
 
-1. **Find the old name.** Open the old `desktop/dev/names.js` (from git history, or run `node tools/find-names.js game.previous --out /tmp/old-names.js`). The comment says what it is and which file it is in.
+1. **Find the old name.** Open the old `desktop/dev/names.js` (from git history, or run `npm run find-names -- game.previous --out /tmp/old-names.js`). The comment says what it is and which file it is in.
 2. **Look at the old code.** Make both copies readable:
 
    ```bash
-   node tools/find-names.js game.previous --decode scripts/frame2.js > /tmp/old.js
-   node tools/find-names.js game --decode scripts/frame2.js > /tmp/new.js
+   npm run -s find-names -- game.previous --decode scripts/frame2.js > /tmp/old.js
+   npm run -s find-names -- game --decode scripts/frame2.js > /tmp/new.js
    ```
 
    Search `/tmp/old.js` for the old name, and find the lines the pattern in `RULES` describes.

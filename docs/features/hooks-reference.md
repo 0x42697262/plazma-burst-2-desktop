@@ -331,7 +331,7 @@ wrappers use ids from `1000000` up.
 | `Hook <name>: loaded (N functions, N patches, off in multiplayer)` | Fine |
 | `Hook <name>: disabled (module.exports.enabled = false)` | Fine |
 | `Hook <name>: not loaded: <reason>` | Left out; the reason is one of the rows below |
-| `Game.<x>: no such name in desktop/dev/names.js ...` | Typo, or the name is new. Run `npm run find-names`, or add a rule to `tools/find-names.js` |
+| `Game.<x>: no such name in desktop/dev/names.js ...` | Typo, or the name is new. Run `npm run find-names`, or add a rule to `src/tools/find-names/constants.ts` |
 | `no "function <x>(" in the game's scripts ...` | Wrong or outdated obfuscated name, or not a function declaration (§6.2) |
 | `"function <x>(" is declared N times (...)` | Ambiguous. Use `Script.patch` with surrounding text |
 | `Script.patch(...): found N times, expected M` | `find` doesn't match as often as `count` says. After a game update, fix the text |

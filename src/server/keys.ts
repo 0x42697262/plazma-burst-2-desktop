@@ -91,6 +91,3 @@ export const LINE_JOIN = '\n';
 export const HTML_CHARACTER = Object.freeze({ lessThan: '<', greaterThan: '>', ampersand: '&' });
 export const HEADER = Object.freeze({ contentType: 'Content-Type', contentLength: 'Content-Length', cache: 'Cache-Control' });
 export const SERVER_FOLDER = 'server';
-export const TOOLS_FOLDER = 'tools';
-export const FIND_NAMES_FILE = 'find-names.js';
-export const SELF_SIGNED_MODULE = 'selfsigned';

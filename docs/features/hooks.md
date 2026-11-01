@@ -123,7 +123,7 @@ Interceptor.attach(Game.levelStart, {
   doesn't exist yet.
 
 Readable names for the game's functions and values are found by `npm run find-names` and
-listed in `desktop/dev/names.js`. To add one, add a rule to `tools/find-names.js`.
+listed in `desktop/dev/names.js`. To add one, add a rule to `src/tools/find-names/constants.ts`.
 
 ## Script.patch: change code inside a function
 

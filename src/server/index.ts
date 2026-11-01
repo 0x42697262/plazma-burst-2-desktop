@@ -4,18 +4,19 @@ import path from 'node:path';
 import https from 'node:https';
 import crypto from 'node:crypto';
 import readline from 'node:readline';
-import { createRequire } from 'node:module';
 import { Server, type Socket } from 'socket.io';
 import { createLogger } from '#kernel/log/logger.ts';
 import { parseLogLevel } from '#kernel/config/log-level.ts';
 import { REPO_ROOT, DESKTOP_DIR } from '#kernel/config/paths.ts';
 import { makeUnpacker } from '#kernel/maps/map-text.ts';
+import { findNames } from '#tools/find-names/find-names.ts';
+import selfsigned from 'selfsigned';
 import { stringOf } from '#kernel/text/text-of.ts';
 import { BANS_INDENT, CERT_DAYS, CERT_KEY_SIZE, CLOSE_DELAY_MS, KEY_FILE_MODE, MATCH_NUMBER_WIDTH, NICKNAME_WIDTH, NOT_FOUND, OK, ADDRESS_WIDTH, PING_WIDTH } from './constants.ts';
 import {
   ARG, BANS_FILE, CERT_ALGORITHM, CERT_FILE, CERT_NAME, CONFIG_FILE, CONNECTION_EVENT, DATA_FOLDER, ERROR_EVENT, GAME_DIR_VARIABLE, GAME_FOLDER, GET_METHOD,
   INTERRUPT_SIGNAL, IPV4, JSON_TYPE, KEY_FILE, LINE_EVENT, MAPS_FOLDER, NEEDED_NAMES, NO_STORE, ORIGIN, QUIT_WORDS, SPACE, STATUS_PATH, STRINGS_FILE,
-  TEXT_ENCODING, VERSION_FILE, WORDS, LINE_JOIN, HEADER, SERVER_FOLDER, TOOLS_FOLDER, FIND_NAMES_FILE, SELF_SIGNED_MODULE,
+  TEXT_ENCODING, VERSION_FILE, WORDS, LINE_JOIN, HEADER, SERVER_FOLDER,
 } from './keys.ts';
 import { SERVER_LOG as TEXT } from './text.ts';
 import { loadConfig } from './config.ts';
@@ -24,13 +25,10 @@ import { GameServer } from './game.ts';
 
 type Arguments = { config: string; game: string; data: string; help?: boolean };
 type Tls = { cert: string; key: string; fingerprint: string };
-type FindNames = (gameDir: string) => { found: Record<string, string> };
 type MatchRow = { map_name: string; game_type: string; players_current: number; players_max: number; spectators_current: number; has_password?: boolean };
 type SelfSigned = { generate(attributes: unknown, options: unknown): { private: string; cert: string } };
 
 const SERVER_DIR = path.join(REPO_ROOT, SERVER_FOLDER);
-const requireLegacy = createRequire(import.meta.url);
-const { findNames } = requireLegacy(path.join(REPO_ROOT, TOOLS_FOLDER, FIND_NAMES_FILE)) as { findNames: FindNames };
 const FIRST_USER_ARGUMENT = 2;
 
 function parseArgs(args: readonly string[]): Arguments {
@@ -54,8 +52,7 @@ function certificate(dataDir: string, log: ReturnType<typeof createLogger>): Tls
   const certFile = path.join(dataDir, CERT_FILE);
   const keyFile = path.join(dataDir, KEY_FILE);
   if (!fs.existsSync(certFile) || !fs.existsSync(keyFile)) {
-    const selfsigned = requireLegacy(SELF_SIGNED_MODULE) as SelfSigned;
-    const pems = selfsigned.generate(CERT_NAME, { keySize: CERT_KEY_SIZE, days: CERT_DAYS, algorithm: CERT_ALGORITHM });
+    const pems = (selfsigned as SelfSigned).generate(CERT_NAME, { keySize: CERT_KEY_SIZE, days: CERT_DAYS, algorithm: CERT_ALGORITHM });
     fs.mkdirSync(dataDir, { recursive: true });
     fs.writeFileSync(keyFile, pems.private, { mode: KEY_FILE_MODE });
     fs.writeFileSync(certFile, pems.cert);
