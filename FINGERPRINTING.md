@@ -22,6 +22,14 @@ as the server saw it, and a token. The separator also changes per session. This 
 covers where the mechanism lives in the client, the wire format that carries it, the full
 lifecycle of one exchange, the payload's code, and every field of the reply.
 
+**Where the code comes from.** It is not downloaded: there is no URL, no HTTP request and no
+script tag. The source arrives inline, as part 1 of a `RELIABLE_TASK` message, inside the
+socket.io event `"m"` on the lobby connection. That is `www.plazmaburst2.com:2053` for the
+official server, and the private server itself when you join one from the server list. **Who
+can run code in your game is whoever your lobby connection goes to.** §9 covers what that
+code can reach inside this desktop app, which is more than in a browser: it includes your
+network logs with your login credentials, and the saved private servers.
+
 ---
 
 ## 1. Method and Sources
@@ -41,7 +49,7 @@ lifecycle of one exchange, the payload's code, and every field of the reply.
 The payload was captured by the dev console. `desktop/dev/console/net/fingerprint.js`
 listens on the lobby connection and `desktop/fingerprint.js` stores each version once. The
 console's `fingerprint` command runs the latest version locally and prints the reply
-(§10). Any claim about server behaviour is **inferred** and marked as such.
+(§11). Any claim about server behaviour is **inferred** and marked as such.
 
 ### 1.2 Deobfuscation
 
@@ -576,7 +584,7 @@ on its own.
 
 1. **One version.** Everything about the payload describes version `b8354ed91036`. The
    collector is data, not code shipped in `game/`, so the server can change it at any time
-   without a client update. The dev console keeps every version it sees (§10).
+   without a client update. The dev console keeps every version it sees (§11).
 2. **Server behaviour is not observable.** When the task is sent, how often, how the
    token and separator are generated, how F4 and F5 are checked, and what happens when no
    reply comes all live on the server. The roles in §6.6 are inferred.
@@ -585,14 +593,97 @@ on its own.
 
 ---
 
-## 9. Implications for Developers
+## 9. Origin and Reach of the Pushed Code (RCE)
+
+### 9.1 Where it comes from
+
+- **Not a download.** Nothing is fetched. The source is a string inside a reliable
+  message (§3.3), on the main-server connection `$ММ.$ceTOI`.
+- **Official server.** The connection goes to `https://www.plazmaburst2.com:2053`, or to
+  `https://vvvv.plazmaburst2.com:2053` with CONNECTION METHOD = ALT (§2.1).
+- **Private servers.** Joining one from the server list repoints the game's lobby address
+  to that server (`desktop/dev/console/join/client.js:27`, `game.setLobbyAddress`). The
+  private server then *is* `$ММ.$ceTOI`, and the client's only guard,
+  `connection === $ММ.$ceTOI` (§4.2), lets it push tasks too. **Its operator gets
+  everything in §9.3**, with no involvement from the official server.
+- **Per session.** The official source carries that session's IP address, token and
+  separator (§6.6), so it is generated for each connection. The server can send any code
+  to any player at any time; nothing on the client pins what a task may contain.
+- **What leaves a trace on disk.**
+  - `fingerprint/` keeps only tasks whose source contains `getBrowserFingerprint` (§11).
+  - The network log (`netlogs/`, on by default) has a `REL … TASK(…)` line for every task.
+    With `net_log_all` on, the source is written whole; otherwise it is cut at 2,000
+    characters.
+  - A task that is not the fingerprinter is visible only in the network log.
+
+### 9.2 How the execution happens
+
+1. The handler concatenates the received text into an `eval` template:
+   `` `$lIcoН1=(` + source + `)(\`mkpnduz2\`)` `` (`flash.js:3741`).
+2. `eval` is called **directly**, inside `$c0рlc`, so the code shares that function's scope
+   (§4.4).
+3. Nothing is checked first. There is no signature, no hash, no allowlist and no length
+   limit. The source does not even have to be a function: `0); anything(); (()=>0` closes
+   the parenthesis and runs `anything()` as a statement. "A function that receives `v`" is
+   only the convention the official server follows.
+4. Exceptions are swallowed (`catch(e){}`), so a task that does damage and then throws
+   leaves no error in the console.
+5. The game's own `eval` cannot be blocked by a page Content-Security-Policy without
+   breaking the game, which uses `eval` elsewhere (`game/scripts/main.js:1053`, `game/scripts/screens/Settings.js:266`).
+
+### 9.3 What the code can reach in this desktop app
+
+The game window (`desktop/main.js`, `new BrowserWindow`) uses Electron's defaults:
+`nodeIntegration` off, `contextIsolation` on, `sandbox` on. Its preload
+(`desktop/launcher/preload.js`) creates the `pb2servers` bridge only on `file:` pages, and
+the main process answers that bridge only from the list page
+(`main.js`, `serveServerList`, which checks `e.senderFrame.url`). So the pushed code has
+**no Node.js and no direct file or process access**; escaping the page would take an
+Electron or Chromium bug. Inside the page, though, it can reach all of this:
+
+| Surface | What pushed code can do | Severity |
+|---|---|---|
+| **Network logs**: `__dev/netruns`, `__dev/netread` | Read every log in `netlogs/`. Each login is logged as `REL #0 AUTHENTICATE("<login>", "<32-character password field>", …)`: the exact login secret the game sends, for **every account that ever logged in on this machine** while `net_log` was on. On 2026-11-01 the logs held 13 such lines, 10 with a non-empty password field. | **High** |
+| **Saved private servers**: `__dev/servers` | `list` returns names, addresses and nicknames; passwords are hidden (`hasPassword` only). But `save` with an existing `id` and no `password` **keeps the saved password while changing `address` and `fingerprint`**. `play` then logs in there at once. Together: the server's password goes to an address of the attacker's choosing. `check` / `fingerprint` make the main process open a connection to any host:port. | **High** |
+| **Console settings**: `__dev/kv` (PUT) | Rewrite `desktop/dev-overrides.json`: settings, profiles and binds. A bind runs any console command line, `js` included, so the code survives restarts and runs on a keypress later, even when you are on another server. | **High** (persistence) |
+| **The game itself** | Read and change any game state, send any message as you (chat, votes, kicks, match actions), read `loaderInfo.parameters.l` / `.p` (the login and password field the game logs in with). | High |
+| **The page's storage** | Read and write the origin's cookies (the wrapper's login cookies), `localStorage` and IndexedDB (`localforage`). | Medium |
+| **Fingerprinter store**: `__dev/fingerprint` (POST) | Plant a "version" containing `getBrowserFingerprint`. Your later `fingerprint` command then runs it, on whatever server you are on at that point. | Medium |
+| **Maps**: `__dev/savemap`, `__dev/saveedited` | Write map XML into `desktop/maps/` (file names are sanitised; no path escape). With `fast_maps`, a saved map is loaded instead of the download, so a planted map changes what a match runs for you. | Low–Medium |
+| **Network log writes**: `__dev/netlog` (POST) | Add forged lines to the log. | Low |
+| **Screenshot**: `__dev/screenshot` | Capture the window. | Low |
+| **Reads**: console source, `names.js`, `opcodes.js`, `__hooks/` | Read the console's code, the decoded game names and your hooks. | Low |
+| **Any network** | `fetch` / WebSocket to any host, within CORS: a way to send anything above out. | — |
+
+All `__dev/` routes are served on the game's own origin whenever `PB2_DEV` is not `0`, which
+is the default (`main.js`, `handleRequest`). So **anything running in the page can call
+them, and the code the server pushes runs in the page.** In a browser on plazmaburst2.com
+the same RCE exists, but none of the `__dev/` surface: the desktop wrapper widens what a
+hostile or compromised lobby server can do.
+
+### 9.4 Mitigations (none implemented yet)
+
+1. **Mask the password field in the network log.** The recorder should write
+   `AUTHENTICATE("<login>", "‹hidden›", …)`. Existing logs should be cleaned or deleted.
+2. **Bind passwords to addresses.** `servers save` from the `__dev/` route should drop the
+   saved password when `address` or `fingerprint` changes, or the route should be read-only
+   with editing left to the list page's IPC bridge.
+3. **Refuse tasks from private servers.** `net/tap.js` already sees every packet before
+   the game does. Dropping `RELIABLE_TASK` and `RELIABLE_TASK_ASNYC` on a private-server
+   lobby removes that operator's RCE. A private server built from this repository never
+   sends tasks, so nothing is lost. Doing the same to the official server would be noticed:
+   the reply would be missing.
+4. **A per-launch secret for `__dev/`** helps only partly: code in the same page can wrap
+   `fetch` and read the secret off the console's next request.
+5. **Today's workaround:** start with `PB2_DEV=0` before joining a private server you do
+   not trust. That removes the whole `__dev/` surface, together with the dev console.
+
+## 10. Implications for Developers
 
 - **`RELIABLE_TASK` is arbitrary code execution by design.** Whoever controls the
-  main-server connection can run any JS in the game page with full access to the
-  multiplayer singleton, the active connection, and the page's DOM and storage. In this
-  client the sole guard is the `connection === $ММ.$ceTOI` check. Anything that can stand
-  in as the main server, such as a private server or a man-in-the-middle on a downgraded
-  transport, inherits this capability.
+  main-server connection can run any JS in the game page (§9). The sole guard is the
+  `connection === $ММ.$ceTOI` check, and in this app that includes every private server
+  you join.
 - **Tampering is detectable.** The reply echoes the session's IP address and token, and is
   split on a separator only the server knows in advance. A reply built without running
   this session's source, for example one replayed or generated by a fixed script, would
@@ -611,7 +702,7 @@ on its own.
 
 ---
 
-## 10. Reproducing This
+## 11. Reproducing This
 
 - **Capture.** `desktop/dev/console/net/fingerprint.js` listens on the lobby connection's
   receive method (through `net/tap.js`) and spots a `RELIABLE_TASK` whose source contains
