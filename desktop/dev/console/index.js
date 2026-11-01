@@ -25,7 +25,7 @@ import { COLOR } from './core/colors.js';
 import { errorBudget } from './core/guard.js';
 import { plural } from './core/text.js';
 import { game } from './game/bindings.js';
-import { namesMissing, CLIENT_TITLE, FIND_NAMES } from './game/names.js';
+import { namesMissing, CLIENT_TITLE, FIND_NAMES, SADBURST } from './game/names.js';
 import { load, reload as reloadStore, settings, binds, profiles, loadProblems, setMapSource } from './state/store.js';
 import { currentMapId } from './game/level.js';
 import { profileTick } from './commands/profile.js';
@@ -42,6 +42,8 @@ import { SERVER } from './core/server.js';
 import { startHost } from './server/host.js';
 import { startJoin } from './join/client.js';
 
+// Sad Burst 2 has a settings file of its own (desktop/main.js, DEV_KV_FILE).
+const KV_FILE = SADBURST ? 'dev-overrides.sadburst.json' : 'dev-overrides.json';
 const BOOT_POLL_MS = 200; // how often to look for the game's stage while it loads
 const STATUS_EVERY_MS = 500;
 const MAP_TICK_MS = 250;
@@ -52,7 +54,7 @@ const NET_ERRORS_SHOWN = 3;
 const reportError = (msg) => print(msg, COLOR.error);
 
 function printProblems() {
-  for (const p of loadProblems()) print(`dev-overrides.json: ${p}`, COLOR.warn);
+  for (const p of loadProblems()) print(`${KV_FILE}: ${p}`, COLOR.warn);
 }
 const frameGuard = errorBudget(FRAME_ERRORS_SHOWN, reportError);
 const mapGuard = errorBudget(MAP_ERRORS_SHOWN, reportError);
@@ -81,7 +83,7 @@ function start(source) {
   }
   const n = Object.keys(settings.snapshot()).length;
   const p = profiles.names().length;
-  print(`Loaded ${plural(n, 'override')}, ${plural(binds.keys().length, 'bind')}${p ? ` and ${plural(p, 'profile')}` : ''} from ${source === 'file' ? 'desktop/dev-overrides.json' : 'localStorage'}.`, COLOR.hint);
+  print(`Loaded ${plural(n, 'override')}, ${plural(binds.keys().length, 'bind')}${p ? ` and ${plural(p, 'profile')}` : ''} from ${source === 'file' ? `desktop/${KV_FILE}` : 'localStorage'}.`, COLOR.hint);
   printProblems();
   setInterval(updateStatusIfOpen, STATUS_EVERY_MS);
   setInterval(() => { mapGuard('Map cache', mapTick); mapGuard('Profiles', profileTick); }, MAP_TICK_MS);
@@ -108,12 +110,12 @@ globalThis.pb2dev = {
   // The wrapper calls this when dev-overrides.json was changed outside the console.
   reload(obj) {
     reloadStore(obj);
-    print('dev-overrides.json changed: reloaded', COLOR.hint);
+    print(`${KV_FILE} changed: reloaded`, COLOR.hint);
     printProblems();
   },
   // ... or when the file it changed to is not valid JSON: the console keeps what it had.
   fileError(message) {
-    print(`dev-overrides.json changed but cannot be read (${message}). Keeping the settings from before, and not saving changes to the file until it is fixed.`, COLOR.error);
+    print(`${KV_FILE} changed but cannot be read (${message}). Keeping the settings from before, and not saving changes to the file until it is fixed.`, COLOR.error);
   },
   get kv() { return settings.snapshot(); },
   open: () => openPanel(),

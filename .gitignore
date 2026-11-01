@@ -23,6 +23,8 @@ desktop/dev/opcodes.sadburst.js
 # Local settings
 desktop/credentials.json*
 desktop/dev-overrides.json
+desktop/dev-overrides.sadburst.json
+desktop/maps.sadburst/
 desktop/maps/*
 
 # Your hooks (see hooks/README.md). The guide, the reference and the *.example.js templates are tracked.
@@ -54,3 +56,4 @@ server/data/
 
 # The main server's fingerprinter, every version once (desktop/fingerprint.js, console "fingerprint").
 /fingerprint/
+/fingerprint.sadburst/

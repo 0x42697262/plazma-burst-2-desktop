@@ -90,7 +90,13 @@ const DEV_CONSOLE_ENTRY = 'index.js';
 const DEV_NAMES = CLIENT.names;
 // The map editor's trigger action names, from "npm run fetch-opcodes" ("triggers exec").
 const DEV_OPCODES = CLIENT.opcodes;
-const DEV_KV_FILE = path.join(__dirname, 'dev-overrides.json');
+// Sad Burst 2 keeps everything apart from the official client (its own settings file, maps
+// folder and browser session): its lobby can run code in its page (RELIABLE_TASK,
+// FINGERPRINTING.md §4), and nothing it writes may reach the official client, e.g. a bind
+// running "js ..." in the official game, signed in with your official account.
+const DEV_KV_FILE = path.join(__dirname, SADBURST ? 'dev-overrides.sadburst.json' : 'dev-overrides.json');
+const SADBURST_PARTITION = 'persist:sadburst';
+const gameSession = () => (SADBURST ? session.fromPartition(SADBURST_PARTITION) : session.defaultSession);
 // The console and you both change it; see kv-file.js. Edits reach the page through
 // pb2dev.reload / pb2dev.fileError.
 let mainWindow = null;
@@ -153,7 +159,7 @@ function checkNamesFile() {
 // Local maps: type "local-<name>" as the Map ID in Campaign > Custom Map.
 // Loads desktop/maps/<name>.xml (or .txt / no extension). Plain map XML or the
 // server's compressed "<q." format both work. Re-read on every load.
-const MAPS_DIR = path.join(__dirname, 'maps');
+const MAPS_DIR = path.join(__dirname, SADBURST ? 'maps.sadburst' : 'maps');
 const SCREENSHOT_DIR = path.join(__dirname, '..', 'screenshots');
 const LOCAL_MAP_PREFIX = 'local-';
 
@@ -170,8 +176,9 @@ const json = (obj, status = 200) => new Response(JSON.stringify(obj), {
 
 // The main server's fingerprinter, every version once (desktop/fingerprint.js): the dev
 // console sends each one it sees, and "fingerprint" runs the latest. Your own window's
-// only: a remote play tester's game neither writes nor reads them.
-const FINGERPRINT_DIR = path.join(__dirname, '..', 'fingerprint');
+// only: a remote play tester's game neither writes nor reads them. Sad Burst 2 has its own
+// folder: "fingerprint" runs the saved code, and Sad Burst's must never run in the official game.
+const FINGERPRINT_DIR = path.join(__dirname, '..', SADBURST ? 'fingerprint.sadburst' : 'fingerprint');
 const fingerprints = createFingerprints({ dir: FINGERPRINT_DIR });
 
 async function serveFingerprint(name, request, url, ctx) {
@@ -709,7 +716,8 @@ app.whenReady().then(async () => {
   if (HOST_MODE || SERVER_MODE) await applyCredentials();
   else pinServerCertificates();
 
-  protocol.handle('https', (request) => handleRequestLogged(request, SERVER_MODE ? SERVER_CTX : LOCAL_CTX));
+  if (SADBURST) gameSession().protocol.handle('https', (request) => handleRequestLogged(request, LOCAL_CTX));
+  else protocol.handle('https', (request) => handleRequestLogged(request, SERVER_MODE ? SERVER_CTX : LOCAL_CTX));
 
   // Electron's default menu without Window > Close, whose Ctrl+W closed the game. The
   // rest stays: Quit (Ctrl+Q), copy/paste, reload, DevTools, zoom, full screen.
@@ -736,8 +744,11 @@ app.whenReady().then(async () => {
     height: 720,
     autoHideMenuBar: true,
     title: CLIENT.title,
-    // The server list's bridge (desktop/launcher/preload.js); it exposes nothing to the game's page.
-    webPreferences: { backgroundThrottling: false, preload: path.join(__dirname, 'launcher', 'preload.js') },
+    // The server list's bridge (desktop/launcher/preload.js); it exposes nothing to the game's
+    // page. Sad Burst 2: its own session, and no bridge at all.
+    webPreferences: SADBURST
+      ? { backgroundThrottling: false, partition: SADBURST_PARTITION }
+      : { backgroundThrottling: false, preload: path.join(__dirname, 'launcher', 'preload.js') },
   });
   logPage(win, '');
 
@@ -876,12 +887,12 @@ async function serveServerListRoute(request, ctx) {
   }
 }
 
-// Who a request comes from. The local window: the default session, the shared
-// dev-overrides.json. A tester's game: their own session, settings file and window.
+// Who a request comes from. The local window: the default session (Sad Burst 2: its own),
+// the shared dev-overrides.json. A tester's game: their own session, settings file and window.
 const LOCAL_CTX = Object.freeze({
   remote: false,
   name: '',
-  fetch: (request) => net.fetch(request, { bypassCustomProtocolHandlers: true }),
+  fetch: (request) => (SADBURST ? gameSession().fetch.bind(gameSession()) : net.fetch)(request, { bypassCustomProtocolHandlers: true }),
   kvFile,
   get window() { return mainWindow; },
 });
