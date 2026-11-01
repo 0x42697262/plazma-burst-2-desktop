@@ -9,7 +9,7 @@ const REPO = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..',
 
 const REMOTE_CHILD = `
   globalThis.PB2_REMOTE = true;
-  const { bootConsole, CONSOLE_ENTRY } = await import(${JSON.stringify(pathToFileURL(path.join(REPO, 'test/support/fake-game.mjs')).href)});
+  const { bootConsole, CONSOLE_ENTRY } = await import(${JSON.stringify(pathToFileURL(path.join(REPO, 'src/console/testing/fake-game.fixture.ts')).href)});
   const c = await bootConsole();
   const at = (rel) => new URL(rel, ${JSON.stringify(pathToFileURL(path.join(REPO, 'desktop/dev/console/')).href)}).href;
   const { attachLog, print } = await import(at('../../../src/console/kernel/ui/log.ts'));
@@ -38,7 +38,7 @@ test('remote mode: "js" and "hooks" do not exist, the anti-cheat note is gone, t
 
 const SWEEP_CHILD = `
   globalThis.PB2_REMOTE = true;
-  const { bootConsole } = await import(${JSON.stringify(pathToFileURL(path.join(REPO, 'test/support/fake-game.mjs')).href)});
+  const { bootConsole } = await import(${JSON.stringify(pathToFileURL(path.join(REPO, 'src/console/testing/fake-game.fixture.ts')).href)});
   const c = await bootConsole();
   const at = (rel) => new URL(rel, ${JSON.stringify(pathToFileURL(path.join(REPO, 'desktop/dev/console/')).href)}).href;
   const { attachLog } = await import(at('../../../src/console/kernel/ui/log.ts'));

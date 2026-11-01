@@ -1,6 +1,6 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { bootConsole } from '../../../test/support/fake-game.mjs';
+import { bootConsole } from '#console/testing/fake-game.fixture.ts';
 import { NET_DIGITS, encNum, netMsg, netPacket, fakeConnection } from '#console/testing/net-protocol.fixture.ts';
 import type { Recorder, GameNetwork } from './services/recorder.ts';
 import { createRecorder } from './services/recorder.ts';

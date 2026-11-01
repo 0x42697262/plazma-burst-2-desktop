@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { bootConsole } from '../../../test/support/fake-game.mjs';
+import { bootConsole } from '#console/testing/fake-game.fixture.ts';
 import { NET_DIGITS, encNum, netMsg, netPacket } from '#console/testing/net-protocol.fixture.ts';
 import { splitParts, unescField } from '#console/kernel/net/codec.ts';
 

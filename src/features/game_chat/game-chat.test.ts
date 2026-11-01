@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { bootConsole } from '../../../test/support/fake-game.mjs';
+import { bootConsole } from '#console/testing/fake-game.fixture.ts';
 
 test('"game help" lists the built-in commands by group; outside a level a command is refused', async () => {
   const game = await bootConsole();

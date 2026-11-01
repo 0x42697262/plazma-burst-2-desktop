@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { bootConsole } from '../../../test/support/fake-game.mjs';
+import { bootConsole } from '#console/testing/fake-game.fixture.ts';
 import { fakeConnection } from '#console/testing/net-protocol.fixture.ts';
 
 test('on a private server nothing is captured: its code could otherwise be run later by "fingerprint"', async () => {

@@ -11,7 +11,7 @@ const childOut = (src: string): any => JSON.parse(execFileSync(process.execPath,
 
 test('not on the dedicated host: no "server", "who", "kick" or "say"', () => {
   const out = childOut(`
-    const { bootConsole } = await import(${JSON.stringify(at('test/support/fake-game.mjs'))});
+    const { bootConsole } = await import(${JSON.stringify(at('src/console/testing/fake-game.fixture.ts'))});
     await bootConsole();
     const { findRunnable } = await import(${JSON.stringify(at('src/console/kernel/commands/registry.ts'))});
     process.stdout.write(JSON.stringify(['server', 'who', 'kick', 'say'].map((w) => !!findRunnable(w))));
@@ -23,7 +23,7 @@ const HOST_CHILD = `
   const { checkConfig } = await import(${JSON.stringify(at('src/features/p2p_host/domain/config.ts'))});
   const cfg = checkConfig({ match: { map_id: 'nanotech-cht', password: 'pw' }, allow: ['friend'], region: 'Asia', restart_after_s: 5 });
   Object.defineProperty(globalThis, 'PB2_SERVER', { value: { match: cfg.match, server: cfg.server } });
-  const { bootConsole } = await import(${JSON.stringify(at('test/support/fake-game.mjs'))});
+  const { bootConsole } = await import(${JSON.stringify(at('src/console/testing/fake-game.fixture.ts'))});
   const c = await bootConsole();
   const { G, N } = c;
   const out = { steps: [] };

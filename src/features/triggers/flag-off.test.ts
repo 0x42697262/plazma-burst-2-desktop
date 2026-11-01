@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CATALOG } from '#shared/features/catalog.ts';
 import { resolveFlags } from '#kernel/flags/resolve.ts';
-import { bootConsole } from '../../../test/support/fake-game.mjs';
+import { bootConsole } from '#console/testing/fake-game.fixture.ts';
 
 test('with the triggers flag off there are no trigger, region, variable or logic commands', async () => {
   const { states } = resolveFlags({ catalog: CATALOG, fileOverrides: {}, fileUnknownIds: [], envToggles: [{ id: 'triggers', on: false }], mode: 'local', client: 'official' });

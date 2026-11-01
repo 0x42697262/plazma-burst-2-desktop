@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { bootConsole } from '../../../test/support/fake-game.mjs';
+import { bootConsole } from '#console/testing/fake-game.fixture.ts';
 
 type Saved = { id: string; name?: string; address?: string; fingerprint?: string; nickname?: string; hasPassword: boolean };
 

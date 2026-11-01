@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CATALOG } from '#shared/features/catalog.ts';
 import { resolveFlags } from '#kernel/flags/resolve.ts';
-import { bootConsole } from '../../../test/support/fake-game.mjs';
+import { bootConsole } from '#console/testing/fake-game.fixture.ts';
 
 test('with server_list off (or in Sad Burst 2), the console has no servers command and does not join', async () => {
   const offByFlag = resolveFlags({ catalog: CATALOG, fileOverrides: {}, fileUnknownIds: [], envToggles: [{ id: 'server_list', on: false }], mode: 'local', client: 'official' });

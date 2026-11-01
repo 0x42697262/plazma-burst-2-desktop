@@ -1,6 +1,6 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { bootConsole, type FakeGame } from '../../../test/support/fake-game.mjs';
+import { bootConsole, type FakeGame } from '#console/testing/fake-game.fixture.ts';
 import { errorsOf } from '#console/testing/console-output.fixture.ts';
 
 let game: FakeGame;
