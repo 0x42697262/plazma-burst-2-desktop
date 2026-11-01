@@ -29,7 +29,6 @@ import { namesMissing, CLIENT_TITLE, FIND_NAMES, SADBURST } from './game/names.j
 import { load, reload as reloadStore, settings, binds, profiles, loadProblems, setMapSource } from './state/store.js';
 import { currentMapId } from './game/level.js';
 import { applyOverrides, onActiveChange } from './overrides/frame.js';
-import { editorTick } from './editor/index.js';
 import { run } from './dispatch.js';
 import { SERVER } from './core/server.js';
 import { startHost } from './server/host.js';
@@ -56,7 +55,6 @@ const featureFrame = featureFrameHooks(features);
 function onFrame() {
   for (const hook of featureFrame) frameGuard(hook.name, hook.run);
   frameGuard('Frame', applyOverrides);
-  frameGuard('Editor', editorTick);
 }
 
 function start(source) {

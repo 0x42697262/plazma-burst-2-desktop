@@ -34,7 +34,7 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   consoleFeature(FEATURE.triggers, { migrated: true }),
   consoleFeature(FEATURE.trace, { migrated: true }),
   define(FEATURE.mapCache, { migrated: true }),
-  consoleFeature(FEATURE.mapEditor, { requires: [FEATURE.devConsole, FEATURE.mapCache, FEATURE.triggers] }),
+  consoleFeature(FEATURE.mapEditor, { requires: [FEATURE.devConsole, FEATURE.mapCache, FEATURE.triggers], migrated: true }),
   consoleFeature(FEATURE.gameChat, { migrated: true }),
   consoleFeature(FEATURE.zoom, { migrated: true }),
   consoleFeature(FEATURE.screenshot, { migrated: true }),

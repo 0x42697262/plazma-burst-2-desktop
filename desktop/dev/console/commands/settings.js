@@ -11,7 +11,6 @@ import { heldBack, refusal } from '../overrides/server-checks.js';
 import { CLIENT_TAG } from './help.js';
 import { REMOTE } from '../core/remote.js';
 import { listSections } from '../../../../src/console/kernel/list-sections.ts';
-import { editSummary } from '../editor/edit.js';
 import { checksBypassed } from '../state/danger.js';
 
 const RESET_WORDS = ['default', 'reset', 'unset'];
@@ -74,15 +73,6 @@ export function runKey(key, args) {
 // What else you changed, after the keys: [title, rows] or null when there is nothing.
 const EXTRAS = Object.freeze({
   checks: () => checksBypassed() && ['ranked match protection: OFF ("bypass checks")', ['  nothing is held back in ranked matches; "bypass off" turns it back on']],
-  editor: () => {
-    const sum = editSummary();
-    if (!sum) return null;
-    const parts = [['changed', sum.changed], ['added', sum.added], ['deleted', sum.deleted]].filter(([, n]) => n).map(([w, n]) => `${n} ${w}`);
-    return [`editor: ${parts.join(', ')}`, [
-      `  ${sum.inLevel ? 'in the running level' : 'kept, not in the running level'}; put in again when the level starts over on this map`,
-      '  ("editor reset" undoes and forgets them)',
-    ]];
-  },
 });
 const allExtras = () => ({ ...EXTRAS, ...Object.fromEntries(listSections()) });
 const LIST_GROUPS = () => [...GROUPS, ...Object.keys(allExtras())];

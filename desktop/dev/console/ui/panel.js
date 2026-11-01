@@ -211,7 +211,7 @@ export function onKeyDownCapture(e) {
       return;
     }
   }
-  if (!isOpen && !isTextInput(e.target) && !game.chatTyping() && editorKey(e)) {
+  if (!isOpen && !isTextInput(e.target) && !game.chatTyping() && isFeatureOn('map_editor') && editorKey(e)) {
     e.preventDefault();
     e.stopImmediatePropagation();
     heldBoundKeys.add(e.code);

@@ -18,6 +18,7 @@ import { scanBypassConsole } from '#features/scan_bypass/console.ts';
 import { mapCacheConsole } from '#features/map_cache/console.ts';
 import { hooksConsole } from '#features/hooks/console.ts';
 import { triggersConsole } from '#features/triggers/console.ts';
+import { mapEditorConsole } from '#features/map_editor/console.ts';
 
 export const CONSOLE_FEATURES: readonly ConsoleFeature[] = Object.freeze([
   lobbyTaskGuardConsole,
@@ -37,6 +38,7 @@ export const CONSOLE_FEATURES: readonly ConsoleFeature[] = Object.freeze([
   mapCacheConsole,
   hooksConsole,
   triggersConsole,
+  mapEditorConsole,
 ]);
 
 export const enabledConsoleFeatures = (features: readonly ConsoleFeature[] = CONSOLE_FEATURES): ConsoleFeature[] => features.filter((feature) => isFeatureOn(feature.id));

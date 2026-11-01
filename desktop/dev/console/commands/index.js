@@ -3,7 +3,6 @@ import { register } from './registry.js';
 import { helpCommand } from './help.js';
 import { settingsCommands } from './settings.js';
 import { moreCommand, chainTopic, consoleCommands } from './console.js';
-import { editorCommand } from './editor.js';
 import { serverCommand, serverShortcuts } from './server.js';
 import { featuresCommand } from '../../../../src/console/kernel/commands/features.ts';
 import { enabledConsoleFeatures, featureCommands } from '../../../../src/console/features.ts';
@@ -13,7 +12,7 @@ const [list, set, get, unset, reset, builtin] = settingsCommands;
 register(
   serverCommand, ...serverShortcuts, // the dedicated host only (core/server.js)
   helpCommand, list, set, get, unset, reset,
-  editorCommand, chainTopic, moreCommand,
+  chainTopic, moreCommand,
   builtin, featuresCommand, ...consoleCommands,
   ...featureCommands(enabledConsoleFeatures()),
 );
