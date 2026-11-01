@@ -1,10 +1,11 @@
 import { ROUTE } from '#shared/contract/routes.ts';
-import { HTTP_POST, QUERY_START, RUN_QUERY } from '../keys.ts';
+import { HTTP_METHOD, NO_STORE_CACHE } from '#shared/contract/keys.ts';
+import { QUERY_START, RUN_QUERY } from '../keys.ts';
 import type { LineSink } from '../services/recorder.ts';
 
 export type RunEntry = { name: string; size: number; updated: number; active: boolean; mine: boolean; current: boolean };
 
-const NO_STORE: RequestInit = { cache: 'no-store' };
+const NO_STORE: RequestInit = { cache: NO_STORE_CACHE };
 
 async function textOrThrow(response: Response): Promise<string> {
   if (!response.ok) throw new Error(await response.text());
@@ -13,7 +14,7 @@ async function textOrThrow(response: Response): Promise<string> {
 
 export const wrapperLineSink: LineSink = {
   async send(body) {
-    const response = await fetch(ROUTE.netLog, { method: HTTP_POST, body });
+    const response = await fetch(ROUTE.netLog, { method: HTTP_METHOD.post, body });
     if (!response.ok) throw new Error(await response.text());
     return await response.json() as { run: string; file: string };
   },

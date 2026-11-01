@@ -39,7 +39,6 @@ import { fingerprintTick } from './net/fingerprint.js';
 import { run } from './dispatch.js';
 import { SERVER } from './core/server.js';
 import { startHost } from './server/host.js';
-import { startJoin } from './join/client.js';
 import { enabledConsoleFeatures, featureFrameHooks, featureTicks } from '../../../src/console/features.ts';
 
 // Sad Burst 2 has a settings file of its own (desktop/main.js, DEV_KV_FILE).
@@ -100,7 +99,6 @@ function start(source) {
   }
   for (const feature of features) if (feature.start) feature.start();
   if (SERVER) startHost();
-  startJoin();
 }
 
 async function boot() {

@@ -1,22 +1,24 @@
-// Your own server ("npm run server", server/) and joining it from the app's server list
-// (desktop/servers.js): their settings, the list's checks (ping, the pinned /status, the
-// fingerprint), and the game's own server code run against the game's own client code.
+// Your own server ("npm run server", server/): its settings, the server list's checks
+// against it (ping, the pinned /status, the fingerprint; src/features/server_list/), and
+// the game's own server code run against the game's own client code.
 // The end-to-end test needs the game files (game/) and is skipped without them.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { spawn, execFileSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 
 const REPO = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
 const { checkConfig } = require('../server/config.js');
 const { memberShapes } = require('../server/game.js');
-const servers = require('../desktop/servers.js');
-const { checkServer, parseAddress, normalFingerprint } = servers;
+const { createProbe } = await import('../src/features/server_list/adapters/probe.ts');
+const { checkServer: checkEntry } = await import('../src/features/server_list/domain/server.ts');
+const probe = createProbe();
+const checkServer = (entry) => checkEntry(entry, () => 'testserver1');
 const HAS_GAME = fs.existsSync(path.join(REPO, 'game', 'scripts', 'libs', 'flash.js'));
 
 const FP = Array.from({ length: 32 }, (_, i) => i.toString(16).padStart(2, '0').toUpperCase()).join(':');
@@ -34,71 +36,12 @@ test('server config: defaults, checks, the open-server warning', () => {
   for (const want of [/port/, /nicknames/, /cheat_reports/, /download_maps/, /skin/]) assert.ok(bad.errors.some((e) => want.test(e)), String(want));
 });
 
-test('server list entries: address, pinned fingerprint, nickname; saved without anything else', () => {
-  assert.deepEqual(parseAddress('203.0.113.5:2054'), { host: '203.0.113.5', port: 2054, hostPort: '203.0.113.5:2054' });
-  assert.equal(parseAddress('my.host').port, 2053);
-  assert.equal(parseAddress('[::1]:9').host, '::1');
-  assert.throws(() => parseAddress('a b:1'));
-  assert.equal(normalFingerprint(FP.toLowerCase().replace(/:/g, '')), FP);
-  const ok = checkServer({ address: 'https://1.2.3.4:2053/', fingerprint: FP.toLowerCase(), nickname: ' Pal ', password: 'pw' });
-  assert.deepEqual(ok.errors, []);
-  assert.equal(ok.server.hostPort, '1.2.3.4:2053');
-  assert.equal(ok.server.name, '1.2.3.4:2053', 'no name: the address');
-  assert.equal(ok.server.nickname, 'Pal');
-  assert.match(ok.server.id, /^[a-f0-9]{12}$/);
-  assert.equal(checkServer({ address: '', fingerprint: 'abc', nickname: '' }).errors.length, 3);
-
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-servers-'));
-  const file = path.join(dir, 'servers.json');
-  try {
-    assert.deepEqual(servers.loadServers(file), { servers: [], last: null, problems: [] });
-    servers.saveServers(file, [ok.server], ok.server.id);
-    const saved = JSON.parse(fs.readFileSync(file, 'utf8'));
-    assert.deepEqual(Object.keys(saved.servers[0]).sort(), ['address', 'fingerprint', 'id', 'name', 'nickname', 'password']);
-    fs.writeFileSync(file, JSON.stringify({ servers: [...saved.servers, { address: 'x y' }], last: saved.last }));
-    const back = servers.loadServers(file);
-    assert.equal(back.servers.length, 1);
-    assert.equal(back.servers[0].id, ok.server.id);
-    assert.equal(back.last, ok.server.id);
-    assert.match(back.problems[0], /^server 2: /);
-  } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
-  }
-});
 
 test('the account module is built from how the game uses it', () => {
   const src = 'A.$m.get(1); A.$m.set(c,{}); A.$l.length; A.$l[i]; A.$f(conn); x=A.$k; A.$f2(a,A.$k2,"",null);';
   assert.deepEqual(memberShapes(src, 'A'), { $m: 'map', $l: 'list', $f: 'fn', $k: 'value', $f2: 'fn', $k2: 'value' });
 });
 
-// The console in join mode is decided when its modules load: its own process.
-test('join mode: the lobby address points at the server, the login is set from the menu on, Tab shows the server', () => {
-  const out = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', `
-    Object.defineProperty(globalThis, 'PB2_JOIN', { value: { address: '1.2.3.4:2053', nickname: 'Pal', password: 'pw' } });
-    const { bootConsole } = await import(${JSON.stringify(pathToFileURL(path.join(REPO, 'test/fake-game.mjs')).href)});
-    globalThis.loaderInfo = { parameters: { l: '', p: '' } };
-    const c = await bootConsole();
-    const net = c.G[c.N.net];
-    net[c.N.lobbyHosts] = ['', 'https://vvvv.', 'https://www.'];
-    const tick = c.intervals[c.intervals.length - 1];
-    c.G.stage.currentFrameLabel = 'loading';
-    tick();
-    const before = { ...globalThis.loaderInfo.parameters };
-    c.G.stage.currentFrameLabel = 'menu';
-    c.G[c.N.serverLocation] = 'USA, Arizona';
-    tick();
-    const location = c.G[c.N.serverLocation];
-    c.G[c.N.serverLocation] = 'Europe, player-hosted';
-    tick();
-    process.stdout.write(JSON.stringify({ hosts: net[c.N.lobbyHosts], before, after: globalThis.loaderInfo.parameters, location, p2pLocation: c.G[c.N.serverLocation], said: c.log.printed.filter((l) => /Private server/.test(l)) }));
-  `], { cwd: REPO, encoding: 'utf8' }));
-  assert.deepEqual(out.hosts, ['https://1.2.3.4:2053/?', 'https://1.2.3.4:2053/?', 'https://1.2.3.4:2053/?']);
-  assert.deepEqual(out.before, { l: '', p: '' }, 'nothing during start-up, when the game talks to the official site');
-  assert.deepEqual(out.after, { l: 'Pal', p: 'pw' });
-  assert.equal(out.location, 'Private server, 1.2.3.4:2053', 'the Tab scoreboard names the server, not "USA, Arizona"');
-  assert.equal(out.p2pLocation, 'Europe, player-hosted', 'a player-hosted match keeps its region');
-  assert.ok(out.said.some((l) => /Multiplayer connects there, as Pal/.test(l)), out.said.join('\n'));
-});
 
 test('own server: the game\'s server code logs players in, lists, creates and joins matches, and obeys its terminal', { skip: !HAS_GAME && 'no game files' }, async () => {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'; // the client trusts the test server's self-signed certificate
@@ -122,15 +65,15 @@ test('own server: the game\'s server code logs players in, lists, creates and jo
     const url = `https://127.0.0.1:${out.match(/" on 127\.0\.0\.1:(\d+)/)[1]}`;
     const port = Number(out.match(/" on 127\.0\.0\.1:(\d+)/)[1]);
     const fingerprint = out.match(/fingerprint: ([0-9A-F:]{95})/)[1];
-    assert.equal(await servers.fetchFingerprint('127.0.0.1', port), fingerprint);
+    assert.equal(await probe.fingerprint('127.0.0.1', port), fingerprint);
     const entry = checkServer({ address: `127.0.0.1:${port}`, fingerprint, nickname: 'Pal' }).server;
-    const st = await servers.fetchStatus(entry);
+    const st = await probe.status(entry);
     assert.equal(st.password, true);
     assert.equal(st.players, 0);
     assert.equal(typeof st.name, 'string');
     assert.ok(Object.keys(st).every((k) => ['name', 'description', 'version', 'password', 'players', 'max_players', 'matches'].includes(k)), 'nothing private');
-    await assert.rejects(servers.fetchStatus({ ...entry, fingerprint: FP }), (e) => e.pinned === false, 'another certificate: no status');
-    assert.equal(typeof await servers.ping('127.0.0.1', port), 'number');
+    await assert.rejects(probe.status({ ...entry, fingerprint: FP }), (e) => e.pinned === false, 'another certificate: no status');
+    assert.equal(typeof await probe.ping('127.0.0.1', port), 'number');
     const client = () => { const c = createClient({ gameDir: path.join(REPO, 'game'), names: N, url }); clients.push(c); return c; };
     const a = client();
     const b = client();
@@ -205,55 +148,3 @@ test('maps: this server\'s first, then the site (unpacked to plain XML and kept)
   }
 });
 
-test('console "servers": lists with ping, adds (fetching the fingerprint), keeps the password out of the history, connects', () => {
-  const out = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', `
-    const { bootConsole } = await import(${JSON.stringify(pathToFileURL(path.join(REPO, 'test/fake-game.mjs')).href)});
-    const c = await bootConsole();
-    const saved = [];
-    const calls = [];
-    // The wrapper's servers route (desktop/main.js serverListApi), as a stand-in.
-    globalThis.fetch = async (url, opt) => {
-      const { op, arg } = JSON.parse(opt.body);
-      calls.push(op);
-      const value = {
-        list: () => ({ official: { id: 'official', name: 'PlazmaBurst2.com', host: 'vvvv.plazmaburst2.com', port: 2053, description: 'The official servers' }, servers: saved, last: null, gameVersion: 'v1', problems: [] }),
-        check: () => (arg === 'official' ? { ping: 180 } : { ping: 4, status: { name: 'Paulbase', description: 'Friends', players: 2, max_players: 64, version: 'v1', password: true } }),
-        fingerprint: () => 'AA:BB',
-        save: () => { const s = { id: 'abc123', name: arg.name, address: arg.address, fingerprint: arg.fingerprint, nickname: arg.nickname, hasPassword: !!arg.password }; saved.push(s); calls.push(JSON.stringify(arg)); return { server: s }; },
-        play: () => true,
-      }[op]();
-      return { status: 200, json: async () => ({ ok: true, value }) };
-    };
-    const settle = () => new Promise((r) => setTimeout(r, 20));
-    const { history } = await import(${JSON.stringify(pathToFileURL(path.join(REPO, 'desktop/dev/console/state/store.js')).href)});
-    const { maskLine } = await import(${JSON.stringify(pathToFileURL(path.join(REPO, 'desktop/dev/console/dispatch.js')).href)});
-    const line = 'servers add address=192.168.1.20:2053 fingerprint=fetch nickname=Pal password=s3cret name="Pal base"';
-    history.add(maskLine(line));
-    c.log.printed.length = 0;
-    c.G.pb2dev.run(line);
-    await settle();
-    const added = c.log.printed.slice();
-    c.log.printed.length = 0;
-    c.G.pb2dev.run('servers');
-    await settle();
-    const listed = c.log.printed.slice();
-    c.log.printed.length = 0;
-    c.G.pb2dev.run('servers connect pal');
-    await settle();
-    const connected = c.log.printed.slice();
-    c.G.pb2dev.run('servers edit 1 nonsense=1');
-    await settle();
-    process.stdout.write(JSON.stringify({ added, listed, connected, calls, history: history.lines.slice(-1), errors: c.log.printed.filter((l) => /^error/.test(l)) }));
-  `], { cwd: REPO, encoding: 'utf8' }));
-  assert.deepEqual(out.history, ['servers add address=192.168.1.20:2053 fingerprint=fetch nickname=Pal password=••• name="Pal base"']);
-  assert.ok(out.added.every((l) => !l.includes('s3cret')), 'not in the log either');
-  assert.ok(out.added.some((l) => /fingerprint AA:BB/.test(l)), 'fetched, with the warning to compare');
-  assert.ok(out.added.some((l) => /Saved Pal base \(192\.168\.1\.20:2053, as Pal, password saved\)/.test(l)), out.added.join('\n'));
-  assert.deepEqual(JSON.parse(out.calls.find((c) => c.startsWith('{'))), { name: 'Pal base', address: '192.168.1.20:2053', fingerprint: 'AA:BB', nickname: 'Pal', password: 's3cret' }, 'the wrapper gets the real password');
-  assert.ok(out.listed.some((l) => /official\s+PlazmaBurst2\.com\s+vvvv\.plazmaburst2\.com:2053\s+180 ms/.test(l)), out.listed.join('\n'));
-  assert.ok(out.listed.some((l) => /1\s+Paulbase\s+192\.168\.1\.20:2053\s+4 ms\s+2\/64/.test(l)), out.listed.join('\n'));
-  assert.ok(out.listed.some((l) => /Friends · as Pal/.test(l)));
-  assert.ok(out.connected.some((l) => /Connecting to Pal base/.test(l)));
-  assert.equal(out.calls.filter((c) => c === 'play').length, 1);
-  assert.match(out.errors.join(' '), /unknown "nonsense="/);
-});

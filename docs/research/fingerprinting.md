@@ -668,9 +668,9 @@ hostile or compromised lobby server can do.
    the match password in `JOIN_MATCH` and `CREATE_MATCH`
    ([netlog](../features/netlog.md#secrets-are-never-written)). `npm run redact-netlogs`
    cleans logs written before then.
-2. **Bind passwords to addresses.** `servers save` from the `__dev/` route should drop the
-   saved password when `address` or `fingerprint` changes, or the route should be read-only
-   with editing left to the list page's IPC bridge.
+2. **Bind passwords to addresses.** *Done (2026-11-02, refactor step P3.2).* Saving a
+   server drops its saved password when `address` or `fingerprint` changes, unless the save
+   gives a password itself ([server list](../features/server-list.md#passwords-never-move-to-a-new-address-security-fix-2)).
 3. **Refuse tasks from private servers.** `net/tap.js` already sees every packet before
    the game does. Dropping `RELIABLE_TASK` and `RELIABLE_TASK_ASNYC` on a private-server
    lobby removes that operator's RCE. A private server built from this repository never

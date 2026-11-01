@@ -61,7 +61,16 @@ Notes from P2 for the feature steps:
     fakeConnection) and the `.d.mts` declarations for the test helpers.
   - A test that imports a module reading `game/names.js` must import it after
     `bootConsole()` (dynamic import).
-- [ ] P3.2 `server_list` + security fix 2 (password dropped when address or pin changes; `servers.json` versioned)
+- [x] P3.2 `server_list` + security fix 2 (password dropped when address or pin changes; `servers.json` versioned, mode 0600)
+  - The launcher page and its preload are TypeScript, bundled to `dist/launcher/` by
+    `npm run build`. `desktop/main.js` loads `LAUNCHER_PAGE`/`LAUNCHER_PRELOAD` from
+    the feature.
+  - `src/wrapper/features.ts` is now `buildWrapper(deps, ports)`. Ports are what the old
+    `main.js` provides (the window, the login session), until P4.3 moves them.
+  - The server list is now local-mode only in the catalog. Before, the p2p host had the
+    `servers` command, and every operation answered 403.
+  - HTTP methods and status codes are in `src/shared/contract/keys.ts`, used by both
+    sides.
 - [ ] P3.3 `fingerprint` + `private_lobby_tasks` + `net/tap` + security fix 3 (no RELIABLE_TASK from private lobbies)
 - [ ] P3.4 `screenshot`
 - [ ] P3.5 `js_eval`

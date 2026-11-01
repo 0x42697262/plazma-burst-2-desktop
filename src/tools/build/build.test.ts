@@ -24,3 +24,18 @@ test('the console bundle boots in the fake game, runs commands and adds no globa
     fs.rmSync(outDir, { recursive: true, force: true });
   }
 });
+
+test('the launcher builds into its own folder: page script, preload for Electron, and the page itself', async () => {
+  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-launcher-'));
+  try {
+    const { buildLauncher } = await import('./build.ts');
+    await buildLauncher(outDir);
+    const files = fs.readdirSync(outDir).filter((name) => !name.endsWith('.map')).sort();
+    assert.deepEqual(files, ['index.html', 'launcher.css', 'launcher.js', 'preload.cjs']);
+    const preload = fs.readFileSync(path.join(outDir, 'preload.cjs'), 'utf8');
+    assert.match(preload, /require\("electron"\)/);
+    assert.match(preload, /servers:list/);
+  } finally {
+    fs.rmSync(outDir, { recursive: true, force: true });
+  }
+});

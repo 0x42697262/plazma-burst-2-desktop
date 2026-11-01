@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 import type { z } from 'zod';
-import { JSON_INDENT, LINE_END, MISSING_FILE_CODE, TEMPORARY_SUFFIX, TEXT_ENCODING, UNVERSIONED, VERSION_FIELD } from './constants.ts';
+import { BYTE_ORDER_MARK, JSON_INDENT, LINE_END, MISSING_FILE_CODE, TEMPORARY_SUFFIX, TEXT_ENCODING, UNVERSIONED, VERSION_FIELD } from './constants.ts';
 import { TEXT } from './text.ts';
 
 export type Migration = (data: Record<string, unknown>) => Record<string, unknown>;
@@ -12,6 +12,7 @@ export type VersionedFileOptions<Value extends Record<string, unknown>> = {
   version: number;
   schema: z.ZodType<Value>;
   migrations: Readonly<Record<number, Migration>>;
+  fileMode?: number;
 };
 
 export type VersionedRead<Value> = { value: Value; migratedFrom: number | null };
@@ -36,7 +37,7 @@ export function decodeVersioned<Value extends Record<string, unknown>>(text: str
   const { file, version: latestVersion, schema, migrations } = options;
   let parsed: unknown;
   try {
-    parsed = JSON.parse(text);
+    parsed = JSON.parse(text.replace(BYTE_ORDER_MARK, ''));
   } catch (error) {
     throw new PersistError(TEXT.notJson(file, (error as Error).message));
   }
@@ -56,19 +57,20 @@ export function decodeVersioned<Value extends Record<string, unknown>>(text: str
 }
 
 export function createVersionedFile<Value extends Record<string, unknown>>(options: VersionedFileOptions<Value>): VersionedFile<Value> {
-  const { file, version } = options;
+  const { file, version, fileMode } = options;
+  const writeOptions = fileMode === undefined ? {} : { mode: fileMode };
   const temporaryFile = file + TEMPORARY_SUFFIX;
   const ensureFolder = (): void => { fs.mkdirSync(path.dirname(file), { recursive: true }); };
 
   async function write(value: Value): Promise<void> {
     await fsPromises.mkdir(path.dirname(file), { recursive: true });
-    await fsPromises.writeFile(temporaryFile, serializeVersioned(version, value));
+    await fsPromises.writeFile(temporaryFile, serializeVersioned(version, value), writeOptions);
     await fsPromises.rename(temporaryFile, file);
   }
 
   function writeSync(value: Value): void {
     ensureFolder();
-    fs.writeFileSync(temporaryFile, serializeVersioned(version, value));
+    fs.writeFileSync(temporaryFile, serializeVersioned(version, value), writeOptions);
     fs.renameSync(temporaryFile, file);
   }
 

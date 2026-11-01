@@ -1,0 +1,138 @@
+export const OFFICIAL_DESCRIPTION = 'The official servers (USA, Arizona). Your PB2 account from desktop/credentials.json.';
+
+export const ENTRY_TEXT = Object.freeze({
+  badAddress: (text: string) => `address: "${text}" is not like "203.0.113.5:2053"`,
+  portRange: (port: number) => `address: port ${port} is out of range`,
+  notAnEntry: 'not a server entry',
+  badFingerprint: 'fingerprint: the server\'s certificate fingerprint, as its terminal prints it (64 hex digits)',
+  badNickname: 'nickname: 1-20 letters, digits, spaces and _ . -',
+  badPassword: 'password: text',
+  entryProblem: (index: number, errors: readonly string[]) => `server ${index}: ${errors.join('; ')}`,
+  fileProblem: (file: string, message: string) => `${file}: ${message}`,
+});
+
+export const PROBE_TEXT = Object.freeze({
+  noAnswer: 'no answer',
+  noCertificate: 'no certificate',
+  notPinned: 'the server\'s certificate is not the saved one',
+  tooLong: 'answer too long',
+  noStatus: 'no status (an older server?)',
+  notJson: 'the status is not JSON',
+});
+
+export const SERVICE_TEXT = Object.freeze({
+  notSaved: 'that server is not saved',
+  notSavedShort: 'not saved',
+  serversFileProblem: (problem: string) => `desktop/servers.json: ${problem}`,
+  imported: (file: string) => `Imported desktop/join.json into ${file}; join.json is no longer used`,
+  importFailed: (message: string) => `desktop/join.json not imported: ${message}`,
+  playing: (name: string, hostPort: string, nickname: string) => `Private server: ${name} (${hostPort}) as ${nickname}`,
+  titleOfficial: 'Plazma Burst 2',
+  titlePrivate: (name: string) => `Plazma Burst 2 (${name})`,
+  passwordDropped: (name: string) => `Private server ${name}: its address or certificate changed, so its saved password was dropped (enter it again with Edit)`,
+});
+
+export const ROUTE_TEXT = Object.freeze({
+  notAvailable: 'Not available',
+  postOnly: 'POST { op, arg }',
+  invalidJson: 'Invalid JSON',
+  unknownOperation: 'unknown op',
+  notAllowed: 'not allowed here',
+});
+
+export const COMMAND_TEXT = Object.freeze({
+  wrapperOnly: 'the server list is in the desktop wrapper only',
+  notInThisWindow: 'the server list is not available in this window',
+  unknownKey: (key: string, fields: readonly string[]) => `unknown "${key}=". Use ${fields.map((field) => `${field}=`).join(' ')}`,
+  notPairs: (rest: string) => `"${rest}" is not key=value (a value with spaces goes in "quotes")`,
+  whichServer: 'which server? "official", a number from "servers", or its name',
+  noServer: (number: string) => `no server ${number} ("servers" lists them)`,
+  ambiguous: (word: string, names: readonly string[]) => `"${word}" could be ${names.join(', ')}`,
+  notSaved: (word: string) => `no saved server "${word}"`,
+  offline: 'offline',
+  pingMs: (milliseconds: number) => `${milliseconds} ms`,
+  listTitle: 'Servers ("servers connect <n>" plays there):',
+  noPlayers: '—',
+  players: (players: number, max: number) => `${players}/${max}`,
+  lastPlayed: '  (last played)',
+  numberCell: (number: string, width: number) => `  ${number.padEnd(width)}`,
+  addressCell: (address: string) => `  ${address}  `,
+  playersCell: (players: string, here: string) => `  ${players}${here}`,
+  certificateChanged: 'its certificate is NOT the saved one: someone else may be at this address',
+  describeAs: (description: string, nickname: string, needsPassword: boolean) => `${description ? `${description} · ` : ''}as ${nickname}${needsPassword ? ' · needs a password' : ''}`,
+  descriptionLine: (description: string) => `             ${description}`,
+  versionMismatch: (there: string, here: string) => `             game ${there} there, ${here} here: the same version is needed`,
+  fileProblem: (problem: string) => `desktop/servers.json: ${problem}`,
+  fetchNeedsAddress: 'fingerprint=fetch needs address=',
+  fetchedFingerprint: (fingerprint: string) => `The server shows fingerprint ${fingerprint}. Compare it with the one the host sent you.`,
+  errorLine: (message: string) => `error: ${message}`,
+  saved: (what: string, name: string, address: string, nickname: string, hasPassword: boolean) => `${what} ${name} (${address}, as ${nickname}${hasPassword ? ', password saved' : ''}). "servers connect ${name}" plays there.`,
+  savedWord: 'Saved',
+  changedWord: 'Changed',
+  connecting: (name: string) => `Connecting to ${name}…`,
+  officialNotEditable: 'the official server cannot be edited',
+  nothingToChange: 'nothing to change: key=value …',
+  officialStays: 'the official server stays in the list',
+  removed: (name: string) => `Removed ${name}`,
+  fingerprintUsage: 'usage: servers fingerprint <address>',
+  fingerprintLine: (address: string, fingerprint: string) => `${address}: ${fingerprint}`,
+  unknownSubcommand: (word: string) => `unknown "servers ${word}". Type "help servers".`,
+  usage: 'servers [list | connect | add | edit | remove | fingerprint | page]',
+  description: 'The server list: official and private servers, with ping; add, edit, remove, connect',
+  about: [
+    'The same list "npm start" opens before the game (desktop/servers.json), from here:',
+    'the official server and your private servers ("npm run server"), each checked for',
+    'ping, players and description. A server is named by "official", its number in the',
+    'list, or the start of its name or address.',
+  ],
+  examples: [
+    ['servers', 'the list'],
+    ['servers connect 1', 'play on the first private server'],
+    ['servers add address=192.168.1.20:2053 fingerprint=fetch nickname=Pal password=pw name="Paulbase"', 'save one'],
+    ['servers edit 1 password=newpw', 'change its password'],
+    ['servers page', 'back to the list page'],
+  ],
+  notes: [
+    'A typed password= is kept out of the history and the log.',
+    'Changing a server\'s address or fingerprint drops its saved password: give it again with password=.',
+    'No shortcut key: bind one yourself, e.g. "bind f9 servers page".',
+  ],
+  sub: Object.freeze({
+    list: { usage: 'servers [list]', desc: 'The servers: name, address, ping, players, description (checked now)', about: ['Each server is checked now: ping (the time to connect), and a private server\'s', 'name, players, description and game version. A warning when its certificate is', 'not the saved one, or its game version differs from yours.'] },
+    connect: { usage: 'servers connect <official | n | name>', desc: 'Play on that server (the game reloads)', about: ['Leaves what you are playing and loads the game on that server. On a private', 'server the game starts logged out and logs in with the saved nickname and', 'password; on the official one with desktop/credentials.json.'], examples: [['servers connect official', 'PlazmaBurst2.com'], ['servers connect 1', 'the first private server']] },
+    add: { usage: 'servers add address=<a> fingerprint=<fp | fetch> nickname=<you> [password=<p>] [name="<name>"]', desc: 'Save a private server', about: ['address and fingerprint come from the server\'s terminal. fingerprint=fetch asks', 'the server for it; compare it with the one the host sent you. A value with spaces', 'goes in "double quotes". The password is kept out of the history and the log.'], examples: [['servers add address=192.168.1.20:2053 fingerprint=fetch nickname=Pal password=pw name="Paulbase"', 'save one']] },
+    edit: { usage: 'servers edit <n | name> key=value …', desc: 'Change a saved server (address, fingerprint, nickname, password, name)', about: ['Only the keys given change. password= with nothing after it removes the password.', 'A new address or fingerprint drops the saved password unless password= is given too.'], examples: [['servers edit 1 nickname=Pal2', 'another nickname'], ['servers edit paul password=newpw', 'by name']] },
+    remove: { usage: 'servers remove <n | name>', desc: 'Forget a saved server', about: ['Takes it out of desktop/servers.json. The official server always stays.'] },
+    fingerprint: { usage: 'servers fingerprint <address>', desc: 'The certificate fingerprint a server shows (compare it with the host\'s)', about: ['Only the TLS handshake: nothing is sent to the server.'], examples: [['servers fingerprint 192.168.1.20:2053', '']] },
+    page: { usage: 'servers page', desc: 'Back to the server list page (leaves the game)', about: ['The page "npm start" opens. There is no shortcut key for it; bind one if you like:', '"bind f9 servers page".'] },
+  }),
+});
+
+export const JOIN_TEXT = Object.freeze({
+  location: (address: string) => `Private server, ${address}`,
+  failed: (message: string) => `Private server: ${message}`,
+  started: (address: string, nickname: string) => `Private server ${address}: Multiplayer connects there, as ${nickname}.`,
+});
+
+export const LAUNCHER_TEXT = Object.freeze({
+  checking: '…',
+  offline: 'offline',
+  pingMs: (milliseconds: number) => `${milliseconds} ms`,
+  noPlayers: '—',
+  players: (players: number, max: number, matches: number) => `${players}/${max}${matches ? ` · ${matches} match${matches === 1 ? '' : 'es'}` : ''}`,
+  asNickname: (nickname: string) => `as ${nickname}`,
+  certificateChanged: 'Its certificate is not the saved one. Someone else may be at this address; ask the host for the fingerprint again.',
+  notReachable: 'not reachable',
+  versionMismatch: (there: string, here: string) => `Game ${there} there, ${here} here: the same version is needed ("npm run fetch-game" on both).`,
+  asNicknameNeedsPassword: (nickname: string, needsPassword: boolean) => `as ${nickname}${needsPassword ? ' · needs a password (Edit)' : ''}`,
+  officialTag: 'official',
+  privateTag: 'private',
+  fileProblems: (problems: readonly string[]) => `desktop/servers.json: ${problems.join('; ')}`,
+  editTitle: (name: string) => `Edit ${name}`,
+  addTitle: 'Add a private server',
+  passwordUnchanged: '(unchanged)',
+  fingerprintFetched: 'Got it from the server. Compare it with the fingerprint the host sent you before saving.',
+  fingerprintFailed: (message: string) => `Could not get the fingerprint: ${message}`,
+  confirmRemove: (name: string) => `Remove ${name} from the list?`,
+  outsideApp: 'This page only works inside the desktop app (npm start).',
+});

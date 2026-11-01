@@ -44,7 +44,7 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   consoleFeature(FEATURE.scanBypass, { availableIn: LOCAL_AND_SERVER }),
   consoleFeature(FEATURE.jsEval, { availableIn: LOCAL_AND_SERVER }),
   define(FEATURE.hooks, { unavailableForClients: ONLY_OFFICIAL, migrated: true }),
-  define(FEATURE.serverList, { availableIn: LOCAL_AND_SERVER, unavailableForClients: ONLY_OFFICIAL }),
+  define(FEATURE.serverList, { availableIn: LOCAL_ONLY, unavailableForClients: ONLY_OFFICIAL, migrated: true }),
   define(FEATURE.login),
   define(FEATURE.certPinning, { availableIn: LOCAL_ONLY }),
   define(FEATURE.remotePlay, { availableIn: [MODE.remote], unavailableForClients: ONLY_OFFICIAL }),

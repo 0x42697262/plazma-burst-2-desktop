@@ -84,7 +84,6 @@ export const OFF_WORD = 'off';
 export const TYPE_PREFIX_AT_START = new RegExp(`^${TYPE_PREFIX}`);
 export const STAMP_PAD = '0';
 export const LOSS_ORDER = Object.freeze(['slow', 'stalled', 'dropped', 'gaps', 'late'] as const);
-export const HTTP_POST = 'POST';
 export const QUERY_START = '?';
 export const SETTING_NAME = Object.freeze({ recording: 'recording', everything: 'everything' });
 export type SettingName = typeof SETTING_NAME[keyof typeof SETTING_NAME];

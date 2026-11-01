@@ -19,7 +19,6 @@ const { REMOTE_PAGE_SCRIPT, REMOTE_WEB_PREFERENCES, isGamePage, lockDownSession,
 const REMOTE_SCREENSHOT_MS = 2000;
 const { startHost, parseHostArgs } = require('./remote/host');
 const serverConfig = require('./p2p-host/config');
-const servers = require('./servers');
 // Which game: the official client, or Sad Burst 2 with "npm run sadburst" (desktop/clients.js).
 const { CLIENTS } = require('./clients');
 const CLIENT = CLIENTS[ENVIRONMENT.client];
@@ -43,16 +42,8 @@ const SERVER_MODE = ENVIRONMENT.mode === 'server';
 const SERVER_CONFIG_FILE = path.join(__dirname, 'p2p-host.json');
 const SERVER_KV_FILE = path.join(__dirname, 'p2p-host-overrides.json');
 
-// The server list (desktop/launcher/): "npm start" opens it before the game. The official
-// server, and private servers (server/, "npm run server") saved in desktop/servers.json.
-// On a private server the game's lobby connection goes there instead, trusting only that
-// server's certificate, and the game starts logged out: the server gets a nickname and
-// its password, never your PB2 account.
-const SERVERS_FILE = path.join(__dirname, 'servers.json');
-const OLD_JOIN_FILE = path.join(__dirname, 'join.json'); // before the server list; imported once
-const LAUNCHER_FILE = path.join(__dirname, 'launcher', 'index.html');
-const LAUNCHER_URL = require('url').pathToFileURL(LAUNCHER_FILE).href;
-let joinTarget = null; // the private server being played on (desktop/servers.js checkServer), or null
+// The server list: src/features/server_list/ (docs/features/server-list.md).
+const { LAUNCHER_PAGE, LAUNCHER_PRELOAD } = require('../src/features/server_list/wrapper.ts');
 let serverPage = null; // the checked config the page gets as PB2_SERVER
 
 // Game files, downloaded with "npm run fetch-game" (game/; Sad Burst 2: game.sadburst/).
@@ -78,11 +69,23 @@ let hookPlan = null;
 const DEV_ENABLED = FLAGS.dev_console.on;
 // __dev/ routes of migrated features (src/features/*/wrapper.ts), when their flag is on.
 const { createDevRouter } = require('../src/wrapper/http/router.ts');
-const { wrapperFeatures } = require('../src/wrapper/features.ts');
-const devRouter = createDevRouter(
-  wrapperFeatures({ log, gameVersion: VERSION || '', isSadburst: SADBURST, repoRoot: path.join(__dirname, '..') }),
-  (id) => FLAGS[id].on,
+const { buildWrapper } = require('../src/wrapper/features.ts');
+const liveWindow = () => (mainWindow && !mainWindow.isDestroyed() ? mainWindow : null);
+const wrapper = buildWrapper(
+  { log, gameVersion: VERSION || '', isSadburst: SADBURST, repoRoot: path.join(__dirname, '..') },
+  {
+    gameSession: {
+      startLoggedOut: () => startLoggedOut(),
+      applyCredentials: () => applyCredentials(),
+      loadGame: () => { const win = liveWindow(); if (win) win.loadURL(START_URL); },
+      showList: () => { const win = liveWindow(); if (win) win.loadFile(LAUNCHER_PAGE); },
+      setTitle: (title) => { const win = liveWindow(); if (win) win.setTitle(title); },
+    },
+  },
 );
+const serverList = wrapper.serverList;
+const joinTarget = () => serverList.service.joinTarget();
+const devRouter = createDevRouter(wrapper.features, (id) => FLAGS[id].on);
 // Routes and map markers shared with the console (src/shared/contract/).
 const { DEV_DIR, ROUTE_NAME: ROUTE, MAP_MARKER, SAVE_RESULT } = require('../src/shared/contract/keys.ts');
 const DEV_PREFIX = PREFIX + DEV_DIR;
@@ -293,7 +296,7 @@ function pinServerCertificates() {
   const { X509Certificate } = require('crypto');
   let warned = null;
   session.defaultSession.setCertificateVerifyProc((request, callback) => {
-    const target = joinTarget;
+    const target = joinTarget();
     if (!target || request.hostname !== target.host) { callback(-3); return; }
     let fingerprint = '';
     try { fingerprint = new X509Certificate(request.certificate.data).fingerprint256; } catch {}
@@ -480,7 +483,6 @@ async function serveDev(request, url, ctx) {
   }
   const fp = await serveFingerprint(name, request, url, ctx);
   if (fp) return fp;
-  if (name === ROUTE.servers) return serveServerListRoute(request, ctx);
   if (name === ROUTE.kv) {
     if (request.method === 'PUT') {
       let obj;
@@ -540,7 +542,7 @@ async function serveHooks(request, url) {
 async function serveLocal(url, ctx) {
   let rel = decodeURIComponent(url.pathname.slice(PREFIX.length));
   if (rel === '' || rel.endsWith('/')) rel += 'index.html';
-  if ((DEV_ENABLED || HOOKS_ENABLED || ctx.remote || ctx.server || joinTarget) && rel === 'index.html') {
+  if ((DEV_ENABLED || HOOKS_ENABLED || ctx.remote || ctx.server || joinTarget()) && rel === 'index.html') {
     const html = await fs.readFile(path.join(ROOT, 'index.html'), 'utf8');
     let out = html;
     if (HOOKS_ENABLED) {
@@ -562,13 +564,13 @@ async function serveLocal(url, ctx) {
         : out.replace(/<\/body>/i, DEV_SCRIPT_TAG + '</body>');
       if (out === before) log.error('Dev console: could not inject into index.html');
     }
-    if (joinTarget && !ctx.remote && !ctx.server) {
+    if (joinTarget() && !ctx.remote && !ctx.server) {
       const at = out.search(/<script\b/i);
       if (at < 0) {
         log.error('Private server: could not prepare index.html (no <script> tag); not serving it');
         return new Response('Not available', { status: 503 });
       }
-      out = out.slice(0, at) + joinPageScript(joinTarget) + out.slice(at);
+      out = out.slice(0, at) + joinPageScript(joinTarget()) + out.slice(at);
     }
     if (ctx.server) {
       // The dedicated host: PB2_SERVER before every other script, and chat lines (the
@@ -695,7 +697,7 @@ app.whenReady().then(async () => {
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     { role: 'fileMenu' },
     // No shortcut: every key is the player's to bind in the dev console. Also "servers page".
-    ...(HOST_MODE || SERVER_MODE || SADBURST ? [] : [{ label: 'Servers', submenu: [{ label: 'Server list', click: () => showServerList() }] }]),
+    ...(HOST_MODE || SERVER_MODE || !FLAGS.server_list.on ? [] : [{ label: 'Servers', submenu: [{ label: 'Server list', click: () => serverList.service.showList() }] }]),
     { role: 'editMenu' },
     { role: 'viewMenu' },
     { label: 'Window', submenu: [{ role: 'minimize' }] },
@@ -715,148 +717,27 @@ app.whenReady().then(async () => {
     height: 720,
     autoHideMenuBar: true,
     title: CLIENT.title,
-    // The server list's bridge (desktop/launcher/preload.js); it exposes nothing to the game's
+    // The server list's bridge (src/features/server_list/launcher/preload.ts); it exposes nothing to the game's
     // page. Sad Burst 2: its own session, and no bridge at all.
     webPreferences: SADBURST
       ? { backgroundThrottling: false, partition: SADBURST_PARTITION }
-      : { backgroundThrottling: false, preload: path.join(__dirname, 'launcher', 'preload.js') },
+      : { backgroundThrottling: false, preload: LAUNCHER_PRELOAD },
   });
   logPage(win, '');
 
   if (DEV_ENABLED) {
     try { kvFile.watch(); } catch (e) { log.warn(`Not watching ${DEV_KV_FILE}: ${e.message}`); }
   }
-  if (SADBURST) {
-    // Its own servers and accounts: no server list, straight to its game page, where its
-    // entry screen asks you to log in (or play as a guest).
+  if (!FLAGS.server_list.on) {
+    // No server list (feature flag off, or Sad Burst 2, which has its own servers and
+    // accounts): straight to the game page.
     win.loadURL(START_URL);
     return;
   }
-  importOldJoinFile();
-  serveServerList();
-  showServerList();
+  serverList.service.importOldJoinFile();
+  serverList.registerIpc(ipcMain);
+  serverList.service.showList();
 });
-
-// ---------------------------------------------------------------------------
-// Server list (desktop/launcher/, desktop/servers.js)
-// ---------------------------------------------------------------------------
-function showServerList() {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-  joinTarget = null;
-  mainWindow.setTitle('Plazma Burst 2');
-  mainWindow.loadFile(LAUNCHER_FILE);
-}
-
-// desktop/join.json from before the server list becomes a saved server, once.
-function importOldJoinFile() {
-  if (fsSync.existsSync(SERVERS_FILE) || !fsSync.existsSync(OLD_JOIN_FILE)) return;
-  try {
-    const { server } = servers.checkServer(JSON.parse(fsSync.readFileSync(OLD_JOIN_FILE, 'utf8')));
-    if (!server) return;
-    servers.saveServers(SERVERS_FILE, [server], null);
-    log.info(`Imported desktop/join.json into ${path.relative(path.join(__dirname, '..'), SERVERS_FILE)}; join.json is no longer used`);
-  } catch (e) {
-    log.warn(`desktop/join.json not imported: ${e.message}`);
-  }
-}
-
-// What the server list can do, for the list page (IPC) and the dev console's "servers"
-// (the servers route). Passwords stay in this process; callers learn whether one is set.
-const loadServerList = () => servers.loadServers(SERVERS_FILE);
-const shownServer = (s) => ({ id: s.id, name: s.name, address: s.address, fingerprint: s.fingerprint, nickname: s.nickname, hasPassword: !!s.password });
-const serverListApi = {
-  list() {
-    const { servers: list, last, problems } = loadServerList();
-    for (const p of problems) log.warn(`desktop/servers.json: ${p}`);
-    return { official: { ...servers.OFFICIAL }, servers: list.map(shownServer), last, gameVersion: VERSION, problems };
-  },
-  // entry: { id?, name, address, fingerprint, nickname, password? } (no password: keep the saved one).
-  save(entry) {
-    const { servers: list, last } = loadServerList();
-    const old = entry && entry.id ? list.find((s) => s.id === entry.id) : null;
-    if (entry && entry.id && !old) return { errors: ['that server is not saved'] };
-    const { server, errors } = servers.checkServer({ ...entry, password: entry && typeof entry.password === 'string' ? entry.password : old ? old.password : '' });
-    if (!server) return { errors };
-    const next = old ? list.map((s) => (s.id === old.id ? server : s)) : [...list, server];
-    servers.saveServers(SERVERS_FILE, next, last);
-    return { server: shownServer(server) };
-  },
-  remove(id) {
-    const { servers: list, last } = loadServerList();
-    if (!list.some((s) => s.id === id)) return false;
-    servers.saveServers(SERVERS_FILE, list.filter((s) => s.id !== id), last === id ? null : last);
-    return true;
-  },
-  // { ping (ms or null), status ({ name, description, players, ... }) or error }
-  async check(id) {
-    if (id === servers.OFFICIAL.id) return { ping: await servers.ping(servers.OFFICIAL.host, servers.OFFICIAL.port) };
-    const s = loadServerList().servers.find((x) => x.id === id);
-    if (!s) return { error: 'not saved' };
-    const [ping, status] = await Promise.all([
-      servers.ping(s.host, s.port),
-      servers.fetchStatus(s).then((v) => ({ v }), (e) => ({ e })),
-    ]);
-    return status.v ? { ping, status: status.v } : { ping, error: status.e.message, pinned: status.e.pinned !== false };
-  },
-  async fingerprint(address) {
-    const a = servers.parseAddress(address);
-    return servers.fetchFingerprint(a.host, a.port);
-  },
-  // Plays on that server: its session (your login, or logged out and its certificate), then the game.
-  async play(id) {
-    const { servers: list } = loadServerList();
-    const target = id === servers.OFFICIAL.id ? null : list.find((s) => s.id === id);
-    if (id !== servers.OFFICIAL.id && !target) throw new Error('that server is not saved');
-    servers.saveServers(SERVERS_FILE, list, id);
-    if (target) {
-      await startLoggedOut();
-      joinTarget = target;
-      log.info(`Private server: ${target.name} (${target.hostPort}) as ${target.nickname}`);
-      mainWindow.setTitle(`Plazma Burst 2 (${target.name})`);
-    } else {
-      joinTarget = null;
-      await applyCredentials();
-      mainWindow.setTitle('Plazma Burst 2');
-    }
-    setTimeout(() => mainWindow.loadURL(START_URL), 0); // after the answer, which the reload would cut off
-    return true;
-  },
-  openList() {
-    setTimeout(showServerList, 0);
-    return true;
-  },
-};
-
-// The list page's bridge (desktop/launcher/preload.js): only that page may ask.
-function serveServerList() {
-  const fromList = (e) => e.senderFrame && e.senderFrame.url.split('#')[0] === LAUNCHER_URL;
-  const handle = (channel, fn) => ipcMain.handle(channel, async (e, ...args) => {
-    if (!fromList(e)) throw new Error('not allowed here');
-    return fn(...args);
-  });
-  handle('servers:list', () => serverListApi.list());
-  handle('servers:save', (entry) => serverListApi.save(entry));
-  handle('servers:remove', (id) => serverListApi.remove(id));
-  handle('servers:check', (id) => serverListApi.check(id));
-  handle('servers:fingerprint', (address) => serverListApi.fingerprint(address));
-  handle('servers:play', (id) => serverListApi.play(id));
-}
-
-// The dev console's "servers": POST { op, arg } on the servers route. Not for a remote
-// play tester's window or the player-hosted host, which play on the official server only.
-const SERVER_LIST_OPS = Object.freeze(['list', 'save', 'remove', 'check', 'fingerprint', 'play', 'openList']);
-async function serveServerListRoute(request, ctx) {
-  if (ctx.remote || ctx.server || HOST_MODE || SERVER_MODE) return new Response('Not available', { status: 403 });
-  if (request.method !== 'POST') return new Response('POST { op, arg }', { status: 405 });
-  let body;
-  try { body = JSON.parse(await request.text()); } catch { return new Response('Invalid JSON', { status: 400 }); }
-  if (!body || !SERVER_LIST_OPS.includes(body.op)) return new Response('unknown op', { status: 400 });
-  try {
-    return json({ ok: true, value: await serverListApi[body.op](body.arg) });
-  } catch (e) {
-    return json({ ok: false, error: e.message });
-  }
-}
 
 // Who a request comes from. The local window: the default session (Sad Burst 2: its own),
 // the shared dev-overrides.json. A tester's game: their own session, settings file and window.

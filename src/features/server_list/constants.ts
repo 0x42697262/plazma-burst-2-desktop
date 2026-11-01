@@ -1,0 +1,16 @@
+export const DEFAULT_PORT = 2053;
+export const PORT_MIN = 1;
+export const PORT_MAX = 65535;
+export const NAME_MAX = 40;
+export const PROBE_TIMEOUT_MS = 4000;
+export const STATUS_BYTES_MAX = 16384;
+export const SERVER_ID_BYTES = 6;
+export const SERVERS_FILE_MODE = 0o600;
+export const SERVERS_FILE_VERSION = 1;
+export const NANOSECONDS_PER_MILLISECOND = 1e6;
+export const PING_GOOD_MS = 80;
+export const PING_OK_MS = 150;
+export const JOIN_TICK_MS = 100;
+export const NAME_COLUMN_WIDTH = 9;
+export const SUBCOMMAND_WORDS = 1;
+export const EDIT_WORDS = 2;

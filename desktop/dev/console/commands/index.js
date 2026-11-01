@@ -23,7 +23,6 @@ import { hooksCommand } from './hooks.js';
 import { fingerprintCommand } from './fingerprint.js';
 import { bypassCommand } from './bypass.js';
 import { serverCommand, serverShortcuts } from './server.js';
-import { serversCommand } from './servers.js';
 import { featuresCommand } from '../../../../src/console/kernel/commands/features.ts';
 import { enabledConsoleFeatures, featureCommands } from '../../../../src/console/features.ts';
 
@@ -34,6 +33,6 @@ register(
   helpCommand, list, set, get, unset, reset, profileCommand,
   ...playerCommands, gunsCommand, tpCommand, posCommand, ...gunCommands, charsCommand, traceCommand,
   ...bindCommands, keynameCommand, triggersCommand, regionsCommand, varsCommand, logicCommand, editorCommand, chainTopic, moreCommand,
-  gameCommand, zoomCommand, builtin, mapsCommand, serversCommand, screenshotCommand, fingerprintCommand, bypassCommand, jsCommand, hooksCommand, featuresCommand, ...consoleCommands,
+  gameCommand, zoomCommand, builtin, mapsCommand, screenshotCommand, fingerprintCommand, bypassCommand, jsCommand, hooksCommand, featuresCommand, ...consoleCommands,
   ...featureCommands(enabledConsoleFeatures()),
 );
