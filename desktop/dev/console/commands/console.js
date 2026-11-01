@@ -1,6 +1,6 @@
 // The console's own commands: paging, clearing, closing, and the ";" chain topic.
-import { clearLog } from '../ui/log.js';
-import { turnPage } from '../ui/pager.js';
+import { clearLog } from '../../../../src/console/kernel/ui/log.ts';
+import { turnPage } from '../../../../src/console/kernel/ui/pager.ts';
 import { closePanel } from '../ui/panel.js';
 
 export const moreCommand = {

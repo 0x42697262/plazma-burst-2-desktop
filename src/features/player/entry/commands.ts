@@ -1,4 +1,4 @@
-import { print } from '../../../../desktop/dev/console/ui/log.js';
+import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { bindKey, unbindKey } from '#features/binds/index.ts';
 import { COORDINATE_ARGUMENTS, DISTANCE_WIDTH, HP_WIDTH, INDEX_WIDTH, NICKNAME_WIDTH, TEAM_WIDTH } from '../constants.ts';

@@ -1,7 +1,7 @@
 // "server": the dedicated host's commands ("npm run p2p-host", server/host.js), typed in
 // its terminal. Only on the dedicated host (`server: true`, src/console/kernel/core/mode.ts). "who",
 // "kick" and "say" are the same as their "server" subcommands, for short.
-import { print } from '../ui/log.js';
+import { print } from '../../../../src/console/kernel/ui/log.ts';
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { SERVER } from '../../../../src/console/kernel/core/mode.ts';
 import {

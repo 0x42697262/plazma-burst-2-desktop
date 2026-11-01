@@ -19,7 +19,7 @@
 // (panel, log, pager), commands/ (one module per command group, all in the registry),
 // dispatch.js (running a typed line).
 import './commands/index.js';
-import { print, TAG } from './ui/log.js';
+import { print, TAG } from '../../../src/console/kernel/ui/log.ts';
 import { buildPanel, updateStatus, updateStatusIfOpen, openPanel, closePanel, onKeyDownCapture, onKeyUpCapture } from './ui/panel.js';
 import { COLOR } from '../../../src/console/kernel/core/keys.ts';
 import { errorBudget } from '../../../src/console/kernel/core/guard.ts';

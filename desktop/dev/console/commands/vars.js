@@ -1,6 +1,6 @@
 // "vars": the map's trigger variables. List, read, change, remove, and sync to the match.
-import { print } from '../ui/log.js';
-import { showPaged, takePage } from '../ui/pager.js';
+import { print } from '../../../../src/console/kernel/ui/log.ts';
+import { showPaged, takePage } from '../../../../src/console/kernel/ui/pager.ts';
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { plural } from '../../../../src/console/kernel/core/words.ts';
 import { game } from '../../../../src/console/kernel/game/bindings.ts';

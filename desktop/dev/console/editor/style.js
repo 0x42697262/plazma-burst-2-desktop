@@ -2,8 +2,8 @@
 // and buttons in its Dark theme, its 16x16 object icons (level_editor/icons16/<kind>.gif, loaded
 // from the site like the rest of the game), and small builders for its elements. Sizes
 // are game units (the overlay is 800 x 400 of them).
-import { el } from '../ui/dom.js';
-import { IN_OVERLAY, swallow, markUi } from '../ui/theme.js';
+import { el } from '../../../../src/console/kernel/ui/dom.ts';
+import { IN_OVERLAY, swallow, markUi } from '../../../../src/console/kernel/ui/theme.ts';
 
 // Dark, like the game's own dark panels (HUD panel type 2, "#000000d9": the Esc menu's
 // side panels, where a match host sees the logs), with the map editor's Dark theme

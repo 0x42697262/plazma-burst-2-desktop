@@ -8,7 +8,7 @@
 // too. Not sent (your client only) when the other clients would refuse it or run it
 // differently: forced, "as" another character (the server always makes the sender the
 // activator), or while spectating.
-import { print } from '../ui/log.js';
+import { print } from '../../../../src/console/kernel/ui/log.ts';
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { plural, parseIndex } from '../../../../src/console/kernel/core/words.ts';
 import { game } from '../../../../src/console/kernel/game/bindings.ts';

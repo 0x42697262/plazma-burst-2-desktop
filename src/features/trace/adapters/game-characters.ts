@@ -1,8 +1,8 @@
 import { GAME_WIDTH, GAME_HEIGHT, game } from '#console/kernel/game/bindings.ts';
 import { GAME_FIELDS } from '#console/kernel/game/fields.ts';
 import { player, charAt, isDown, charLabel, BODY_MIDDLE, requireLevel, resolveChar, isActive } from '#console/kernel/game/level.ts';
-import { setLayer, hasLayer, toScreen, crosshair } from '../../../../desktop/dev/console/ui/overlay.js';
-import { drawLabels } from '../../../../desktop/dev/console/ui/labels.js';
+import { setLayer, hasLayer, toScreen, crosshair } from '#console/kernel/ui/overlay.ts';
+import { drawLabels } from '#console/kernel/ui/labels.ts';
 import { parseIndex } from '#console/kernel/core/words.ts';
 
 export type Character = { x: number; y: number; team: unknown; login?: unknown; nickname?: unknown; [field: string]: unknown };
@@ -32,7 +32,7 @@ export const traceOverlay = {
   width: GAME_WIDTH as number,
   height: GAME_HEIGHT as number,
   setLayer: (name: string, draw: Layer): void => { (setLayer as (name: string, draw: Layer) => void)(name, draw); },
-  hasLayer: (name: string): boolean => (hasLayer as (name: string) => boolean)(name),
+  hasLayer: (name: string): boolean => hasLayer(name),
   toScreen: (transform: Transform, point: ScreenPoint): ScreenPoint => (toScreen as (transform: Transform, point: ScreenPoint) => ScreenPoint)(transform, point),
   crosshair: (transform: Transform): unknown => (crosshair as (transform: Transform) => unknown)(transform),
   drawLabels: (context: CanvasRenderingContext2D, items: LabelItem[], cursor: unknown, bounds: { w: number; h: number }): unknown => (drawLabels as (context: CanvasRenderingContext2D, items: LabelItem[], cursor: unknown, bounds: { w: number; h: number }) => unknown)(context, items, cursor, bounds),

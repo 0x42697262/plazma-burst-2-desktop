@@ -11,7 +11,7 @@ let game;
 before(async () => { game = await bootConsole(); });
 
 test('trace draws a white line from you to each traced character', async () => {
-  const overlay = await consoleModule('ui/overlay.js');
+  const overlay = await consoleModule('../../../src/console/kernel/ui/overlay.ts');
   const cam = game.G.game;
   cam.x = 100; cam.y = 50; cam.scaleX = cam.scaleY = 1;
   // You at (0, 0), bob (#1) at (100, -50), bluebot (#2) at (600, 100). Set here: earlier

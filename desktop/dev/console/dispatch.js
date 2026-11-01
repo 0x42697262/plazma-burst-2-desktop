@@ -1,6 +1,6 @@
 // Running a typed line: split a ";" chain, find each command in the registry, say when
 // it is client-only in multiplayer, and run it.
-import { print } from './ui/log.js';
+import { print } from '../../../src/console/kernel/ui/log.ts';
 import { COLOR } from '../../../src/console/kernel/core/keys.ts';
 import { plural, isHelpArg } from '../../../src/console/kernel/core/words.ts';
 import { game } from '../../../src/console/kernel/game/bindings.ts';

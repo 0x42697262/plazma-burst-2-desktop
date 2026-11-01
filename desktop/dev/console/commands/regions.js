@@ -1,5 +1,5 @@
 // "regions": the map's regions, and firing one without being in it.
-import { showPaged, takePage } from '../ui/pager.js';
+import { showPaged, takePage } from '../../../../src/console/kernel/ui/pager.ts';
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { requireLevel } from '../../../../src/console/kernel/game/level.ts';
 import { GAME_FIELDS } from '../../../../src/console/kernel/game/fields.ts';

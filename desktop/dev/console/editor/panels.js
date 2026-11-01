@@ -9,8 +9,8 @@
 // - The top line, between them: how the mouse works, edits the running level does not
 //   have, messages.
 // They are drawn from the session and drawn again when it changes. The look is style.js.
-import { el } from '../ui/dom.js';
-import { IN_OVERLAY } from '../ui/theme.js';
+import { el } from '../../../../src/console/kernel/ui/dom.ts';
+import { IN_OVERLAY } from '../../../../src/console/kernel/ui/theme.ts';
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { game } from '../../../../src/console/kernel/game/bindings.ts';
 import { KINDS, KIND_TAGS, NOT_PLACED, kindOf, nameOf } from './kinds.js';

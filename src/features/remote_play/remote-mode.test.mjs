@@ -12,7 +12,7 @@ const REMOTE_CHILD = `
   const { bootConsole, CONSOLE_ENTRY } = await import(${JSON.stringify(pathToFileURL(path.join(REPO, 'test/fake-game.mjs')).href)});
   const c = await bootConsole();
   const at = (rel) => new URL(rel, ${JSON.stringify(pathToFileURL(path.join(REPO, 'desktop/dev/console/')).href)}).href;
-  const { attachLog, print } = await import(at('ui/log.js'));
+  const { attachLog, print } = await import(at('../../../src/console/kernel/ui/log.ts'));
   const { findRunnable } = await import(at('commands/registry.js'));
   const pane = { childNodes: [], append(n) { this.childNodes.push(n); }, get firstChild() { return this.childNodes[0]; }, scrollTop: 0, scrollHeight: 0 };
   attachLog(pane);
@@ -41,7 +41,7 @@ const SWEEP_CHILD = `
   const { bootConsole } = await import(${JSON.stringify(pathToFileURL(path.join(REPO, 'test/fake-game.mjs')).href)});
   const c = await bootConsole();
   const at = (rel) => new URL(rel, ${JSON.stringify(pathToFileURL(path.join(REPO, 'desktop/dev/console/')).href)}).href;
-  const { attachLog } = await import(at('ui/log.js'));
+  const { attachLog } = await import(at('../../../src/console/kernel/ui/log.ts'));
   const { helpEntries } = await import(at('commands/registry.js'));
   const pane = { childNodes: [], append(n) { this.childNodes.push(n); }, get firstChild() { return this.childNodes[0]; }, scrollTop: 0, scrollHeight: 0 };
   attachLog(pane);

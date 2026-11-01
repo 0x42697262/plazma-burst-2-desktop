@@ -1,6 +1,6 @@
 import { CATALOG } from '#shared/features/catalog.ts';
 import { reportLines } from '#kernel/flags/resolve.ts';
-import { print } from '../../../../desktop/dev/console/ui/log.js';
+import { print } from '../ui/log.ts';
 import { COLOR } from '../core/keys.ts';
 import { pageFlags } from '../../flags.ts';
 import { FEATURES_COMMAND } from './keys.ts';

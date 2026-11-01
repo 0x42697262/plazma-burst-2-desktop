@@ -1,6 +1,6 @@
 // "help" and the help renderers. All text comes from the command definitions (the
 // registry) and the settings schema: nothing here lists commands or keys by hand.
-import { print } from '../ui/log.js';
+import { print } from '../../../../src/console/kernel/ui/log.ts';
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { SCHEMA, ALIASES, resolveKey, aliasesOf, keyClientOnly, affectsGame, describeKey, showValue } from '../../../../src/console/kernel/state/schema.ts';
 import { settings } from '../../../../src/console/kernel/state/store.ts';

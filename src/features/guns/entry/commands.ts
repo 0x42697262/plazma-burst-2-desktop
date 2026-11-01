@@ -1,4 +1,4 @@
-import { print } from '../../../../desktop/dev/console/ui/log.js';
+import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { MAX_UPGRADE, MODEL_WIDTH, NUMBER_WIDTH, SLOT_WIDTH } from '../constants.ts';
 import { ALL_WORD, COMMAND, GUN_KINDS, INDEX_PREFIX, MATCH_SEPARATOR, NUMBER_WORD, TARGET_WORD, WORD_SEPARATOR, YOU } from '../keys.ts';

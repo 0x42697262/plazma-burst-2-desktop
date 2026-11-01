@@ -1,4 +1,4 @@
-import { print } from '../../../../desktop/dev/console/ui/log.js';
+import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { takeOptions } from '#console/kernel/core/args.ts';
 import { agoText } from '#console/kernel/core/words.ts';

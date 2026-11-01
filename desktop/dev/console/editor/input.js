@@ -14,9 +14,9 @@
 // without moving takes the one below it instead. Place tool: a click adds an element of the current layer there;
 // a rectangle can be dragged out instead. Positions snap to SNAP units; with Alt held
 // they do not. A drag is one step for undo.
-import { isUi } from '../ui/theme.js';
+import { isUi } from '../../../../src/console/kernel/ui/theme.ts';
 import { game, GAME_WIDTH, GAME_HEIGHT } from '../../../../src/console/kernel/game/bindings.ts';
-import { currentTransform, toWorld } from '../ui/overlay.js';
+import { currentTransform, toWorld } from '../../../../src/console/kernel/ui/overlay.ts';
 import { kindOf, anchorOf, SHAPE } from './kinds.js';
 import { liveBounds } from './live.js';
 import {

@@ -1,4 +1,4 @@
-import { print } from '../../../../desktop/dev/console/ui/log.js';
+import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { game } from '#console/kernel/game/bindings.ts';
 import { GAME_FIELDS } from '#console/kernel/game/fields.ts';

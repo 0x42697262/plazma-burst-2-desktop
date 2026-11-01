@@ -1,5 +1,5 @@
-import { print } from '../../../../desktop/dev/console/ui/log.js';
-import { showPaged, takePage } from '../../../../desktop/dev/console/ui/pager.js';
+import { print } from '#console/kernel/ui/log.ts';
+import { showPaged, takePage } from '#console/kernel/ui/pager.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { agoText } from '#console/kernel/core/words.ts';
 import { CONNECTION_KIND_COLUMN_WIDTH, KILOBYTE, RUN_INDEX_WIDTH, RUN_NAME_COLUMN_WIDTH, RUN_OWNER_COLUMN_WIDTH, RUN_SIZE_COLUMN_WIDTH, SIZE_DECIMALS } from '../constants.ts';
@@ -35,7 +35,7 @@ function colorOf(parsed: ParsedLine | null): string {
 
 function pageOf(args: readonly string[]): { args: string[]; page: number } {
   const taken = takePage(args);
-  return { args: taken.args as string[], page: taken.page };
+  return { args: taken.args, page: taken.page };
 }
 
 const usage = (text: string): Error => new Error(COMMAND_TEXT.usageError(text));

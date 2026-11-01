@@ -1,4 +1,4 @@
-import { print } from '../../../../desktop/dev/console/ui/log.js';
+import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { EDIT_WORDS, NAME_COLUMN_WIDTH, PING_GOOD_MS, PING_OK_MS, SUBCOMMAND_WORDS } from '../constants.ts';
 import { COMMAND, FETCH_FINGERPRINT_WORD, MASKED_PASSWORD_REPLACEMENT, OFFICIAL_ID, OPERATION, PASSWORD_IN_LINE, WORD_SEPARATOR, hostPortOf } from '../keys.ts';

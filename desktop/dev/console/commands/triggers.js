@@ -1,6 +1,6 @@
 // "triggers": list the map's triggers, show one, search them, run one, and the run log.
-import { print } from '../ui/log.js';
-import { showPaged, takePage } from '../ui/pager.js';
+import { print } from '../../../../src/console/kernel/ui/log.ts';
+import { showPaged, takePage } from '../../../../src/console/kernel/ui/pager.ts';
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { plural, pluralSuffix, agoText, parseIndex } from '../../../../src/console/kernel/core/words.ts';
 import { game } from '../../../../src/console/kernel/game/bindings.ts';

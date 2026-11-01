@@ -1,4 +1,4 @@
-import { print } from '../../../../desktop/dev/console/ui/log.js';
+import { print } from '../ui/log.ts';
 import { COLOR } from '../core/keys.ts';
 import { SCHEMA, ALIASES, unphrase } from '../state/schema.ts';
 import { showKey, baseKey, GAME_KEYS } from '../state/key-names.ts';

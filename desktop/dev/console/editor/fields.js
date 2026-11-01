@@ -1,7 +1,7 @@
 // A value that turns into a text box when clicked, as in the map editor's params: Enter
 // applies it, Esc or clicking elsewhere leaves it as it was. `choices` offers
 // completions (a datalist): strings, or { value, label }.
-import { el } from '../ui/dom.js';
+import { el } from '../../../../src/console/kernel/ui/dom.ts';
 import { PALETTE, FONT, FONT_SIZE } from './style.js';
 
 let lists = 0;

@@ -1,6 +1,6 @@
 import { FEATURE } from '#shared/features/keys.ts';
 import type { ConsoleFeature } from '#console/feature-types.ts';
-import { print } from '../../../desktop/dev/console/ui/log.js';
+import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { JOIN_TICK_MS } from './constants.ts';
 import { JOIN_TEXT } from './text.ts';

@@ -1,5 +1,5 @@
 // "editor": the in-game map editor, on and off (also its hotkey, editor_key).
-import { print } from '../ui/log.js';
+import { print } from '../../../../src/console/kernel/ui/log.ts';
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { showKey } from '../../../../src/console/kernel/state/key-names.ts';
 import { KEY } from '../../../../src/console/kernel/state/schema.ts';
@@ -18,7 +18,7 @@ import { nameOf, kindOf, KINDS, KIND_TAGS, SHAPE } from '../editor/kinds.js';
 import { player } from '../../../../src/console/kernel/game/level.ts';
 import { inputStatus } from '../editor/input.js';
 import { panelsOnPage } from '../editor/panels.js';
-import { hasLayer } from '../ui/overlay.js';
+import { hasLayer } from '../../../../src/console/kernel/ui/overlay.ts';
 import { REMOTE } from '../../../../src/console/kernel/core/mode.ts';
 
 const ON_WORDS = ['on', '1', 'true', 'yes'];

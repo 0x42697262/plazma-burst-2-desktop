@@ -1,4 +1,4 @@
-import { print } from '../../../../desktop/dev/console/ui/log.js';
+import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { NAME_WIDTH, STATUS_WIDTH } from '../constants.ts';
 import { COMMAND, GLOBAL, STATUS } from '../keys.ts';

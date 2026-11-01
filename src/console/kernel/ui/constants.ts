@@ -1,0 +1,16 @@
+export const FONT_SIZE = 5;
+export const CHARACTER_WIDTH_RATIO = 0.61;
+export const CHAR_WIDTH = FONT_SIZE * CHARACTER_WIDTH_RATIO;
+export const LINE_HEIGHT = FONT_SIZE + 1;
+export const PAD = 1;
+export const GROUP_RADIUS = 5;
+export const HOVER_RADIUS = 12;
+export const COLLAPSED_LINES = 3;
+export const OPEN_LINES = 24;
+export const LABEL_OFFSET = 3;
+export const LABEL_GAP = 1;
+export const LABEL_SHIFTS = 3;
+export const MOVED_LABEL_DISTANCE = PAD * 4;
+export const BOTH_SIDES = 2;
+export const OVERLAY_MARGIN = 40;
+export const PAGE_WORD_COUNT = 2;

@@ -4,8 +4,8 @@
 // what points at it; uids at the far ends), the rectangle being placed, and quick-pick
 // markers.
 import { GAME_WIDTH, GAME_HEIGHT } from '../../../../src/console/kernel/game/bindings.ts';
-import { setLayer, drawOverlay, toScreen, crosshair } from '../ui/overlay.js';
-import { drawLabels } from '../ui/labels.js';
+import { setLayer, drawOverlay, toScreen, crosshair } from '../../../../src/console/kernel/ui/overlay.ts';
+import { drawLabels } from '../../../../src/console/kernel/ui/labels.ts';
 import { buildGraph, nameless } from '../logic/graph.js';
 import { kindOf } from './kinds.js';
 import { liveBounds } from './live.js';

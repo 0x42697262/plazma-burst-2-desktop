@@ -1,7 +1,7 @@
-import { print } from '../../../../desktop/dev/console/ui/log.js';
+import { print } from '#console/kernel/ui/log.ts';
 import { setPanelHidden } from '../../../../desktop/dev/console/ui/panel.js';
-import { el } from '../../../../desktop/dev/console/ui/dom.js';
-import { IN_OVERLAY } from '../../../../desktop/dev/console/ui/theme.js';
+import { el } from '#console/kernel/ui/dom.ts';
+import { IN_OVERLAY } from '#console/kernel/ui/theme.ts';
 import { game } from '#console/kernel/game/bindings.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { takeOptions } from '#console/kernel/core/args.ts';

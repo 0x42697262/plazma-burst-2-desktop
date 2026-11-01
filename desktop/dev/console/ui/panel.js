@@ -1,9 +1,9 @@
 // The console window, styled after the game's "View logs" panel (800x400 game units),
 // and the keys it reacts to: Shift+` toggles it, Esc closes it, binds run in levels.
 import { isFeatureOn } from '../../../../src/console/flags.ts';
-import { el } from './dom.js';
-import { THEME, IN_OVERLAY, swallow, markUi } from './theme.js';
-import { print, attachLog, clearLog } from './log.js';
+import { el } from '../../../../src/console/kernel/ui/dom.ts';
+import { THEME, IN_OVERLAY, swallow, markUi } from '../../../../src/console/kernel/ui/theme.ts';
+import { print, attachLog, clearLog } from '../../../../src/console/kernel/ui/log.ts';
 import { complete } from './complete.js';
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { game } from '../../../../src/console/kernel/game/bindings.ts';

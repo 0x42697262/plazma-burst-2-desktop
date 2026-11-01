@@ -274,7 +274,7 @@ test('logic screen keeps only what the camera shows, as it moves', async () => {
 });
 
 test('logic labels never overlap: grouped, collapsed, opened by the crosshair', async () => {
-  const { layoutLabels } = await consoleModule('ui/labels.js');
+  const { layoutLabels } = await consoleModule('../../../src/console/kernel/ui/labels.ts');
   const bounds = { w: 800, h: 400 };
   const hit = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
   const overlapping = (ls) => ls.some((a, i) => ls.some((b, j) => j > i && hit(a, b)));
@@ -560,7 +560,7 @@ test('editor: on and off by its key, outlines every object, selects by click and
     assert.equal(doc.ordinal(session.pickAt(at)), 1, 'and round again');
     assert.equal(session.pickAt({ x: 1000, y: 1000 }), null, 'nothing there: deselect');
     // Screen to world and back: the fake canvas is 800x400 on screen, as wide as the game.
-    const { currentTransform, toScreen } = await consoleModule('ui/overlay.js');
+    const { currentTransform, toScreen } = await consoleModule('../../../src/console/kernel/ui/overlay.ts');
     const back = toScreen(currentTransform(), worldOfEvent({ clientX: 110, clientY: 60 }));
     assert.ok(Math.abs(back.x - 110) < 1e-9 && Math.abs(back.y - 60) < 1e-9, JSON.stringify(back));
 
@@ -614,7 +614,7 @@ test('editor: on and off by its key, outlines every object, selects by click and
 test('editor: edits go into the running level, in any mode, and again after a restart; drag moves and resizes', async () => {
   const session = await consoleModule('editor/session.js');
   const { mouse, grabOf, dragPlace } = await consoleModule('editor/input.js');
-  const { currentTransform, toScreen } = await consoleModule('ui/overlay.js');
+  const { currentTransform, toScreen } = await consoleModule('../../../src/console/kernel/ui/overlay.ts');
   const original = c.G[c.N.mapText];
   const quiet = (line) => c.run(line).filter((l) => !l.startsWith('Note:'));
   // A mouse event at a world point, through the screen the way a real one comes in.
@@ -721,7 +721,7 @@ test('editor: edits go into the running level, in any mode, and again after a re
 test('editor tools: place, copy, delete and undo; live edits still reach the right game object', async () => {
   const session = await consoleModule('editor/session.js');
   const { mouse } = await consoleModule('editor/input.js');
-  const { currentTransform, toScreen } = await consoleModule('ui/overlay.js');
+  const { currentTransform, toScreen } = await consoleModule('../../../src/console/kernel/ui/overlay.ts');
   const original = c.G[c.N.mapText];
   const quiet = (line) => c.run(line).filter((l) => !l.startsWith('Note:'));
   const at = (p, extra = {}) => { const s = toScreen(currentTransform(), p); return { button: 0, clientX: s.x, clientY: s.y, ...extra }; };
@@ -1101,7 +1101,7 @@ test('editor: Params shows every parameter of the kind, with the editor\'s title
 test('editor: an object parameter is picked by clicking the object in the world, as in the map editor', async () => {
   const session = await consoleModule('editor/session.js');
   const { drawEditorFrame } = await consoleModule('editor/view.js');
-  const { currentTransform, toScreen } = await consoleModule('ui/overlay.js');
+  const { currentTransform, toScreen } = await consoleModule('../../../src/console/kernel/ui/overlay.ts');
   const overlay = c.G[c.N.uiOverlay].overlay;
   // The node whose own text is `text`, and the params row it is in.
   const find = (node, text) => {

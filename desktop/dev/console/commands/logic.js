@@ -1,7 +1,7 @@
 // "logic": how the map's regions, triggers, timers, doors and the rest are wired.
 // "logic show" draws it over the level; "logic <uid>" prints one element as a tree.
-import { print } from '../ui/log.js';
-import { showPaged, takePage } from '../ui/pager.js';
+import { print } from '../../../../src/console/kernel/ui/log.ts';
+import { showPaged, takePage } from '../../../../src/console/kernel/ui/pager.ts';
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { plural } from '../../../../src/console/kernel/core/words.ts';
 import { requireLevel } from '../../../../src/console/kernel/game/level.ts';

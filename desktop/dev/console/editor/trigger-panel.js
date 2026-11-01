@@ -2,7 +2,7 @@
 // (each action's name, then its A and B), with an action added, removed or changed in
 // place; or, after "Edit triggers as text", the whole trigger as the editor's text view
 // (the format "triggers exec" reads), applied in one go.
-import { el } from '../ui/dom.js';
+import { el } from '../../../../src/console/kernel/ui/dom.ts';
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { actionInfo, opcodeName, opcodeType } from '../triggers/script.js';
 import { actionsOf, actionValues, triggerText, valuesFromText } from './actions.js';

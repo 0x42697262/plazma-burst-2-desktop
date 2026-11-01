@@ -10,7 +10,7 @@ import { settings } from '../../../../src/console/kernel/state/store.ts';
 import { force, original, restore, restoreObj, restoreAll } from './force.js';
 import { installGod, uninstallGodExcept, uninstallAllGod } from './god.js';
 import { heldBack, guarding, REASON, BYPASS_HINT } from './server-checks.js';
-import { print } from '../ui/log.js';
+import { print } from '../../../../src/console/kernel/ui/log.ts';
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 
 // The game's walk acceleration per tick, which "speed" scales.

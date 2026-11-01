@@ -1,7 +1,7 @@
 import { FEATURE } from '#shared/features/keys.ts';
 import type { ConsoleFeature } from '#console/feature-types.ts';
 import { gameNetwork } from '#console/kernel/game/network.ts';
-import { print } from '../../../desktop/dev/console/ui/log.js';
+import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { REMOTE } from '#console/kernel/core/mode.ts';
 import { isJoiningPrivateServer } from '#features/server_list/index.ts';

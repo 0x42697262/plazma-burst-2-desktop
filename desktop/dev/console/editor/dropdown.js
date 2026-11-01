@@ -6,8 +6,8 @@
 // params, the categories along the top in their colours (Everything, ..., Do Nothing),
 // and a search field.
 // It closes on a choice, Esc, or a press anywhere else.
-import { el } from '../ui/dom.js';
-import { IN_OVERLAY, swallow, markUi } from '../ui/theme.js';
+import { el } from '../../../../src/console/kernel/ui/dom.ts';
+import { IN_OVERLAY, swallow, markUi } from '../../../../src/console/kernel/ui/theme.ts';
 import { game, GAME_WIDTH, GAME_HEIGHT } from '../../../../src/console/kernel/game/bindings.ts';
 import { FONT, FONT_SIZE, PALETTE, icon, scrolling } from './style.js';
 import { actionCategories } from './params.js';
