@@ -25,7 +25,7 @@ import { COLOR } from './core/colors.js';
 import { errorBudget } from './core/guard.js';
 import { plural } from './core/text.js';
 import { game } from './game/bindings.js';
-import { namesMissing } from './game/names.js';
+import { namesMissing, CLIENT_TITLE, FIND_NAMES } from './game/names.js';
 import { load, reload as reloadStore, settings, binds, profiles, loadProblems, setMapSource } from './state/store.js';
 import { currentMapId } from './game/level.js';
 import { profileTick } from './commands/profile.js';
@@ -72,9 +72,9 @@ function start(source) {
   document.addEventListener('keydown', onKeyDownCapture, true);
   document.addEventListener('keyup', onKeyUpCapture, true);
   updateStatus();
-  if (!SERVER) print('Plazma Burst 2 dev console. Type "help". Toggle with Shift+` (~).', COLOR.bright);
+  if (!SERVER) print(`${CLIENT_TITLE} dev console. Type "help". Toggle with Shift+\` (~).`, COLOR.bright);
   if (namesMissing.length) {
-    const msg = `Game names not found: ${namesMissing.join(', ')}. Commands that use them will fail. Run "npm run find-names" (see README.md).`;
+    const msg = `Game names not found: ${namesMissing.join(', ')}. Commands that use them will fail. Run "${FIND_NAMES}" (see README.md).`;
     print(msg, COLOR.error);
     console.error(`${TAG} ${msg}`);
   }

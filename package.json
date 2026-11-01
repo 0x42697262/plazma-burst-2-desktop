@@ -7,6 +7,7 @@
   "scripts": {
     "start": "electron .",
     "start:verbose": "electron . --verbose",
+    "sadburst": "electron . --sadburst",
     "fetch-game": "node tools/fetch-game.js",
     "find-names": "node tools/find-names.js",
     "fetch-opcodes": "node tools/fetch-opcodes.js",

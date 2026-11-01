@@ -3,6 +3,10 @@
 // "npm run find-names". Only the modules in game/ use these keys.
 
 export const N = globalThis.PB2_NAMES || {};
+// Sad Burst 2 (desktop/clients.js): its names file says so in its version.
+export const SADBURST = String(N.version || '').startsWith('sadburst-');
+export const CLIENT_TITLE = SADBURST ? 'Sad Burst 2' : 'Plazma Burst 2';
+export const FIND_NAMES = SADBURST ? 'npm run find-names -- --sadburst' : 'npm run find-names';
 export const namesMissing = globalThis.PB2_NAMES
   ? Object.keys(N).filter((k) => !N[k])
   : ['(names.js not loaded)'];
@@ -10,7 +14,7 @@ export const namesMissing = globalThis.PB2_NAMES
 export function nameOf(key) {
   const name = N[key];
   // Missing: not found in this game version, or names.js is older than the console.
-  if (!name) throw new Error(`game name "${key}" is not in desktop/dev/names.js. Run "npm run find-names", then restart the app.`);
+  if (!name) throw new Error(`game name "${key}" is not in ${SADBURST ? 'desktop/dev/names.sadburst.js' : 'desktop/dev/names.js'}. Run "${FIND_NAMES}", then restart the app.`);
   return name;
 }
 
