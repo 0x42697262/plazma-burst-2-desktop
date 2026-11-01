@@ -4,12 +4,18 @@ node_modules/
 /game/
 /game.previous/
 /game.download/
+# Sad Burst 2 ("npm run fetch-game -- --sadburst"), desktop/clients.js.
+/game.sadburst/
+/game.sadburst.previous/
+/game.sadburst.download/
 
 # Generated from the game files with "npm run find-names".
 desktop/dev/names.js
+desktop/dev/names.sadburst.js
 
 # The map editor's trigger action names, from "npm run fetch-opcodes".
 desktop/dev/opcodes.js
+desktop/dev/opcodes.sadburst.js
 
 # Screenshots taken with the dev console's "screenshot"
 /screenshots/

@@ -83,3 +83,18 @@ mark_pairs['mark_he_nades_count'] = 'value>=0+round1';
 mark_pairs['mark_watercolor']="string";`;
   assert.deepEqual(parseMarkPairs(src), { sky: 'sky_model', he_nades_count: 'value>=0+round1', watercolor: 'string' });
 });
+
+// Sad Burst 2's editor bundles the same file minified: statements joined by commas and
+// a.b for a["b"].
+test('fetch-opcodes reads the minified editor bundle too', () => {
+  const { parseParams, parseParamTable, parseMarkPairs } = createRequire(import.meta.url)('../tools/fetch-opcodes.js');
+  const src = 'addTrigger(0,"Movable &#8250; Force Movable \'A\' move to region \'B\'","door","region"),AddOpcodeAlias("MovableTo"),'
+    + 'param_type[23]=["use_on","region_activation","Activation on","When it runs","region"],'
+    + 'special_values_table.region_activation[1]="\'\'USE\'\' key",special_values_table["textmsg"]["[color]"]="Custom color",'
+    + 'mark_pairs.mark_sky="sky_model",x=1';
+  assert.deepEqual(parseParams(src).aliases, { MovableTo: 0 });
+  const { params, values } = parseParamTable(src);
+  assert.equal(params[0].name, 'use_on');
+  assert.deepEqual(values, { region_activation: { 1: "''USE'' key" }, textmsg: { '[color]': 'Custom color' } });
+  assert.deepEqual(parseMarkPairs(src), { sky: 'sky_model' });
+});

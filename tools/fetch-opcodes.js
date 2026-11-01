@@ -15,13 +15,20 @@
 // kind offers: special_values_table['region_activation'][9] = "''USE'' key, only Red team ...".
 // The editor page needs a login, its scripts do not.
 //
-// Usage: node tools/fetch-opcodes.js [--from file] [--out file]
-//   --from  read a saved lib_params.js instead of downloading it
-//   --out   target file (default: desktop/dev/opcodes.js)
+// Sad Burst 2 (--sadburst, desktop/clients.js): its editor bundles the same file, minified,
+// into scripts/ale/ale-all.js (statements joined with commas, "a.b" for a["b"]); the
+// patterns below take both forms. It has no server for the value lists.
+//
+// Usage: node tools/fetch-opcodes.js [--sadburst] [--from file] [--out file]
+//   --sadburst  the Sad Burst 2 editor, into desktop/dev/opcodes.sadburst.js
+//               ("npm run fetch-opcodes --sadburst")
+//   --from      read a saved lib_params.js instead of downloading it
+//   --out       target file (default: desktop/dev/opcodes.js)
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
+const { clientFor, withoutClientFlag } = require('../desktop/clients');
 
 const REPO = path.join(__dirname, '..');
 const SOURCE_URL = 'https://www.plazmaburst2.com/level_editor/editor_scripts/lib_params.js';
@@ -30,7 +37,6 @@ const SOURCE_URL = 'https://www.plazmaburst2.com/level_editor/editor_scripts/lib
 const LISTS_URL = 'https://www.plazmaburst2.com/level_editor/e_server.php?a=request_consts';
 const SERVER_LISTS = Object.freeze(['char', 'decor_model', 'bg_model']);
 const UA = 'Mozilla/5.0 (pb2-desktop fetch-opcodes)';
-const OUT = path.join(REPO, 'desktop', 'dev', 'opcodes.js');
 // Sanity checks: a list much shorter than this, or these aliases on other numbers,
 // means the file changed shape and the result cannot be trusted.
 const MIN_ACTIONS = 400;
@@ -97,7 +103,11 @@ function parseParams(src) {
 }
 
 const PARAM = new RegExp(String.raw`\bparam_type\[\s*\d+\s*\]\s*=\s*\[\s*(${STRING})\s*,\s*(${STRING})\s*,\s*(${STRING})\s*,\s*(${STRING})\s*,\s*(${STRING})\s*\]`, 'g');
-const VALUE = new RegExp(String.raw`\bspecial_values_table\[\s*(${STRING})\s*\]\[\s*(-?\d+|${STRING})\s*\]\s*=\s*(${STRING})\s*;`, 'g');
+// A property as a["b"] or, minified, a.b: the name is group 1 (quoted) or group 2 (bare).
+const PROP = String.raw`(?:\[\s*(${STRING})\s*\]|\.([A-Za-z_$][\w$]*))`;
+const END = String.raw`\s*(?=[;,)\n]|$)`;
+const VALUE = new RegExp(String.raw`\bspecial_values_table${PROP}\[\s*(-?\d+|${STRING})\s*\]\s*=\s*(${STRING})${END}`, 'g');
+const propName = (quoted, bare) => (quoted !== undefined ? unquote(quoted) : bare);
 
 // params: [{ name, kind, title, desc, cls }] in the editor's order; values: { kind:
 // { value: label } }. Lists the editor builds in loops or from other files are left as
@@ -109,22 +119,22 @@ function parseParamTable(src) {
   }));
   const values = {};
   for (const m of code.matchAll(VALUE)) {
-    const kind = unquote(m[1]);
-    const key = /^-?\d+$/.test(m[2]) ? m[2] : unquote(m[2]);
+    const kind = propName(m[1], m[2]);
+    const key = /^-?\d+$/.test(m[3]) ? m[3] : unquote(m[3]);
     if (/^\[listof/.test(key)) continue; // which objects the editor lists, not a value ("[val]" is kept: "type a number")
-    (values[kind] ||= {})[key] = plainText(unquote(m[3]));
+    (values[kind] ||= {})[key] = plainText(unquote(m[4]));
   }
   return { params, values };
 }
 
 // { mark: kind } for the engine marks whose parameter has a kind of its own (the
 // editor's mark_pairs['mark_sky'] = 'sky_model'; the others are free text).
-const MARK_PAIR = new RegExp(String.raw`\bmark_pairs\[\s*(${STRING})\s*\]\s*=\s*(${STRING})\s*;`, 'g');
+const MARK_PAIR = new RegExp(String.raw`\bmark_pairs${PROP}\s*=\s*(${STRING})${END}`, 'g');
 function parseMarkPairs(src) {
   const out = {};
   for (const m of stripComments(src).matchAll(MARK_PAIR)) {
-    const key = unquote(m[1]);
-    if (key.startsWith('mark_')) out[key.slice('mark_'.length)] = unquote(m[2]);
+    const key = propName(m[1], m[2]);
+    if (key.startsWith('mark_')) out[key.slice('mark_'.length)] = unquote(m[3]);
   }
   return out;
 }
@@ -190,26 +200,29 @@ async function fetchServerLists() {
 }
 
 async function main() {
-  const argv = process.argv.slice(2);
+  const client = clientFor();
+  const argv = withoutClientFlag(process.argv.slice(2));
+  const sourceUrl = client.editorScript || SOURCE_URL;
   let from = null;
-  let out = OUT;
+  let out = client.opcodes;
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--from') from = argv[++i];
     else if (argv[i] === '--out') out = path.resolve(argv[++i]);
     else if (argv[i] === '-h' || argv[i] === '--help') {
-      console.log('Usage: node tools/fetch-opcodes.js [--from lib_params.js] [--out file]');
+      console.log('Usage: node tools/fetch-opcodes.js [--sadburst] [--from lib_params.js] [--out file]');
       return;
     } else throw new Error(`Unknown argument: ${argv[i]}`);
   }
   let src;
   if (from) src = fs.readFileSync(from, 'utf8');
   else {
-    const res = await fetch(SOURCE_URL, { headers: { 'User-Agent': UA } });
-    if (res.status !== 200) throw new Error(`${SOURCE_URL}: HTTP ${res.status}`);
+    const res = await fetch(sourceUrl, { headers: { 'User-Agent': UA } });
+    if (res.status !== 200) throw new Error(`${sourceUrl}: HTTP ${res.status}`);
+    if (!/javascript/.test(res.headers.get('content-type') || '')) throw new Error(`${sourceUrl}: not a script (the editor moved?)`);
     src = await res.text();
   }
   const table = { ...parseParams(src), ...parseParamTable(src) };
-  if (!from) Object.assign(table.values, await fetchServerLists());
+  if (!from && !client.editorScript) Object.assign(table.values, await fetchServerLists());
   table.categories = parseCategories(src, table.actions);
   table.markPairs = parseMarkPairs(src);
   const problems = check(table);
@@ -217,7 +230,7 @@ async function main() {
     for (const p of problems) console.error(`problem: ${p}`);
     throw new Error(`${out} not written`);
   }
-  fs.writeFileSync(out, render(table, from ? path.basename(from) : SOURCE_URL));
+  fs.writeFileSync(out, render(table, from ? path.basename(from) : sourceUrl));
   console.log(`Found ${Object.keys(table.actions).length} trigger actions (${Object.keys(table.aliases).length} with names), ${table.params.length} object parameters, ${Object.keys(table.values).length} value lists. Wrote ${path.relative(REPO, out)}`);
 }
 
