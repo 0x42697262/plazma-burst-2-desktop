@@ -79,7 +79,8 @@ Now `passwordForSave` (in `domain/server.ts`) decides:
 ## Joining in the page
 
 The wrapper sets `PB2_JOIN` (not enumerable) before any script: `{ address, nickname,
-password }`. The console's start hook (`services/join-client.ts`), every 100 ms:
+password }`. The page core's join client (`services/join-client.ts`, started by
+`page.ts`), every 100 ms:
 - **Lobby address**: points every lobby address start at
   `https://<address>/?`. The game builds the lobby address as
   `<start> + "plazmaburst2.com:" + port`, so what follows the `?` is a query the server
@@ -92,5 +93,5 @@ password }`. The console's start hook (`services/join-client.ts`), every 100 ms:
   screens (`scripts/frame1.js`, `frame2.js`) talk to the official site, so they sent
   nothing.
 
-The join runs in the console bundle. With `dev_console` off, joining a private server
-does not work.
+The join runs in the page core, not in the dev console, so joining a private server
+works with `dev_console` off.

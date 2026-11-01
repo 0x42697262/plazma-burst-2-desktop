@@ -7,7 +7,7 @@ import { INDEX_TEXT as TEXT } from './text.ts';
 export type JoinPage = { hostPort: string; nickname?: string; password?: string };
 export type IndexOptions = {
   hooks: ((html: string) => string) | null;
-  devScripts: string | null;
+  pageScripts: string | null;
   join: JoinPage | null;
   serverPage: unknown;
   remoteScript: string | null;
@@ -33,10 +33,10 @@ export function prepareIndex(source: string, options: IndexOptions): PreparedInd
   const warnings: string[] = [];
   const refused = (message: string): PreparedIndex => ({ html: null, errors: [...errors, message], warnings });
   let html = options.hooks ? options.hooks(source) : source;
-  if (options.devScripts !== null) {
+  if (options.pageScripts !== null) {
     const before = html;
-    html = html.includes(MAIN_SCRIPT_TAG) ? html.replace(MAIN_SCRIPT_TAG, MAIN_SCRIPT_TAG + options.devScripts) : html.replace(BODY_END, options.devScripts + BODY_END_TAG);
-    if (html === before) errors.push(TEXT.devNotInjected);
+    html = html.includes(MAIN_SCRIPT_TAG) ? html.replace(MAIN_SCRIPT_TAG, MAIN_SCRIPT_TAG + options.pageScripts) : html.replace(BODY_END, options.pageScripts + BODY_END_TAG);
+    if (html === before) errors.push(TEXT.pageNotInjected);
   }
   if (options.join && !options.remoteScript && !options.isServer) {
     const joined = beforeFirstScript(html, joinPageScript(options.join));

@@ -39,7 +39,8 @@ Each fact says where it was verified.
 ## Verification checklist
 One line per behavior change: what to do, and the result to expect.
 - Remote play redactor: `npm test`; the redactor case in `src/features/remote_play/domain.test.ts` hides a `docs/…` path
-- Console bundle: `npm run smoke` prints the console's `help`, so the game page loaded the `dist/console/` bundle.
+- Console bundle: `npm run smoke` prints the console's `help`, so the game page loaded `dist/page/` (page core and console).
+- Page core: `npm test` (src/page/page-core.test.ts). `PB2_FEATURES=-dev_console,-server_list npx electron . --log-level=debug` loads `__dev/page/page.js` and no `console.js`; on a private server, a task is not run and the terminal shows a `[pb2]` line.
 - Feature flags: `npm start -- --features` lists the flags. `PB2_FEATURES=-console_core npm start`
   stops with "cannot be turned off". `PB2_HOOKS=0 npm run smoke -- --run features`
   shows `hooks off env`.

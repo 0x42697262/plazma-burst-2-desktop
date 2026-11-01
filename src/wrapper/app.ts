@@ -3,7 +3,7 @@ import fsSync from 'node:fs';
 import path from 'node:path';
 import { app, BrowserWindow, Menu, dialog, protocol, net, session, ipcMain, type MenuItemConstructorOptions, type Session } from 'electron';
 import { CLIENTS } from '#kernel/config/clients.ts';
-import { CONSOLE_BUNDLE_DIR, CONSOLE_BUNDLE_FILE, DATA_DIR, REPO_ROOT } from '#kernel/config/paths.ts';
+import { CONSOLE_BUNDLE_FILE, DATA_DIR, PAGE_BUNDLE_DIR, PAGE_CORE_FILE, REPO_ROOT } from '#kernel/config/paths.ts';
 import { CLIENT, MODE, PAGE_FLAGS_GLOBAL } from '#shared/features/keys.ts';
 import { DEV_DIR, ROUTE_NAME } from '#shared/contract/keys.ts';
 import { REMOTE_PAGE_SCRIPT, SCALE_FACTOR_ONE, SCALE_FACTOR_SWITCH } from '#features/remote_play/keys.ts';
@@ -25,7 +25,7 @@ import { FILES_TEXT, PAGE_TEXT } from './platform/text.ts';
 import { createKvFile } from './platform/kv-file.ts';
 import { prepareIndex, pageGlobalScript, type JoinPage } from './platform/index-page.ts';
 import { createGameFiles, readGameVersion, checkSadburstBuild } from './platform/game-files.ts';
-import { createDevFiles, checkNamesFile, checkConsoleBundle } from './platform/dev-files.ts';
+import { createDevFiles, checkNamesFile, checkPageBundle } from './platform/dev-files.ts';
 import { textResponse, typedResponse } from './platform/responses.ts';
 import { logPage } from './platform/page-log.ts';
 import { createRemoteGames } from './platform/remote-games.ts';
@@ -51,6 +51,8 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
   const devPrefix = prefix + DEV_DIR;
   const hooksOn = flags.hooks.on;
   const devConsoleOn = flags.dev_console.on;
+  const hasPageCoreFeature = flags.lobby_task_guard.on || flags.server_list.on;
+  const pageCoreOn = devConsoleOn || hasPageCoreFeature;
   const devSettingsFile = path.join(DATA_DIR, client.settingsFileName);
   const serverSettingsFile = path.join(DATA_DIR, SETTINGS_FILE_NAME);
 
@@ -81,10 +83,10 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
   const isOn = (id: keyof typeof flags): boolean => flags[id].on;
   const intercept = createInterceptor(wrapper.features, isOn);
   const serveDev = createDevFiles({
-    consoleDir: CONSOLE_BUNDLE_DIR,
-    consoleEntry: CONSOLE_BUNDLE_FILE,
+    pageDir: PAGE_BUNDLE_DIR,
     namesFile: client.names,
     opcodesFile: client.opcodes,
+    consoleOn: devConsoleOn,
     router: createDevRouter(wrapper.features, isOn),
   });
   const gameFiles = createGameFiles({ root, log, keepMissing: isSadburst });
@@ -99,10 +101,12 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
   const devSettings = createKvFile(devSettingsFile, settingsEvents);
   const serverSettings = createKvFile(serverSettingsFile, settingsEvents);
 
-  const devScripts = pageGlobalScript(PAGE_FLAGS_GLOBAL, flags)
+  const pageCoreScripts = pageGlobalScript(PAGE_FLAGS_GLOBAL, flags)
     + scriptTag(DEV_DIR + ROUTE_NAME.names)
-    + scriptTag(DEV_DIR + ROUTE_NAME.opcodes)
-    + moduleScriptTag(DEV_DIR + ROUTE_NAME.console + CONSOLE_BUNDLE_FILE);
+    + moduleScriptTag(DEV_DIR + ROUTE_NAME.page + PAGE_CORE_FILE);
+  const consoleScripts = scriptTag(DEV_DIR + ROUTE_NAME.opcodes)
+    + moduleScriptTag(DEV_DIR + ROUTE_NAME.page + CONSOLE_BUNDLE_FILE);
+  const pageScripts = pageCoreOn ? pageCoreScripts + (devConsoleOn ? consoleScripts : '') : null;
 
   const localContext: PageContext = {
     remote: false,
@@ -124,7 +128,7 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
     const html = await fs.readFile(path.join(root, INDEX_FILE), TEXT_ENCODING);
     const prepared = prepareIndex(html, {
       hooks: hooksOn ? wrapper.hooks.injectIndex : null,
-      devScripts: devConsoleOn ? devScripts : null,
+      pageScripts,
       join: joinTarget(),
       serverPage,
       remoteScript: context.remote ? REMOTE_PAGE_SCRIPT : null,
@@ -140,7 +144,7 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
   async function serveLocal(url: URL, context: PageContext): Promise<Response> {
     let relative = decodeURIComponent(url.pathname.slice(prefix.length));
     if (relative === '' || relative.endsWith(FOLDER_END)) relative += INDEX_FILE;
-    const preparesIndex = devConsoleOn || hooksOn || context.remote || !!context.server || !!joinTarget();
+    const preparesIndex = pageCoreOn || hooksOn || context.remote || !!context.server || !!joinTarget();
     if (preparesIndex && relative === INDEX_FILE) return serveIndex(context);
     const hooked = hooksOn ? wrapper.hooks.changedScript(relative) : null;
     if (hooked !== null) return typedResponse(hooked, SCRIPT_TYPE, false);
@@ -153,7 +157,7 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
     const intercepted = await intercept(request, url, context);
     if (intercepted) return intercepted;
     if (url.hostname === host && url.pathname.startsWith(prefix)) {
-      if (devConsoleOn && url.pathname.startsWith(devPrefix)) return serveDev(decodeURIComponent(url.pathname.slice(devPrefix.length)), request, url, context);
+      if (pageCoreOn && url.pathname.startsWith(devPrefix)) return serveDev(decodeURIComponent(url.pathname.slice(devPrefix.length)), request, url, context);
       return serveLocal(url, context);
     }
     return context.fetch(request);
@@ -239,9 +243,9 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
       void checkSadburstBuild({ root, site: client.site, prefix, log, fetchLive: (url) => net.fetch(url, { bypassCustomProtocolHandlers: true, cache: NO_STORE }) });
     }
     log.debug(TEXT.debugLevel);
-    if (devConsoleOn) {
+    if (pageCoreOn) {
       checkNamesFile({ namesFile: client.names, repoRoot: REPO_ROOT, gameVersion: version, runFlag: client.runFlag, log });
-      checkConsoleBundle({ consoleDir: CONSOLE_BUNDLE_DIR, consoleEntry: CONSOLE_BUNDLE_FILE, log });
+      checkPageBundle({ pageDir: PAGE_BUNDLE_DIR, entries: devConsoleOn ? [PAGE_CORE_FILE, CONSOLE_BUNDLE_FILE] : [PAGE_CORE_FILE], log });
     }
     if (isRemoteHost || isDedicatedHost) await applyCredentials();
     else if (flags.cert_pinning.on) pinCertificates(session.defaultSession, joinTarget, log);

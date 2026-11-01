@@ -14,7 +14,8 @@ operator could run any code in the page. That page code can reach the wrapper's
 
 ## What it does
 
-When the page joins a private server (`PB2_JOIN` is set), the console's start hook puts
+When the page joins a private server (`PB2_JOIN` is set), the page core
+(`src/page/`, [ADR 0005](../adr/0005-editions-and-page-core.md)) puts
 an argument rewriter on the game connection class's receive method
 (`connClass.prototype[connRecv]`, through the kernel's `rewriteArguments`).
 - Because it sits on the class, it is in place before the first lobby connection
@@ -24,7 +25,10 @@ an argument rewriter on the game connection class's receive method
 - The game then evaluates only that, gets `undefined`, and sends no reply.
 - Everything else in the packet stays exactly as sent: acks, state, other messages.
   So the reliable stream has no gap.
-- The console prints once per packet that it replaced a task.
+- It reports once per packet that it replaced a task: in the dev console's panel, or,
+  without the console, in the terminal as a `[pb2]` line.
+- It does not need the dev console: the page core runs it in every app that has
+  `lobby_task_guard` on.
 
 The anti-tamper scan walks only the enumerable properties of `globalThis` and the
 network object, and compares each function's source

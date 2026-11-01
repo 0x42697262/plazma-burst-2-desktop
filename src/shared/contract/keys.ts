@@ -3,7 +3,7 @@ export const DEV_DIR = '__dev/';
 export const ROUTE_NAME = Object.freeze({
   names: 'names.js',
   opcodes: 'opcodes.js',
-  console: 'console/',
+  page: 'page/',
   kv: 'kv',
   maps: 'maps',
   saveMap: 'savemap',

@@ -8,9 +8,12 @@
   `features`, the panel, the settings store and the game adapter.
 
 ## How it works
-- The console is one bundle (`dist/console/index.js`) the wrapper serves as
-  `__dev/console/index.js` and adds to the game's index.html after the game's own
-  scripts, with `names.js`, `opcodes.js` and the page's flags (`PB2_FEATURES`) before it.
+- The console is `dist/page/console.js`, which the wrapper serves as
+  `__dev/page/console.js` and adds to the game's index.html after the game's own scripts,
+  after the page core (`page.js`, [ADR 0005](../adr/0005-editions-and-page-core.md)),
+  `names.js`, `opcodes.js` and the page's flags (`PB2_FEATURES`). The page core comes
+  without the console when only its features are on; the console shows the page core's
+  reports in its panel.
 - No game function is patched: the game's anti-tamper check compares function source.
   Values are forced from an ENTER_FRAME listener on the game stage
   (`kernel/overrides/frame.ts`) and put back when a setting is removed or the level ends.

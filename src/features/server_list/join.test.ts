@@ -9,8 +9,8 @@ test('join mode: the lobby address points at the server, the login is set from t
   const game = await bootConsole();
   const network = game.G[game.N.net] as Record<string, unknown>;
   network[game.N.lobbyHosts] = ['', 'https://vvvv.', 'https://www.'];
-  const tick = game.intervals[game.intervals.length - 1];
-  assert.ok(tick);
+  const tick = game.intervals[0];
+  assert.ok(tick, 'the page core starts the join client first, before the console');
   game.G.stage.currentFrameLabel = 'loading';
   tick();
   const before = { ...loaderInfo.parameters };

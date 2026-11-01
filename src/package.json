@@ -6,6 +6,7 @@
     "#features/*": "./features/*",
     "#console/*": "./console/*",
     "#wrapper/*": "./wrapper/*",
-    "#tools/*": "./tools/*"
+    "#tools/*": "./tools/*",
+    "#page/*": "./page/*"
   }
 }

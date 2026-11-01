@@ -25,7 +25,7 @@ Requirements: Node.js 22.18 or newer, npm.
 ```bash
 npm install          # Electron (its binary downloads on the first start)
 npm run fetch-game   # the game files, about 57 MB, about 1 minute
-npm start            # builds the dev console (dist/console/), then starts the game
+npm start            # builds the page scripts (dist/page/), then starts the game
 ```
 
 Working on the code: `npm run verify` runs lint, the type check, the tests and the build; see [AGENTS.md](AGENTS.md).

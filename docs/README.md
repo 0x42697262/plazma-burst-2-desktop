@@ -10,6 +10,7 @@
 - [0002 Layered feature flags, read-only at runtime](adr/0002-feature-flags-layered.md)
 - [0003 One folder per feature](adr/0003-feature-modules.md)
 - [0004 Versioned local files](adr/0004-versioned-local-files.md)
+- [0005 Editions, and a page core apart from the dev console](adr/0005-editions-and-page-core.md)
 
 ## Features
 - [hooks.md](features/hooks.md): changing the game's scripts as they are served

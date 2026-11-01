@@ -1,23 +1,24 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import * as esbuild from 'esbuild';
-import { REPO_ROOT, CONSOLE_BUNDLE_DIR, CONSOLE_BUNDLE_FILE } from '#kernel/config/paths.ts';
+import { REPO_ROOT, PAGE_BUNDLE_DIR } from '#kernel/config/paths.ts';
 import {
   LAUNCHER_DIST_DIR, LAUNCHER_PRELOAD_SOURCE, LAUNCHER_SCRIPT_SOURCE, LAUNCHER_SOURCE_DIR, LAUNCHER_STATIC_FILES,
 } from '#features/server_list/paths.ts';
 import { RUNTIME_BUNDLE, RUNTIME_SOURCE } from '#features/hooks/paths.ts';
 import { CLIENT_DIST_DIR, CLIENT_SCRIPT_SOURCE, CLIENT_SOURCE_DIR } from '#features/remote_play/paths.ts';
 import { CLIENT_SCRIPT_FILE, CLIENT_STATIC_FILES } from '#features/remote_play/keys.ts';
-import { BROWSER_TARGET, CONSOLE_SOURCE_ENTRY, ELECTRON_MODULE, LAUNCHER_PRELOAD_FILE, LAUNCHER_SCRIPT_FILE, NODE_TARGET } from './constants.ts';
+import { BROWSER_TARGET, CHUNK_NAMES, ELECTRON_MODULE, PAGE_ENTRIES, LAUNCHER_PRELOAD_FILE, LAUNCHER_SCRIPT_FILE, NODE_TARGET } from './constants.ts';
 
-export const defaultConsoleOutFile = path.join(CONSOLE_BUNDLE_DIR, CONSOLE_BUNDLE_FILE);
 
 const shared: esbuild.BuildOptions = { bundle: true, sourcemap: 'linked', legalComments: 'none', logLevel: 'warning' };
 
-export const consoleBuildOptions = (outfile: string = defaultConsoleOutFile): esbuild.BuildOptions => ({
+export const pageBuildOptions = (outdir: string = PAGE_BUNDLE_DIR): esbuild.BuildOptions => ({
   ...shared,
-  entryPoints: [path.join(REPO_ROOT, CONSOLE_SOURCE_ENTRY)],
-  outfile,
+  entryPoints: Object.fromEntries(Object.entries(PAGE_ENTRIES).map(([name, source]) => [name, path.join(REPO_ROOT, source)])),
+  outdir,
+  splitting: true,
+  chunkNames: CHUNK_NAMES,
   format: 'esm',
   platform: 'browser',
   target: BROWSER_TARGET,
@@ -82,9 +83,10 @@ export async function buildHooksRuntime(outfile: string = RUNTIME_BUNDLE): Promi
   return outfile;
 }
 
-export async function buildConsole(outfile: string = defaultConsoleOutFile): Promise<string> {
-  await esbuild.build(consoleBuildOptions(outfile));
-  return outfile;
+export async function buildPage(outdir: string = PAGE_BUNDLE_DIR): Promise<string> {
+  await fs.rm(outdir, { recursive: true, force: true });
+  await esbuild.build(pageBuildOptions(outdir));
+  return outdir;
 }
 
 export async function buildLauncher(outDir: string = LAUNCHER_DIST_DIR): Promise<string> {
@@ -93,11 +95,11 @@ export async function buildLauncher(outDir: string = LAUNCHER_DIST_DIR): Promise
 }
 
 export async function buildAll(): Promise<string[]> {
-  return Promise.all([buildConsole(), buildLauncher(), buildHooksRuntime(), buildRemoteClient()]);
+  return Promise.all([buildPage(), buildLauncher(), buildHooksRuntime(), buildRemoteClient()]);
 }
 
 export async function watchAll(): Promise<esbuild.BuildContext[]> {
-  const contexts = await Promise.all([consoleBuildOptions(), launcherPageOptions(), launcherPreloadOptions(), hooksRuntimeOptions(), remoteClientOptions()].map((options) => esbuild.context(options)));
+  const contexts = await Promise.all([pageBuildOptions(), launcherPageOptions(), launcherPreloadOptions(), hooksRuntimeOptions(), remoteClientOptions()].map((options) => esbuild.context(options)));
   await copyLauncherStatic(LAUNCHER_DIST_DIR);
   await copyRemoteClientStatic(CLIENT_DIST_DIR);
   await Promise.all(contexts.map((context) => context.watch()));

@@ -6,6 +6,7 @@ import { stringOf } from '#kernel/text/text-of.ts';
 
 const REPO = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 export const CONSOLE_ENTRY = path.join(REPO, 'src/console/index.ts');
+export const PAGE_ENTRY = path.join(REPO, 'src/page/index.ts');
 const DEFAULT_MAP_FILE = path.join(REPO, 'test/fixtures/map.xml');
 const FAKE_NAME_PREFIX = '__pb2_';
 const CONSOLE_PRINT_PREFIX = '[pb2dev] ';
@@ -72,7 +73,9 @@ const A_FEW_OF_THE_MAP_EDITORS_ACTIONS_OPCODES_JS_HAS_THEM_ALL = Object.freeze({
 
 const isWholeNumberText = (text: string) => String(parseInt(text)) === text;
 
-export async function bootConsole({ mapFile = DEFAULT_MAP_FILE, sayTrigger, entry = CONSOLE_ENTRY }: { mapFile?: string; sayTrigger?: string; entry?: string } = {}): Promise<FakeGame> {
+type BootOptions = { mapFile?: string; sayTrigger?: string; pageEntry?: string | null; entry?: string | null };
+
+export async function bootConsole({ mapFile = DEFAULT_MAP_FILE, sayTrigger, pageEntry = PAGE_ENTRY, entry = CONSOLE_ENTRY }: BootOptions = {}): Promise<FakeGame> {
   const globals: Record<string, any> = globalThis;
   const names: Record<string, any> = Object.fromEntries(expectedKeys().map((key) => [key, `${FAKE_NAME_PREFIX}${key}`]));
   names.version = 'vTEST';
@@ -288,10 +291,10 @@ export async function bootConsole({ mapFile = DEFAULT_MAP_FILE, sayTrigger, entr
   };
 
   const globalsBeforeConsole = Object.keys(globals);
-  await import(pathToFileURL(entry).href);
+  for (const script of [pageEntry, entry]) if (script !== null) await import(pathToFileURL(script).href);
   await new Promise((resolve) => { setImmediate(resolve); });
-  const bootPollFindsTheGameReadyAndStartsTheConsole = intervals.shift();
-  bootPollFindsTheGameReadyAndStartsTheConsole?.();
+  const bootPollFindsTheGameReadyAndStartsThePageCoreAndTheConsole = intervals.shift();
+  bootPollFindsTheGameReadyAndStartsThePageCoreAndTheConsole?.();
 
   return {
     G: globals, N: names, globals, names, log, store, chars, triggers, globalsBeforeConsole,

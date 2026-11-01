@@ -11,8 +11,8 @@ CI. The console is served to the game page file by file from
 ## Decision
 - Write all code in TypeScript (`strict`, `noUncheckedIndexedAccess`,
   `erasableSyntaxOnly`, `verbatimModuleSyntax`), checked with `tsc --noEmit`.
-- Only the dev console is bundled: esbuild turns it into `dist/console/index.js`, which
-  the wrapper serves as `__dev/console/index.js`. The game page cannot run TypeScript.
+- The page scripts are bundled: esbuild turns the page core and the dev console into
+  `dist/page/` ([ADR 0005](0005-editions-and-page-core.md)), served under `__dev/page/`. The game page cannot run TypeScript.
 - The wrapper (Electron's main process), the server, the tools and the tests run the
   `.ts` sources directly with Node's built-in type stripping. This was confirmed on
   2026-11-02 for Node 26.12 and for Electron 45, whose Node is 24.22: a CommonJS file

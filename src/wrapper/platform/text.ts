@@ -3,7 +3,7 @@ export const TEXT = Object.freeze({
 });
 
 export const INDEX_TEXT = Object.freeze({
-  devNotInjected: 'Dev console: could not inject into index.html',
+  pageNotInjected: 'Page scripts: could not inject into index.html',
   joinNotPrepared: 'Private server: could not prepare index.html (no <script> tag); not serving it',
   hostNotPrepared: 'Dedicated host: could not prepare index.html (no <script> tag or no scripts/flash.js); not serving it',
   traceSilent: 'Verbose: scripts/flash.js not found in index.html; the game\'s trace() stays silent',
@@ -23,7 +23,7 @@ export const FILES_TEXT = Object.freeze({
   namesMissing: (file: string, findNames: string) => `Dev console: ${file} is missing. Run "${findNames}".`,
   namesOtherVersion: (namesVersion: string, gameVersion: string, findNames: string) => `Dev console: names.js is for game ${namesVersion} but the game is ${gameVersion}. Run "${findNames}".`,
   namesIncomplete: 'Dev console: names.js has names that were not found; some commands will fail.',
-  consoleBundleMissing: 'Dev console: dist/console/ is missing. Run "npm run build".',
+  pageBundleMissing: 'The page scripts in dist/page/ are missing. Run "npm run build".',
   findNames: (runFlag: string) => `npm run find-names${runFlag}`,
 });
 

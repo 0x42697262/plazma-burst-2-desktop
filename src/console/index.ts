@@ -8,6 +8,9 @@ import { errorBudget } from './kernel/core/guard.ts';
 import { plural } from './kernel/core/words.ts';
 import { SERVER } from './kernel/core/mode.ts';
 import { game } from './kernel/game/bindings.ts';
+import { whenGameReady } from '#page/ready.ts';
+import { showReportsIn } from '#page/report.ts';
+import { REPORT_LEVEL, type ReportLevel } from '#page/keys.ts';
 import { namesMissing, CLIENT_TITLE, FIND_NAMES, SADBURST } from './kernel/game/names.ts';
 import { currentMapId } from './kernel/game/level.ts';
 import { load, reload as reloadStore, settings, binds, profiles, loadProblems, setMapSource } from './kernel/state/store.ts';
@@ -16,13 +19,18 @@ import { applyOverrides, onActiveChange } from './kernel/overrides/frame.ts';
 import { registerListSection } from './kernel/list-sections.ts';
 import { run } from './kernel/dispatch.ts';
 import { enabledConsoleFeatures, featureFrameHooks, featureTicks, featureListSections } from './features.ts';
-import { BOOT_POLL_MS, FRAME_ERRORS_SHOWN, STATUS_EVERY_MS } from './constants.ts';
+import { FRAME_ERRORS_SHOWN, STATUS_EVERY_MS } from './constants.ts';
 import { DATA_FOLDER, FRAME_GUARD_LABEL, KEY_DOWN_EVENT, KEY_UP_EVENT, LOCAL_STORAGE_NAME, PAGE_API_GLOBAL } from './keys.ts';
 import { TEXT } from './text.ts';
 
 const SETTINGS_FILE = CLIENT_DETAILS[SADBURST ? CLIENT.sadburst : CLIENT.official].settingsFileName;
 
 const reportError = (message: string): void => { print(message, COLOR.error); };
+
+const PAGE_REPORT_COLOR: Readonly<Record<ReportLevel, string>> = Object.freeze({
+  [REPORT_LEVEL.note]: COLOR.title, [REPORT_LEVEL.warn]: COLOR.warn, [REPORT_LEVEL.error]: COLOR.error,
+});
+showReportsIn((message, level) => { print(message, PAGE_REPORT_COLOR[level]); });
 
 function printProblems(): void {
   for (const problem of loadProblems()) print(TEXT.fileProblem(SETTINGS_FILE, problem), COLOR.warn);
@@ -69,22 +77,10 @@ function start(source: LoadSource): void {
   for (const feature of features) feature.start?.();
 }
 
-function isGameReady(): boolean {
-  try {
-    return game.ready();
-  } catch {
-    return false;
-  }
-}
-
 async function boot(): Promise<void> {
   setMapSource(currentMapId);
   const source = await load();
-  const timer = setInterval(() => {
-    if (!isGameReady()) return;
-    clearInterval(timer);
-    start(source);
-  }, BOOT_POLL_MS);
+  whenGameReady(() => { start(source); });
 }
 
 Reflect.set(globalThis, PAGE_API_GLOBAL, {

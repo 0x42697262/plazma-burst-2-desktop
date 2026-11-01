@@ -39,7 +39,7 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   consoleFeature(FEATURE.screenshot),
   consoleFeature(FEATURE.netlog),
   consoleFeature(FEATURE.fingerprint, { availableIn: LOCAL_AND_SERVER }),
-  consoleFeature(FEATURE.lobbyTaskGuard, { availableIn: LOCAL_ONLY }),
+  define(FEATURE.lobbyTaskGuard, { availableIn: LOCAL_ONLY }),
   consoleFeature(FEATURE.scanBypass, { availableIn: LOCAL_AND_SERVER }),
   consoleFeature(FEATURE.jsEval, { availableIn: LOCAL_AND_SERVER }),
   define(FEATURE.hooks, { unavailableForClients: ONLY_OFFICIAL }),

@@ -12,7 +12,7 @@ import { textResponse, typedResponse } from './responses.ts';
 import type { PageContext } from './context.ts';
 
 export type DevRouter = (name: string, request: Request, url: URL, context: RequestContext) => Promise<Response | null>;
-export type DevFiles = { consoleDir: string; consoleEntry: string; namesFile: string; opcodesFile: string; router: DevRouter };
+export type DevFiles = { pageDir: string; namesFile: string; opcodesFile: string; consoleOn: boolean; router: DevRouter };
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 
@@ -24,11 +24,11 @@ async function scriptOr(file: string, fallback: string): Promise<Response> {
   }
 }
 
-export function createDevFiles({ consoleDir, namesFile, opcodesFile, router }: DevFiles) {
-  async function serveConsoleFile(relative: string): Promise<Response | null> {
-    const file = path.resolve(consoleDir, relative);
+export function createDevFiles({ pageDir, namesFile, opcodesFile, consoleOn, router }: DevFiles) {
+  async function servePageFile(relative: string): Promise<Response | null> {
+    const file = path.resolve(pageDir, relative);
     const type = contentTypeOf(file);
-    if (path.relative(consoleDir, file).startsWith(PARENT_FOLDER) || !type) return null;
+    if (path.relative(pageDir, file).startsWith(PARENT_FOLDER) || !type) return null;
     try {
       return typedResponse(await fs.readFile(file), type, false);
     } catch {
@@ -54,13 +54,13 @@ export function createDevFiles({ consoleDir, namesFile, opcodesFile, router }: D
   return async function serveDev(name: string, request: Request, url: URL, context: PageContext): Promise<Response> {
     const routed = await router(name, request, url, context);
     if (routed) return routed;
-    if (name.startsWith(ROUTE_NAME.console)) {
-      const served = await serveConsoleFile(name.slice(ROUTE_NAME.console.length));
+    if (name.startsWith(ROUTE_NAME.page)) {
+      const served = await servePageFile(name.slice(ROUTE_NAME.page.length));
       if (served) return served;
     }
     if (name === ROUTE_NAME.names) return scriptOr(namesFile, NAMES_FALLBACK);
-    if (name === ROUTE_NAME.opcodes) return scriptOr(opcodesFile, OPCODES_FALLBACK);
-    if (name === ROUTE_NAME.kv) return serveSettings(request, context);
+    if (consoleOn && name === ROUTE_NAME.opcodes) return scriptOr(opcodesFile, OPCODES_FALLBACK);
+    if (consoleOn && name === ROUTE_NAME.kv) return serveSettings(request, context);
     return textResponse(TEXT.notFound, NOT_FOUND);
   };
 }
@@ -79,6 +79,6 @@ export function checkNamesFile({ namesFile, repoRoot, gameVersion, runFlag, log 
   if (NAMES_NOT_FOUND.test(text)) log.error(TEXT.namesIncomplete);
 }
 
-export function checkConsoleBundle({ consoleDir, consoleEntry, log }: { consoleDir: string; consoleEntry: string; log: Logger }): void {
-  if (!fsSync.existsSync(path.join(consoleDir, consoleEntry))) log.error(TEXT.consoleBundleMissing);
+export function checkPageBundle({ pageDir, entries, log }: { pageDir: string; entries: readonly string[]; log: Logger }): void {
+  if (!entries.every((entry) => fsSync.existsSync(path.join(pageDir, entry)))) log.error(TEXT.pageBundleMissing);
 }

@@ -12,6 +12,7 @@ credentials, saved maps, logs, the generated `names.js` and `opcodes.js`, and in
 | `src/shared/` | The wrapper ↔ console contract (route names, request and response schemas) and the feature catalog | nothing else in `src/` |
 | `src/kernel/` | Cross-cutting pieces with no feature logic: config, flags, persistence, logging | `shared` |
 | `src/wrapper/` | The Electron main process: the composition root, the `__dev/` router, platform (windows, protocol, sessions) | `shared`, `kernel`, the wrapper side of features |
+| `src/page/` | The page core: what every game page needs to play safely (the lobby task guard, the private-server join client), the game-ready wait and the report channel | `shared`, `kernel`, the console's game adapter (`src/console/kernel/game/`, `net/`), the page side of features |
 | `src/console/` | The in-page dev console: the composition root and its kernel (registry, dispatch, UI, store, game adapter) | `shared`, `kernel` (browser-safe parts), the console side of features |
 | `src/server/` | The private lobby server (`npm run server`): config, maps, the game server's stand-ins, TLS and the terminal | `shared`, `kernel`, `tools/find-names` |
 | `src/tools/` | Command-line tools: build, fetch-game, find-names, fetch-opcodes, redact-netlogs, smoke, the ESLint rules | `shared`, `kernel`, `features` |
@@ -39,12 +40,14 @@ credentials, saved maps, logs, the generated `names.js` and `opcodes.js`, and in
 ## Build
 
 - esbuild (`src/tools/build/`) bundles what runs in a browser or needs CommonJS: the
-  console into `dist/console/index.js` (browser ESM, from `src/console/index.ts`), the
+  page scripts into `dist/page/` in one run with code splitting: `page.js` (the page
+  core, from `src/page/index.ts`), `console.js` (the dev console, from
+  `src/console/index.ts`) and the `chunks/` they share, so shared modules load once; the
   server list page and its preload into `dist/launcher/`, the hooks runtime into
   `dist/hooks/runtime.cjs`, and the remote-play client into `dist/remote-client/`; see
   [ADR 0001](../adr/0001-typescript-esbuild.md). The wrapper (`src/wrapper/main.ts`),
   the server, the tools and the tests run the `.ts` sources directly.
-- The console bundle must add no global besides `pb2dev`, because the game's
+- The page scripts must add no global besides `pb2dev`, because the game's
   anti-tamper scan compares globals ([anticheat research](../research/anticheat.md),
   §6).
 - Tests and tools run the TypeScript sources directly with Node's type stripping, so
