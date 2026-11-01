@@ -10,7 +10,7 @@
 // panels.js   Tools, Layers, Objects, Params, the status line
 // input.js    presses in the world: select, drag, resize, place
 // Views listen to the session; the session never draws.
-import { COLOR } from '../core/colors.js';
+import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { showKey, eventKeyName } from '../state/keys.js';
 import { KEY } from '../state/schema.js';
 import { settings } from '../state/store.js';

@@ -1,4 +1,4 @@
-import { takeOptions } from '../../../../desktop/dev/console/core/args.js';
+import { takeOptions } from '#console/kernel/core/args.ts';
 import { SHOW_LAST_DEFAULT, SHOW_LAST_MAX } from '../constants.ts';
 import {
   CONNECTION_WORD_SEPARATOR, DIRECTION, FILTER_OPTION, FILTER_TERM, FILTER_TERM_PATTERN, KIND_OPTIONS, MESSAGE_TYPE_IN_LINE, TYPE_PREFIX_AT_START,

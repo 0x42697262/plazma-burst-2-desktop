@@ -1,5 +1,5 @@
 import { print } from '../../../../desktop/dev/console/ui/log.js';
-import { COLOR } from '../../../../desktop/dev/console/core/colors.js';
+import { COLOR } from '#console/kernel/core/keys.ts';
 import { COMMAND } from '../keys.ts';
 import { TEXT } from '../text.ts';
 import { protection } from '../adapters/game-scan.ts';

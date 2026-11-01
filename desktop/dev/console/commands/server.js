@@ -2,7 +2,7 @@
 // its terminal. Only on the dedicated host (`server: true`, core/server.js). "who",
 // "kick" and "say" are the same as their "server" subcommands, for short.
 import { print } from '../ui/log.js';
-import { COLOR } from '../core/colors.js';
+import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { SERVER } from '../core/server.js';
 import {
   PHASE, roster, kick, tell, say, ownerCommand, useLocalMap, dropLocalMap, stop, startAgain, restart, hostStatus,

@@ -1,8 +1,8 @@
 // Running a typed line: split a ";" chain, find each command in the registry, say when
 // it is client-only in multiplayer, and run it.
 import { print } from './ui/log.js';
-import { COLOR } from './core/colors.js';
-import { plural, isHelpArg } from './core/text.js';
+import { COLOR } from '../../../src/console/kernel/core/keys.ts';
+import { plural, isHelpArg } from '../../../src/console/kernel/core/words.ts';
 import { game } from './game/bindings.js';
 import { SCHEMA, resolveKey, keyClientOnly, unphrase } from './state/schema.js';
 import { findRunnable, findSubcommand, reachOf } from './commands/registry.js';

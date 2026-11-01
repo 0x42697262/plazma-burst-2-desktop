@@ -4,7 +4,7 @@ import { F } from '../../../../desktop/dev/console/game/fields.js';
 import { KEY } from '../../../../desktop/dev/console/state/schema.js';
 import { settings } from '../../../../desktop/dev/console/state/store.js';
 import { gameCommandHeldBack, refusal } from '../../../../desktop/dev/console/overrides/server-checks.js';
-import { stripHtml } from '../../../../desktop/dev/console/core/text.js';
+import { stripHtml } from '#console/kernel/core/words.ts';
 
 export type ChatClip = { y: number; visible: boolean; alpha?: number; timer?: number; htmlText?: string; isRemoved?: boolean; children?: ChatClip[]; [field: string]: unknown };
 

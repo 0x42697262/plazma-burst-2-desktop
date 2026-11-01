@@ -1,5 +1,5 @@
 import { print } from '../../../../desktop/dev/console/ui/log.js';
-import { COLOR } from '../../../../desktop/dev/console/core/colors.js';
+import { COLOR } from '../core/keys.ts';
 import { SCHEMA, ALIASES, unphrase } from '../../../../desktop/dev/console/state/schema.js';
 import { showKey, baseKey, GAME_KEYS } from '../../../../desktop/dev/console/state/keys.js';
 import { hotkeyOf } from '../../../../desktop/dev/console/state/hotkeys.js';

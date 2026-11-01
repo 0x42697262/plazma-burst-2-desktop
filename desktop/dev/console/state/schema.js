@@ -1,7 +1,7 @@
 // The console's settings ("keys"): what each one is, how it is typed, and what it takes.
 // This table is the only place a key is defined; KEY gives every other module its name.
-import { onOff } from '../core/text.js';
-import { PAGE_SIZE_DEFAULT, PAGE_SIZE_MAX } from '../core/limits.js';
+import { onOff } from '../../../../src/console/kernel/core/words.ts';
+import { PAGE_SIZE_DEFAULT, PAGE_SIZE_MAX } from '../../../../src/console/kernel/core/constants.ts';
 import { parseKeyName, showKey } from './keys.js';
 
 // Groups that only configure the console itself: they need no level and are not

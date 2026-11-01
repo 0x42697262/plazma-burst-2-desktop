@@ -3,7 +3,7 @@
 // place; or, after "Edit triggers as text", the whole trigger as the editor's text view
 // (the format "triggers exec" reads), applied in one go.
 import { el } from '../ui/dom.js';
-import { COLOR } from '../core/colors.js';
+import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { actionInfo, opcodeName, opcodeType } from '../triggers/script.js';
 import { actionsOf, actionValues, triggerText, valuesFromText } from './actions.js';
 import { setAttrs } from './edit.js';

@@ -1,7 +1,7 @@
 import { FEATURE } from '#shared/features/keys.ts';
 import type { ConsoleFeature } from '#console/feature-types.ts';
 import { print } from '../../../desktop/dev/console/ui/log.js';
-import { COLOR } from '../../../desktop/dev/console/core/colors.js';
+import { COLOR } from '#console/kernel/core/keys.ts';
 import { MAP_ERRORS_SHOWN, MAP_TICK_MS } from './constants.ts';
 import { TICK_NAME } from './keys.ts';
 import { gameMaps } from './adapters/game-maps.ts';

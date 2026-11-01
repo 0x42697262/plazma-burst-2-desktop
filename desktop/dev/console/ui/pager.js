@@ -2,8 +2,8 @@
 // list never scrolls out of the log. The last list is kept: "more" prints its next page,
 // "page <n>" any page. A command also takes "page <n>" at its end: "triggers on page 3".
 import { print } from './log.js';
-import { COLOR } from '../core/colors.js';
-import { s } from '../core/text.js';
+import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
+import { pluralSuffix } from '../../../../src/console/kernel/core/words.ts';
 import { KEY } from '../state/schema.js';
 import { settings } from '../state/store.js';
 
@@ -41,7 +41,7 @@ export function showPaged({ title, rows, cmd, hint = '', empty = '', color = COL
   const size = settings.effective(KEY.PAGE_SIZE);
   const pages = Math.max(1, Math.ceil(rows.length / size));
   if (!Number.isInteger(page) || page < 1) throw new Error('pages start at 1');
-  if (page > pages) throw new Error(`no page ${page}: this list has ${pages} page${s(pages)} of ${size}`);
+  if (page > pages) throw new Error(`no page ${page}: this list has ${pages} page${pluralSuffix(pages)} of ${size}`);
   pager = { title, rows, cmd, hint, empty, color, page, pages, size };
   printPage();
 }
@@ -52,7 +52,7 @@ export function turnPage(n) {
   if (n !== undefined && !/^\d+$/.test(String(n))) throw new Error('usage: page <n>');
   const page = n === undefined ? pager.page + 1 : Number(n);
   if (n === undefined && page > pager.pages) throw new Error(`already on the last page (${pager.pages}/${pager.pages}). "page 1" goes back to the top.`);
-  if (page < 1 || page > pager.pages) throw new Error(`no page ${page}: this list has ${pager.pages} page${s(pager.pages)}`);
+  if (page < 1 || page > pager.pages) throw new Error(`no page ${page}: this list has ${pager.pages} page${pluralSuffix(pager.pages)}`);
   pager.page = page;
   printPage();
 }

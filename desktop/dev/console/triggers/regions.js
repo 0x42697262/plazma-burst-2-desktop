@@ -1,7 +1,7 @@
 // Firing a region without being in it: what the game does when a region's condition is
 // met (the region check in frame2.js), for any activator.
 import { print } from '../ui/log.js';
-import { COLOR } from '../core/colors.js';
+import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { game } from '../game/bindings.js';
 import { F } from '../game/fields.js';
 import { charAt } from '../game/level.js';

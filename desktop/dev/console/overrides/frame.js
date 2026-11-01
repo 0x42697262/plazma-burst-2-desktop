@@ -11,7 +11,7 @@ import { force, original, restore, restoreObj, restoreAll } from './force.js';
 import { installGod, uninstallGodExcept, uninstallAllGod } from './god.js';
 import { heldBack, guarding, REASON, BYPASS_HINT } from './server-checks.js';
 import { print } from '../ui/log.js';
-import { COLOR } from '../core/colors.js';
+import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 
 // The game's walk acceleration per tick, which "speed" scales.
 const STAND_WALK = (sit) => (2 - sit * 0.75) / 2 * 3;

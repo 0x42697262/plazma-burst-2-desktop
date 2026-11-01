@@ -1,6 +1,6 @@
 // "regions": the map's regions, and firing one without being in it.
 import { showPaged, takePage } from '../ui/pager.js';
-import { COLOR } from '../core/colors.js';
+import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { requireLevel } from '../game/level.js';
 import { F } from '../game/fields.js';
 import { regionList, triggerList, regionModeName, regionUid, timerUid, findRegion, REGION_MODE } from '../triggers/model.js';

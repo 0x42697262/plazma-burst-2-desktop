@@ -4,7 +4,7 @@
 // unobfuscated names.)
 import { N, nameOf, read, write, call, escName } from './names.js';
 import { F } from './fields.js';
-import { escapeRe } from '../core/text.js';
+import { escapeRe } from '../../../../src/console/kernel/core/words.ts';
 
 // Frame label of the game stage while a level is running.
 const LEVEL_FRAME = 'gaming';

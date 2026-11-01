@@ -1,5 +1,5 @@
 import { print } from '../../../../desktop/dev/console/ui/log.js';
-import { COLOR } from '../../../../desktop/dev/console/core/colors.js';
+import { COLOR } from '#console/kernel/core/keys.ts';
 import { bindKey, unbindKey } from '#features/binds/index.ts';
 import { COORDINATE_ARGUMENTS, DISTANCE_WIDTH, HP_WIDTH, INDEX_WIDTH, NICKNAME_WIDTH, TEAM_WIDTH } from '../constants.ts';
 import { ALL_WORD, CHARS_HINT, COMMAND, HP_CHANGE, HP_PERCENT_NO_SIGN, NO_CHARACTER_NAMED, TO_WORD, TP_COMMAND, TP_OPTION, WORD_SEPARATOR, YOU } from '../keys.ts';

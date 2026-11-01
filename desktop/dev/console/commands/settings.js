@@ -1,7 +1,7 @@
 // Settings commands: list, set, get, unset, reset, and a key typed as a command
 // ("speed 1.8", "god").
 import { print } from '../ui/log.js';
-import { COLOR } from '../core/colors.js';
+import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { SCHEMA, GROUPS, KEY, resolveKey, parseValue, affectsGame, keyClientOnly, describeKey, showValue } from '../state/schema.js';
 import { settings, binds, activeProfile, currentMap } from '../state/store.js';
 import { showKey } from '../state/keys.js';

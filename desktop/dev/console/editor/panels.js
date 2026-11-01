@@ -11,7 +11,7 @@
 // They are drawn from the session and drawn again when it changes. The look is style.js.
 import { el } from '../ui/dom.js';
 import { IN_OVERLAY } from '../ui/theme.js';
-import { COLOR } from '../core/colors.js';
+import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { game } from '../game/bindings.js';
 import { KINDS, KIND_TAGS, NOT_PLACED, kindOf, nameOf } from './kinds.js';
 import {

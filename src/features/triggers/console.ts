@@ -28,6 +28,6 @@ const varsSection: ListSection = () => {
 export const triggersConsole: ConsoleFeature = Object.freeze({
   id: FEATURE.triggers,
   commands: [triggersCommand, regionsCommand, varsCommand, logicCommand] as Command[],
-  frame: [{ name: FRAME_HOOK_NAME, run: () => { (syncTriggerHooks)(); } }],
+  frame: [{ name: FRAME_HOOK_NAME, run: () => { syncTriggerHooks(); } }],
   listSections: { [LIST_SECTION.logic]: logicSection, [LIST_SECTION.vars]: varsSection },
 });

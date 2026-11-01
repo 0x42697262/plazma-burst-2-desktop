@@ -1,7 +1,7 @@
 import { print } from '../../../../desktop/dev/console/ui/log.js';
-import { COLOR } from '../../../../desktop/dev/console/core/colors.js';
-import { plural } from '../../../../desktop/dev/console/core/text.js';
-import { takeOptions, oneOf } from '../../../../desktop/dev/console/core/args.js';
+import { COLOR } from '#console/kernel/core/keys.ts';
+import { plural } from '#console/kernel/core/words.ts';
+import { takeOptions, oneOf } from '#console/kernel/core/args.ts';
 import { DISTANCE_WIDTH, NAME_WIDTH } from '../constants.ts';
 import { COMMAND, CHARS_HINT, NAME_LIST_SEPARATOR, OLD_WORDS, OPTION, OPTION_PREFIX, TRACE_KIND, TRACE_SIDE, WORD_SEPARATOR } from '../keys.ts';
 import { TEXT } from '../text.ts';
@@ -14,7 +14,7 @@ const GROUP_OPTIONS = [OPTION.all, ...KINDS, ...SIDES];
 const KIND_OF: Readonly<Record<string, TraceGroup['kind']>> = { [OPTION.players]: TRACE_KIND.players, [OPTION.npc]: TRACE_KIND.npc };
 const SIDE_OF: Readonly<Record<string, TraceGroup['side']>> = { [OPTION.team]: TRACE_SIDE.team, [OPTION.enemies]: TRACE_SIDE.enemies };
 
-const pluralText = (count: number, noun: string): string => (plural as (count: number, noun: string) => string)(count, noun);
+const pluralText = (count: number, noun: string): string => plural(count, noun);
 const pickOne = (options: Set<string>, names: string[]): string | undefined => (oneOf as (options: Set<string>, names: string[]) => string | undefined)(options, names);
 
 export const groupOptions = ({ kind, side }: TraceGroup): string => [kind, side].filter(Boolean).map((option) => OPTION_PREFIX + String(option)).join(WORD_SEPARATOR) || OPTION_PREFIX + OPTION.all;

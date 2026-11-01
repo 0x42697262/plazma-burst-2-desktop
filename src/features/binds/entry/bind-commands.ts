@@ -1,5 +1,5 @@
 import { print } from '../../../../desktop/dev/console/ui/log.js';
-import { COLOR } from '../../../../desktop/dev/console/core/colors.js';
+import { COLOR } from '#console/kernel/core/keys.ts';
 import { commandText, warnKeyUses } from '#console/kernel/commands/command-text.ts';
 import { BIND_ARGUMENTS_MIN, KEY_WIDTH } from '../constants.ts';
 import { ALL_WORDS, COMMAND, KEY_ARGUMENT } from '../keys.ts';

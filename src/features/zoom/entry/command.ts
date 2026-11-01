@@ -1,4 +1,4 @@
-import { takeOptions, oneOf } from '../../../../desktop/dev/console/core/args.js';
+import { takeOptions, oneOf } from '#console/kernel/core/args.ts';
 import { DEFAULT_PERCENT } from '../constants.ts';
 import { COMMAND, PERCENT_SUFFIX } from '../keys.ts';
 import { TEXT } from '../text.ts';

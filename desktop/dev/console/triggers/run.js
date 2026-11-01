@@ -9,8 +9,8 @@
 // differently: forced, "as" another character (the server always makes the sender the
 // activator), or while spectating.
 import { print } from '../ui/log.js';
-import { COLOR } from '../core/colors.js';
-import { plural, parseIndex } from '../core/text.js';
+import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
+import { plural, parseIndex } from '../../../../src/console/kernel/core/words.ts';
 import { game } from '../game/bindings.js';
 import { F } from '../game/fields.js';
 import { charAt, noCharacter } from '../game/level.js';

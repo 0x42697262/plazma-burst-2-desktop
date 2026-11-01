@@ -5,7 +5,7 @@
 // The same in every mode: the game's map text is never written. When the level starts
 // again on the same map (dying, a restart, a new round), the game builds it from that
 // text, and the edits are put into the new level again.
-import { ROUTE } from '../core/shared.js';
+import { ROUTE } from '../../../../src/shared/contract/routes.ts';
 import { kindOf, SHAPE, DEFAULTS, NOT_PLACED, newUid } from './kinds.js';
 import { applyLive } from './apply.js';
 import { addLive, removeLive, restoreLive } from './rebuild.js';

@@ -1,7 +1,7 @@
 import { print } from '../../../../desktop/dev/console/ui/log.js';
-import { COLOR } from '../../../../desktop/dev/console/core/colors.js';
-import { takeOptions } from '../../../../desktop/dev/console/core/args.js';
-import { agoText } from '../../../../desktop/dev/console/core/text.js';
+import { COLOR } from '#console/kernel/core/keys.ts';
+import { takeOptions } from '#console/kernel/core/args.ts';
+import { agoText } from '#console/kernel/core/words.ts';
 import { CHARS_WIDTH, DATE_CHARS, KEY_WIDTH, KIND_WIDTH, LABEL_WIDTH, SEEN_WIDTH } from '../constants.ts';
 import { COMMAND, UNKNOWN_LABEL } from '../keys.ts';
 import { COMMAND_TEXT } from '../text.ts';

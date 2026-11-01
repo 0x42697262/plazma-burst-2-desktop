@@ -6,8 +6,8 @@
 import { game } from '../game/bindings.js';
 import { F } from '../game/fields.js';
 import { ACTION, VAR_WRITE_TYPES } from '../game/actions.js';
-import { MAP } from '../core/shared.js';
-import { quote, s } from '../core/text.js';
+import { MAP_MARKER as MAP } from '../../../../src/shared/contract/keys.ts';
+import { quote, pluralSuffix } from '../../../../src/console/kernel/core/words.ts';
 import { requireLevel } from '../game/level.js';
 import { triggerList, actionsOf } from './model.js';
 
@@ -133,7 +133,7 @@ export function modeVerdict(mode, value) {
     case 'n': return numeric ? ['lower only', 'clients holding a lower number keep theirs'] : [NO, notANumber];
     case 'l': {
       const n = String(value).length;
-      return ['longer only', `only clients whose value is under ${n} character${s(n)}${numeric ? ', which compares a number as text' : ''}`];
+      return ['longer only', `only clients whose value is under ${n} character${pluralSuffix(n)}${numeric ? ', which compares a number as text' : ''}`];
     }
     default: return [NO, 'unknown mode'];
   }

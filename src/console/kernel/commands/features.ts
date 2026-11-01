@@ -1,7 +1,7 @@
 import { CATALOG } from '#shared/features/catalog.ts';
 import { reportLines } from '#kernel/flags/resolve.ts';
 import { print } from '../../../../desktop/dev/console/ui/log.js';
-import { COLOR } from '../../../../desktop/dev/console/core/colors.js';
+import { COLOR } from '../core/keys.ts';
 import { pageFlags } from '../../flags.ts';
 import { FEATURES_COMMAND } from './keys.ts';
 import { TEXT } from './text.ts';

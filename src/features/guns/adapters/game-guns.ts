@@ -1,7 +1,7 @@
 import { game } from '../../../../desktop/dev/console/game/bindings.js';
 import { F, GUN_SLOTS, FIRST_SLOT, LAST_SLOT, EMPTY_SLOT, slotField } from '../../../../desktop/dev/console/game/fields.js';
 import { targetChar, takeCharSuffix, be, have } from '../../../../desktop/dev/console/game/level.js';
-import { parseIndex, capitalize } from '../../../../desktop/dev/console/core/text.js';
+import { parseIndex, capitalize } from '#console/kernel/core/words.ts';
 
 export type GameCharacter = { x: number; y: number; curwea: number; [field: string]: unknown };
 export type GameGun = { model?: string; [field: string]: unknown };
@@ -25,5 +25,5 @@ export const characters = {
   be: (who: string): string => (be as (who: string) => string)(who),
   have: (who: string): string => (have as (who: string) => string)(who),
   index: (word: string): number | null => (parseIndex as (word: string) => number | null)(word),
-  capitalize: (text: string): string => (capitalize as (text: string) => string)(text),
+  capitalize: (text: string): string => capitalize(text),
 };

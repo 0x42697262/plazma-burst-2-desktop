@@ -8,9 +8,9 @@
 // play over WebRTC with this game; the lobby server lists the match, checks who may
 // join and passes their connection offers along (docs/operations/p2p-host.md).
 import { print } from '../ui/log.js';
-import { COLOR } from '../core/colors.js';
-import { MAP } from '../core/shared.js';
-import { stripHtml } from '../core/text.js';
+import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
+import { MAP_MARKER as MAP } from '../../../../src/shared/contract/keys.ts';
+import { stripHtml } from '../../../../src/console/kernel/core/words.ts';
 import { SERVER } from '../core/server.js';
 import { game, NET } from '../game/bindings.js';
 

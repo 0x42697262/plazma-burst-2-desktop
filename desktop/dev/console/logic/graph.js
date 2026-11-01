@@ -10,7 +10,7 @@
 // clash.
 import { game } from '../game/bindings.js';
 import { ACTION, ACTION_NAMES, RUNS_REGION_TRIGGER } from '../game/actions.js';
-import { MAP } from '../core/shared.js';
+import { MAP_MARKER as MAP } from '../../../../src/shared/contract/keys.ts';
 import { triggerList, regionList } from '../triggers/model.js';
 import { actionInfo } from '../triggers/script.js';
 

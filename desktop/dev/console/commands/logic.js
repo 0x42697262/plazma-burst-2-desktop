@@ -2,8 +2,8 @@
 // "logic show" draws it over the level; "logic <uid>" prints one element as a tree.
 import { print } from '../ui/log.js';
 import { showPaged, takePage } from '../ui/pager.js';
-import { COLOR } from '../core/colors.js';
-import { plural } from '../core/text.js';
+import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
+import { plural } from '../../../../src/console/kernel/core/words.ts';
 import { requireLevel } from '../game/level.js';
 import { LINK, logicGraph, findNode, placeOf, chatTriggerUid } from '../logic/graph.js';
 import { showLogic, hideLogic, logicShown, isVisible } from '../logic/view.js';

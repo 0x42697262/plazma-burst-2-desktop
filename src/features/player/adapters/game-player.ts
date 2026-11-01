@@ -6,8 +6,8 @@ import { KEY } from '../../../../desktop/dev/console/state/schema.js';
 import { settings, binds } from '../../../../desktop/dev/console/state/store.js';
 import { hpBonusFor, hpBonusAppliedTo } from '../../../../desktop/dev/console/overrides/frame.js';
 import { setKey, unsetKey, runKey } from '../../../../desktop/dev/console/commands/settings.js';
-import { takeOptions } from '../../../../desktop/dev/console/core/args.js';
-import { isNumberText, parseIndex, capitalize } from '../../../../desktop/dev/console/core/text.js';
+import { takeOptions } from '#console/kernel/core/args.ts';
+import { isNumberText, parseIndex, capitalize } from '#console/kernel/core/words.ts';
 
 export type Character = { x: number; y: number; io?: unknown; team?: unknown; nickname?: unknown; tarx: number; tary: number; [field: string]: unknown };
 type Fade = { alpha: number; visible: boolean };
@@ -57,10 +57,10 @@ export const keySetting = {
 };
 
 export const words = {
-  options: (args: readonly string[], names: readonly string[]): Options => (takeOptions as (args: readonly string[], names: readonly string[]) => Options)(args, names),
+  options: (args: readonly string[], names: readonly string[]): Options => takeOptions(args, names),
   isNumber: (word: string): boolean => (isNumberText as (word: string) => boolean)(word),
   index: (word: string): number | null => (parseIndex as (word: string) => number | null)(word),
-  capitalize: (text: string): string => (capitalize as (text: string) => string)(text),
+  capitalize: (text: string): string => capitalize(text),
 };
 
 export const boundToTp = (command: string): string[] => (binds as unknown as { boundTo(command: string): string[] }).boundTo(command);

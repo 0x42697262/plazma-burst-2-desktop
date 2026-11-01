@@ -1,7 +1,7 @@
 import { FEATURE } from '#shared/features/keys.ts';
 import type { ConsoleFeature } from '#console/feature-types.ts';
 import { print } from '../../../desktop/dev/console/ui/log.js';
-import { COLOR } from '../../../desktop/dev/console/core/colors.js';
+import { COLOR } from '#console/kernel/core/keys.ts';
 import { FRAME_HOOK_NAME, LIST_SECTION } from './keys.ts';
 import { gameCamera } from './adapters/game-camera.ts';
 import { createZoom } from './services/zoom.ts';

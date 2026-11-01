@@ -1,5 +1,5 @@
 import { print } from '../../../../desktop/dev/console/ui/log.js';
-import { COLOR } from '../../../../desktop/dev/console/core/colors.js';
+import { COLOR } from '#console/kernel/core/keys.ts';
 import { game } from '../../../../desktop/dev/console/game/bindings.js';
 import { F } from '../../../../desktop/dev/console/game/fields.js';
 import { printPair } from '../../../../desktop/dev/console/commands/help.js';

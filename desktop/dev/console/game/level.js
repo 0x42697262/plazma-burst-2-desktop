@@ -1,7 +1,7 @@
 // The running level and its characters.
 import { game } from './bindings.js';
 import { F } from './fields.js';
-import { parseIndex } from '../core/text.js';
+import { parseIndex } from '../../../../src/console/kernel/core/words.ts';
 
 // The game takes a character's middle this far above its feet (x, y): the region check
 // tests y - 41, and the teleport effect plays there.

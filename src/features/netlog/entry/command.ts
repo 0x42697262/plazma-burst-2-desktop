@@ -1,7 +1,7 @@
 import { print } from '../../../../desktop/dev/console/ui/log.js';
 import { showPaged, takePage } from '../../../../desktop/dev/console/ui/pager.js';
-import { COLOR } from '../../../../desktop/dev/console/core/colors.js';
-import { agoText } from '../../../../desktop/dev/console/core/text.js';
+import { COLOR } from '#console/kernel/core/keys.ts';
+import { agoText } from '#console/kernel/core/words.ts';
 import { CONNECTION_KIND_COLUMN_WIDTH, KILOBYTE, RUN_INDEX_WIDTH, RUN_NAME_COLUMN_WIDTH, RUN_OWNER_COLUMN_WIDTH, RUN_SIZE_COLUMN_WIDTH, SIZE_DECIMALS } from '../constants.ts';
 import { COMMAND, SETTING_NAME, type SettingName, DIRECTION, LINE_BREAK, LINE_KIND, OFF_WORD, ON_WORD, RUN_NUMBER } from '../keys.ts';
 import { COMMAND_TEXT } from '../text.ts';

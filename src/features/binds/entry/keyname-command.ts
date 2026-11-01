@@ -1,5 +1,5 @@
 import { print } from '../../../../desktop/dev/console/ui/log.js';
-import { COLOR } from '../../../../desktop/dev/console/core/colors.js';
+import { COLOR } from '#console/kernel/core/keys.ts';
 import { COMMAND, SINGLE_CHARACTER } from '../keys.ts';
 import { TEXT } from '../text.ts';
 import { bindStore, keyNames, type KeyEvent } from '../adapters/keys.ts';

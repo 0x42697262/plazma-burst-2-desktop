@@ -2,7 +2,7 @@
 // "npm start": desktop/main.js forwards the page's console there. Colours and the
 // small-text flag are for the log pane only, so the terminal gets the plain text.
 import { el } from './dom.js';
-import { LOG_MAX } from '../core/limits.js';
+import { LOG_MAX } from '../../../../src/console/kernel/core/constants.ts';
 import { redact } from '../core/remote.js';
 
 export const TAG = '[pb2dev]'; // marks the console's own lines in the terminal

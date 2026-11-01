@@ -20,7 +20,7 @@ export const profileStore = profiles as unknown as ProfileStore;
 const ownSettings = settings as unknown as SettingsStore;
 
 export const profileContext = {
-  currentMap: (): string | null => (currentMap)(),
+  currentMap: (): string | null => currentMap(),
   active: (): ActiveProfile | null => (activeProfile as () => ActiveProfile | null)(),
   hasOwnSetting: (key: string): boolean => ownSettings.hasOwn(key),
   ownSetting: (key: string): unknown => ownSettings.own(key),
@@ -32,7 +32,7 @@ export const profileContext = {
   showKey: (key: string): string => (showKey as (key: string) => string)(key),
   commandText,
   warnKeyUses,
-  isLevelActive: (): boolean => (isActive)(),
+  isLevelActive: (): boolean => isActive(),
   run: (line: string, source: string): void => { (run as (line: string, source: string) => void)(line, source); },
   gameKeyGroups: (): string[] => [...new Set(Object.entries(SCHEMA as Record<string, { group: string }>).filter(([key]) => (affectsGame as (key: string) => boolean)(key)).map(([, schema]) => schema.group))],
 };

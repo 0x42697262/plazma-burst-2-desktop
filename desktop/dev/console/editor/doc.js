@@ -4,7 +4,7 @@
 // the running game has it, from when the level loaded this text: elements added since
 // have none, and deleting one does not move the others in the game.
 // Untouched elements keep their exact text; toText() gives the map back.
-import { MAP } from '../core/shared.js';
+import { MAP_MARKER as MAP } from '../../../../src/shared/contract/keys.ts';
 import { unplacedSpots } from '../logic/graph.js';
 
 // <tag a="..." b="..." />. Values hold no quotes (the editor escapes them), so ">"

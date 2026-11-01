@@ -1,8 +1,8 @@
 // "triggers": list the map's triggers, show one, search them, run one, and the run log.
 import { print } from '../ui/log.js';
 import { showPaged, takePage } from '../ui/pager.js';
-import { COLOR } from '../core/colors.js';
-import { plural, s, agoText, parseIndex } from '../core/text.js';
+import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
+import { plural, pluralSuffix, agoText, parseIndex } from '../../../../src/console/kernel/core/words.ts';
 import { game } from '../game/bindings.js';
 import { F } from '../game/fields.js';
 import { ACTION_NAMES } from '../game/actions.js';
@@ -15,7 +15,7 @@ import {
 import { triggerRuns, clearTriggerRuns, TRIG_HISTORY_MAX } from '../triggers/log.js';
 import { takeRunOptions, runTriggerAs, reportRun, SHOT_POWER, resolveActions, runScript } from '../triggers/run.js';
 import { parseScript, actionInfo, opcodeName, opcodesLoaded, searchActions } from '../triggers/script.js';
-import { takeOptions } from '../core/args.js';
+import { takeOptions } from '../../../../src/console/kernel/core/args.ts';
 
 const UID_WIDTH = 20; // the uid column of the trigger list
 const FIND_UID_WIDTH = 16; // the uid column of search results
@@ -27,7 +27,7 @@ const actionName = (type) => {
   return what ? `  (${what})` : '';
 };
 const disabledColor = (t) => (t[F.T_ENABLED] ? undefined : COLOR.muted);
-const actionWord = (n) => `action${s(n)}`;
+const actionWord = (n) => `action${pluralSuffix(n)}`;
 
 // The map's triggers, or null after saying there are none.
 function triggersOrNone() {

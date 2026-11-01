@@ -3,7 +3,7 @@ import { F } from '../../../../desktop/dev/console/game/fields.js';
 import { player, charAt, isDown, charLabel, BODY_MIDDLE, requireLevel, resolveChar, isActive } from '../../../../desktop/dev/console/game/level.js';
 import { setLayer, hasLayer, toScreen, crosshair } from '../../../../desktop/dev/console/ui/overlay.js';
 import { drawLabels } from '../../../../desktop/dev/console/ui/labels.js';
-import { parseIndex } from '../../../../desktop/dev/console/core/text.js';
+import { parseIndex } from '#console/kernel/core/words.ts';
 
 export type Character = { x: number; y: number; team: unknown; login?: unknown; nickname?: unknown; [field: string]: unknown };
 export type Transform = Record<string, number>;
@@ -22,8 +22,8 @@ export const gameCharacters = {
   label: (index: number, character?: Character): string => (charLabel as (index: number, character?: Character) => string)(index, character),
   isHuman: (character: Character): boolean => !!character[(F as { HUMAN: string }).HUMAN],
   bodyMiddle: BODY_MIDDLE as number,
-  requireLevel: (): void => { (requireLevel)(); },
-  isLevelActive: (): boolean => (isActive)(),
+  requireLevel: (): void => { requireLevel(); },
+  isLevelActive: (): boolean => isActive(),
   resolve: (word: string): number => (resolveChar as (word: string) => number)(word),
   isIndexWord: (word: string): boolean => (parseIndex as (word: string) => number | null)(word) !== null,
 };

@@ -21,9 +21,9 @@
 import './commands/index.js';
 import { print, TAG } from './ui/log.js';
 import { buildPanel, updateStatus, updateStatusIfOpen, openPanel, closePanel, onKeyDownCapture, onKeyUpCapture } from './ui/panel.js';
-import { COLOR } from './core/colors.js';
-import { errorBudget } from './core/guard.js';
-import { plural } from './core/text.js';
+import { COLOR } from '../../../src/console/kernel/core/keys.ts';
+import { errorBudget } from '../../../src/console/kernel/core/guard.ts';
+import { plural } from '../../../src/console/kernel/core/words.ts';
 import { game } from './game/bindings.js';
 import { namesMissing, CLIENT_TITLE, FIND_NAMES, SADBURST } from './game/names.js';
 import { load, reload as reloadStore, settings, binds, profiles, loadProblems, setMapSource } from './state/store.js';

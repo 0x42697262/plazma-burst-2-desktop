@@ -1,7 +1,7 @@
 import { FEATURE } from '#shared/features/keys.ts';
 import type { ConsoleFeature } from '#console/feature-types.ts';
 import { print } from '../../../desktop/dev/console/ui/log.js';
-import { COLOR } from '../../../desktop/dev/console/core/colors.js';
+import { COLOR } from '#console/kernel/core/keys.ts';
 import { BIND_KEY_WIDTH, KEY_WIDTH, PROFILE_ERRORS_SHOWN, PROFILE_TICK_MS } from './constants.ts';
 import { LIST_SECTION } from './keys.ts';
 import { TEXT } from './text.ts';

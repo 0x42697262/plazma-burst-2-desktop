@@ -5,7 +5,7 @@ import { el } from './dom.js';
 import { THEME, IN_OVERLAY, swallow, markUi } from './theme.js';
 import { print, attachLog, clearLog } from './log.js';
 import { complete } from './complete.js';
-import { COLOR } from '../core/colors.js';
+import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { game } from '../game/bindings.js';
 import { isActive } from '../game/level.js';
 import { eventKeyName, showKey, baseKey, TOGGLE_KEY } from '../state/keys.js';

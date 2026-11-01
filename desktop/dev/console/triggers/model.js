@@ -2,8 +2,8 @@
 import { game } from '../game/bindings.js';
 import { F } from '../game/fields.js';
 import { ACTION, RUNS_REGION_TRIGGER } from '../game/actions.js';
-import { parseIndex, quote } from '../core/text.js';
-import { MAP } from '../core/shared.js';
+import { parseIndex, quote } from '../../../../src/console/kernel/core/words.ts';
+import { MAP_MARKER as MAP } from '../../../../src/shared/contract/keys.ts';
 import { unwrap } from './log.js';
 
 const TARGET_SHOWN = 40; // characters of a text target shown in lists

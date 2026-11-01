@@ -7,7 +7,7 @@
 import { isFeatureOn } from '../../../../src/console/flags.ts';
 import { SCHEMA, parseValue, affectsGame } from './schema.js';
 import { parseKeyName } from './keys.js';
-import { ROUTE } from '../core/shared.js';
+import { ROUTE } from '../../../../src/shared/contract/routes.ts';
 
 const LS_KEY = 'pb2dev_kv';
 const SAVE_DELAY_MS = 150; // several changes in a row become one write
