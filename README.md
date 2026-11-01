@@ -16,6 +16,7 @@ The game files are **not** in this repository. You download them with a script.
 6. [Configuration](#6-configuration)
 7. [Network log](#7-network-log)
 8. [Troubleshooting](#8-troubleshooting)
+9. [Sad Burst 2 (community client)](#9-sad-burst-2-community-client)
 
 ## 1. Quick start
 
@@ -31,6 +32,9 @@ In the game, press Shift+`` ` `` (`~`) for the dev console and type `help`.
 
 To run a server of your own for friends, without the official site: `npm run server`, and
 they pick it in the server list `npm start` opens ([server/README.md](server/README.md)).
+
+The community client Sad Burst 2 has commands of its own; the ones above never touch it
+([section 9](#9-sad-burst-2-community-client)).
 
 ## 2. Folder layout
 
@@ -62,6 +66,9 @@ they pick it in the server list `npm start` opens ([server/README.md](server/REA
 | `tools/find-names.js` | Generates `desktop/dev/names.js` | yes |
 | `tools/fetch-opcodes.js` | Generates `desktop/dev/opcodes.js` from the editor's public `lib_params.js` | yes |
 | `game/` | The downloaded game | no |
+| `desktop/clients.js` | The game clients (official, Sad Burst 2) and which one a command is for | yes |
+| `game.sadburst/`, `desktop/dev/names.sadburst.js`, `desktop/dev/opcodes.sadburst.js` | Sad Burst 2: its game page, names and editor action names ([section 9](#9-sad-burst-2-community-client)) | no |
+| `tools/fetch-sadburst.js`, `tools/find-names-sadburst.js` | Sad Burst 2: its download and its names (called by `fetch-game` and `find-names` with `--sadburst`) | yes |
 | `game.previous/` | The copy before the last update | no |
 | `test/` | Dev console tests against a fake game (`npm test`, Node 20.10+, no game files needed) | yes |
 
@@ -274,3 +281,37 @@ Remote play testers have no `netlog runs` and no `run:`: they only see their own
 - **Dev console says names were not found**: see [section 5](#5-finding-the-obfuscated-names).
 - **Lag, rubber-banding, messages that never arrive**: `netlog show --loss` in the console, or the `LOSS` and `STAT` lines in `netlogs/` ([section 7](#7-network-log)).
 - **Game console output**: the game page's `console.log` is printed in the terminal running `npm start`; `npm start -- --verbose` adds requests, window events and the game's `trace()` output. Press `Ctrl+Shift+I` in the window for DevTools.
+
+## 9. Sad Burst 2 (community client)
+
+[Sad Burst 2](https://sadburst2.com/gameh5) (sadburst2.com) is a community fork of the official HTML5 client, with its own servers and accounts. The repository supports it next to the official client. **Every command is for the official client unless you add `--sadburst`**, so the usual commands never download or touch Sad Burst files:
+
+| Command | What |
+|---|---|
+| `npm run fetch-game -- --sadburst` | Its game page into `game.sadburst/` (about 3.5 MB), then its names and editor action names. The old copy is kept as `game.sadburst.previous/` |
+| `npm run find-names -- --sadburst` | `desktop/dev/names.sadburst.js` |
+| `npm run fetch-opcodes -- --sadburst` | `desktop/dev/opcodes.sadburst.js`, from its map editor (`map_editor/scripts/ale/ale-all.js`) |
+| `npm run sadburst` | The game window, with the dev console and the network log |
+
+The `--` is needed: npm 12 refuses `npm run fetch-game --sadburst` as an unknown npm option. Older npm passes it on as `npm_config_sadburst`, which works too.
+
+**How it differs from the official client:**
+
+| | Official | Sad Burst 2 |
+|---|---|---|
+| Address served | `www.plazmaburst2.com/h5/versions/<version>/` | `sadburst2.com/gameplay/` (the rest of the site, its login and API, goes to the network) |
+| Game code | Plain scripts listed in `index.html` | A page script (`assets/index-*.js`, Vue) loads `gamelogic/scripts-manifest.json`: a strings file per language, then the game scripts with hashed names, run as inline scripts |
+| Obfuscated names | Found by pattern | **The same names as the official client**, in minified code (`!0` for `true`, constants folded, local variables renamed) |
+| Download | Every file, through the site's directory listings | Only the code: the site has no listings, and answers any unknown path under `/gameplay/` with its game page. Images, sounds and maps are kept in `game.sadburst/` the first time the game loads them |
+| Login | `desktop/credentials.json`, cookies cleared at start | Its own entry screen: log in with a Sad Burst account, or play as a guest. The session stays in the app between starts |
+| Server list | `npm start` opens it | None: straight to its game page |
+| Hooks | Yes | **Off.** Its loader hashes every game script (SHA-256) and sends the hash with the lobby login (`PB2_CLIENT_BUILD`: client version, hash, size), so a patched script shows the server a changed client |
+| Remote play, player-hosted host | Yes | No |
+| Network log instance | `local` | `sadburst` (`netlogs/<date>_<time>_sadburst.log`) |
+
+**Names.** Patterns written for the official code rarely match minified code. `find-names -- --sadburst` takes a name by pattern where one still matches, and otherwise the **official client's name for it, if that name appears in the Sad Burst code** (how: `tools/find-names-sadburst.js`). The official names come from `game/` (run `npm run fetch-game` too), from `desktop/dev/names.js`, or from the previous `names.sadburst.js`. Build `20261030020533`: 222 of 225 names; `authReport`, `authEndorse` and `lockedArrays` are not in its code, so the anti-cheat scan report's array names are missing there. If Sad Burst 2 ever renames its identifiers, the run finds almost nothing and says so: new patterns for its minified code are needed then.
+
+**A newer build.** At start the app compares `game.sadburst/` with the site's `asset-version.txt` and says when the site has a newer build: run `npm run fetch-game -- --sadburst`. Its login carries the hash of your scripts, so an old copy may be refused.
+
+**Tested so far:** the game page loads, its entry screen logs in or plays as a guest, the game starts, the dev console and the network log run. Console commands inside a level have not been checked one by one on Sad Burst 2 yet.
+
