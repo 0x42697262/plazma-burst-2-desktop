@@ -41,3 +41,13 @@ test('a name is the official one when it is in the Sad Burst code; missing ones 
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('fetch-game --sadburst finds the page script\'s modules and the game\'s scripts', () => {
+  const { htmlRefs, moduleRefs, manifestFiles } = require('../tools/fetch-sadburst.js');
+  assert.deepEqual(htmlRefs('<link href="logo.png"><script src="./assets/index-X.js"></script><img src="/static/a.png"><a href="https://x/">'),
+    ['logo.png', './assets/index-X.js']);
+  assert.deepEqual(moduleRefs('m.f=["./a-1.js","./b-2.css"];import(`./c-3.js`);fetch("other.js")'), ['a-1.js', 'b-2.css', 'c-3.js']);
+  assert.deepEqual(manifestFiles({ strings: { en: 'gamelogic/s.js', zh: 'gamelogic/z.js' }, order: ['gamelogic/a.js', 'gamelogic/s.js'] }),
+    ['gamelogic/s.js', 'gamelogic/z.js', 'gamelogic/a.js']);
+  assert.throws(() => manifestFiles({ order: [] }), /scripts manifest/);
+});

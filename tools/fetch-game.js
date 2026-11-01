@@ -8,7 +8,10 @@
 //      recursively through their directory listings
 //
 // Usage: node tools/fetch-game.js [version] [--out dir] [--no-names] [--jobs n]
+//        node tools/fetch-game.js --sadburst [--out dir] [--no-names] [--jobs n]
 //   version     e.g. v1769098419 (default: the version linked from /h5/)
+//   --sadburst  Sad Burst 2 instead, into game.sadburst/ (tools/fetch-sadburst.js), then
+//               its names and opcodes ("npm run fetch-game -- --sadburst")
 //   --out       target folder (default: game/). The old copy is kept as <out>.previous
 //   --no-names  do not run tools/find-names.js and tools/fetch-opcodes.js afterwards
 //   --jobs      parallel downloads (default 8)
@@ -17,23 +20,24 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
+const { clientFor, withoutClientFlag, FLAG } = require('../desktop/clients');
 
 const SITE = 'https://www.plazmaburst2.com';
 const REPO = path.join(__dirname, '..');
 const UA = 'Mozilla/5.0 (pb2-desktop fetch-game)';
 const TEXT_EXT = new Set(['.html', '.htm', '.js', '.css', '.json', '.txt', '.xml']);
 
-function parseArgs(argv) {
-  const opts = { out: path.join(REPO, 'game'), names: true, jobs: 8, version: null };
+function parseArgs(argv, client) {
+  const opts = { out: client.gameDir, names: true, jobs: 8, version: null };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--out') opts.out = path.resolve(argv[++i]);
     else if (a === '--no-names') opts.names = false;
     else if (a === '--jobs') opts.jobs = Math.max(1, Number(argv[++i]) || 8);
     else if (a === '-h' || a === '--help') {
-      console.log('Usage: node tools/fetch-game.js [version] [--out dir] [--no-names] [--jobs n]');
+      console.log('Usage: node tools/fetch-game.js [version | --sadburst] [--out dir] [--no-names] [--jobs n]');
       process.exit(0);
-    } else if (/^v?\d+$/.test(a)) opts.version = a.startsWith('v') ? a : 'v' + a;
+    } else if (/^v?\d+$/.test(a) && client.id === 'official') opts.version = a.startsWith('v') ? a : 'v' + a;
     else throw new Error(`Unknown argument: ${a}`);
   }
   return opts;
@@ -103,8 +107,33 @@ async function pool(items, jobs, fn) {
   await Promise.all(workers);
 }
 
+// Sad Burst 2: its copy, then its names and opcodes.
+async function mainSadburst(client, opts) {
+  const r = await require('./fetch-sadburst').fetchSadburst(client, opts);
+  if (r.problems.length) {
+    console.log('Problems:');
+    for (const p of r.problems) console.log(`  ${p}`);
+    process.exitCode = 1;
+  }
+  if (!opts.names) return;
+  console.log('\nFinding obfuscated names for the dev console...');
+  const n = require('./find-names-sadburst').run({ gameDir: opts.out });
+  if (n.missing.length || n.problems.length) {
+    console.log('Some names were not found. The dev console may not fully work there; see README.md, "Sad Burst 2".');
+    process.exitCode = 1;
+  }
+  console.log('\nFetching the map editor\'s trigger action names...');
+  try {
+    execFileSync(process.execPath, [path.join(__dirname, 'fetch-opcodes.js'), FLAG], { stdio: 'inherit' });
+  } catch {
+    console.log('Not updated. Run "npm run fetch-opcodes -- --sadburst" later.');
+  }
+}
+
 async function main() {
-  const opts = parseArgs(process.argv.slice(2));
+  const client = clientFor();
+  const opts = parseArgs(withoutClientFlag(process.argv.slice(2)), client);
+  if (client.id === 'sadburst') { await mainSadburst(client, opts); return; }
   const version = opts.version || (await latestVersion());
   const base = `${SITE}/h5/versions/${version}/`;
   const tmp = `${opts.out}.download`;
