@@ -3,9 +3,9 @@ import { showPaged, takePage } from '../../../../src/console/kernel/ui/pager.ts'
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { requireLevel } from '../../../../src/console/kernel/game/level.ts';
 import { GAME_FIELDS } from '../../../../src/console/kernel/game/fields.ts';
-import { regionList, triggerList, regionModeName, regionUid, timerUid, findRegion, REGION_MODE } from '../triggers/model.js';
-import { fireRegion } from '../triggers/regions.js';
-import { takeRunOptions } from '../triggers/run.js';
+import { regionList, triggerList, regionModeName, regionUid, timerUid, findRegion, REGION_MODE } from '../../../../src/features/triggers/model.ts';
+import { fireRegion } from '../../../../src/features/triggers/regions.ts';
+import { takeRunOptions } from '../../../../src/features/triggers/run.ts';
 
 const UID_WIDTH = 18;
 const MODE_WIDTH = 22;

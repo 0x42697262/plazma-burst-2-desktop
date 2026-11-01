@@ -29,7 +29,7 @@ test('vars sync explains, sends with the chosen mode, and refuses a mode that ca
 });
 
 test('vars set types values like the map loader does', async () => {
-  const { parseVarValue } = await consoleModule('triggers/vars.js');
+  const { parseVarValue } = await consoleModule('../../../src/features/triggers/vars.ts');
   // The loader's rule, from scripts/frame2.js.
   const loader = (v) => (parseInt(v) + '' === v ? parseInt(v) : v);
   for (const v of ['5', '0', '-1', '-0', '01', '3.5', '1e3', '0x10', '', 'abc', '5abc', '+5', 'NaN', '99999999']) {

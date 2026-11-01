@@ -11,10 +11,10 @@ import { KEY } from '../../../../src/console/kernel/state/schema.ts';
 import { settings } from '../../../../src/console/kernel/state/store.ts';
 import {
   triggerList, actionsOf, showTarget, callsText, triggerLabel, findTrigger, triggerSources, sourcesOf, SOURCE,
-} from '../triggers/model.js';
-import { triggerRuns, clearTriggerRuns, TRIG_HISTORY_MAX } from '../triggers/log.js';
-import { takeRunOptions, runTriggerAs, reportRun, SHOT_POWER, resolveActions, runScript } from '../triggers/run.js';
-import { parseScript, actionInfo, opcodeName, opcodesLoaded, searchActions } from '../triggers/script.js';
+} from '../../../../src/features/triggers/model.ts';
+import { triggerRuns, clearTriggerRuns, TRIG_HISTORY_MAX } from '../../../../src/features/triggers/run-log.ts';
+import { takeRunOptions, runTriggerAs, reportRun, SHOT_POWER, resolveActions, runScript } from '../../../../src/features/triggers/run.ts';
+import { parseScript, actionInfo, opcodeName, opcodesLoaded, searchActions } from '../../../../src/features/triggers/script.ts';
 import { takeOptions } from '../../../../src/console/kernel/core/args.ts';
 
 const UID_WIDTH = 20; // the uid column of the trigger list

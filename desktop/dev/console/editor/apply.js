@@ -7,7 +7,7 @@
 // are written like everything else; nothing hides it.
 import { game } from '../../../../src/console/kernel/game/bindings.ts';
 import { GAME_FIELDS } from '../../../../src/console/kernel/game/fields.ts';
-import { unwrap } from '../triggers/log.js';
+import { unwrap } from '../../../../src/features/triggers/run-log.ts';
 import { moveWall, textureAt } from '../../../../src/console/kernel/game/walls.ts';
 import { findRect, moveRect } from '../../../../src/console/kernel/game/layers.ts';
 import { boundsOf } from './kinds.js';

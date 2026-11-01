@@ -12,7 +12,7 @@ import { canRebuild, canBuild, buildElement, builtCount, loaderProblem } from '.
 import { textureAt, addWall, removeWall } from '../../../../src/console/kernel/game/walls.ts';
 import { findRect, moveRect } from '../../../../src/console/kernel/game/layers.ts';
 import { boundsOf } from './kinds.js';
-import { unwrap } from '../triggers/log.js';
+import { unwrap } from '../../../../src/features/triggers/run-log.ts';
 import { claimNewestGun, removeGun, remakeGun } from './guns.js';
 import { placeLamp, removeLamp } from './lamps.js';
 import { setStart } from './start.js';

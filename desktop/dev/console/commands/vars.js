@@ -4,11 +4,11 @@ import { showPaged, takePage } from '../../../../src/console/kernel/ui/pager.ts'
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { plural } from '../../../../src/console/kernel/core/words.ts';
 import { game } from '../../../../src/console/kernel/game/bindings.ts';
-import { showTarget } from '../triggers/model.js';
+import { showTarget } from '../../../../src/features/triggers/model.ts';
 import {
   requireVars, showVar, parseVarValue, SYNC_MODES, RECOMMENDED_MODE, VAR_MAX_LEN, fights, modeName,
   syncMarkOn, mapHasSyncMark, syncActionsFor, seedersFor, modeVerdict, NO, YES, noteVarEdit,
-} from '../triggers/vars.js';
+} from '../../../../src/features/triggers/vars.ts';
 
 const NAME_WIDTH = 28;
 const SHOWN = Object.freeze({ syncers: 6, seeders: 4 });

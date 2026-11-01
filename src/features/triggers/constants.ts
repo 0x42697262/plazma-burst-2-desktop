@@ -1,1 +1,9 @@
 export const KEY_WIDTH = 14;
+export const TARGET_SHOWN = 40;
+export const TRIG_HISTORY_MAX = 1000;
+export const REFUSED_MERGE_WINDOW = 20;
+export const FULL_CHECK_EVERY = 60;
+export const SHOT_POWER = 1;
+export const VAR_MAX_LEN = 2048;
+export const DECIMAL_RADIX = 10;
+export const QUOTED_MIN_LENGTH = 2;

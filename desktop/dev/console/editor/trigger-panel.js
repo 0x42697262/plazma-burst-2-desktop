@@ -4,7 +4,7 @@
 // (the format "triggers exec" reads), applied in one go.
 import { el } from '../../../../src/console/kernel/ui/dom.ts';
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
-import { actionInfo, opcodeName, opcodeType } from '../triggers/script.js';
+import { actionInfo, opcodeName, opcodeType } from '../../../../src/features/triggers/script.ts';
 import { actionsOf, actionValues, triggerText, valuesFromText } from './actions.js';
 import { setAttrs } from './edit.js';
 import { editField } from './fields.js';

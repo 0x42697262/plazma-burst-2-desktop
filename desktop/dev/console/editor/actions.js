@@ -1,7 +1,7 @@
 // A trigger's actions, as the map stores them (actions_1_type, actions_1_targetA,
 // actions_1_targetB, actions_2_..., type -1 = an empty slot), as a list, and as the map
-// editor's text view (triggers/script.js reads that format; this writes it).
-import { opcodeName, parseScript } from '../triggers/script.js';
+// editor's text view (src/features/triggers/script.ts reads that format; this writes it).
+import { opcodeName, parseScript } from '../../../../src/features/triggers/script.ts';
 
 const ACTION = /^actions_(\d+)_(type|targetA|targetB)$/;
 export const EMPTY_TYPE = '-1';

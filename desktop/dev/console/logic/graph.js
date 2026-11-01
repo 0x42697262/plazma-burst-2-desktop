@@ -11,8 +11,8 @@
 import { game } from '../../../../src/console/kernel/game/bindings.ts';
 import { ACTION, ACTION_NAMES, RUNS_REGION_TRIGGER } from '../../../../src/console/kernel/game/actions.ts';
 import { MAP_MARKER as MAP } from '../../../../src/shared/contract/keys.ts';
-import { triggerList, regionList } from '../triggers/model.js';
-import { actionInfo } from '../triggers/script.js';
+import { triggerList, regionList } from '../../../../src/features/triggers/model.ts';
+import { actionInfo } from '../../../../src/features/triggers/script.ts';
 
 // What a link means, which is how the view colours it.
 export const LINK = Object.freeze({

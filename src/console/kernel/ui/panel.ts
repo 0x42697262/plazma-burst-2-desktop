@@ -7,7 +7,7 @@ import { binds, history } from '../state/store.ts';
 import { hotkeyOf } from '../state/hotkeys.ts';
 import { levelWasActive } from '../overrides/frame.ts';
 import { run, maskLine } from '../dispatch.ts';
-import { looksLikeScript } from '../../../../desktop/dev/console/triggers/script.js';
+import { looksLikeScript } from '#features/triggers/script.ts';
 import { editorKey } from '../../../../desktop/dev/console/editor/index.js';
 import { el } from './dom.ts';
 import { THEME, IN_OVERLAY, swallow, markUi } from './theme.ts';
@@ -107,7 +107,7 @@ function onInputKey(event: KeyboardEvent): void {
 type Pasteable = { value: string; selectionStart: number | null; selectionEnd: number | null };
 
 export function pasteText(text: string, input: Pasteable | null = inputElement): boolean {
-  if (!input || !LINE_BREAK.test(text) || !(looksLikeScript as (text: string) => boolean)(text)) return false;
+  if (!input || !LINE_BREAK.test(text) || !looksLikeScript(text)) return false;
   const oneLine = text.split(LINE_SPLIT).map((line) => line.trim()).filter(Boolean).join(SPACE);
   const value = input.value || '';
   const start = input.selectionStart ?? value.length;
