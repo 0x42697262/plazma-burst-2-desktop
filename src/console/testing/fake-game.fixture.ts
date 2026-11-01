@@ -234,7 +234,7 @@ export async function bootConsole({ mapFile = DEFAULT_MAP_FILE, sayTrigger, entr
     return event;
   };
   const listeners: Record<string, Listener> = {};
-  set('uiOverlay', { overlay: node() });
+  set('uiOverlay', class GameOverlay { static overlay = node(); });
   const drawn: any[] = [];
   const contextThatRecordsWhatIsDrawn = () => new Proxy<Record<string | symbol, unknown>>({}, {
     get: (target, key) => (key in target ? target[key] : (...args: unknown[]) => drawn.push([key, ...args])),

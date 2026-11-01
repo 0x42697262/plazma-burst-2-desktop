@@ -38,7 +38,7 @@ const ENTER_KEY = Object.freeze({
 
 const lockedNameKeys: readonly NameKey[] = LOCKED_NAMED;
 
-const bagOf = (value: unknown): Bag => (value && typeof value === 'object' ? value as Bag : {});
+const bagOf = (value: unknown): Bag => (value && (typeof value === 'object' || typeof value === 'function') ? value as Bag : {});
 const field = (target: unknown, key: NameKey): unknown => bagOf(target)[nameOf(key)];
 const invoke = (target: unknown, key: NameKey, ...args: unknown[]): unknown => (field(target, key) as Callable).apply(target, args);
 const network = (): Network | null => (read('net') as Network | null | undefined) ?? null;
