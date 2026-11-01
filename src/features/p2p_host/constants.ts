@@ -11,3 +11,10 @@ export const MILLISECONDS_PER_SECOND = 1000;
 export const HOST_WINDOW = Object.freeze({ width: 800, height: 400 });
 
 export const FORCED_MATCH_VALUES = Object.freeze({ p2p: true, ranked: false, accept_connections_manually: false });
+
+export const TICK_MS = 500;
+export const SLOW_MS = 30000;
+export const AWAY_MS = 8000;
+export const SPECTATE_RETRY_MS = 10000;
+export const KICK_AGAIN_MS = 30000;
+export const RESTART_PAUSE_MS = 3000;

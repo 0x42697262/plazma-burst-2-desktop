@@ -79,3 +79,65 @@ export const PAGE_ERROR_LEVEL = 'error';
 export const MISSING_FILE_CODE = 'ENOENT';
 export const TEXT_ENCODING = 'utf8';
 export const BYTE_ORDER_MARK = /^\uFEFF/;
+
+export const SCREEN = Object.freeze({ menu: 'menu', lobby: 'MPLobby' });
+export const PHASE = Object.freeze({
+  boot: 'starting the game',
+  lobby: 'logging in to the lobby server',
+  creating: 'creating the match',
+  joining: 'joining the match',
+  running: 'running',
+  waiting: 'waiting to start again',
+  stopped: 'stopped',
+} as const);
+export type Phase = typeof PHASE[keyof typeof PHASE];
+export const LOCAL_MAP_ID_PREFIX = 'local-';
+export const MAP_URL = '/pb2/server.php';
+export const MAP_REQUEST_KIND = 'cmap';
+export const MAP_START = '<';
+export const PLAYER_START = /<player\b/g;
+export const MAP_NOT_COMPRESSED = '0';
+export const TIME_ZONE_SEPARATOR = '/';
+export const REPLY_OK = 'ok';
+export const KICK_DONE = 'successfully';
+export const KICK_KEEP_OUT = '0';
+export const OWNER_COMMAND = Object.freeze({
+  terminate: '-terminate',
+  pause: '-pause',
+  swap: '-swap',
+  endround: '-endround',
+  unbanall: '-unbanall',
+});
+export const SLOT_PREFIX = /^#/;
+export const DIGITS_ONLY = /^\d+$/;
+export const PING_OFF = 'off';
+export const LOCAL_WORD = 'local';
+export const WORD_SEPARATOR = ' ';
+export const NO_VALUE = '-';
+export const WHO_COLUMNS: readonly string[] = Object.freeze(['slot', 'name', 'ping', 'team', 'hp', 'rep']);
+export const COMMAND_NAME = Object.freeze({
+  server: 'server',
+  status: 'status',
+  who: 'who',
+  kick: 'kick',
+  tell: 'tell',
+  say: 'say',
+  map: 'map',
+  pause: 'pause',
+  swap: 'swap',
+  endround: 'endround',
+  unbanall: 'unbanall',
+  ping: 'ping',
+  pingAction: 'ping_action',
+  minReputation: 'min_reputation',
+  stop: 'stop',
+  start: 'start',
+  restart: 'restart',
+});
+export const COMMAND_ALIASES = Object.freeze({
+  status: Object.freeze(['info']),
+  who: Object.freeze(['players']),
+  tell: Object.freeze(['pm', 'whisper']),
+  minReputation: Object.freeze(['minrep']),
+});
+export const SEE_ALSO_MAPS: readonly string[] = Object.freeze(['maps']);
