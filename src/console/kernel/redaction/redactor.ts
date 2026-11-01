@@ -1,5 +1,5 @@
-import { ESCAPED_MATCH, OBFUSCATED_PREFIX, REDACTION_PATTERN, exactNamesPattern, obfuscatedPattern } from '../keys.ts';
-import { HIDDEN } from '../text.ts';
+import { ESCAPED_MATCH, OBFUSCATED_PREFIX, REDACTION_PATTERN, exactNamesPattern, obfuscatedPattern } from './keys.ts';
+import { HIDDEN } from './text.ts';
 import { textOf } from '#kernel/text/text-of.ts';
 
 export type Redactor = (text: unknown) => string;

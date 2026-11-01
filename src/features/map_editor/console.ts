@@ -2,7 +2,8 @@ import { FEATURE } from '#shared/features/keys.ts';
 import type { ConsoleFeature } from '#console/feature-types.ts';
 import type { ListSection } from '#console/kernel/list-sections.ts';
 import { editorCommand } from './entry/command.ts';
-import { editorTick } from './ui/editor.ts';
+import { editorKey, editorTick } from './ui/editor.ts';
+import { provideKeyHandler } from '#console/kernel/ports/input.ts';
 import { editSummary } from './services/edit.ts';
 import { EDIT_KINDS, FRAME_HOOK_NAME, LIST_SECTION } from './keys.ts';
 import { TEXT } from './text.ts';
@@ -19,4 +20,5 @@ export const mapEditorConsole: ConsoleFeature = Object.freeze({
   commands: [editorCommand],
   frame: [{ name: FRAME_HOOK_NAME, run: () => { editorTick(); } }],
   listSections: { [LIST_SECTION]: editsSection },
+  start: () => { provideKeyHandler(editorKey); },
 });

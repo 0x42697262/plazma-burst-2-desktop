@@ -12,6 +12,9 @@ import { isActive } from '#console/kernel/game/level.ts';
 import { KEY_WIDTH } from './constants.ts';
 import { FRAME_HOOK_NAME, LIST_SECTION } from './keys.ts';
 import { TEXT } from './text.ts';
+import { EXEC_PREFIX } from './entry/keys.ts';
+import { looksLikeScript } from './script.ts';
+import { providePasteClaim } from '#console/kernel/ports/input.ts';
 
 type EditedVar = { name: string; now: unknown; was: unknown };
 type Command = { name: string; [field: string]: unknown };
@@ -30,4 +33,5 @@ export const triggersConsole: ConsoleFeature = Object.freeze({
   commands: [triggersCommand, regionsCommand, varsCommand, logicCommand] as Command[],
   frame: [{ name: FRAME_HOOK_NAME, run: () => { syncTriggerHooks(); } }],
   listSections: { [LIST_SECTION.logic]: logicSection, [LIST_SECTION.vars]: varsSection },
+  start: () => { providePasteClaim((text) => (looksLikeScript(text) ? EXEC_PREFIX : null)); },
 });

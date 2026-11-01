@@ -10,7 +10,6 @@ import { pageBuildOptions, wrapperBuildOptions } from './build.ts';
 import { editionNames, oneOffEdition, readEdition } from './edition-file.ts';
 import { onlyEditionFeatures } from './edition-plugin.ts';
 
-const featureSideOrEntry = (id: string) => new RegExp(`^src/features/${id}/(console|page|wrapper)\\.ts$|^src/features/${id}/entry/`);
 const ALWAYS_IN_THE_MAIN_PROCESS = ['login', 'cert_pinning', 'client_sadburst'];
 const CONSOLE_ONLY = /^src\/console\/(index|features)\.ts$|^src\/console\/kernel\/(ui|commands|state)\//;
 
@@ -48,7 +47,7 @@ async function assertHoldsOnly(edition: Edition) {
   const included = edition.features ?? CATALOG.map((definition) => definition.id);
   for (const { id } of CATALOG) {
     if (included.includes(id)) continue;
-    assert.deepEqual(inputs.filter((input) => featureSideOrEntry(id).test(input)), [], `${edition.name}: ${id} is left out`);
+    assert.deepEqual(inputs.filter((input) => input.startsWith(`src/features/${id}/`)), [], `${edition.name}: ${id} is left out, so none of its files is in the page`);
   }
   const hasConsole = included.includes('dev_console');
   assert.equal(outputs.includes('console.js'), hasConsole, `${edition.name}: console.js only with dev_console`);

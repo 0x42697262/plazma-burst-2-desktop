@@ -7,8 +7,7 @@ import { binds, history } from '../state/store.ts';
 import { hotkeyOf } from '../state/hotkeys.ts';
 import { levelWasActive } from '../overrides/frame.ts';
 import { run, maskLine } from '../dispatch.ts';
-import { looksLikeScript } from '#features/triggers/script.ts';
-import { editorKey } from '#features/map_editor/ui/editor.ts';
+import { commandForPaste, handledByAFeature } from '../ports/input.ts';
 import { el } from './dom.ts';
 import { THEME, IN_OVERLAY, swallow, markUi } from './theme.ts';
 import { print, attachLog, clearLog } from './log.ts';
@@ -107,13 +106,14 @@ function onInputKey(event: KeyboardEvent): void {
 type Pasteable = { value: string; selectionStart: number | null; selectionEnd: number | null };
 
 export function pasteText(text: string, input: Pasteable | null = inputElement): boolean {
-  if (!input || !LINE_BREAK.test(text) || !looksLikeScript(text)) return false;
+  const prefix = input && LINE_BREAK.test(text) ? commandForPaste(text) : null;
+  if (!input || prefix === null) return false;
   const oneLine = text.split(LINE_SPLIT).map((line) => line.trim()).filter(Boolean).join(SPACE);
   const value = input.value || '';
   const start = input.selectionStart ?? value.length;
   const before = value.slice(0, start);
   const after = value.slice(input.selectionEnd ?? start);
-  const lead = before.trim() ? before : PANEL.execPrefix;
+  const lead = before.trim() ? before : prefix;
   input.value = lead + oneLine + after;
   input.selectionStart = input.selectionEnd = lead.length + oneLine.length;
   return true;
@@ -218,7 +218,7 @@ export function onKeyDownCapture(event: KeyboardEvent): void {
     if (!event.repeat) togglePanel();
     return;
   }
-  if (!isOpen && !isTyping && isFeatureOn(PROFILE_FEATURE_FLAGS.mapEditor) && editorKey(event)) {
+  if (!isOpen && !isTyping && handledByAFeature(event)) {
     swallowEvent(event);
     heldBoundKeys.add(event.code);
     return;

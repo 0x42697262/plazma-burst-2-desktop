@@ -1,6 +1,6 @@
 import { TESTER_NAME_COLUMN } from './constants.ts';
 
-export const HIDDEN = '‹hidden›';
+export { HIDDEN } from '#console/kernel/redaction/text.ts';
 
 export const TEXT = Object.freeze({
   badTesterName: 'a tester name is 1-32 letters, digits, "-" or "_", starting with a letter or digit',

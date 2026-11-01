@@ -1,4 +1,4 @@
-import { makeRedactor, type Redactor } from '#features/remote_play/domain/redactor.ts';
+import { makeRedactor, type Redactor } from '../redaction/redactor.ts';
 import { stringOf } from '#kernel/text/text-of.ts';
 import type { FeatureId } from '#shared/features/keys.ts';
 import { isFeatureOn } from '../../flags.ts';

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { REMOTE_PAGE_SCRIPT } from './keys.ts';
 import { HIDDEN } from './text.ts';
-import { makeRedactor } from './domain/redactor.ts';
+import { makeRedactor } from '#console/kernel/redaction/redactor.ts';
 import { isBlockedKey, fromElectronInput } from './domain/blocked-keys.ts';
 import { isGamePage, isRefusedPageLoad } from './domain/game-page.ts';
 import { toInputEvents, releaseAll } from './domain/input.ts';

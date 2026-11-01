@@ -54,3 +54,4 @@ export const FIRST_WORD = /^\S+\s*/;
 export const LEADING_OPTIONS = /^(?:--\S*\s*)*/;
 export const SINGLE_WORD = /^#?\S+$/;
 export const TRUE_TEXT = 'true';
+export const EXEC_PREFIX = 'triggers exec ';

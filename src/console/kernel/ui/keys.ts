@@ -53,7 +53,6 @@ export const PANEL = Object.freeze({
   hidden: 'none',
   visible: 'visible',
   invisible: 'hidden',
-  execPrefix: 'triggers exec ',
   listCommand: 'list',
   helpCommand: 'help',
   hintSeparator: '  ',
@@ -86,4 +85,4 @@ export const INPUT_STYLE = Object.freeze({
 });
 export const BUTTON_STYLE = Object.freeze({ position: 'absolute', top: '293px', width: '180px', height: '20px', fontSize: '9px' });
 export const scrollbarColors = (thumb: string, track: string): string => `${thumb} ${track}`;
-export const PROFILE_FEATURE_FLAGS = Object.freeze({ mapEditor: 'map_editor', binds: 'binds' } as const);
+export const PROFILE_FEATURE_FLAGS = Object.freeze({ binds: 'binds' } as const);
