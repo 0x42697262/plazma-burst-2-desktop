@@ -8,8 +8,9 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 
-const COMPRESSED = require('./dev/console/shared.json').map.compressedPrefix;
-const NOT_PUBLISHED = require('./dev/console/shared.json').map.notPublished;
+const { MAP_MARKER } = require('../src/shared/contract/keys.ts');
+const COMPRESSED = MAP_MARKER.compressedPrefix;
+const NOT_PUBLISHED = MAP_MARKER.notPublished;
 
 const isCompressed = (text) => String(text).startsWith(COMPRESSED);
 

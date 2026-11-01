@@ -79,10 +79,9 @@ let hookPlan = null;
 
 // Dev console (Shift+` key). Disable with PB2_DEV=0.
 const DEV_ENABLED = process.env.PB2_DEV !== '0';
-// Routes and map markers shared with the console (desktop/dev/console/shared.json).
-const SHARED = require('./dev/console/shared.json');
-const ROUTE = SHARED.routes;
-const DEV_PREFIX = PREFIX + SHARED.devDir;
+// Routes and map markers shared with the console (src/shared/contract/).
+const { DEV_DIR, ROUTE_NAME: ROUTE, MAP_MARKER, SAVE_RESULT } = require('../src/shared/contract/keys.ts');
+const DEV_PREFIX = PREFIX + DEV_DIR;
 // The console: one bundle of desktop/dev/console/ in dist/console/ ("npm run build"), served as __dev/console/*.
 const DEV_CONSOLE_DIR = path.join(__dirname, '..', 'dist', 'console');
 const DEV_CONSOLE_ENTRY = 'index.js';
@@ -125,9 +124,9 @@ const serverPageScript = (config) => '<script>Object.defineProperty(globalThis, 
 // A private server: where the lobby connection goes and who logs in there (dev console, join/).
 const joinPageScript = (join) => '<script>Object.defineProperty(globalThis, "PB2_JOIN", { value: Object.freeze('
   + JSON.stringify({ address: join.hostPort, nickname: join.nickname, password: join.password }).replace(/</g, '\\u003c') + ') });</script>';
-const DEV_SCRIPT_TAG = `<script src="${SHARED.devDir}${ROUTE.names}"></script>`
-  + `<script src="${SHARED.devDir}${ROUTE.opcodes}"></script>`
-  + `<script type="module" src="${SHARED.devDir}${ROUTE.console}${DEV_CONSOLE_ENTRY}"></script>`;
+const DEV_SCRIPT_TAG = `<script src="${DEV_DIR}${ROUTE.names}"></script>`
+  + `<script src="${DEV_DIR}${ROUTE.opcodes}"></script>`
+  + `<script type="module" src="${DEV_DIR}${ROUTE.console}${DEV_CONSOLE_ENTRY}"></script>`;
 
 // The version folder the files came from (written by tools/fetch-game.js). The game is
 // served under that same URL so it behaves like the official site.
@@ -260,22 +259,22 @@ const mapFileName = (id) => id.replace(/[^A-Za-z0-9 _.\-]/g, (c) => '%' + c.char
 // saved one tag per line (desktop/map-text.js).
 const decompressMap = makeUnpacker(ROOT);
 
-// Returns one of SHARED.saveResult: saved, same or off. Throws on bad input.
+// Returns one of SAVE_RESULT: saved, same or off. Throws on bad input.
 async function saveMap(id, raw) {
-  if (!saveMapsOn()) return SHARED.saveResult.off;
+  if (!saveMapsOn()) return SAVE_RESULT.off;
   id = String(id || '').trim();
   if (!id || id.toLowerCase().startsWith(LOCAL_MAP_PREFIX)) throw new Error('no map ID');
   const text = decompressMap(String(raw || '').replace(/^\uFEFF/, '').trim());
-  if (!text.startsWith('<') || text.startsWith(SHARED.map.notPublished)) throw new Error('not map XML');
+  if (!text.startsWith('<') || text.startsWith(MAP_MARKER.notPublished)) throw new Error('not map XML');
   const file = path.join(MAPS_DIR, mapFileName(id));
   const out = beautifyMap(text);
   try {
-    if ((await fs.readFile(file, 'utf8')) === out) return SHARED.saveResult.same;
+    if ((await fs.readFile(file, 'utf8')) === out) return SAVE_RESULT.same;
   } catch {}
   await fs.mkdir(MAPS_DIR, { recursive: true });
   await fs.writeFile(file, out);
   log.info(`Saved map ${id} to ${file} (${text.length} chars)`);
-  return SHARED.saveResult.saved;
+  return SAVE_RESULT.saved;
 }
 
 // A map from the dev console's editor: desktop/maps/<name>.xml, played as local-<name>.
@@ -388,7 +387,7 @@ async function serveLocalMap(request, ctx) {
   const file = await findLocalMap(id.slice(LOCAL_MAP_PREFIX.length));
   if (!file) {
     log.error(`Local map not found: ${id} (looked in ${MAPS_DIR})`);
-    return new Response(`${SHARED.map.notPublished} />`, { headers: { 'Content-Type': 'text/plain' } });
+    return new Response(`${MAP_MARKER.notPublished} />`, { headers: { 'Content-Type': 'text/plain' } });
   }
   log.info(`Serving local map ${id} from ${file}`);
   const text = (await fs.readFile(file, 'utf8')).replace(/^\uFEFF/, '').trim();
@@ -408,7 +407,7 @@ async function serveServerMap(request, id, ctx) {
   if (!res.ok) return res;
   const text = await res.text();
   saveMap(id, text).catch((e) => {
-    if (!text.startsWith(SHARED.map.notPublished)) log.error(`Could not save map ${id}: ${e.message}`);
+    if (!text.startsWith(MAP_MARKER.notPublished)) log.error(`Could not save map ${id}: ${e.message}`);
   });
   return new Response(text, { status: res.status, headers: { 'Content-Type': res.headers.get('content-type') || 'text/plain; charset=utf-8' } });
 }
