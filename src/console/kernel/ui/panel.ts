@@ -8,7 +8,7 @@ import { hotkeyOf } from '../state/hotkeys.ts';
 import { levelWasActive } from '../overrides/frame.ts';
 import { run, maskLine } from '../dispatch.ts';
 import { looksLikeScript } from '#features/triggers/script.ts';
-import { editorKey } from '../../../../desktop/dev/console/editor/index.js';
+import { editorKey } from '#features/map_editor/ui/editor.ts';
 import { el } from './dom.ts';
 import { THEME, IN_OVERLAY, swallow, markUi } from './theme.ts';
 import { print, attachLog, clearLog } from './log.ts';
@@ -218,7 +218,7 @@ export function onKeyDownCapture(event: KeyboardEvent): void {
     if (!event.repeat) togglePanel();
     return;
   }
-  if (!isOpen && !isTyping && isFeatureOn(PROFILE_FEATURE_FLAGS.mapEditor) && (editorKey as (event: KeyboardEvent) => boolean)(event)) {
+  if (!isOpen && !isTyping && isFeatureOn(PROFILE_FEATURE_FLAGS.mapEditor) && editorKey(event)) {
     swallowEvent(event);
     heldBoundKeys.add(event.code);
     return;

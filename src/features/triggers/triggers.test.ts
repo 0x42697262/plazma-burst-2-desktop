@@ -381,8 +381,8 @@ test('logic: old maps without uids link by number, as the game reads them', asyn
   assert.deepEqual(spot(graph.byIndex.get('trigger')[1]), [40, -60], aboveTopLeft);
   assert.deepEqual(spot(graph.byIndex.get('timer')[0]), [80, -60], aboveTopLeft);
 
-  const session: any = await import('../../../desktop/dev/console/editor/session.js');
-  const { drawEditorFrame }: any = await import('../../../desktop/dev/console/editor/view.js');
+  const session: any = await import('#features/map_editor/services/session.ts');
+  const { drawEditorFrame }: any = await import('#features/map_editor/ui/view.ts');
   const original = globals[names.mapText];
   try {
     game.run('editor on');

@@ -1,3 +1,8 @@
+import type { CommandDefinition } from '#console/kernel/commands/registry.ts';
+
+type WindowPress = { target: string; taken: boolean; x: number; y: number } | null;
+type LayerPress = { world: { x: number; y: number } | null; picked: string | null } | null;
+
 export const TEXT = Object.freeze({
   count: (count: number, kind: string) => `${count} ${kind}`,
   partSeparator: ', ',
@@ -5,3 +10,252 @@ export const TEXT = Object.freeze({
   where: (inLevel: boolean) => `  ${inLevel ? 'in the running level' : 'kept, not in the running level'}; put in again when the level starts over on this map`,
   reset: '  ("editor reset" undoes and forgets them)',
 });
+
+export const UNDO_VERB = Object.freeze({ undo: 'undo', redo: 'redo' });
+
+const yesNo = (value: boolean): string => (value ? 'yes' : 'no');
+
+export const COMMAND_TEXT = Object.freeze({
+  usage: 'usage: editor [on | off]',
+  already: (on: boolean) => `Editor already ${on ? 'on' : 'off'}`,
+  keyOrCommand: (key: string) => `${key} or "editor"`,
+  commandOnly: '"editor"',
+  on: (again: string) => `Editor on: click an object to select it. ${again} turns it off.`,
+  off: 'Editor off',
+  notShown: 'the editor is not on in a level ("editor")',
+  selectFirst: 'select an object first (click it, or pick it in Objects)',
+  setUsage: 'usage: editor set <attribute> <value>  (on the selected object; "" for empty)',
+  alreadyValue: (name: string, attr: string, value: string) => `${name}: ${attr} is already "${value}"`,
+  liveNow: 'live now',
+  notInLevel: (why: string) => `not in the running level: ${why} (kept for "editor save")`,
+  setDone: (name: string, attr: string, value: string, where: string) => `${name}: ${attr} = "${value}", ${where}`,
+  saveUsage: 'usage: editor save <name> [--force]  (desktop/maps/<name>.xml, played as local-<name>)',
+  saved: (file: string, id: string) => `Saved ${file}: play it as "${id}" in Campaign > Custom Map`,
+  error: (message: string) => `error: ${message}`,
+  exists: (message: string, name: string) => `${message}; "editor save ${name} --force" replaces it`,
+  couldNotSave: (why: string) => `could not save (${why})`,
+  desktopOnly: 'desktop wrapper only',
+  listSeparator: ', ',
+  addUsage: (kinds: string) => `usage: editor add <kind> [x y [w h]]  (kinds: ${kinds}; default place: your crosshair)`,
+  notMade: 'it was not made',
+  inLevelBut: (why: string) => `in the running level, but ${why}`,
+  inLevel: 'in the running level',
+  size: (width: string | undefined, height: string | undefined) => ` (${width} x ${height})`,
+  added: (name: string, atX: number, atY: number, size: string, where: string) => `Added ${name} at ${atX}, ${atY}${size}; ${where}`,
+  resetUsage: 'usage: editor reset',
+  nothingToReset: 'Nothing to reset: no edits are kept',
+  resetDone: (undone: number) => `Reset: ${undone ? `${undone} edit${undone === 1 ? '' : 's'} undone in the running level, ` : ''}every edit forgotten; nothing is put in again when the level starts over`,
+  notBack: (count: number) => `  ${count} of them did not reach the running level (not live, or it could not take them back): restart the level to be sure it is the map's own`,
+  deleted: (name: string) => `Deleted ${name} from the map; still in the running level (kept for "editor save")`,
+  copied: (name: string) => `Copied to ${name}`,
+  didIt: (verb: string) => (verb === UNDO_VERB.undo ? 'Undone' : 'Redone'),
+  nothingTo: (verb: string) => `Nothing to ${verb}`,
+  toolUsage: (kinds: string) => `usage: editor tool select  |  editor tool place [kind]  (kinds: ${kinds})`,
+  toolSelect: 'Tool: select',
+  toolPlace: 'Tool: place (click in the world; Esc goes back to select)',
+  statusTitle: 'Editor status',
+  statusOn: (on: boolean, shown: boolean) => `  on: ${yesNo(on)}, shown: ${shown ? 'yes' : 'no (no level running)'}`,
+  statusMap: (map: { elements: number; withUid: number } | null) => `  map: ${map ? `${map.elements} elements, ${map.withUid} with a uid` : 'none'}`,
+  statusLayers: (drawing: boolean, panels: string, listening: boolean) => `  outlines layer: ${drawing ? 'drawing' : 'off'}; panels: ${panels}; listening for presses: ${yesNo(listening)}`,
+  statusLocked: (locked: boolean) => `  pointer locked: ${locked ? 'yes (clicks go to the game, not the editor)' : 'no'}`,
+  statusWindowPress: (press: WindowPress) => `  last press the window saw: ${press ? `at ${press.x}, ${press.y} on ${press.target}, ${press.taken ? 'taken by the editor' : 'left alone (a panel, the console, or outside the game)'}` : 'none since the app started'}`,
+  statusLayerPress: (press: LayerPress) => `  last press the editor handled: ${press ? `world ${press.world ? `${press.world.x}, ${press.world.y}` : '(no camera)'}, picked ${press.picked ?? '(not released yet)'}` : 'none'}`,
+  statusSelected: (name: string | null) => `  selected: ${name ?? 'nothing'}`,
+  layersUsage: (kinds: string) => `usage: editor layers all | nothing | statics | logics | entities | <kind>[,<kind>...] | +<kind> | -<kind>  (kinds: ${kinds})`,
+  layersNow: (titles: readonly string[]) => `Layers: ${titles.length ? titles.join(', ') : 'nothing'} (the rest cannot be selected)`,
+  commandUsage: 'editor [on | off]',
+  commandDesc: 'The in-game map editor: select, move, resize and edit the map\'s objects while you play',
+});
+
+export const EDITOR_HELP = (remote: boolean): NonNullable<CommandDefinition['help']> => ({
+  about: [
+    'Draws every object of the map over the game in its layer\'s colour, and takes the',
+    'mouse: click an object to select it, click the same spot again for the one',
+    'below it. The game keeps running and the keyboard is still yours: walk around',
+    'while you look.',
+    'Drag the selection to move it, its edge or corner to resize it (snaps to 10;',
+    'hold Alt for no snap). Tools (left): select or place new objects, copy,',
+    'delete, undo, redo; keys Del, Ctrl+D, Ctrl+Z, Ctrl+Y.',
+    'Layers (left): click a name to list that layer in Objects, its colour square to',
+    'hide or show it. Objects (right): click one to select it. Params: the selected',
+    'object\'s attributes; click a value to change it. Its logic links are drawn like',
+    '"logic show" draws them.',
+  ],
+  args: [
+    ['(nothing)', 'turn it on or off'],
+    ['on | off', 'turn it on, or off'],
+  ],
+  examples: [
+    ['editor', 'on, or off again'],
+    ['editor_key f7', 'F7 turns it on and off (F8 is the default)'],
+  ],
+  notes: [
+    'Edits go into the running level: walls (with their trims and the corners players',
+    'grab), backgrounds\' places,',
+    'water, pushers, movables, regions, decorations, lamps, guns, triggers and timers.',
+    ...(remote ? [] : ['Walls, water and pushers live in arrays the game\'s integrity check watches: it',
+      'reports the client and reloads the page when it sees them change.']),
+    'Edits nothing finer takes (a movable\'s settings, water\'s damage, what an object',
+    'is attached to, a decoration\'s model, ...) build the object again with the',
+    'game\'s own map loader code, and run its later steps for it (textures, the water',
+    'shown, attachments). Added objects are made the same way, deleted ones taken out',
+    'of play. Not in the running level (kept for "editor save"): players, enemies,',
+    'vehicles, barrels, engine marks, songs and custom images, wall materials and how',
+    'a background looks, and later edits of added barrels and vehicles. The top line',
+    'says why an edit was not live.',
+    'The params panel also lists what the game reads that the map editor does not show',
+    '(water attach, movable mute, region uses_timer, trigger execute, decoration text).',
+    'The same in every mode. When the level starts again on the same map (dying, a',
+    'restart), the edits are put into it again. A new round of a match puts movables,',
+    'triggers and timers back as edited; guns and barrels go back to the map\'s.',
+    'It needs a level, hides while none runs and comes back with the next one.',
+    'Esc clears the selection. Regions and characters are drawn where they are now.',
+  ],
+  see: ['editor set', 'editor add', 'editor tool', 'editor undo', 'editor save', 'editor_key', 'logic'],
+});
+
+export const SUBCOMMAND_HELP = (kindWords: string) => ({
+  status: {
+    name: 'status',
+    aliases: ['info', 'debug'],
+    usage: 'editor status',
+    desc: 'What the editor sees: its panels and click layer, and where your last click landed',
+    help: {
+      about: [
+        'For when clicks do nothing: whether the outlines, panels and click layer are on',
+        'the page, whether the pointer is locked, what element the last press landed on,',
+        'and what the editor picked with it. Click in the world, then run this.',
+      ],
+      see: ['editor'],
+    },
+  },
+  layers: {
+    name: 'layers',
+    aliases: ['layer', 'filter'],
+    usage: 'editor layers all | nothing | statics | logics | entities | <kinds> | +<kind> | -<kind>',
+    desc: 'What can be selected, as the map editor\'s Layers; the rest is drawn faint',
+    help: {
+      about: [
+        'Only objects on an active layer can be selected (clicked, dragged, listed in the',
+        'object box); the others are drawn faint. The same as the Layers buttons.',
+      ],
+      args: [
+        ['all | nothing', 'every kind, or none'],
+        ['statics', 'backgrounds, walls, lamps, water, pushers'],
+        ['logics', 'triggers, timers, engine marks, regions, movables, pushers'],
+        ['entities', 'players, enemies, vehicles, decorations, guns, barrels, engine marks'],
+        ['<kind>,<kind>', 'only these'],
+        ['+<kind> | -<kind>', 'add one, or take one away (Ctrl / Alt + click in Layers)'],
+      ],
+      examples: [['editor layers statics', 'walls and the like only'], ['editor layers +region', 'regions too']],
+      see: ['editor'],
+    },
+  },
+  set: {
+    name: 'set',
+    usage: 'editor set <attribute> <value>',
+    desc: 'Change an attribute of the selected object (as clicking it in Params does)',
+    help: {
+      about: [
+        'Changes one attribute of the selected object, the way editing it in Params',
+        'does, and puts it into the running level. When it cannot, it says why.',
+      ],
+      args: [['<attribute>', 'as Params lists it, e.g. x, use_on, actions_2_targetA'], ['<value>', 'the new value; "" for empty']],
+      examples: [['editor set w 200', 'make it 200 wide'], ['editor set enabled false', 'a disabled trigger']],
+      see: ['editor'],
+    },
+  },
+  add: {
+    name: 'add',
+    aliases: ['new', 'place'],
+    usage: 'editor add <kind> [x y [w h]]',
+    desc: 'Add an object (wall, region, movable, trigger, ...) at your crosshair or at x y',
+    help: {
+      about: [
+        'Adds an object with the map editor\'s defaults and a new uid, and selects it.',
+        'Without a place it goes where your crosshair is. A rectangle (wall, region,',
+        'movable, background, water, pusher) is 100 x 100 unless you give w h.',
+        'The "place" tool does the same with the mouse.',
+      ],
+      args: [['<kind>', kindWords], ['x y', 'its place'], ['w h', 'a rectangle\'s size']],
+      examples: [['editor add wall', 'a wall at your crosshair'], ['editor add region 100 200 50 50', 'a region there']],
+      notes: ['The game\'s own loader code makes it in the running level too (not players, enemies, engine marks or songs).'],
+      see: ['editor tool', 'editor save'],
+    },
+  },
+  delete: {
+    name: 'delete',
+    aliases: ['del', 'remove', 'rm'],
+    usage: 'editor delete',
+    desc: 'Delete the selected object (Del)',
+    help: {
+      about: ['Takes the selected object out of the map. Other objects that refer to it keep', 'the reference, as in the map editor.'],
+      see: ['editor undo', 'editor save'],
+    },
+  },
+  copy: {
+    name: 'copy',
+    aliases: ['duplicate', 'dup'],
+    usage: 'editor copy',
+    desc: 'Copy the selected object, a little to the side, with a new uid (Ctrl+D)',
+    help: { about: ['A copy of the selected object, 20 right and 20 down, with a uid of its own.'], see: ['editor delete'] },
+  },
+  undo: {
+    name: 'undo',
+    usage: 'editor undo',
+    desc: 'Undo the last edit (Ctrl+Z): a drag, a value, an add or a delete',
+    help: { about: ['Undoes the last edit: one drag, one value, one add or delete.'], see: ['editor redo'] },
+  },
+  redo: {
+    name: 'redo',
+    usage: 'editor redo',
+    desc: 'Redo what was undone (Ctrl+Y)',
+    help: { about: ['Does again what "editor undo" undid.'], see: ['editor undo'] },
+  },
+  tool: {
+    name: 'tool',
+    usage: 'editor tool select | place [kind]',
+    desc: 'What a click in the world does: select (and drag), or place a new object',
+    help: {
+      about: [
+        'select: a click selects, a drag moves or resizes the selection.',
+        'place: a click adds an object of the layer Objects shows (give a kind to',
+        'switch layer); a rectangle can be dragged out. Esc goes back to select.',
+      ],
+      examples: [['editor tool place wall', 'click or drag to add walls'], ['editor tool select', 'back to selecting']],
+      see: ['editor add'],
+    },
+  },
+  reset: {
+    name: 'reset',
+    usage: 'editor reset',
+    desc: 'Undo every edit and forget them: the level is the map\'s again, nothing is put in again',
+    help: {
+      about: [
+        'Undoes every edit, last first, the way "editor undo" does in the running level,',
+        'then reads the map again: the edits, the undo history and the edits waiting for',
+        'the running level are gone. Turning the editor on again, or the level starting',
+        'over, puts nothing back. Edits the running level cannot take back (a deleted',
+        'wall, an engine mark, ...) are said: restart the level for those.',
+      ],
+      notes: ['Not undoable. "editor save" first to keep the edited map.'],
+      see: ['editor undo', 'editor save'],
+    },
+  },
+  save: {
+    name: 'save',
+    usage: 'editor save <name> [--force]',
+    desc: 'Save the edited map to desktop/maps/<name>.xml (play it as local-<name>)',
+    help: {
+      about: [
+        'Writes the map with every edit to desktop/maps/<name>.xml, one tag per line.',
+        'Play it from Campaign > Custom Map as local-<name>, or open it in the map',
+        'editor on the website.',
+      ],
+      args: [['<name>', 'letters, digits, spaces, _ . -'], ['--force', 'replace the file if it exists']],
+      examples: [['editor save my_base', 'desktop/maps/my_base.xml']],
+      notes: ['Desktop wrapper only: the wrapper writes the file.'],
+      see: ['editor', 'maps'],
+    },
+  },
+} satisfies Record<string, Omit<CommandDefinition, 'run'>>);

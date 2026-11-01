@@ -1,3 +1,20 @@
 export const FRAME_HOOK_NAME = 'Editor';
 export const LIST_SECTION = 'editor';
 export const EDIT_KINDS = Object.freeze(['changed', 'added', 'deleted'] as const);
+
+export const COMMAND = Object.freeze({ name: 'editor', aliases: Object.freeze(['edit', 'mapedit']) });
+export const ON_WORDS: readonly string[] = Object.freeze(['on', '1', 'true', 'yes']);
+export const OFF_WORDS: readonly string[] = Object.freeze(['off', '0', 'false', 'no']);
+export const FIRST_TWO_WORDS = /^\S+\s+\S+\s*/;
+export const QUOTED_VALUE = /^"(.*)"$/;
+export const UNQUOTE = '$1';
+export const FORCE_OPTION = 'force';
+export const EXISTS_PATTERN = /exists/;
+export const LAYER_ALL = 'all';
+export const LAYER_NONE_WORDS: readonly string[] = Object.freeze(['nothing', 'none']);
+export const SIGNED_LAYER = /^[+-]/;
+export const LAYER_SIGN = Object.freeze({ add: '+' });
+export const LAYER_WORD_SEPARATOR = ',';
+export const SELECT_WORD = 'select';
+export const PLACE_WORD = 'place';
+export const NAME_JOIN = ' ';

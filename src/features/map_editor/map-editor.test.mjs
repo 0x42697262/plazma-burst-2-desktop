@@ -12,9 +12,9 @@ let game;
 before(async () => { game = await bootConsole({ sayTrigger: '#chat_in' }); });
 
 test('editor: on and off by its key, outlines every object, selects by click and from its lists', async () => {
-  const session = await consoleModule('editor/session.js');
-  const { drawEditorFrame } = await consoleModule('editor/view.js');
-  const { worldOfEvent } = await consoleModule('editor/input.js');
+  const session = await consoleModule('../../../src/features/map_editor/services/session.ts');
+  const { drawEditorFrame } = await consoleModule('../../../src/features/map_editor/ui/view.ts');
+  const { worldOfEvent } = await consoleModule('../../../src/features/map_editor/ui/input.ts');
   const original = game.G[game.N.mapText];
   const overlay = game.G[game.N.uiOverlay].overlay;
   try {
@@ -93,7 +93,7 @@ test('editor: on and off by its key, outlines every object, selects by click and
     session.setSelectable(['box']);
     assert.equal(session.selected(), null, 'a selection off the active layers is let go');
     assert.equal(doc.ordinal(session.pickAt(at)), 1);
-    const { KIND_TAGS } = await consoleModule('editor/kinds.js');
+    const { KIND_TAGS } = await consoleModule('../../../src/features/map_editor/domain/kinds.ts');
     // The same from the console: a group, kinds, or + and - (the editor's Ctrl and Alt).
     assert.match(game.run('editor layers entities')[0], /^Layers: player, enemy, vehicle, decoration, gun, barrel, engine mark/);
     game.run('editor layers wall');
@@ -118,8 +118,8 @@ test('editor: on and off by its key, outlines every object, selects by click and
 });
 
 test('editor: edits go into the running level, in any mode, and again after a restart; drag moves and resizes', async () => {
-  const session = await consoleModule('editor/session.js');
-  const { mouse, grabOf, dragPlace } = await consoleModule('editor/input.js');
+  const session = await consoleModule('../../../src/features/map_editor/services/session.ts');
+  const { mouse, grabOf, dragPlace } = await consoleModule('../../../src/features/map_editor/ui/input.ts');
   const { currentTransform, toScreen } = await consoleModule('../../../src/console/kernel/ui/overlay.ts');
   const original = game.G[game.N.mapText];
   const quiet = (line) => game.run(line).filter((l) => !l.startsWith('Note:'));
@@ -225,8 +225,8 @@ test('editor: edits go into the running level, in any mode, and again after a re
 });
 
 test('editor tools: place, copy, delete and undo; live edits still reach the right game object', async () => {
-  const session = await consoleModule('editor/session.js');
-  const { mouse } = await consoleModule('editor/input.js');
+  const session = await consoleModule('../../../src/features/map_editor/services/session.ts');
+  const { mouse } = await consoleModule('../../../src/features/map_editor/ui/input.ts');
   const { currentTransform, toScreen } = await consoleModule('../../../src/console/kernel/ui/overlay.ts');
   const original = game.G[game.N.mapText];
   const quiet = (line) => game.run(line).filter((l) => !l.startsWith('Note:'));
@@ -334,7 +334,7 @@ test('editor tools: place, copy, delete and undo; live edits still reach the rig
 });
 
 test('editor: walls (with trims), backgrounds, water, pushers and movables move in the running level', async () => {
-  const session = await consoleModule('editor/session.js');
+  const session = await consoleModule('../../../src/features/map_editor/services/session.ts');
   const original = game.G[game.N.mapText];
   const G = game.G, N = game.N;
   const quiet = (line) => game.run(line).filter((l) => !l.startsWith('Note:'));
@@ -489,9 +489,9 @@ test('editor: walls (with trims), backgrounds, water, pushers and movables move 
 });
 
 test('editor: a trigger\'s actions are added, changed and removed, or edited as the map editor\'s text', async () => {
-  const session = await consoleModule('editor/session.js');
-  const { actionsOf, actionValues, triggerText, valuesFromText } = await consoleModule('editor/actions.js');
-  const { setAttrs, undo } = await consoleModule('editor/edit.js');
+  const session = await consoleModule('../../../src/features/map_editor/services/session.ts');
+  const { actionsOf, actionValues, triggerText, valuesFromText } = await consoleModule('../../../src/features/map_editor/domain/actions.ts');
+  const { setAttrs, undo } = await consoleModule('../../../src/features/map_editor/services/edit.ts');
   const original = game.G[game.N.mapText];
   const level = (on) => { game.G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; game.frame(); };
   try {
@@ -515,7 +515,7 @@ test('editor: a trigger\'s actions are added, changed and removed, or edited as 
     assert.ok(!('actions_2_type' in t.attrs) && !('actions_3_type' in t.attrs));
     assert.throws(() => valuesFromText(t.attrs, 'Nope( "a", "b" );'), /unknown action "Nope"/);
     // The params panel in text mode: the text view and its Apply.
-    const { setTriggersAsText } = await consoleModule('editor/trigger-panel.js');
+    const { setTriggersAsText } = await consoleModule('../../../src/features/map_editor/ui/trigger-panel.ts');
     setTriggersAsText(true);
     session.select(null); session.select(t);
     const texts = textsOf(game.G[game.N.uiOverlay].overlay);
@@ -531,7 +531,7 @@ test('editor: a trigger\'s actions are added, changed and removed, or edited as 
 });
 
 test('editor: Params shows every parameter of the kind, with the editor\'s titles, defaults and values', async () => {
-  const session = await consoleModule('editor/session.js');
+  const session = await consoleModule('../../../src/features/map_editor/services/session.ts');
   const original = game.G[game.N.mapText];
   const level = (on) => { game.G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; game.frame(); };
   try {
@@ -550,8 +550,8 @@ test('editor: Params shows every parameter of the kind, with the editor\'s title
 });
 
 test('editor: an object parameter is picked by clicking the object in the world, as in the map editor', async () => {
-  const session = await consoleModule('editor/session.js');
-  const { drawEditorFrame } = await consoleModule('editor/view.js');
+  const session = await consoleModule('../../../src/features/map_editor/services/session.ts');
+  const { drawEditorFrame } = await consoleModule('../../../src/features/map_editor/ui/view.ts');
   const { currentTransform, toScreen } = await consoleModule('../../../src/console/kernel/ui/overlay.ts');
   const overlay = game.G[game.N.uiOverlay].overlay;
   // The node whose own text is `text`, and the params row it is in.
@@ -604,8 +604,8 @@ test('editor: an object parameter is picked by clicking the object in the world,
 });
 
 test('editor: the selection\'s connections are dashed lines as in the map editor: green out, white in', async () => {
-  const session = await consoleModule('editor/session.js');
-  const { drawEditorFrame } = await consoleModule('editor/view.js');
+  const session = await consoleModule('../../../src/features/map_editor/services/session.ts');
+  const { drawEditorFrame } = await consoleModule('../../../src/features/map_editor/ui/view.ts');
   const original = game.G[game.N.mapText];
   const level = (on) => { game.G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; game.frame(); };
   // The stroke colour and dash in force at each line drawn.
@@ -641,8 +641,8 @@ test('editor: the selection\'s connections are dashed lines as in the map editor
 });
 
 test('editor: an edit nothing finer takes rebuilds the object with the game\'s own loader code', async () => {
-  const session = await consoleModule('editor/session.js');
-  const loader = await consoleModule('editor/loader.js');
+  const session = await consoleModule('../../../src/features/map_editor/services/session.ts');
+  const loader = await consoleModule('../../../src/features/map_editor/services/loader.ts');
   const G = game.G, N = game.N;
   // A frame2.js shaped like the game's: tags through its string table, a loop that
   // builds (a branch per kind, a counter each), a loop that resolves uids.
@@ -747,7 +747,7 @@ $regionR++;
 });
 
 test('editor: a map gun moves, changes model, is deleted and comes back in the running level', async () => {
-  const session = await consoleModule('editor/session.js');
+  const session = await consoleModule('../../../src/features/map_editor/services/session.ts');
   const G = game.G, N = game.N;
   const original = G[N.mapText];
   const level = (on) => { G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; game.frame(); };
@@ -790,7 +790,7 @@ test('editor: a map gun moves, changes model, is deleted and comes back in the r
 });
 
 test('editor: decoration models and character skins are offered as the editor offers them, with their pictures', async () => {
-  const { dropdownItems } = await consoleModule('editor/params.js');
+  const { dropdownItems } = await consoleModule('../../../src/features/map_editor/domain/params.ts');
   const table = globalThis.PB2_OPCODES;
   table.values.decor_model = { stone: 'Stone', ship: 'Broken ship' };
   table.values.char = { 1: 'Campaign Hero model', 77: 'Raven', '-1': 'Death Match model' };
@@ -810,8 +810,8 @@ test('editor: decoration models and character skins are offered as the editor of
 });
 
 test('editor: a lamp is found by its place, built again in its slot, its light and flare drawn with the game\'s code', async () => {
-  const session = await consoleModule('editor/session.js');
-  const loader = await consoleModule('editor/loader.js');
+  const session = await consoleModule('../../../src/features/map_editor/services/session.ts');
+  const loader = await consoleModule('../../../src/features/map_editor/services/loader.ts');
   const vm = await import('node:vm');
   const G = game.G, N = game.N;
   const original = G[N.mapText];
@@ -926,7 +926,7 @@ $drawn.push($shapes[k]);
 });
 
 test('editor: an engine mark\'s parameter offers what its mark takes, as the editor\'s mark pairs say', async () => {
-  const { paramInfo, dropdownItems } = await consoleModule('editor/params.js');
+  const { paramInfo, dropdownItems } = await consoleModule('../../../src/features/map_editor/domain/params.ts');
   const table = globalThis.PB2_OPCODES;
   const rows = [
     { name: 'mark', kind: 'engine_mark', title: 'Modificator', desc: 'Game modificator', cls: 'inf' },
@@ -951,8 +951,8 @@ test('editor: an engine mark\'s parameter offers what its mark takes, as the edi
 });
 
 test('editor: movables and water take every parameter in the running level, with the loader\'s later steps', async () => {
-  const session = await consoleModule('editor/session.js');
-  const loader = await consoleModule('editor/loader.js');
+  const session = await consoleModule('../../../src/features/map_editor/services/session.ts');
+  const loader = await consoleModule('../../../src/features/map_editor/services/loader.ts');
   const vm = await import('node:vm');
   const G = game.G, N = game.N;
   const original = G[N.mapText];
@@ -1191,9 +1191,9 @@ attachments[$k].child["y"]=${doors}[i]["y"]+attachments[$k].dy;
 });
 
 test('editor: every parameter the game reads is in the params panel, and every one says how it reaches a running level', async () => {
-  const { paramsOf } = await consoleModule('editor/params.js');
-  const { KIND_TAGS } = await consoleModule('editor/kinds.js');
-  const { liveSupport } = await consoleModule('editor/apply.js');
+  const { paramsOf } = await consoleModule('../../../src/features/map_editor/domain/params.ts');
+  const { KIND_TAGS } = await consoleModule('../../../src/features/map_editor/domain/kinds.ts');
+  const { liveSupport } = await consoleModule('../../../src/features/map_editor/services/apply.ts');
   // What the map loader reads of each kind (frame2.js: b["#..."] in each kind's branch).
   const GAME_READS = {
     box: 'x y w h m', image: 'id width height', bg: 'x y w h f c u v a m s', pushf: 'x y w h tox toy stab damage uid attach',
@@ -1215,8 +1215,8 @@ test('editor: every parameter the game reads is in the params panel, and every o
 });
 
 test('editor: a wall\'s grab points go with it, where there is room beside its corners, as the loader gives them', async () => {
-  const session = await consoleModule('editor/session.js');
-  const loader = await consoleModule('editor/loader.js');
+  const session = await consoleModule('../../../src/features/map_editor/services/session.ts');
+  const loader = await consoleModule('../../../src/features/map_editor/services/loader.ts');
   const G = game.G, N = game.N;
   const original = G[N.mapText];
   const quiet = (line) => game.run(line).filter((l) => !l.startsWith('Note:'));
@@ -1300,7 +1300,7 @@ $makeVehicle(mc,n,1);
 });
 
 test('editor reset: every edit undone in the running level and forgotten, nothing put in again', async () => {
-  const session = await consoleModule('editor/session.js');
+  const session = await consoleModule('../../../src/features/map_editor/services/session.ts');
   const { G, N } = game;
   const quiet = (line) => game.run(line).filter((l) => !l.startsWith('Note:'));
   const level = (on) => { G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; game.frame(); };
