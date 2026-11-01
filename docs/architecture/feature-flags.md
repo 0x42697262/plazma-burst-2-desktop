@@ -1,6 +1,7 @@
 # Feature flags
 
-Status: **target design**, built in refactor step P2.3.
+Status: **implemented** (refactor step P2). Code: `src/shared/features/`,
+`src/kernel/flags/`, `src/wrapper/context.ts`, `src/console/flags.ts`.
 
 ## Catalog
 
@@ -44,3 +45,22 @@ on.
 3. Add those to `src/console/features.ts` / `src/wrapper/features.ts`.
 4. Write `docs/features/<id>.md`.
 5. Add a flag-off test: no commands, routes 404, no ticks, nothing written.
+
+## Seeing the flags
+
+- `npm start -- --features` prints every flag, its state, its source and why, then
+  exits.
+- The console's `features` (alias `flags`) prints the same list in the game. It is
+  hidden in remote play, because it would show the host's setup to a tester.
+- When any flag was set in `features.json` or the environment, the wrapper logs one
+  `flags.resolved` line naming those flags, e.g.
+  `flags.resolved hooks=off:env`.
+
+## Problems stop the start
+
+Each of these stops the app before a window opens, with one line per problem:
+- an unknown feature id;
+- turning off a locked feature;
+- changing a flag whose code does not read it yet (`migrated: false`);
+- a malformed `PB2_FEATURES`;
+- an unreadable `features.json`.

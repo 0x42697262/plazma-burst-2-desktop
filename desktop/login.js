@@ -9,12 +9,13 @@ const fsSync = require('fs');
 const path = require('path');
 
 const SITE = 'plazmaburst2.com';
-const CREDENTIAL_KEYS = Object.freeze({ login: 'PB2_LOGIN', password: 'PB2_PASSWORD', pb2uid: 'PB2_UID' });
+const CREDENTIAL_KEYS = Object.freeze(['login', 'password', 'pb2uid']);
 const COOKIE_LIFETIME_S = 365 * 24 * 3600;
 
-// Env vars win over credentials.json: { "login": "...", "password": "...", "pb2uid": "..." }.
+// The environment's (PB2_LOGIN, PB2_PASSWORD, PB2_UID, read by src/kernel/config/) win over
+// credentials.json: { "login": "...", "password": "...", "pb2uid": "..." }.
 // Returns only the ones that are set.
-function loadCredentials(file, env = process.env) {
+function loadCredentials(file, fromEnvironment = {}) {
   let saved = {};
   if (fsSync.existsSync(file)) {
     try {
@@ -24,8 +25,8 @@ function loadCredentials(file, env = process.env) {
     }
   }
   const out = {};
-  for (const [name, envName] of Object.entries(CREDENTIAL_KEYS)) {
-    const value = env[envName] ?? saved[name];
+  for (const name of CREDENTIAL_KEYS) {
+    const value = fromEnvironment[name] ?? saved[name];
     if (value !== undefined && value !== null && value !== '') out[name] = String(value);
   }
   return out;

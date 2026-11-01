@@ -42,3 +42,6 @@ Each fact says where it was verified.
 One line per behavior change: what to do, and the result to expect.
 - P0.2: `npm test`; the redactor case in `test/remote.test.mjs` hides a `docs/…` path
 - P1: `npm run smoke` prints the console's `help`, so the game page loaded the `dist/console/` bundle.
+- P2: `npm start -- --features` lists the flags. `PB2_FEATURES=-zoom npm start` stops
+  with "cannot be changed yet" (until `zoom` is migrated). `PB2_HOOKS=0 npm run smoke -- --run features`
+  shows `hooks off env`.

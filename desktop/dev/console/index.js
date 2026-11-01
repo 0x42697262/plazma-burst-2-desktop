@@ -41,6 +41,7 @@ import { run } from './dispatch.js';
 import { SERVER } from './core/server.js';
 import { startHost } from './server/host.js';
 import { startJoin } from './join/client.js';
+import { enabledConsoleFeatures, featureFrameHooks, featureTicks } from '../../../src/console/features.ts';
 
 // Sad Burst 2 has a settings file of its own (desktop/main.js, DEV_KV_FILE).
 const KV_FILE = SADBURST ? 'dev-overrides.sadburst.json' : 'dev-overrides.json';
@@ -60,7 +61,11 @@ const frameGuard = errorBudget(FRAME_ERRORS_SHOWN, reportError);
 const mapGuard = errorBudget(MAP_ERRORS_SHOWN, reportError);
 const netGuard = errorBudget(NET_ERRORS_SHOWN, reportError);
 
+const features = enabledConsoleFeatures();
+const featureFrame = featureFrameHooks(features);
+
 function onFrame() {
+  for (const hook of featureFrame) frameGuard(hook.name, hook.run);
   frameGuard('Trigger history', syncTriggerHooks);
   frameGuard('Frame', applyOverrides);
   frameGuard('Editor', editorTick);
@@ -89,6 +94,11 @@ function start(source) {
   setInterval(() => { mapGuard('Map cache', mapTick); mapGuard('Profiles', profileTick); }, MAP_TICK_MS);
   // Not per frame: connections are made and packets arrive in menus too.
   setInterval(() => { netGuard('Network log', netTick); netGuard('Fingerprinter', fingerprintTick); }, NET_TICK_MS);
+  for (const tick of featureTicks(features)) {
+    const guard = errorBudget(tick.errorsShown, reportError);
+    setInterval(() => guard(tick.name, tick.run), tick.everyMs);
+  }
+  for (const feature of features) if (feature.start) feature.start();
   if (SERVER) startHost();
   startJoin();
 }

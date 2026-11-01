@@ -7,6 +7,7 @@
 //     game's obfuscated names (they map the game's internals).
 // The wrapper sets PB2_REMOTE (not enumerable) before any script, for remote windows only.
 import { SERVER } from './server.js';
+import { isFeatureOn } from '../../../../src/console/flags.ts';
 
 export const REMOTE = globalThis.PB2_REMOTE === true;
 
@@ -43,5 +44,7 @@ export function makeRedactor(names = {}) {
 export const redact = REMOTE ? makeRedactor(globalThis.PB2_NAMES || {}) : (text) => text;
 
 // Whether a command (or subcommand) definition exists in this mode: remote play leaves
-// out `remote: false`, and `server: true` exists only on the dedicated host (core/server.js).
-export const allowedHere = (def) => !(REMOTE && def.remote === false) && !(def.server === true && !SERVER);
+// out `remote: false`, `server: true` exists only on the dedicated host (core/server.js),
+// and a definition of a feature (`feature: <id>`) exists only while its flag is on.
+export const allowedHere = (def) => !(REMOTE && def.remote === false) && !(def.server === true && !SERVER)
+  && !(def.feature && !isFeatureOn(def.feature));

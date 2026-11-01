@@ -8,7 +8,9 @@ const fsSync = require('fs');
 const path = require('path');
 const { loadCredentials, applyLogin } = require('./login');
 const { createKvFile } = require('./kv-file');
-const { parseLogLevel, createLogger } = require('./log');
+// Settings, feature flags and the log, built once by src/wrapper/context.ts.
+const { wrapperContext } = require('../src/wrapper/context.ts');
+const { environment: ENVIRONMENT, flags: FLAGS, log } = wrapperContext;
 const hooks = require('./hooks');
 const { createNetLog } = require('./netlog');
 const { createFingerprints } = require('./fingerprint');
@@ -20,15 +22,15 @@ const { startHost, parseHostArgs } = require('./remote/host');
 const serverConfig = require('./p2p-host/config');
 const servers = require('./servers');
 // Which game: the official client, or Sad Burst 2 with "npm run sadburst" (desktop/clients.js).
-const { clientFor } = require('./clients');
-const CLIENT = clientFor();
+const { CLIENTS } = require('./clients');
+const CLIENT = CLIENTS[ENVIRONMENT.client];
 const SADBURST = CLIENT.id === 'sadburst';
 const CLIENT_FLAG = SADBURST ? ' -- --sadburst' : ''; // in the commands this file tells you to run
 
 // Remote play host: "npm run host" (electron . --host). No window here: every tester who
 // opens their link gets an offscreen game instance on this machine, streamed to their
 // browser (desktop/remote/). Guide: docs/operations/remote-play.md.
-const HOST_MODE = process.argv.includes('--host');
+const HOST_MODE = ENVIRONMENT.mode === 'remote';
 const REMOTE_TESTERS_FILE = path.join(__dirname, 'remote-testers.json');
 const REMOTE_DATA_DIR = path.join(__dirname, 'remote-data'); // per tester: their console settings
 // Frames are exactly the window's size, whatever this screen's scaling.
@@ -38,7 +40,7 @@ if (HOST_MODE) app.commandLine.appendSwitch('force-device-scale-factor', '1');
 // game window hosts a player-hosted match, listed by the official lobby, from
 // desktop/p2p-host.json and is driven from this terminal (docs/operations/p2p-host.md).
 // Its console settings are its own file.
-const SERVER_MODE = process.argv.includes('--p2p-host') && !HOST_MODE;
+const SERVER_MODE = ENVIRONMENT.mode === 'server';
 const SERVER_CONFIG_FILE = path.join(__dirname, 'p2p-host.json');
 const SERVER_KV_FILE = path.join(__dirname, 'p2p-host-overrides.json');
 
@@ -54,31 +56,31 @@ const LAUNCHER_URL = require('url').pathToFileURL(LAUNCHER_FILE).href;
 let joinTarget = null; // the private server being played on (desktop/servers.js checkServer), or null
 let serverPage = null; // the checked config the page gets as PB2_SERVER
 
-// The terminal log: --verbose / --log-level=<error|warn|info|debug> / PB2_LOG_LEVEL.
-const logLevel = parseLogLevel();
-const log = createLogger(logLevel.level);
-
 // Game files, downloaded with "npm run fetch-game" (game/; Sad Burst 2: game.sadburst/).
 // Override with PB2_GAME_DIR. Sad Burst 2 is served at its real address too: its game page
 // sadburst2.com/gameplay/; the rest of its site (login, API) is the network's.
-const ROOT = path.resolve(process.env.PB2_GAME_DIR || CLIENT.gameDir);
+const ROOT = path.resolve(ENVIRONMENT.gameDir || CLIENT.gameDir);
 const HOST = SADBURST ? CLIENT.host : 'www.plazmaburst2.com';
 const VERSION = readGameVersion();
 const PREFIX = SADBURST ? CLIENT.prefix : `/h5/versions/${VERSION}/`;
 const START_URL = `https://${HOST}${PREFIX}`;
 
 // Hooks: hooks/*.js change the game's scripts as they are served (guide: docs/features/hooks.md).
-// Disable with PB2_HOOKS=0. The plan is rebuilt on every page load, so editing a hook
+// Feature flag "hooks" (PB2_HOOKS=0 turns it off). The plan is rebuilt on every page load, so editing a hook
 // and reloading (Ctrl+R) is enough.
 // Not for Sad Burst 2: its loader hashes every game script and sends the hash with the
 // login (PB2_CLIENT_BUILD), so a patched script would show the server a changed client.
-const HOOKS_ENABLED = process.env.PB2_HOOKS !== '0' && !SADBURST;
+const HOOKS_ENABLED = FLAGS.hooks.on;
 const HOOKS_DIR = path.join(__dirname, '..', 'hooks');
 const HOOKS_PREFIX = PREFIX + hooks.ROUTE_DIR;
 let hookPlan = null;
 
-// Dev console (Shift+` key). Disable with PB2_DEV=0.
-const DEV_ENABLED = process.env.PB2_DEV !== '0';
+// Dev console (Shift+` key). Feature flag "dev_console" (PB2_DEV=0 turns it off).
+const DEV_ENABLED = FLAGS.dev_console.on;
+// __dev/ routes of migrated features (src/features/*/wrapper.ts), when their flag is on.
+const { createDevRouter } = require('../src/wrapper/http/router.ts');
+const { WRAPPER_FEATURES } = require('../src/wrapper/features.ts');
+const devRouter = createDevRouter(WRAPPER_FEATURES, (id) => FLAGS[id].on);
 // Routes and map markers shared with the console (src/shared/contract/).
 const { DEV_DIR, ROUTE_NAME: ROUTE, MAP_MARKER, SAVE_RESULT } = require('../src/shared/contract/keys.ts');
 const DEV_PREFIX = PREFIX + DEV_DIR;
@@ -124,14 +126,18 @@ const serverPageScript = (config) => '<script>Object.defineProperty(globalThis, 
 // A private server: where the lobby connection goes and who logs in there (dev console, join/).
 const joinPageScript = (join) => '<script>Object.defineProperty(globalThis, "PB2_JOIN", { value: Object.freeze('
   + JSON.stringify({ address: join.hostPort, nickname: join.nickname, password: join.password }).replace(/</g, '\\u003c') + ') });</script>';
-const DEV_SCRIPT_TAG = `<script src="${DEV_DIR}${ROUTE.names}"></script>`
+// The resolved feature flags (src/wrapper/context.ts), read-only, before the console loads.
+const { PAGE_FLAGS_GLOBAL } = require('../src/shared/features/keys.ts');
+const FLAGS_SCRIPT_TAG = `<script>Object.defineProperty(globalThis, ${JSON.stringify(PAGE_FLAGS_GLOBAL)}, { value: Object.freeze(`
+  + JSON.stringify(FLAGS).replace(/</g, '\\u003c') + ') });</script>';
+const DEV_SCRIPT_TAG = FLAGS_SCRIPT_TAG + `<script src="${DEV_DIR}${ROUTE.names}"></script>`
   + `<script src="${DEV_DIR}${ROUTE.opcodes}"></script>`
   + `<script type="module" src="${DEV_DIR}${ROUTE.console}${DEV_CONSOLE_ENTRY}"></script>`;
 
 // The version folder the files came from (written by tools/fetch-game.js). The game is
 // served under that same URL so it behaves like the official site.
 function readGameVersion() {
-  if (process.env.PB2_VERSION) return process.env.PB2_VERSION;
+  if (ENVIRONMENT.gameVersion) return ENVIRONMENT.gameVersion;
   try {
     return JSON.parse(fsSync.readFileSync(path.join(ROOT, 'pb2-version.json'), 'utf8')).version;
   } catch {
@@ -342,7 +348,7 @@ function pinServerCertificates() {
 // the credentials, if any, are set (env vars PB2_LOGIN, PB2_PASSWORD, PB2_UID win over
 // desktop/credentials.json). Without them the game starts logged out. See desktop/login.js.
 async function applyCredentials() {
-  const credentials = loadCredentials(path.join(__dirname, 'credentials.json'));
+  const credentials = loadCredentials(path.join(__dirname, 'credentials.json'), ENVIRONMENT.credentials);
   const { removed, set } = await applyLogin(session.defaultSession.cookies, credentials, HOST);
   if (removed.length) log.info(`Cleared saved site cookies: ${removed.join(', ')}`);
   if (set.length) log.info(`Logged in from credentials: ${set.join(', ')}`);
@@ -448,6 +454,8 @@ async function saveScreenshot(win) {
 
 async function serveDev(request, url, ctx) {
   const name = decodeURIComponent(url.pathname.slice(DEV_PREFIX.length));
+  const routed = await devRouter(name, request, url, ctx);
+  if (routed) return routed;
   if (name.startsWith(ROUTE.console)) {
     const res = await serveConsoleFile(name.slice(ROUTE.console.length));
     if (res) return res;
@@ -708,10 +716,9 @@ app.whenReady().then(async () => {
     app.quit();
     return;
   }
-  if (logLevel.problem) log.warn(logLevel.problem);
   log.info(`${SADBURST ? `${CLIENT.title}: ` : ''}Game ${VERSION} from ${ROOT}`);
   if (SADBURST) {
-    if (process.env.PB2_HOOKS !== '0') log.info('Sad Burst 2: hooks are off (its loader sends a hash of the game scripts with the login; docs/features/hooks.md).');
+    if (FLAGS.hooks.source === 'constraint') log.info('Sad Burst 2: hooks are off (its loader sends a hash of the game scripts with the login; docs/features/hooks.md).');
     checkSadburstBuild();
   }
   log.debug(`Log level: debug (requests, window events, the game's trace() output)`);
@@ -975,7 +982,7 @@ async function remoteSession(name) {
     remoteCtx.set(name, ctx);
     ses.protocol.handle('https', (request) => handleRequestLogged(request, ctx));
   }
-  await applyLogin(ses.cookies, loadCredentials(path.join(__dirname, 'credentials.json')), HOST);
+  await applyLogin(ses.cookies, loadCredentials(path.join(__dirname, 'credentials.json'), ENVIRONMENT.credentials), HOST);
   return { ses, ctx };
 }
 
@@ -1023,7 +1030,7 @@ async function createRemoteGame(tester, opt) {
 }
 
 async function startRemoteHost() {
-  const { options, problems } = parseHostArgs(process.argv);
+  const { options, problems } = parseHostArgs(ENVIRONMENT.args);
   for (const p of problems) log.warn(`Host: ${p}`);
   const host = startHost({
     ...options,
@@ -1085,7 +1092,7 @@ const RELOAD_AFTER_CRASH_MS = 5000;
 const QUIT_AFTER_STOP_MS = 1500; // time for "-terminate" to reach the lobby server
 
 async function startDedicatedServer() {
-  const { config, problems: argProblems } = serverConfig.parseServerArgs(process.argv);
+  const { config, problems: argProblems } = serverConfig.parseServerArgs(ENVIRONMENT.args);
   for (const p of argProblems) log.warn(`Host: ${p}`);
   const file = config ? path.resolve(config) : SERVER_CONFIG_FILE;
   const loaded = serverConfig.loadConfig(file);

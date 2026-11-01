@@ -58,7 +58,7 @@ test('credentials: env vars win over the file, and unset ones are left out', () 
   assert.deepEqual(loadCredentials(file, {}), {}, 'no file, no env: nothing');
   fs.writeFileSync(file, JSON.stringify({ login: 'file_login', password: 'file_pw', pb2uid: '' }));
   assert.deepEqual(loadCredentials(file, {}), { login: 'file_login', password: 'file_pw' });
-  assert.deepEqual(loadCredentials(file, { PB2_LOGIN: 'env_login', PB2_UID: 42 }), { login: 'env_login', password: 'file_pw', pb2uid: '42' });
+  assert.deepEqual(loadCredentials(file, { login: 'env_login', pb2uid: 42 }), { login: 'env_login', password: 'file_pw', pb2uid: '42' });
   fs.writeFileSync(file, '{ not json');
   assert.deepEqual(loadCredentials(file, {}), {}, 'a broken file counts as none');
   fs.rmSync(dir, { recursive: true });

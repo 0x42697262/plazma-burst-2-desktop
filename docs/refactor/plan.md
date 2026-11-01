@@ -168,7 +168,7 @@ interface Tick { name: string; everyMs: number; errorBudget: number; run(): void
 | `screenshot` | on | all | `commands/screenshot.js`, `main.js` saveScreenshot | rate limit for remote is a constant |
 | `netlog` | on (recording itself still follows the `net_log` key) | local, server | `commands/netlog.js`, `net/{recorder,codec,state}.js`, `desktop/netlog.js` | **security fix 1** |
 | `fingerprint` | on | local | `commands/fingerprint.js`, `net/fingerprint.js`, `desktop/fingerprint.js` | |
-| `lobby_tasks_private` | **off** (new) | local | `net/tap.js` + join | **security fix 3**: drops RELIABLE_TASK* from non-official lobbies |
+| `private_lobby_tasks` | **off** (new) | local | `net/tap.js` + join | **security fix 3**: drops RELIABLE_TASK* from non-official lobbies |
 | `scan_bypass` | on | local | `commands/bypass.js`, `net/scan-report.js`, `overrides/server-checks.js` | |
 | `js_eval` | on | local, server | `commands/js.js` | `remote: false` today |
 | `hooks` | on (`PB2_HOOKS=0` alias; forced off for sadburst through the catalog's `conflicts`) | local | `desktop/hooks.js`, `hooks-runtime.js`, `commands/hooks.js`, `main.js` serveHooks | |
@@ -285,7 +285,7 @@ Steps are listed in order. The recipe below applies to **each** feature.
   - **Failing test first:** saving a server whose address or certificate pin differs from the stored one must drop the stored password. The `play` op on such a server must ask for the password again.
   - `servers.json` gets a version.
   - The rule lives in `domain/` (`passwordSurvivesEdit(previous, next): boolean`).
-- **P3.3 `fingerprint` + `lobby_tasks_private` + the console kernel's `net/tap`.** Add **security fix 3**:
+- **P3.3 `fingerprint` + `private_lobby_tasks` + the console kernel's `net/tap`.** Add **security fix 3**:
   - **Failing test first:** with the lobby pointed at a non-official address (`join/client.js` setLobbyAddress), a RELIABLE_TASK packet never reaches the game's receive method. With the official lobby it does.
   - Implemented as a tap that can drop messages, shared with the recorder through `tap.ts`. The fingerprint capture still records the dropped source, marked `private-server`.
   - The fingerprint `index.json` gets a version.

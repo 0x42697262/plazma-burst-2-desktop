@@ -26,18 +26,34 @@ Notes for later steps:
   `bootConsole({ entry })` can boot a built bundle instead.
 
 ## P2. Kernel
-- [ ] P2.1 `src/shared/contract/routes.ts` replaces `desktop/dev/console/shared.json`
-- [ ] P2.2 `src/kernel/config/{env,settings}.ts`; every `process.env`/`process.argv` read moved there
-- [ ] P2.3 Feature catalog, `resolve()`, `features.json` adapter
-- [ ] P2.4 `src/kernel/persist/{versioned,serial}.ts`
-- [ ] P2.5 `src/kernel/log/` structured logger and events catalog
-- [ ] P2.6 Composition roots (wrapper, router, console) with fallback to the old code; `allowedHere` from the catalog
-- [ ] P2.7 `features` console command and `--features` start flag
+- [x] P2.1 `src/shared/contract/routes.ts` replaces `desktop/dev/console/shared.json`
+- [x] P2.2 `src/kernel/config/{env,settings}.ts`; every `process.env`/`process.argv` read moved there
+- [x] P2.3 Feature catalog, `resolve()`, `features.json` adapter
+- [x] P2.4 `src/kernel/persist/{versioned,serial}.ts`
+- [x] P2.5 `src/kernel/log/` structured logger and events catalog
+- [x] P2.6 Composition roots (wrapper, router, console) with fallback to the old code; `allowedHere` from the catalog
+- [x] P2.7 `features` console command and `--features` start flag
+
+Notes from P2 for the feature steps:
+- The wrapper starts at `src/wrapper/main.ts`. `src/wrapper/context.ts` builds the
+  environment, the flags and the log once, and stops the app on any problem. The old
+  `desktop/main.js` reads them from there (`ENVIRONMENT`, `FLAGS`, `log`).
+- To migrate a feature:
+  - add its wrapper side (`WrapperFeature`, `src/wrapper/feature-types.ts`) to
+    `src/wrapper/features.ts`; its routes are served before the old `serveDev`;
+  - add its console side (`ConsoleFeature`, `src/console/feature-types.ts`) to
+    `src/console/features.ts`; its commands are registered after the old ones, its
+    frame hooks run first, its ticks get their own interval;
+  - set `migrated: true` in `src/shared/features/catalog.ts`.
+- An old command definition can already be gated with `feature: '<id>'`
+  (`allowedHere`, `desktop/dev/console/core/remote.js`).
+- The flag that lets a private lobby run code is named `private_lobby_tasks`.
+- An unknown log level now stops the app at start; it used to be a warning.
 
 ## P3. Feature migrations
 - [ ] P3.1 `netlog` + security fix 1 (AUTHENTICATE password redacted; `tools/redact-netlogs.ts`, run only after asking the user)
 - [ ] P3.2 `server_list` + security fix 2 (password dropped when address or pin changes; `servers.json` versioned)
-- [ ] P3.3 `fingerprint` + `lobby_tasks_private` + `net/tap` + security fix 3 (no RELIABLE_TASK from private lobbies)
+- [ ] P3.3 `fingerprint` + `private_lobby_tasks` + `net/tap` + security fix 3 (no RELIABLE_TASK from private lobbies)
 - [ ] P3.4 `screenshot`
 - [ ] P3.5 `js_eval`
 - [ ] P3.6 `zoom`
