@@ -33,9 +33,11 @@ import { run } from './dispatch.js';
 import { SERVER } from './core/server.js';
 import { enabledConsoleFeatures, featureFrameHooks, featureTicks, featureListSections } from '../../../src/console/features.ts';
 import { registerListSection } from '../../../src/console/kernel/list-sections.ts';
+import { CLIENT_DETAILS } from '../../../src/shared/clients/keys.ts';
+import { CLIENT } from '../../../src/shared/features/keys.ts';
 
-// Sad Burst 2 has a settings file of its own (desktop/main.js, DEV_KV_FILE).
-const KV_FILE = SADBURST ? 'dev-overrides.sadburst.json' : 'dev-overrides.json';
+// Sad Burst 2 has a settings file of its own (src/shared/clients/keys.ts).
+const KV_FILE = CLIENT_DETAILS[SADBURST ? CLIENT.sadburst : CLIENT.official].settingsFileName;
 const BOOT_POLL_MS = 200; // how often to look for the game's stage while it loads
 const STATUS_EVERY_MS = 500;
 const FRAME_ERRORS_SHOWN = 5;

@@ -68,7 +68,7 @@ The community client Sad Burst 2 has commands of its own; the ones above never t
 | `tools/find-names.js` | Generates `desktop/dev/names.js` | yes |
 | `tools/fetch-opcodes.js` | Generates `desktop/dev/opcodes.js` from the editor's public `lib_params.js` | yes |
 | `game/` | The downloaded game | no |
-| `desktop/clients.js` | The game clients (official, Sad Burst 2) and which one a command is for | yes |
+| `src/shared/clients/`, `src/kernel/config/clients.ts` | The game clients (official, Sad Burst 2) and which one a command is for | yes |
 | `game.sadburst/`, `desktop/dev/names.sadburst.js`, `desktop/dev/opcodes.sadburst.js` | Sad Burst 2: its game page, names and editor action names ([section 9](#9-sad-burst-2-community-client)) | no |
 | `tools/fetch-sadburst.js`, `tools/find-names-sadburst.js` | Sad Burst 2: its download and its names (called by `fetch-game` and `find-names` with `--sadburst`) | yes |
 | `game.previous/` | The copy before the last update | no |

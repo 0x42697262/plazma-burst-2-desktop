@@ -1,4 +1,4 @@
-// "npm run fetch-game -- --sadburst": a copy of the Sad Burst 2 game page (desktop/clients.js)
+// "npm run fetch-game -- --sadburst": a copy of the Sad Burst 2 game page (src/kernel/config/clients.ts)
 // into game.sadburst/. Called by tools/fetch-game.js.
 //
 // The site has no directory listings, and it answers any unknown path under /gameplay/
@@ -140,7 +140,7 @@ async function pool(items, jobs, fn) {
 
 // client: CLIENTS.sadburst. Returns { out, version, files, bytes, problems }.
 async function fetchSadburst(client, { out = client.gameDir, jobs = 8 } = {}) {
-  const base = client.site + client.prefix;
+  const base = client.site + client.gamePrefix(null);
   const tmp = `${out}.download`;
   console.log(`Sad Burst 2 game page\nSource ${base}\nTarget ${out}`);
   fs.rmSync(tmp, { recursive: true, force: true });

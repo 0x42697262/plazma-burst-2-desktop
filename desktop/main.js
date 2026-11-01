@@ -23,11 +23,12 @@ const { pageLine } = require('../src/features/p2p_host/domain/page-log.ts');
 const { CONFIG_FILE_NAME: SERVER_CONFIG_FILE_NAME, EXAMPLE_CONFIG_FILE_NAME: SERVER_EXAMPLE_FILE_NAME, SETTINGS_FILE_NAME: SERVER_SETTINGS_FILE_NAME } = require('../src/features/p2p_host/keys.ts');
 const { RELOAD_AFTER_CRASH_MS, QUIT_AFTER_STOP_MS, MILLISECONDS_PER_SECOND, HOST_WINDOW } = require('../src/features/p2p_host/constants.ts');
 const { HOST_LOG } = require('../src/features/p2p_host/text.ts');
-// Which game: the official client, or Sad Burst 2 with "npm run sadburst" (desktop/clients.js).
-const { CLIENTS } = require('./clients');
+// Which game: the official client, or Sad Burst 2 with "npm run sadburst" (src/kernel/config/clients.ts).
+const { CLIENTS } = require('../src/kernel/config/clients.ts');
+const { TEXT: SADBURST_TEXT } = require('../src/features/client_sadburst/text.ts');
 const CLIENT = CLIENTS[ENVIRONMENT.client];
 const SADBURST = CLIENT.id === 'sadburst';
-const CLIENT_FLAG = SADBURST ? ' -- --sadburst' : ''; // in the commands this file tells you to run
+const CLIENT_FLAG = CLIENT.runFlag; // in the commands this file tells you to run
 
 // Remote play host: "npm run host" (electron . --host). No window here: every tester who
 // opens their link gets an offscreen game instance on this machine, streamed to their
@@ -52,9 +53,9 @@ let serverPage = null; // the checked config the page gets as PB2_SERVER
 // Override with PB2_GAME_DIR. Sad Burst 2 is served at its real address too: its game page
 // sadburst2.com/gameplay/; the rest of its site (login, API) is the network's.
 const ROOT = path.resolve(ENVIRONMENT.gameDir || CLIENT.gameDir);
-const HOST = SADBURST ? CLIENT.host : 'www.plazmaburst2.com';
+const HOST = CLIENT.host;
 const VERSION = readGameVersion();
-const PREFIX = SADBURST ? CLIENT.prefix : `/h5/versions/${VERSION}/`;
+const PREFIX = CLIENT.gamePrefix(VERSION);
 const START_URL = `https://${HOST}${PREFIX}`;
 
 // Hooks: src/features/hooks/ (docs/features/hooks.md); feature flag "hooks".
@@ -68,7 +69,7 @@ const { buildWrapper } = require('../src/wrapper/features.ts');
 const { createLogin } = require('../src/features/login/wrapper.ts');
 const { pinCertificates } = require('../src/features/cert_pinning/wrapper.ts');
 const login = createLogin({ log, desktopDir: __dirname, host: HOST, fromEnvironment: ENVIRONMENT.credentials, isOn: FLAGS.login.on });
-const DEV_KV_FILE = path.join(__dirname, SADBURST ? 'dev-overrides.sadburst.json' : 'dev-overrides.json');
+const DEV_KV_FILE = path.join(__dirname, CLIENT.settingsFileName);
 
 const liveWindow = () => (mainWindow && !mainWindow.isDestroyed() ? mainWindow : null);
 const wrapper = buildWrapper(
@@ -103,8 +104,7 @@ const DEV_OPCODES = CLIENT.opcodes;
 // folder and browser session): its lobby can run code in its page (RELIABLE_TASK,
 // docs/research/fingerprinting.md §4), and nothing it writes may reach the official client, e.g. a bind
 // running "js ..." in the official game, signed in with your official account.
-const SADBURST_PARTITION = 'persist:sadburst';
-const gameSession = () => (SADBURST ? session.fromPartition(SADBURST_PARTITION) : session.defaultSession);
+const gameSession = () => (CLIENT.partition ? session.fromPartition(CLIENT.partition) : session.defaultSession);
 // The console and you both change it; see kv-file.js. Edits reach the page through
 // pb2dev.reload / pb2dev.fileError.
 let mainWindow = null;
@@ -352,13 +352,18 @@ async function fetchAndKeep(url, file, ctx) {
 async function checkSadburstBuild() {
   try {
     const local = JSON.parse(fsSync.readFileSync(path.join(ROOT, 'pb2-version.json'), 'utf8')).build;
-    const res = await net.fetch(`${CLIENT.site}${CLIENT.prefix}asset-version.txt`, { bypassCustomProtocolHandlers: true, cache: 'no-store' });
+    const res = await net.fetch(`${CLIENT.site}${PREFIX}asset-version.txt`, { bypassCustomProtocolHandlers: true, cache: 'no-store' });
     const live = res.ok ? (await res.text()).trim().split(/\r?\n/)[0] : null;
     if (live && local && live !== local) log.warn(`Sad Burst 2: the site has build ${live}, game.sadburst/ is ${local}. Run "npm run fetch-game -- --sadburst".`);
   } catch {}
 }
 
 app.whenReady().then(async () => {
+  if (SADBURST && !FLAGS.client_sadburst.on) {
+    log.error(SADBURST_TEXT.flagOff);
+    app.quit();
+    return;
+  }
   if (!VERSION || !fsSync.existsSync(path.join(ROOT, 'index.html'))) {
     const msg = `No game files found in ${ROOT}.\n\nRun "npm run fetch-game${CLIENT_FLAG}" first (see README.md).`;
     log.error(msg);
@@ -423,7 +428,7 @@ app.whenReady().then(async () => {
     // The server list's bridge (src/features/server_list/launcher/preload.ts); it exposes nothing to the game's
     // page. Sad Burst 2: its own session, and no bridge at all.
     webPreferences: SADBURST
-      ? { backgroundThrottling: false, partition: SADBURST_PARTITION }
+      ? { backgroundThrottling: false, partition: CLIENT.partition }
       : { backgroundThrottling: false, preload: LAUNCHER_PRELOAD },
   });
   logPage(win, '');

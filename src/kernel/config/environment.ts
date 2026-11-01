@@ -40,7 +40,7 @@ const environmentSchema = z.object({
 
 const isLogFormat = (value: string): value is LogFormat => (LOG_FORMATS as readonly string[]).includes(value);
 
-function clientOf(argv: readonly string[], npmSadburst: string | undefined): ClientId {
+export function clientOf(argv: readonly string[], npmSadburst: string | undefined): ClientId {
   const npmAskedForSadburst = npmSadburst !== undefined && npmSadburst !== FALSE_VALUE && npmSadburst !== DISABLED_VALUE;
   return argv.includes(ARG.sadburst) || npmAskedForSadburst ? CLIENT.sadburst : CLIENT.official;
 }

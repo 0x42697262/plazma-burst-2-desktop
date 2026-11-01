@@ -582,8 +582,8 @@ function run(opts = {}) {
 module.exports = { run, findNames, RULES, CHECKS, decode, compile, render, gameVersion, ID_CHARS };
 
 if (require.main === module) {
-  // --sadburst: the Sad Burst 2 copy (desktop/clients.js, tools/find-names-sadburst.js).
-  const { clientFor, withoutClientFlag } = require('../desktop/clients');
+  // --sadburst: the Sad Burst 2 copy (src/kernel/config/clients.ts, tools/find-names-sadburst.js).
+  const { clientFor, withoutClientFlag } = require('../src/kernel/config/clients.ts');
   const sadburst = clientFor().id === 'sadburst';
   const args = withoutClientFlag(process.argv.slice(2));
   const opts = {};
@@ -600,7 +600,7 @@ if (require.main === module) {
   try {
     if (opts.decode && sadburst) {
       const sb = require('./find-names-sadburst');
-      const gameDir = path.resolve(opts.gameDir || require('../desktop/clients').CLIENTS.sadburst.gameDir);
+      const gameDir = path.resolve(opts.gameDir || require('../src/kernel/config/clients.ts').CLIENTS.sadburst.gameDir);
       const src = fs.readFileSync(path.join(gameDir, opts.decode), 'utf8');
       process.stdout.write(decode(src, sb.loadCode(gameDir).strings));
     } else if (opts.decode) {

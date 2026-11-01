@@ -19,7 +19,7 @@ const path = require('path');
 const vm = require('vm');
 const fsn = require('./find-names');
 const { MANIFEST } = require('./fetch-sadburst');
-const { CLIENTS } = require('../desktop/clients');
+const { CLIENTS } = require('../src/kernel/config/clients.ts');
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 

@@ -15,7 +15,7 @@
 // kind offers: special_values_table['region_activation'][9] = "''USE'' key, only Red team ...".
 // The editor page needs a login, its scripts do not.
 //
-// Sad Burst 2 (--sadburst, desktop/clients.js): its editor bundles the same file, minified,
+// Sad Burst 2 (--sadburst, src/kernel/config/clients.ts): its editor bundles the same file, minified,
 // into scripts/ale/ale-all.js (statements joined with commas, "a.b" for a["b"]); the
 // patterns below take both forms. It has no server for the value lists.
 //
@@ -28,7 +28,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { clientFor, withoutClientFlag } = require('../desktop/clients');
+const { clientFor, withoutClientFlag } = require('../src/kernel/config/clients.ts');
 
 const REPO = path.join(__dirname, '..');
 const SOURCE_URL = 'https://www.plazmaburst2.com/level_editor/editor_scripts/lib_params.js';

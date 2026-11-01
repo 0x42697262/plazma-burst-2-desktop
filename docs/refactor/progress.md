@@ -104,7 +104,7 @@ Notes from P2 for the feature steps:
 - [x] P3.18 `login` + `cert_pinning`: `src/features/login/` (credentials file and cookie adapters; flag off starts logged out) and `src/features/cert_pinning/` (the verify procedure). `desktop/login.js` and `test/login.test.mjs` are gone.
 - [x] P3.19 `remote_play`: `src/features/remote_play/` (input, lockdown, testers file versioned, WebSocket host, the client in TypeScript built to `dist/remote-client/`, the redactor); `npm run host` quits when the flag is off. The Electron window code stays in `desktop/main.js` until P4.3. `desktop/remote/` and `tools/remote-testers.js` are gone.
 - [x] P3.20 `p2p_host`: `src/features/p2p_host/` (config checks, config file, page log lines, console side registering `server`/`who`/`kick`/`say` and starting the host); `npm run p2p-host` quits when the flag is off. The page's host driver stays JavaScript in `desktop/dev/console/server/` until P6.1, the Electron window in `desktop/main.js` until P4.3. `desktop/p2p-host/` is gone.
-- [ ] P3.21 `client_sadburst`
+- [x] P3.21 `client_sadburst`: one client map (`src/shared/clients/keys.ts`, `src/kernel/config/clients.ts`) replaces `desktop/clients.js` and the `SADBURST ? … : …` choices of host, page prefix, settings file, session and run flag; `npm run sadburst` quits when the flag is off.
 
 ## P4. Console kernel and wrapper platform
 - [ ] P4.1 Console kernel to `src/console/kernel/`

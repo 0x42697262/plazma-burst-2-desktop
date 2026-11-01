@@ -20,7 +20,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { clientFor, withoutClientFlag, FLAG } = require('../desktop/clients');
+const { clientFor, withoutClientFlag, FLAG } = require('../src/kernel/config/clients.ts');
 
 const SITE = 'https://www.plazmaburst2.com';
 const REPO = path.join(__dirname, '..');
