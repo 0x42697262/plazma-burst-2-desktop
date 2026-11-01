@@ -288,7 +288,7 @@ Remote play testers have no `netlog runs` and no `run:`: they only see their own
 
 | Command | What |
 |---|---|
-| `npm run fetch-game -- --sadburst` | Its game page into `game.sadburst/` (about 3.5 MB), then its names and editor action names. The old copy is kept as `game.sadburst.previous/` |
+| `npm run fetch-game -- --sadburst` | Its game page and everything it loads into `game.sadburst/` (about 68 MB, about 2.5 minutes), then its names and editor action names. The old copy is kept as `game.sadburst.previous/` |
 | `npm run find-names -- --sadburst` | `desktop/dev/names.sadburst.js` |
 | `npm run fetch-opcodes -- --sadburst` | `desktop/dev/opcodes.sadburst.js`, from its map editor (`map_editor/scripts/ale/ale-all.js`) |
 | `npm run sadburst` | The game window, with the dev console and the network log |
@@ -302,7 +302,7 @@ The `--` is needed: npm 12 refuses `npm run fetch-game --sadburst` as an unknown
 | Address served | `www.plazmaburst2.com/h5/versions/<version>/` | `sadburst2.com/gameplay/` (the rest of the site, its login and API, goes to the network) |
 | Game code | Plain scripts listed in `index.html` | A page script (`assets/index-*.js`, Vue) loads `gamelogic/scripts-manifest.json`: a strings file per language, then the game scripts with hashed names, run as inline scripts |
 | Obfuscated names | Found by pattern | **The same names as the official client**, in minified code (`!0` for `true`, constants folded, local variables renamed) |
-| Download | Every file, through the site's directory listings | Only the code: the site has no listings, and answers any unknown path under `/gameplay/` with its game page. Images, sounds and maps are kept in `game.sadburst/` the first time the game loads them |
+| Download | Every file, through the site's directory listings | The site has no listings, and answers any unknown path under `/gameplay/` with its game page. So the files are found from the game's own lists (sounds and bitmaps, sprite sheets and frame sequences, skins, campaign maps) and from every file path in its code. Anything still missing is fetched once while you play, kept, and listed in `game.sadburst/kept.txt`, which the next fetch reads |
 | Login | `desktop/credentials.json`, cookies cleared at start | Its own entry screen: log in with a Sad Burst account, or play as a guest. The session stays in the app between starts |
 | Server list | `npm start` opens it | None: straight to its game page |
 | Hooks | Yes | **Off.** Its loader hashes every game script (SHA-256) and sends the hash with the lobby login (`PB2_CLIENT_BUILD`: client version, hash, size), so a patched script shows the server a changed client |

@@ -8,16 +8,29 @@
 //   3. asset-version.txt (build number, client version), and the game itself:
 //      gamelogic/scripts-manifest.json lists the strings file of each language and the
 //      scripts in load order
-// Everything else the game loads (images, sounds, maps) is saved by the desktop wrapper
-// the first time the game asks for it (desktop/main.js, "npm run sadburst").
+//   4. what the game loads, from its own lists (assetPaths): the sounds and bitmaps list
+//      (flash_export/just_sounds_and_bitmaps.html) with its .ogg overrides, the sprite
+//      sheets and frame sequences its loader names, the skins and campaign manifests, and
+//      every relative file path written in its code, strings and CSS
+//   5. what the desktop wrapper had to fetch while you played (kept.txt, see below)
+// The wrapper ("npm run sadburst") fetches anything still missing the first time the game
+// asks for it, keeps it, and lists it in game.sadburst/kept.txt, so the next fetch-game
+// gets it too.
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const UA = 'Mozilla/5.0 (pb2-desktop fetch-game)';
 const MANIFEST = 'gamelogic/scripts-manifest.json';
 const VERSION_FILE = 'asset-version.txt';
+const KEPT = 'kept.txt'; // what the wrapper fetched while you played (desktop/main.js)
+const SOUNDS_LIST = 'flash_export/just_sounds_and_bitmaps.html';
+const SKINS_LIST = 'flash_export/flash_skins/manifest.json';
+const CAMPAIGN_LIST = 'gamelogic/campaign/manifest.json';
+const ASSET_EXT = 'png|jpe?g|gif|webp|svg|mp3|ogg|wav|css|json|xml|ttf|otf|woff2?';
+const ID = '0-9A-Za-z_\\u0400-\\u04FF';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -59,6 +72,63 @@ function manifestFiles(manifest) {
     throw new Error(`${MANIFEST} does not look like a scripts manifest`);
   }
   return [...new Set([...Object.values(manifest.strings), ...manifest.order])];
+}
+
+// A strings file (gamelogic/<hash>.js: {let e=globalThis;e.$name="...",...}) -> Map.
+function loadStrings(text) {
+  const ctx = {};
+  ctx.globalThis = ctx;
+  vm.createContext(ctx);
+  vm.runInContext(text, ctx);
+  const map = new Map();
+  for (const [k, v] of Object.entries(ctx)) if (typeof v === 'string' && k.startsWith('$')) map.set(k, v);
+  return map;
+}
+
+const pad4 = (n) => String(n).padStart(4, '0');
+const RELATIVE = new RegExp(`^(?:[\\w-]+/)*[\\w.-]+\\.(?:${ASSET_EXT})$`, 'i');
+
+// The files the game loads, relative to the game page, from what fetch-game already has:
+// texts: [[rel, text]] of the code, CSS and lists; strings: the strings file's values;
+// kept: the wrapper's kept.txt lines. Some guesses do not exist (a path relative to
+// another folder): download() just skips those.
+function assetPaths({ texts, strings, languages = ['en'], kept = [] }) {
+  const out = new Set();
+  const all = texts.map(([, t]) => t).join('\n');
+  const valueOf = (token) => (token.startsWith('$') ? strings.get(token) : token.slice(1, -1));
+  // Relative file paths written in code and CSS ("x/y.png", `y.css`, url(x.png)), and
+  // whole strings of the strings file that are one.
+  for (const m of all.matchAll(new RegExp(`["'\`(]((?:[\\w-]+/)*[\\w.-]+\\.(?:${ASSET_EXT}))["'\`)]`, 'gi'))) out.add(m[1]);
+  for (const v of strings.values()) if (RELATIVE.test(v)) out.add(v);
+  // The sprite sheet loader: ("flash_export/name", scale, flag) is name.png and name.js;
+  // ("flash_export/name", count) is count frames, name/frame0001.jpg ...
+  const decoded = all.replace(new RegExp(`\\$[${ID}]+`, 'g'), (t) => (strings.has(t) ? JSON.stringify(strings.get(t)) : t));
+  for (const m of decoded.matchAll(/\(["`](flash_export\/[\w-]+)["`],(\d+)(,[^)]{1,6})?\)/g)) {
+    out.add(`${m[1]}.png`);
+    out.add(`${m[1]}.js`);
+    if (!m[3]) for (let i = 1; i <= Number(m[2]) && i <= 999; i++) out.add(`${m[1]}/frame${pad4(i)}.jpg`);
+  }
+  // Sounds whose .ogg replaces the .mp3: sound_ogg_override.add("id").
+  for (const m of decoded.matchAll(/sound_ogg_override\.add\(["`]([\w-]+)["`]\)/g)) out.add(`audio_overrides/${m[1]}.ogg`);
+  // The lists, when they are in texts.
+  const text = (rel) => (texts.find(([r]) => r === rel) || [])[1];
+  const sounds = text(SOUNDS_LIST);
+  if (sounds) {
+    for (const m of sounds.matchAll(new RegExp(`src:\\s*(\\$[${ID}]+|"[^"]+"|\`[^\`]+\`)`, 'g'))) {
+      const v = valueOf(m[1]);
+      if (v) out.add(`flash_export/${v}`);
+    }
+  }
+  const skins = text(SKINS_LIST);
+  if (skins) { try { for (const id of JSON.parse(skins)) out.add(`flash_export/flash_skins/${id}.png`); } catch {} }
+  const campaign = text(CAMPAIGN_LIST);
+  if (campaign) {
+    try {
+      for (const level of JSON.parse(campaign).levels || []) for (const lang of languages) out.add(`gamelogic/campaign/${lang}/${level}.xml`);
+    } catch {}
+  }
+  for (const k of kept) if (k && !k.startsWith('#')) out.add(k.trim());
+  return [...out].filter((p) => p && !/^(\.\.|\/)/.test(p));
 }
 
 async function pool(items, jobs, fn) {
@@ -121,6 +191,28 @@ async function fetchSadburst(client, { out = client.gameDir, jobs = 8 } = {}) {
   const scripts = manifestFiles(JSON.parse(manifestData.toString('utf8')));
   await pool(scripts, jobs, (f) => download(f));
 
+  // 4, 5. What the game loads: the lists first, then everything they and the code name.
+  const manifest = JSON.parse(manifestData.toString('utf8'));
+  await pool([SOUNDS_LIST, SKINS_LIST, CAMPAIGN_LIST], jobs, (f) => download(f));
+  const textOf = (rel) => { const d = saved.get(rel); return d ? d.toString('utf8') : null; };
+  const texts = [...saved.keys()].filter((r) => /\.(js|css|html|json)$/.test(r) && saved.get(r)).map((r) => [r, textOf(r)]);
+  let kept = [];
+  try { kept = fs.readFileSync(path.join(out, KEPT), 'utf8').split(/\r?\n/); } catch {}
+  const assets = assetPaths({
+    texts,
+    strings: loadStrings(textOf(manifest.strings.en) || ''),
+    languages: Object.keys(manifest.strings),
+    kept,
+  });
+  const before = saved.size;
+  let done = 0;
+  await pool(assets, jobs, async (f) => {
+    await download(f);
+    if (++done % 200 === 0) console.log(`  assets: ${done} of ${assets.length} looked up, ${(bytes / 1048576).toFixed(1)} MB`);
+  });
+  console.log(`  assets: ${saved.size - before} files from ${assets.length} paths the game names (${kept.filter(Boolean).length} from ${KEPT})`);
+  if (kept.length) fs.writeFileSync(path.join(tmp, KEPT), kept.filter(Boolean).join('\n') + '\n');
+
   const problems = [];
   for (const f of scripts) if (!saved.get(f)) problems.push(`the manifest lists missing ${f}`);
   for (const r of links) if (missing.has(path.posix.normalize(r).replace(/^\.\//, ''))) problems.push(`index.html links missing ${r}`);
@@ -146,8 +238,8 @@ async function fetchSadburst(client, { out = client.gameDir, jobs = 8 } = {}) {
   }
   fs.renameSync(tmp, out);
   console.log(`Done: ${version} (client ${versionText[1] || '?'}), ${saved.size} files, ${(bytes / 1048576).toFixed(1)} MB in ${out}`);
-  console.log('Images, sounds and maps are saved the first time the game loads them ("npm run sadburst").');
+  console.log(`Anything the game still asks for is fetched once while you play and listed in ${KEPT}, so the next fetch gets it too.`);
   return { out, version, files: saved.size, bytes, problems };
 }
 
-module.exports = { fetchSadburst, htmlRefs, moduleRefs, manifestFiles, MANIFEST, VERSION_FILE };
+module.exports = { fetchSadburst, htmlRefs, moduleRefs, manifestFiles, assetPaths, loadStrings, MANIFEST, VERSION_FILE, KEPT };

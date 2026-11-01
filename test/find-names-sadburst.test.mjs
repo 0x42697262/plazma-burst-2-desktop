@@ -51,3 +51,26 @@ test('fetch-game --sadburst finds the page script\'s modules and the game\'s scr
     ['gamelogic/s.js', 'gamelogic/z.js', 'gamelogic/a.js']);
   assert.throws(() => manifestFiles({ order: [] }), /scripts manifest/);
 });
+
+test('fetch-game --sadburst knows what the game loads: its lists, its sprite loader, paths in its code, kept.txt', () => {
+  const { assetPaths } = require('../tools/fetch-sadburst.js');
+  const strings = new Map([['$o', 'images/asphalt.png'], ['$s', 'flash_export/sky']]);
+  const paths = assetPaths({
+    texts: [
+      ['gamelogic/a.js', 'a("flash_export/guns",4,!0),e($s,3);sound_ogg_override.add("am_wind");x(`loading_screen.css`);y("https://cdn/x.png")'],
+      ['assets/b.css', '.a{background:url(loading_screen/glow.png)}'],
+      ['flash_export/just_sounds_and_bitmaps.html', '[{src:$o, id:`asphalt`},{src:"sounds/body.mp3", id:`body`}]'],
+      ['flash_export/flash_skins/manifest.json', '[151,152]'],
+      ['gamelogic/campaign/manifest.json', '{"levels":["c0a"]}'],
+    ],
+    strings,
+    languages: ['en', 'zh'],
+    kept: ['bitmap_overrides/mmenu.jpg', ''],
+  });
+  for (const p of ['flash_export/guns.png', 'flash_export/guns.js', 'flash_export/sky/frame0001.jpg', 'flash_export/sky/frame0003.jpg',
+    'audio_overrides/am_wind.ogg', 'loading_screen.css', 'loading_screen/glow.png', 'flash_export/images/asphalt.png',
+    'flash_export/sounds/body.mp3', 'flash_export/flash_skins/152.png', 'gamelogic/campaign/en/c0a.xml', 'gamelogic/campaign/zh/c0a.xml',
+    'bitmap_overrides/mmenu.jpg']) assert.ok(paths.includes(p), p);
+  assert.ok(!paths.includes('flash_export/sky/frame0004.jpg'), 'as many frames as the loader says');
+  assert.ok(!paths.some((p) => p.includes('cdn')), 'not other sites');
+});

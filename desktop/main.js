@@ -610,9 +610,22 @@ async function serveLocal(url, ctx) {
   }
 }
 
-// Sad Burst 2: fetch-game copies its code only, so an image, sound or map the game asks for
-// the first time comes from the site and is kept in game.sadburst/ for the next time. The
-// site answers a missing file with its game page (HTML): that is "not found", not kept.
+// Sad Burst 2: a file fetch-game did not get (it cannot list the site's folders) comes from
+// the site the first time the game asks for it, is kept in game.sadburst/, and is listed in
+// game.sadburst/kept.txt, so the next "npm run fetch-game -- --sadburst" gets it too
+// (tools/fetch-sadburst.js). The site answers a missing file with its game page (HTML):
+// that is "not found", not kept.
+const KEPT_FILE = path.join(ROOT, 'kept.txt');
+let keptList = null; // what kept.txt lists
+async function noteKept(file) {
+  const rel = path.relative(ROOT, file).split(path.sep).join('/');
+  if (!keptList) {
+    try { keptList = new Set((await fs.readFile(KEPT_FILE, 'utf8')).split(/\r?\n/).filter(Boolean)); } catch { keptList = new Set(); }
+  }
+  if (keptList.has(rel)) return;
+  keptList.add(rel);
+  await fs.appendFile(KEPT_FILE, rel + '\n');
+}
 async function fetchAndKeep(url, file, ctx) {
   let res;
   try {
@@ -626,6 +639,7 @@ async function fetchAndKeep(url, file, ctx) {
   try {
     await fs.mkdir(path.dirname(file), { recursive: true });
     await fs.writeFile(file, data);
+    await noteKept(file);
     log.debug(`[sadburst] kept ${path.relative(ROOT, file)} (${data.length} bytes)`);
   } catch (e) {
     log.warn(`Sad Burst 2: could not keep ${file}: ${e.message}`);
