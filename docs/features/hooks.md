@@ -7,8 +7,8 @@ Hooks are small scripts in this folder that change or watch what the game does,
 - Your hooks: `hooks/<name>.js`. Not in git (only this guide and `*.example.js` are).
 - Templates: `hooks/*.example.js`. Never loaded. Copy one to `<name>.js` to use it.
 - Turn all hooks off: `PB2_HOOKS=0 npm start`.
-- Sad Burst 2 (`npm run sadburst`) has no hooks: its loader sends a hash of its scripts with the login, so a patched script would show its server a changed client ([README.md §9](../README.md#9-sad-burst-2-community-client)).
-- Every call, rule, order and message in detail: [REFERENCE.md](REFERENCE.md).
+- Sad Burst 2 (`npm run sadburst`) has no hooks: its loader sends a hash of its scripts with the login, so a patched script would show its server a changed client ([README.md §9](../../README.md#9-sad-burst-2-community-client)).
+- Every call, rule, order and message in detail: [REFERENCE.md](hooks-reference.md).
 
 ## Quick start (2 minutes)
 
@@ -117,7 +117,7 @@ Interceptor.attach(Game.levelStart, {
 - **Game code that kept a reference to the function earlier still calls the original.**
   Hook as early as possible after the function is made.
 - **Not on `globalThis` or the network class.** The anti-tamper scan compares the source
-  of the functions there (`ANTICHEAT.md` §6), so swapping one while the game runs gets
+  of the functions there (`docs/research/anticheat.md` §6), so swapping one while the game runs gets
   reported. Those are refused with an error; hook them by name (`Game.<name>`) instead.
 - `Game.method` only works inside callbacks. At the top level of a hook file the game
   doesn't exist yet.
@@ -180,7 +180,7 @@ Inside callbacks (in the game), not at the top level of the file:
 
 **Why not change functions while the game runs, like Frida does?** The game's anti-tamper
 check saves the source of every global function when the page loads, and compares it later
-(`ANTICHEAT.md` §6). Replacing a function afterwards gets reported and reloads the page.
+(`docs/research/anticheat.md` §6). Replacing a function afterwards gets reported and reloads the page.
 Changing code **as it is served** happens before that snapshot, so the snapshot already
 includes the change. It also reaches code that is unreachable at run time: local
 variables, inner functions, and constants inside a function.

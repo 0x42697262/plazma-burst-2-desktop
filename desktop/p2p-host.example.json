@@ -1,5 +1,5 @@
 {
-  "_comment": "Copy to desktop/p2p-host.json. Guide: desktop/p2p-host/README.md. \"match\" takes the game's own preset (create screen > Copy Preset as text).",
+  "_comment": "Copy to desktop/p2p-host.json. Guide: docs/operations/p2p-host.md. \"match\" takes the game's own preset (create screen > Copy Preset as text).",
   "match": {
     "title": "Friends only",
     "map_id": "nanotech-cht",

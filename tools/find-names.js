@@ -239,7 +239,7 @@ const RULES = [
   { file: 'flash', keys: ['netTypeNames'],
     what: ['net property: reliable message type number -> name ("RELIABLE_...")'],
     re: String.raw`if\(prop\.substring\(0,[\x60"]RELIABLE_[\x60"]\.length\)===[\x60"]RELIABLE_[\x60"]\)\s*⟨net⟩\.⟨ID⟩\[⟨net⟩\[prop\]\]=prop;` },
-  // The main server's tasks (RELIABLE_TASK, FINGERPRINTING.md): JavaScript the game runs
+  // The main server's tasks (RELIABLE_TASK, docs/research/fingerprinting.md): JavaScript the game runs
   // with eval, called with this build tag; net/fingerprint.js runs the fingerprinter so.
   { file: 'flash', keys: ['buildTag'],
     what: ['global: the client build tag the game passes to the main server\'s tasks'],
@@ -298,7 +298,7 @@ const RULES = [
     re: String.raw`\(⟨_⟩===⟨net⟩\.⟨_⟩&&!⟨spectating⟩\)\? ⟨ID⟩ : ⟨_⟩\),\s*TextField\.QuickReplaceMyEmojis` },
   { file: 'frame2', keys: ['chatTrace'], what: ['flag: every chat line also goes to trace()'],
     re: String.raw`var ⟨ID⟩=false;\s*function ChatNewMsg\(` },
-  // ----- The state update (ANTICHEAT.md §14.2): where each value sits -----
+  // ----- The state update (docs/research/anticheat.md §14.2): where each value sits -----
   // The server reads parts of your state update by these indices (numbers on the network
   // class). The recorder labels STATE lines with them, so a new layout follows by itself.
   { file: 'flash', keys: ['stateHp'], what: ['net property: index of your HP in a state update'],
@@ -380,7 +380,7 @@ const RULES = [
   // The lobby address: hosts[CONNECTION_SERVER_ID] + "plazmaburst2.com" + ":" + port.
   { file: 'lobby', keys: ['lobbyHosts', 'lobbyPort'], what: ['net property: lobby server address starts ("https://vvvv.")', 'net property: lobby server port'],
     re: String.raw`"localhost" : ⟨net⟩\.⟨ID⟩\[CONNECTION_SERVER_ID\]\+"plazmaburst2\.com"\)\+":"\+⟨net⟩\.⟨ID⟩;` },
-  // The anti-cheat's locked arrays (ANTICHEAT.md §7). The scan's code 3 report sends an
+  // The anti-cheat's locked arrays (docs/research/anticheat.md §7). The scan's code 3 report sends an
   // index into this list.
   { file: 'tools', keys: ['lockedArrays'],
     what: ['anti-cheat locked arrays, in the order the scan compares them'],

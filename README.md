@@ -31,7 +31,7 @@ npm start
 In the game, press Shift+`` ` `` (`~`) for the dev console and type `help`.
 
 To run a server of your own for friends, without the official site: `npm run server`, and
-they pick it in the server list `npm start` opens ([server/README.md](server/README.md)).
+they pick it in the server list `npm start` opens ([docs/operations/private-server.md](docs/operations/private-server.md)).
 
 The community client Sad Burst 2 has commands of its own; the ones above never touch it
 ([section 9](#9-sad-burst-2-community-client)).
@@ -49,14 +49,14 @@ The community client Sad Burst 2 has commands of its own; the ones above never t
 | `desktop/credentials.json` | Your login (copy `credentials.example.json`) | no |
 | `desktop/dev-overrides.json` | Dev console settings, binds and profiles (per-map settings, `profile` in the console). Editing it while the game runs reloads it | no |
 | `desktop/kv-file.js` | Shares `dev-overrides.json` between the console and your edits | yes |
-| `hooks/` | Your hooks: Frida-style scripts that change the game's code as it loads. Guide: `hooks/README.md`, reference: `hooks/REFERENCE.md` | only `README.md`, `REFERENCE.md` and `*.example.js` |
-| `desktop/remote/` | Remote play: testers play a game running on this machine from their browser (`npm run host`). Guide: `desktop/remote/README.md` | yes |
+| `hooks/` | Your hooks: Frida-style scripts that change the game's code as it loads. Guide: `docs/features/hooks.md`, reference: `docs/features/hooks-reference.md` | only `README.md`, `REFERENCE.md` and `*.example.js` |
+| `desktop/remote/` | Remote play: testers play a game running on this machine from their browser (`npm run host`). Guide: `docs/operations/remote-play.md` | yes |
 | `desktop/remote-testers.json`, `desktop/remote-data/` | Remote play: tester links, and each tester's console settings | no |
-| `server/` | Your own lobby server: the game's own server code in Node, TLS on one port, run from the terminal (`npm run server`). Players pick it in the app's server list. Guide: `server/README.md` | yes |
+| `server/` | Your own lobby server: the game's own server code in Node, TLS on one port, run from the terminal (`npm run server`). Players pick it in the app's server list. Guide: `docs/operations/private-server.md` | yes |
 | `server/server.json`, `server/data/` | Your server: its settings (copy `server/server.example.json`), its certificate, bans and downloaded maps | no |
 | `desktop/launcher/`, `desktop/servers.js` | The server list `npm start` opens: the official server and your private servers, with address, ping, players and description | yes |
 | `desktop/servers.json` | Your saved private servers: address, certificate fingerprint, your nickname, the server password (edited from the server list) | no |
-| `desktop/p2p-host/` | Player-hosted dedicated host: a "THIS DEVICE (UDP)" match listed by the official lobby, with no window (`npm run p2p-host`). Guide: `desktop/p2p-host/README.md` | yes |
+| `desktop/p2p-host/` | Player-hosted dedicated host: a "THIS DEVICE (UDP)" match listed by the official lobby, with no window (`npm run p2p-host`). Guide: `docs/operations/p2p-host.md` | yes |
 | `desktop/p2p-host.json`, `desktop/p2p-host-overrides.json` | Player-hosted dedicated host: its settings (copy `desktop/p2p-host.example.json`), and its console settings | no |
 | `desktop/hooks.js`, `desktop/hooks-runtime.js` | The hooks loader (dry run, patches, trampolines) and its in-page runtime | yes |
 | `netlogs/` | Network logs: every message the game sends and receives, and its packet losses, as plain text. One file per run and game instance (console key `net_log`, command `netlog`; see [section 7](#7-network-log)) | no |
@@ -211,8 +211,8 @@ If names are missing, the dev console still opens and lists them in red. Only co
 | Variable | Default | What |
 |---|---|---|
 | `PB2_DEV=0` | on | Turn the dev console off. |
-| `PB2_HOOKS=0` | on | Turn the hooks in `hooks/` off (see `hooks/README.md`). |
-| `npm run host -- [options]` | off | Remote play host instead of a game window (`--port`, `--max`, `--fps`, ...; see `desktop/remote/README.md`). |
+| `PB2_HOOKS=0` | on | Turn the hooks in `hooks/` off (see `docs/features/hooks.md`). |
+| `npm run host -- [options]` | off | Remote play host instead of a game window (`--port`, `--max`, `--fps`, ...; see `docs/operations/remote-play.md`). |
 | `PB2_GAME_DIR` | `game/` | Play a different game copy |
 | `PB2_VERSION` | from `pb2-version.json` | Version folder used in the URL |
 | `PB2_LOGIN`, `PB2_PASSWORD`, `PB2_UID` | `desktop/credentials.json` | Login cookies |
@@ -249,12 +249,12 @@ A second copy of the app started in the same second gets `..._local-2.log`. Page
 | `LOSS` | `slow ack` (acknowledged over 500 ms after the ping), `no ack` (none after 2 s), `dropped` (socket.io dropped it, the socket was busy), `gap` (a later message arrived first), `late` (a missing one arrived) |
 | `STAT` | Once a second per busy connection: ping, how long acks took, packets, characters, repeats, losses (`loss: none` when there were none) |
 | `CONN` | Connected, disconnected (with the game's reason and the connection's totals) |
-| `STATE` | Every unreliable state update, decoded by position. Your state: `hp 150 \| respawns 1 \| aim +212,-40 \| pos 1264,-520 \| ...`; the server's snapshot: `#3 hp 80 ping 45 ms [that player's state]` for each player. Off by default (60 to 250 a second); only counted in `STAT`. On with `net_log_state` or `net_log_all`. How HP travels: [ANTICHEAT.md §14.9](ANTICHEAT.md#149-how-hp-travels) |
+| `STATE` | Every unreliable state update, decoded by position. Your state: `hp 150 \| respawns 1 \| aim +212,-40 \| pos 1264,-520 \| ...`; the server's snapshot: `#3 hp 80 ping 45 ms [that player's state]` for each player. Off by default (60 to 250 a second); only counted in `STAT`. On with `net_log_state` or `net_log_all`. How HP travels: [docs/research/anticheat.md §14.9](docs/research/anticheat.md#149-how-hp-travels) |
 | `PKT` | Every packet, also ack-only ones (`ack #0 \| nothing else`): its size in characters, its ack, what it carries with each item's size (`state (3 parts) 120 chars, #5 CHAT 36 chars`), and the framing: the ack, sequence numbers and separators. The sizes add up to the packet's. The `REL` and `STATE` lines after it show the contents. Only with `net_log_all` |
 
 **Repeats are not loss.** The game repeats every message that is not acknowledged yet in every packet it sends (about every 16 ms), until the ack arrives, about one ping later. So each reliable message goes out several times, and arrives several times, on a perfect connection. `STAT` counts them (`repeated 41 out, 26 in`); only a slow or missing ack is loss.
 
-**Why a connection closed:** the `CONN closed:` line gives socket.io's reason and what it means. `io server disconnect` is the server closing it on purpose; `transport close` and `ping timeout` are the network. What the server checks in your state updates (server-side checks: they run on the match's server, not in your game), and which of those checks disconnect you: [ANTICHEAT.md §14](ANTICHEAT.md#14-server-side-state-checks-ммpoeрм).
+**Why a connection closed:** the `CONN closed:` line gives socket.io's reason and what it means. `io server disconnect` is the server closing it on purpose; `transport close` and `ping timeout` are the network. What the server checks in your state updates (server-side checks: they run on the match's server, not in your game), and which of those checks disconnect you: [docs/research/anticheat.md §14](docs/research/anticheat.md#14-server-side-state-checks-ммpoeрм).
 
 **In the console:**
 
@@ -268,7 +268,7 @@ A second copy of the app started in the same second gets `..._local-2.log`. Page
 | `net_log_state on` | Also write every state update |
 | `netlog all on` | Log everything: every packet (`PKT`) and every state update (the key `net_log_all`, off by default; large files). `netlog show --pkt` shows the packets |
 
-**What is recorded and how:** the protocol is in [ANTICHEAT.md §13.3](ANTICHEAT.md#133-on-the-wire). The recorder wraps three methods on each connection object, only while `net_log` is on: the receive method, the socket's `emit` and the P2P peer's `send`. No global and nothing on the network class is replaced, so the anti-tamper scan is not affected. State updates carry no sequence number, so their loss cannot be seen one by one; compare the `state` counts per second in `STAT`.
+**What is recorded and how:** the protocol is in [docs/research/anticheat.md §13.3](docs/research/anticheat.md#133-on-the-wire). The recorder wraps three methods on each connection object, only while `net_log` is on: the receive method, the socket's `emit` and the P2P peer's `send`. No global and nothing on the network class is replaced, so the anti-tamper scan is not affected. State updates carry no sequence number, so their loss cannot be seen one by one; compare the `state` counts per second in `STAT`.
 
 Remote play testers have no `netlog runs` and no `run:`: they only see their own game's log. `PB2_DEV=0` turns the console off, and the network log with it.
 
@@ -308,7 +308,7 @@ The `--` is needed: npm 12 refuses `npm run fetch-game --sadburst` as an unknown
 | Hooks | Yes | **Off.** Its loader hashes every game script (SHA-256) and sends the hash with the lobby login (`PB2_CLIENT_BUILD`: client version, hash, size), so a patched script shows the server a changed client |
 | Remote play, player-hosted host | Yes | No |
 | Network log instance | `local` | `sadburst` (`netlogs/<date>_<time>_sadburst.log`) |
-| Kept apart | — | Its own browser session (cookies, storage), console settings (`desktop/dev-overrides.sadburst.json`), maps folder (`desktop/maps.sadburst/`) and fingerprinter folder (`fingerprint.sadburst/`), and no server-list bridge. Its lobby can run code in its page (`RELIABLE_TASK`, [FINGERPRINTING.md §4](FINGERPRINTING.md#4-the-task-primitive)); nothing that code writes reaches the official client |
+| Kept apart | — | Its own browser session (cookies, storage), console settings (`desktop/dev-overrides.sadburst.json`), maps folder (`desktop/maps.sadburst/`) and fingerprinter folder (`fingerprint.sadburst/`), and no server-list bridge. Its lobby can run code in its page (`RELIABLE_TASK`, [docs/research/fingerprinting.md §4](docs/research/fingerprinting.md#4-the-task-primitive)); nothing that code writes reaches the official client |
 
 **Names.** Patterns written for the official code rarely match minified code. `find-names -- --sadburst` takes a name by pattern where one still matches, and otherwise the **official client's name for it, if that name appears in the Sad Burst code** (how: `tools/find-names-sadburst.js`). The official names come from `game/` (run `npm run fetch-game` too), from `desktop/dev/names.js`, or from the previous `names.sadburst.js`. Build `20261030020533`: all 222 names it has. Three official names are not in this client and are left out on purpose (the run lists them as "not in this client (fine)", the file says why): `authReport` and `authEndorse` are only for the own lobby server (`server/`), and `lockedArrays` is block-scoped in its minified code, so the anti-cheat scan report shows no array names there. If Sad Burst 2 ever renames its identifiers, the run finds almost nothing and says so: new patterns for its minified code are needed then.
 

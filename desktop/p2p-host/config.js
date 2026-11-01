@@ -6,7 +6,7 @@
 //           ("THIS DEVICE (UDP)") match that is not ranked.
 //   the rest  what only the host does: who may stay, which local map it serves, the
 //           UDP ports and ICE servers its WebRTC uses, the frame rate it runs at.
-// See desktop/p2p-host/README.md.
+// See docs/operations/p2p-host.md.
 'use strict';
 
 const fs = require('fs');

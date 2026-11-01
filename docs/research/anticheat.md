@@ -363,7 +363,7 @@ To see which one it was:
 2. Network → filter **WS** → the game's socket → **Messages**. A scan failure leaves the `RELIABLE_PING` frame just before the reload, with the code and the detail. No such frame: it was a stack check (or the canary).
 3. For code `3`, the detail is the index into `$pAТAMI`. In the Console, `$pAТAMI.indexOf(<array>)` gives an array's index, e.g. with the wall x array (`$сАоОo`, copied from `frame2.js:4499`; do not retype the look-alike letters). Only **read** there: calling `$oITOo`, `$oIeeol` or `$T0OMое` from the Console is itself a stack-check reload.
 
-The desktop wrapper's `--verbose` log does not show the report: it goes over the game's socket connection, and once that is a WebSocket its messages do not pass through the wrapper's request handler (only the HTTP requests do). What the log shows is the page starting again: the game's files requested from the top, then `[window] page loaded`. The dev console's network log does show it: `netlog show type:ping` ([README.md §7](README.md#7-network-log)).
+The desktop wrapper's `--verbose` log does not show the report: it goes over the game's socket connection, and once that is a WebSocket its messages do not pass through the wrapper's request handler (only the HTTP requests do). What the log shows is the page starting again: the game's files requested from the top, then `[window] page loaded`. The dev console's network log does show it: `netlog show type:ping` ([README.md §7](../../README.md#7-network-log)).
 
 ### 7.4 Leaving to the campaign screen is not the anti-cheat
 
@@ -1214,7 +1214,7 @@ On arrival, `$ММ.$pOeрМ` / `$ММ.$c0рlc` split the text at `\x02`, undo th
 
 **The packet around the messages** (`connection.js`, `$AОAcc` sends, `$AoH1e` receives): one text per network tick, fields split by `\x01` (escaped `$.1`): `ack`, the newest unreliable state, then `uid`, message, `uid`, message, ... for every reliable message not yet acknowledged. `ack` is the highest uid received in order. Unacknowledged messages are repeated in every packet until their ack arrives: each packet received sets the "sent up to" mark (`$IHОHp`) back to its ack (`connection.js:824`), so the next packet carries every unacknowledged message again. When nothing arrives, the same reset happens 2 s after the last new message (6 s when it was over 1000 characters). So a reliable message normally goes out once per tick for about one round trip; that repeating is not loss. Over a socket the packet goes out with `socket.volatile.emit("m", text)`, which socket.io drops when the socket is busy; peer to peer it goes over an unordered data channel with no retransmits.
 
-The dev console's network log ([README.md §7](README.md#7-network-log), `desktop/dev/console/net/recorder.js`) decodes all of this into `netlogs/`: each reliable message with its type name and decoded numbers, and every resend, dropped packet, gap, late and duplicate message.
+The dev console's network log ([README.md §7](../../README.md#7-network-log), `desktop/dev/console/net/recorder.js`) decodes all of this into `netlogs/`: each reliable message with its type name and decoded numbers, and every resend, dropped packet, gap, late and duplicate message.
 
 ### 13.4 Keep-alive: start, run, end
 
@@ -1443,7 +1443,7 @@ So the same function runs in three places:
 
 ### 14.2 The state update, part by part
 
-**Sending (client):** `$ММ.$ТеeАp(connection)` (`libs/flash.js:421`) runs on every network tick, every 16 ms on a socket and 4 ms peer to peer (`connection.js:1061`). For your own character `$lНH10М = $0Ме1А[$НAlНc]` (`chars[me]`) it builds `parts` and queues it as the connection's **unreliable** message: `$НAAloМ.$OMeTо($ММ.$ОAA0р, parts)` (`:783`). Only the newest one is sent: `connection.$MТTМM` is overwritten each tick ([13.3](#133-on-the-wire)). Numbers are written with `$Oоolр` (base-N digits, [README §7](README.md#7-network-log)). With `true` as its second argument, `0` becomes `""`.
+**Sending (client):** `$ММ.$ТеeАp(connection)` (`libs/flash.js:421`) runs on every network tick, every 16 ms on a socket and 4 ms peer to peer (`connection.js:1061`). For your own character `$lНH10М = $0Ме1А[$НAlНc]` (`chars[me]`) it builds `parts` and queues it as the connection's **unreliable** message: `$НAAloМ.$OMeTо($ММ.$ОAA0р, parts)` (`:783`). Only the newest one is sent: `connection.$MТTМM` is overwritten each tick ([13.3](#133-on-the-wire)). Numbers are written with `$Oоolр` (base-N digits, [README §7](../../README.md#7-network-log)). With `true` as its second argument, `0` becomes `""`.
 
 | Index | Constant | Built at | Value |
 |---|---|---|---|
@@ -1879,7 +1879,7 @@ Sad Burst 2 is a fork of the official client: same obfuscated names, same code u
 | **D. Integrity scan** `$HHOеоH` / `$сMlcА1` (§6) | Saves the source of every non-native function on `globalThis` and `$ММ` at `window.onload`, plus the array identities registered with `$HpolеМ`; compares 300 ms slices; reports `RELIABLE_PING` code 1/2/3 and reloads | Identical algorithm and the same string canary ([§9.13](#913-the-string-canary-моеie)); 23 array identities registered with `$HpolеМ` (`$рHоеН`, the four `skin_color_*`, the wall, pusher and water arrays and others). **Active everywhere:** `isCompiled` is true on `sadburst2.com/gameplay/` (the URL has no `/game/`), so the scan runs in single-player too, as in the original official `main.js` | Logic yes; baseline differs (§15.4) |
 | **E. Locked arrays** `$IeTlO` (§7) | List in a top-level `let $pAТAMI` (reachable with an indirect `eval`) | Same registration and compare, but the list is a block-scoped `n` inside `{let e=...,t=...,n=[],o=new Map,i=!0,c=0; ...}`: unreachable from outside. `names.sadburst.js` leaves `lockedArrays` out on purpose | Logic yes; list hidden |
 | **Error reporter** (§9.15) | POSTs to `/h5/index.php?action=report_error` | Builds the report object, then **sends nothing** (no `fetch` in the reporter). `$еl1НсI` still exists and still flips the flag, which no longer matters | No: reporting removed |
-| **`RELIABLE_TASK` eval** ([FINGERPRINTING.md](FINGERPRINTING.md)) | Main server pushes JS source, client `eval`s it, returns the result | Identical handler (`if ($с0А0О \|\| connection !== $ММ.$ceTOI) return; eval("$lIcoН1=(" + src + ")(`...`)")`), so Sad Burst's lobby can run code in the client the same way | Yes |
+| **`RELIABLE_TASK` eval** ([docs/research/fingerprinting.md](fingerprinting.md)) | Main server pushes JS source, client `eval`s it, returns the result | Identical handler (`if ($с0А0О \|\| connection !== $ММ.$ceTOI) return; eval("$lIcoН1=(" + src + ")(`...`)")`), so Sad Burst's lobby can run code in the client the same way | Yes |
 | **Device ID** (`JSON.strіngіfy`, Cyrillic `і`) | `$IooорO.$OОOeMе(JSON, save)` adds look-alike `JSON.strіngіfy` / `JSON.pаrsе`: the first returns the saved `first_uid`, whatever it is given; the second records `first_login` / `first_login_proof` | Identical; sent as part 7 of `AUTHENTICATE` (§16.5) | Yes |
 | **Server-side checks** (§14) | HP over `hmax`, respawn desync, aim (`dx > 800+200`, `dy > 400+200`), clock | The shipped server code is identical; the constants are only folded (`M>1e3\|\|r>600`, `>25`, `.99`, `600` doubled for P2P). What Sad Burst's own servers run is not in the client | Shipped code yes |
 | **Build hash** | None: `AUTHENTICATE` carries the literal `"version_h5"` | SHA-256 of every game script, sent in the version field of every lobby and region login | **New** ([§16](#16-the-client-build-hash-sad-burst-2)) |
@@ -2109,7 +2109,7 @@ function runScript(index, code) {                                               
 ```
 
 - What runs is the decoded text of the same bytes that were hashed (`code` and `bytes` come from the same response). Index `0` is the strings file, `1` the first file of `order`.
-- Hashing and running are separate steps on the same data. **The hash says what was downloaded, not what is running.** Anything that changes the code after this point leaves the hash as it was: an extension, DevTools, a `RELIABLE_TASK` from the server ([FINGERPRINTING.md](FINGERPRINTING.md)), or the game's own runtime state.
+- Hashing and running are separate steps on the same data. **The hash says what was downloaded, not what is running.** Anything that changes the code after this point leaves the hash as it was: an extension, DevTools, a `RELIABLE_TASK` from the server ([docs/research/fingerprinting.md](fingerprinting.md)), or the game's own runtime state.
 
 ### 16.6 Phase 5: the login message (`D`, `H`)
 
@@ -2160,7 +2160,7 @@ function authenticate(connection, done, kind) {                                 
 | 7 | `"<device id>"` | JSON-quoted. The look-alike `JSON.strіngіfy` ignores its argument and returns the `first_uid` kept in the save data ([§15.2](#152-layer-by-layer)) |
 | 8 | `1769098189070` | Constant. The shipped server code refuses a login without part 8: `Server: Refresh page to get new version of the game` |
 
-In the network log (`npm run sadburst`, [README §7](README.md#7-network-log)) it is the first reliable message of each connection:
+In the network log (`npm run sadburst`, [README §7](../../README.md#7-network-log)) it is the first reliable message of each connection:
 
 ```
 OUT  REL    #0 AUTHENTICATE(".guest", ".guest", "version_h5/1.23/d43a92d5…71c9/1866990", "hash_h5", "h", "Player", "\"k2…\"", "1769098189070")

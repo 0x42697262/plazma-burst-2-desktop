@@ -1,4 +1,4 @@
-// State updates, readable (ANTICHEAT.md §14.2 and §14.9). Two kinds go over a connection:
+// State updates, readable (docs/research/anticheat.md §14.2 and §14.9). Two kinds go over a connection:
 //
 // - A player's state: what a client sends about its own character about 60 times a
 //   second (flash.js $ММ.$ТеeАp), and what a P2P host gets from each guest. Decoded by

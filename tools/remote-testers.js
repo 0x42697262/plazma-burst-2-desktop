@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Remote play testers (desktop/remote/README.md): who may open a game on this machine.
+// Remote play testers (docs/operations/remote-play.md): who may open a game on this machine.
 //   npm run testers -- add <name>      new tester, or a new link for an existing one
 //   npm run testers -- remove <name>   their link stops working (a running game ends when they leave)
 //   npm run testers -- list

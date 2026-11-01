@@ -10,7 +10,7 @@ function listHooks(args) {
   if (args.length) throw new Error('usage: hooks');
   const api = globalThis.PB2Hooks;
   if (!api) {
-    print('No hooks on this page load. Put a hook in hooks/ (see hooks/README.md) and reload with Ctrl+R.', COLOR.notice);
+    print('No hooks on this page load. Put a hook in hooks/ (see docs/features/hooks.md) and reload with Ctrl+R.', COLOR.notice);
     return;
   }
   const list = api.status();
@@ -39,7 +39,7 @@ export const hooksCommand = {
       'Hooks are small scripts in hooks/ that change how the game behaves without editing',
       'its files, with a Frida-style API: Interceptor.attach(Game.levelStart, { onEnter,',
       'onLeave }), Interceptor.replace, Script.patch and send() to the terminal.',
-      'The guide is hooks/README.md; hooks/*.example.js are templates (copy one to <name>.js).',
+      'The guide is docs/features/hooks.md; hooks/*.example.js are templates (copy one to <name>.js).',
     ],
     examples: [
       ['hooks', 'which hooks loaded on this page load, and why the others did not'],

@@ -1,5 +1,5 @@
 // What the console holds back in approved, ranked matches because the match's server
-// checks it (ANTICHEAT.md §14, server-side checks on the state your game sends). Other
+// checks it (docs/research/anticheat.md §14, server-side checks on the state your game sends). Other
 // matches (unapproved maps, unranked) and single-player are left alone:
 //   - your HP above the map's limit: reported as "HealthAltering" (§14.4). Held back:
 //     max_hp above your character's own max, any hp_bonus / hp_bonus_pct above 0, the
@@ -16,8 +16,8 @@ import { KEY } from '../state/schema.js';
 import { checksBypassed } from '../state/danger.js';
 
 export const REASON = Object.freeze({
-  hp: 'the server reports HP above the map\'s limit as "HealthAltering" (ANTICHEAT.md §14.4)',
-  aim: 'zoomed out you can aim outside the normal view, which the server announces to the other players (ANTICHEAT.md §14.6)',
+  hp: 'the server reports HP above the map\'s limit as "HealthAltering" (docs/research/anticheat.md §14.4)',
+  aim: 'zoomed out you can aim outside the normal view, which the server announces to the other players (docs/research/anticheat.md §14.6)',
 });
 export const BYPASS_HINT = '"bypass checks" turns this protection off (dangerous)';
 export const NORMAL_ZOOM_PCT = 100;

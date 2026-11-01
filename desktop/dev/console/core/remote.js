@@ -14,8 +14,8 @@ export const HIDDEN = '‹hidden›';
 
 // Folders of the project and of the game, with whatever path follows.
 // The path never ends in "." or ":", so a sentence's full stop stays.
-const PATH = /(?:\.{0,2}\/)?\b(?:desktop|hooks|tools|test|game|game\.previous|scripts|screenshots|node_modules|__dev|__hooks)\/(?:[^\s"'`)\],;]*[^\s"'`)\],;.:])?/g;
-// Source and config files by name: names.js, ANTICHEAT.md, dev-overrides.json, ...
+const PATH = /(?:\.{0,2}\/)?\b(?:desktop|docs|hooks|tools|test|game|game\.previous|scripts|screenshots|node_modules|__dev|__hooks)\/(?:[^\s"'`)\],;]*[^\s"'`)\],;.:])?/g;
+// Source and config files by name: names.js, docs/research/anticheat.md, dev-overrides.json, ...
 const FILE = /\b[\w.*-]+\.(?:md|js|mjs|cjs|json)\b/g;
 const ID = '0-9A-Za-z_$\\u0400-\\u04FF';
 // An obfuscated game name: "$" and letters, at least one of them Cyrillic.

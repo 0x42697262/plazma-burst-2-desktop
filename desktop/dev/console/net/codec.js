@@ -1,4 +1,4 @@
-// The game's network text, decoded (scripts/connection.js; ANTICHEAT.md §13.3): packet
+// The game's network text, decoded (scripts/connection.js; docs/research/anticheat.md §13.3): packet
 // fields split by \x01, message parts split by \x02 (escaped "$.1" / "$.2" inside), and
 // numbers written in base N with the game's digits (net.netDigits: the characters 1-126
 // except a few, so they look like control characters, letters and punctuation).

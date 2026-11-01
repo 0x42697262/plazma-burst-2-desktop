@@ -36,7 +36,7 @@ function status(args) {
   print(`Protection: on. In approved, ranked matches${rankedMatch() ? ' (you are in one now)' : ''} the console holds back what the match\'s server checks:`, COLOR.ok);
   print('  Unranked matches, unapproved maps and single-player are not touched.', COLOR.hint);
   print('  raising your HP (max_hp, hp_bonus, hp_bonus_pct, game god, game grow) and zooming out.', COLOR.hint);
-  print('Server-side checks: ANTICHEAT.md section 14. "bypass checks" turns the protection off (dangerous).', COLOR.hint);
+  print('Server-side checks: docs/research/anticheat.md section 14. "bypass checks" turns the protection off (dangerous).', COLOR.hint);
 }
 
 function askToTurnOff(args, ctx) {
@@ -64,7 +64,7 @@ export const bypassCommand = {
   help: {
     about: [
       'In an approved, ranked match the console holds back what the match\'s server checks',
-      '(server-side checks, ANTICHEAT.md section 14): raising your HP above your normal',
+      '(server-side checks, docs/research/anticheat.md section 14): raising your HP above your normal',
       'max, and zooming out. Typing them is refused, and a setting you already had is not',
       'applied there (it is kept for other matches and single-player). Unranked matches',
       'and unapproved maps are not touched.',

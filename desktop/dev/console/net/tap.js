@@ -5,7 +5,7 @@
 // method, and each module adds and removes only its own listener. The wrapper goes when
 // its last listener does, restoring the method as it was: like the recorder's own
 // wrappers, it is only on the connection object, only while someone listens (the
-// anti-tamper scan compares globals and classes, ANTICHEAT.md §6).
+// anti-tamper scan compares globals and classes, docs/research/anticheat.md §6).
 const TAP = Symbol('pb2dev tap');
 
 // listener(...args) runs before the method, with the same arguments; what it throws is

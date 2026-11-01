@@ -1,5 +1,5 @@
 {
-  "_comment": "Copy to server/server.json. Guide: server/README.md. Every key is optional.",
+  "_comment": "Copy to server/server.json. Guide: docs/operations/private-server.md. Every key is optional.",
   "name": "My server",
   "description": "Friends only",
   "port": 2053,

@@ -38,7 +38,7 @@ function separatorOf(code) {
 }
 const codePoint = (ch) => [...ch].map((c) => `U+${c.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}`).join(' ');
 
-// What a value is, from the value itself (FINGERPRINTING.md §7.2): the fingerprinter's
+// What a value is, from the value itself (docs/research/fingerprinting.md §7.2): the fingerprinter's
 // return has no names, and a new version may order it differently.
 function labelOf(text, tag, code) {
   const obj = jsonObject(text);
@@ -144,7 +144,7 @@ export const fingerprintCommand = {
   help: {
     about: [
       'The main server sends the game a browser fingerprinter (JavaScript, RELIABLE_TASK;',
-      'FINGERPRINTING.md), which the game runs and answers. Every version that arrives is',
+      'docs/research/fingerprinting.md), which the game runs and answers. Every version that arrives is',
       'saved once in fingerprint/ (not in git); a version seen again is not saved again.',
       '"fingerprint" runs the latest here, as the game does, and shows the answer: each',
       'value labelled from what it is, the fingerprint\'s JSON one value a line. The',

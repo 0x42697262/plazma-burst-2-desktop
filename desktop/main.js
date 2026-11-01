@@ -27,7 +27,7 @@ const CLIENT_FLAG = SADBURST ? ' -- --sadburst' : ''; // in the commands this fi
 
 // Remote play host: "npm run host" (electron . --host). No window here: every tester who
 // opens their link gets an offscreen game instance on this machine, streamed to their
-// browser (desktop/remote/). Guide: desktop/remote/README.md.
+// browser (desktop/remote/). Guide: docs/operations/remote-play.md.
 const HOST_MODE = process.argv.includes('--host');
 const REMOTE_TESTERS_FILE = path.join(__dirname, 'remote-testers.json');
 const REMOTE_DATA_DIR = path.join(__dirname, 'remote-data'); // per tester: their console settings
@@ -36,7 +36,7 @@ if (HOST_MODE) app.commandLine.appendSwitch('force-device-scale-factor', '1');
 
 // Player-hosted dedicated host: "npm run p2p-host" (electron . --p2p-host). One offscreen
 // game window hosts a player-hosted match, listed by the official lobby, from
-// desktop/p2p-host.json and is driven from this terminal (desktop/p2p-host/README.md).
+// desktop/p2p-host.json and is driven from this terminal (docs/operations/p2p-host.md).
 // Its console settings are its own file.
 const SERVER_MODE = process.argv.includes('--p2p-host') && !HOST_MODE;
 const SERVER_CONFIG_FILE = path.join(__dirname, 'p2p-host.json');
@@ -67,7 +67,7 @@ const VERSION = readGameVersion();
 const PREFIX = SADBURST ? CLIENT.prefix : `/h5/versions/${VERSION}/`;
 const START_URL = `https://${HOST}${PREFIX}`;
 
-// Hooks: hooks/*.js change the game's scripts as they are served (guide: hooks/README.md).
+// Hooks: hooks/*.js change the game's scripts as they are served (guide: docs/features/hooks.md).
 // Disable with PB2_HOOKS=0. The plan is rebuilt on every page load, so editing a hook
 // and reloading (Ctrl+R) is enough.
 // Not for Sad Burst 2: its loader hashes every game script and sends the hash with the
@@ -92,7 +92,7 @@ const DEV_NAMES = CLIENT.names;
 const DEV_OPCODES = CLIENT.opcodes;
 // Sad Burst 2 keeps everything apart from the official client (its own settings file, maps
 // folder and browser session): its lobby can run code in its page (RELIABLE_TASK,
-// FINGERPRINTING.md §4), and nothing it writes may reach the official client, e.g. a bind
+// docs/research/fingerprinting.md §4), and nothing it writes may reach the official client, e.g. a bind
 // running "js ..." in the official game, signed in with your official account.
 const DEV_KV_FILE = path.join(__dirname, SADBURST ? 'dev-overrides.sadburst.json' : 'dev-overrides.json');
 const SADBURST_PARTITION = 'persist:sadburst';
@@ -707,7 +707,7 @@ app.whenReady().then(async () => {
   if (logLevel.problem) log.warn(logLevel.problem);
   log.info(`${SADBURST ? `${CLIENT.title}: ` : ''}Game ${VERSION} from ${ROOT}`);
   if (SADBURST) {
-    if (process.env.PB2_HOOKS !== '0') log.info('Sad Burst 2: hooks are off (its loader sends a hash of the game scripts with the login; hooks/README.md).');
+    if (process.env.PB2_HOOKS !== '0') log.info('Sad Burst 2: hooks are off (its loader sends a hash of the game scripts with the login; docs/features/hooks.md).');
     checkSadburstBuild();
   }
   log.debug(`Log level: debug (requests, window events, the game's trace() output)`);
@@ -1032,7 +1032,7 @@ async function startRemoteHost() {
     const local = `http://${options.bind === '0.0.0.0' ? 'localhost' : options.bind}:${port}`;
     log.info(`Remote play: listening on ${options.bind}:${port} (${options.width}x${options.height}, ${options.fps} fps, JPEG quality ${options.quality}, up to ${options.maxGames} games)`);
     log.info(`Remote play: testers open their link, e.g. ${local}/#t=<token>. Add one: npm run testers -- add <name>`);
-    if (options.bind !== '0.0.0.0') log.info('Remote play: only this machine can connect. For the internet, use a tunnel (desktop/remote/README.md) or --public.');
+    if (options.bind !== '0.0.0.0') log.info('Remote play: only this machine can connect. For the internet, use a tunnel (docs/operations/remote-play.md) or --public.');
   } catch (e) {
     log.error(`Remote play: could not listen on ${options.bind}:${options.port}: ${e.message}`);
     app.quit();
@@ -1086,7 +1086,7 @@ async function startDedicatedServer() {
   const file = config ? path.resolve(config) : SERVER_CONFIG_FILE;
   const loaded = serverConfig.loadConfig(file);
   if (loaded.missing) {
-    log.error(`Host: no ${file}. Copy desktop/p2p-host.example.json there and set "match.map_id" (guide: desktop/p2p-host/README.md).`);
+    log.error(`Host: no ${file}. Copy desktop/p2p-host.example.json there and set "match.map_id" (guide: docs/operations/p2p-host.md).`);
     app.quit();
     return;
   }

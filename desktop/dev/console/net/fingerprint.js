@@ -1,4 +1,4 @@
-// The main server's browser fingerprinter (FINGERPRINTING.md): it arrives on the lobby
+// The main server's browser fingerprinter (docs/research/fingerprinting.md): it arrives on the lobby
 // connection as a RELIABLE_TASK (or RELIABLE_TASK_ASNYC, the game's spelling) whose first
 // part is JavaScript source, which the game runs with eval and answers with what it
 // returns. Every one seen goes to the desktop wrapper, which keeps each version once in

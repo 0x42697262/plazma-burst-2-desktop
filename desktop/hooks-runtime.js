@@ -126,7 +126,7 @@
   // evaluated from text, methods put on objects) are wrapped on the spot instead:
   // object[name] becomes a wrapper that runs the same handlers. Not allowed on globalThis
   // or the network class: the anti-tamper scan compares the source of the functions
-  // there (ANTICHEAT.md section 6), so those are hooked by name, at load time.
+  // there (docs/research/anticheat.md section 6), so those are hooked by name, at load time.
   const RUNTIME_ID_START = 1e6; // runtime ids never meet the loader's (0, 1, 2, ...)
   let nextRuntimeId = RUNTIME_ID_START;
   const wraps = new Map();       // id -> { holder, prop, orig, wrapper, hadOwn }
@@ -183,7 +183,7 @@
     if (!target || !target[TARGET]) throw new Error(`${api}: the target must be Game.<name>, Game.fn("<obfuscated name>") or Game.method(object, "name")`);
     if (target.holder) return wrapMethod(target, api);
     const id = idOf[target.name];
-    if (id === undefined) throw new Error(`${api}: ${target.key || target.name} is not instrumented. Targets must be fixed (Game.<name>), so the loader can see them before the game loads; see hooks/README.md`);
+    if (id === undefined) throw new Error(`${api}: ${target.key || target.name} is not instrumented. Targets must be fixed (Game.<name>), so the loader can see them before the game loads; see docs/features/hooks.md`);
     return id;
   }
 

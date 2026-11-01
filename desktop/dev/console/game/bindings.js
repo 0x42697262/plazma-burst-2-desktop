@@ -110,7 +110,7 @@ export const game = {
   // game's own debug view (the "debug 1" chat command) uses them: the stage is
   // GAME_WIDTH x GAME_HEIGHT units, drawn at canvas.width / GAME_WIDTH pixels per unit,
   // and the world goes through game.x/y and game.scaleX/Y (zoom), inside game.parent.
-  // Read only: these are anti-cheat guarded values (ANTICHEAT.md 3.3, slots 46-51).
+  // Read only: these are anti-cheat guarded values (docs/research/anticheat.md 3.3, slots 46-51).
   gameCanvas: () => (typeof game_canvas === 'undefined' ? null : game_canvas),
   camera: () => {
     const g = globalThis.game;
@@ -253,7 +253,7 @@ export const game = {
   connReason: (c) => c[nameOf('connReason')] || null, // why it closed
   // Numbers in messages are written in base N with these digits (built at load).
   netDigits: () => { const net = read('net'); return (net && net[nameOf('netDigits')]) || ''; },
-  // Where the server reads each value of a player's state update (ANTICHEAT.md §14.2):
+  // Where the server reads each value of a player's state update (docs/research/anticheat.md §14.2):
   // index numbers on the network class, null for a name that was not found.
   stateLayout: () => {
     const net = read('net');

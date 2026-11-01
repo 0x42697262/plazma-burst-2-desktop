@@ -27,10 +27,8 @@ desktop/dev-overrides.sadburst.json
 desktop/maps.sadburst/
 desktop/maps/*
 
-# Your hooks (see hooks/README.md). The guide, the reference and the *.example.js templates are tracked.
+# Your hooks (see docs/features/hooks.md). The *.example.js templates are tracked.
 /hooks/*
-!/hooks/README.md
-!/hooks/REFERENCE.md
 !/hooks/*.example.js
 
 # Remote play (desktop/remote/): tester links, and each tester's console settings.

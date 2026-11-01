@@ -1,5 +1,5 @@
 // The server's settings: server/server.json (or --config <file>). Every key is optional.
-// See server/README.md.
+// See docs/operations/private-server.md.
 'use strict';
 
 const fs = require('fs');

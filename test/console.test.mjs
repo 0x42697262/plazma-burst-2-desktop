@@ -2614,7 +2614,7 @@ test('net_log_all (off by default) adds a PKT line per packet and every state up
   }
 });
 
-// A fingerprinter like the main server's (FINGERPRINTING.md), with what it writes in per
+// A fingerprinter like the main server's (docs/research/fingerprinting.md), with what it writes in per
 // session: the IP address it sees, a token and the separator its values are joined with.
 const FP_SOURCE = `( v )=>{ try { let FP = class FP { static getBrowserFingerprint() {
   FP.hash1 = JSON.stringify({ canvas: 7, width: 1920 }); FP.hash2 = JSON.stringify({ canvas: 7, userAgent: 'UA', languages: ['en'] }); return 12345; } };
@@ -2827,7 +2827,7 @@ test('only in an approved, ranked match: raising HP and zooming out are refused;
   for (const line of ['max_hp 500', 'hp +100', 'hp +50%', 'hp_bonus 20', 'hp_bonus_pct 10', 'zoom 50', 'zoom 30 --lock', 'game god', 'game god 1', 'game grow', 'game zoom 25']) {
     assert.match(errorOf(c.run(line)), REFUSED, line);
   }
-  assert.match(errorOf(c.run('max_hp 500')), /HealthAltering.*ANTICHEAT\.md §14\.4/);
+  assert.match(errorOf(c.run('max_hp 500')), /HealthAltering.*docs\/research\/anticheat\.md §14\.4/);
   assert.match(errorOf(c.run('zoom 50')), /announces to the other players.*§14\.6/);
   assert.equal(p.hmax, own, 'nothing changed');
   // Lowering HP, zooming in, other game commands and other keys are not the server's business.

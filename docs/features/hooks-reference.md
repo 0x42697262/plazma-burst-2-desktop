@@ -1,7 +1,7 @@
 # Hooks reference
 
 Every part of the hooks system: what each call does, in what order things happen, and what
-each message means. For a first hook, read [README.md](README.md) instead.
+each message means. For a first hook, read [README.md](hooks.md) instead.
 
 Source: `desktop/hooks.js` (loader, runs in the wrapper), `desktop/hooks-runtime.js`
 (runtime, runs in the game page), tests in `test/hooks.test.mjs`.
@@ -46,7 +46,7 @@ Each page load (start, or Ctrl+R) runs these steps in order:
 The files in `game/` are never written. The plan exists only in memory until the next page load.
 
 **Why changes happen as files are served:** the game's anti-tamper scan stores the source of
-every global function when the page loads and compares it later (`ANTICHEAT.md` §6). Code
+every global function when the page loads and compares it later (`docs/research/anticheat.md` §6). Code
 changed while it is served is already in that stored source, so the comparison always matches.
 
 ## 2. Hook files
@@ -211,7 +211,7 @@ loader cannot see: ones created later from text (gun scripts), or assigned to ob
 
 `read` and `write` reach the game's top-level `let` / `const` / `var` / functions (indirect
 `eval` in global scope). Writing a value the anti-cheat guards in an online match
-(`ANTICHEAT.md` §3.3) gets reported, the same as any other change.
+(`docs/research/anticheat.md` §3.3) gets reported, the same as any other change.
 
 ## 8. Script.patch
 

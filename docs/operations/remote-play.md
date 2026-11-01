@@ -83,7 +83,7 @@ tester's connection falls behind, so the game doesn't lag.
   everything else is a 404. They receive pixels, never game or project code.
 - **Run code:** the console's `js` command doesn't exist in their game, and there are no DevTools.
 - **See your hooks:** the `hooks` command doesn't exist in their game.
-- **Risk your account:** they play logged in as you, so `bypass checks` (turning off the console's ranked match protection, [ANTICHEAT.md §14.8](../../ANTICHEAT.md#148-summary-for-players)) doesn't exist in their game.
+- **Risk your account:** they play logged in as you, so `bypass checks` (turning off the console's ranked match protection, [docs/research/anticheat.md §14.8](../research/anticheat.md#148-summary-for-players)) doesn't exist in their game.
 - **See other network logs:** their game writes `netlogs/<date>_<time>_tester-<name>.log` on your machine, and their `netlog` shows only that one: no `netlog runs`, no `run:` ([README.md §7](../../README.md#7-network-log)).
 - **Read paths, file names or game internals:** everything the console prints is
   scrubbed of host paths, file names, and the game's obfuscated names (shown as `‹hidden›`).

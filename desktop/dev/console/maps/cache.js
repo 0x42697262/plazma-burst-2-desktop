@@ -8,7 +8,7 @@
 //   when you rejoin a match) and the saved map is put where the game reads it. This wraps
 //   the lobby connection's send method: the only game method the console replaces, only
 //   while fast_maps is on, and only on the connection object (the anti-tamper scan
-//   checks globals, not object methods; see ANTICHEAT.md 9.11).
+//   checks globals, not object methods; see docs/research/anticheat.md 9.11).
 import { print, TAG } from '../ui/log.js';
 import { COLOR } from '../core/colors.js';
 import { ROUTE, MAP, SAVE_RESULT } from '../core/shared.js';

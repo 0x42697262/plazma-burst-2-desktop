@@ -4,7 +4,7 @@
 // on and off, net_log_state adds every unreliable state update (decoded by position,
 // net/state.js), net_log_all every packet (PKT lines) and every state update.
 //
-// The game's protocol (scripts/connection.js; ANTICHEAT.md §13.3): a packet is text,
+// The game's protocol (scripts/connection.js; docs/research/anticheat.md §13.3): a packet is text,
 // fields split by \x01 (escaped "$.1" inside a field):
 //   ack | latest unreliable state | uid | reliable message | uid | reliable message ...
 // - ack: the highest reliable sequence number (uid) received in order.
@@ -33,7 +33,7 @@
 // How: the connection's receive method (through net/tap.js, shared with the fingerprinter
 // capture), its socket's emit and its peer's send are wrapped on each connection object,
 // only while net_log is on. Nothing global or on the network
-// class is replaced (those are what the anti-tamper scan compares, ANTICHEAT.md §6).
+// class is replaced (those are what the anti-tamper scan compares, docs/research/anticheat.md §6).
 import { game } from '../game/bindings.js';
 import { KEY } from '../state/schema.js';
 import { settings } from '../state/store.js';
@@ -79,7 +79,7 @@ const TYPE_PREFIX = 'RELIABLE_'; // every reliable type name starts with it; lef
 // Parts that are always an encoded number, even when it looks like a letter (values 29 to
 // 121 are one ordinary character): (index, part count) => true. The callback ID a RESPONSE
 // answers (the counter starts at 100), and every part of the messages that carry HP or the
-// respawn count (ANTICHEAT.md §14.9). HIT_PLAYER from the server has one more part at the
+// respawn count (docs/research/anticheat.md §14.9). HIT_PLAYER from the server has one more part at the
 // end, its kill flag ("1" or ""), which stays text.
 const ALL = () => true;
 const HIT_PLAYER_SENT = 15; // parts as the shooter sends them (type + 14 numbers)

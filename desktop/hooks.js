@@ -1,5 +1,5 @@
 // Hooks: Frida-style instrumentation of the game's scripts, written in hooks/*.js.
-// Guide: hooks/README.md.
+// Guide: docs/features/hooks.md.
 //
 // The game's files on disk are never changed and never replaced whole. When the page
 // loads, the wrapper (desktop/main.js) asks build() for a plan:

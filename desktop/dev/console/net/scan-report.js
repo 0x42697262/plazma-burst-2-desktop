@@ -1,4 +1,4 @@
-// Logs the anti-cheat scan's report (ANTICHEAT.md §6.2, §7.3) as the game sends it, so the
+// Logs the anti-cheat scan's report (docs/research/anticheat.md §6.2, §7.3) as the game sends it, so the
 // wrapper's terminal shows it: the page's console.warn reaches the terminal at the default
 // log level. The page reloads 300 ms after the report, so the overlay would not keep it.
 // How: the game's send method adds every message it sends to the network class's message

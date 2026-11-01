@@ -1,7 +1,7 @@
 # Player-hosted dedicated host
 
 > For a server of your own that the official site is not part of at all, see
-> [server/README.md](../../server/README.md) (`npm run server`, and the app's server list). This
+> [docs/operations/private-server.md](private-server.md) (`npm run server`, and the app's server list). This
 > host is for a match listed by the official lobby, that any copy of the game can join.
 
 `npm run p2p-host` runs the game with no window and nobody playing on it. It hosts one
@@ -122,7 +122,7 @@ whole lobby server, and every friend running a changed game.
 | Connection | TCP websocket, always works | WebRTC: STUN only (Google, Twilio), **no TURN relay**. If both sides are behind a strict NAT (CGNAT, some mobile networks), the connection fails. Fix it on your side with `udp_ports` plus port forwarding, or a TURN server in `ice_servers` |
 | Ping in the browser | shown | "?" (the browser cannot measure it); `who` and `netlog` here show it |
 | Ping limit | against ping to Arizona | against ping to this host |
-| Anti-cheat reports | the server disconnects the player | on a P2P host a player's report fails. The match says they will be disconnected, but they are not (ANTICHEAT.md §13.5) |
+| Anti-cheat reports | the server disconnects the player | on a P2P host a player's report fails. The match says they will be disconnected, but they are not (docs/research/anticheat.md §13.5) |
 | Accept each player | — | the game asks in a dialog nobody here can click; use `allow` |
 | Match lives while | the server runs | this host is online and logged in to the lobby server; if the host drops, the match ends and the host starts a new one after `restart_after_s` |
 | Maps | published IDs | published IDs, plus local maps through this host |

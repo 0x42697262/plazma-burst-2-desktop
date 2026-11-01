@@ -1,5 +1,5 @@
 // Fingerprinter versions: the main server sends the game a browser fingerprinter as
-// JavaScript source (a RELIABLE_TASK, FINGERPRINTING.md), and the dev console hands each
+// JavaScript source (a RELIABLE_TASK, docs/research/fingerprinting.md), and the dev console hands each
 // one it sees to this module (desktop/dev/console/net/fingerprint.js). Every version is
 // kept, once, in fingerprint/ (not in git):
 //   fingerprint/<date>_<time>_<id>.js   the source exactly as the server sent it

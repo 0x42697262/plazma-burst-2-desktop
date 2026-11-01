@@ -2,7 +2,7 @@
 // Your own Plazma Burst 2 lobby server: "npm run server". The game's own server code
 // (server/game.js) behind TLS on one port, run from this terminal. Players pick it in the
 // desktop app's server list (npm start), never through the official site.
-// Guide: server/README.md.
+// Guide: docs/operations/private-server.md.
 //
 // Usage: node server/index.js [--config file] [--game dir] [--data dir] [--verbose]
 //   --data  where the certificate, bans and downloaded maps are kept (default server/data)

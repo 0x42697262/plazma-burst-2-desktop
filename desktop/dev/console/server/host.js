@@ -6,7 +6,7 @@
 // message makes the match, the "Spectate" button's message moves the host, the match
 // owner's chat commands ("-map", "-pause", ...) and kick button do the rest. The players
 // play over WebRTC with this game; the lobby server lists the match, checks who may
-// join and passes their connection offers along (desktop/p2p-host/README.md).
+// join and passes their connection offers along (docs/operations/p2p-host.md).
 import { print } from '../ui/log.js';
 import { COLOR } from '../core/colors.js';
 import { MAP } from '../core/shared.js';
