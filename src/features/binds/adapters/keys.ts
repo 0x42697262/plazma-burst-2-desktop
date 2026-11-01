@@ -1,7 +1,7 @@
 import { parseKeyName, showKey, baseKey, eventKeyName, GAME_KEYS, TOGGLE_KEY } from '#console/kernel/state/key-names.ts';
 import { binds, activeProfile } from '#console/kernel/state/store.ts';
 import { hotkeyOf } from '#console/kernel/state/hotkeys.ts';
-import { catchNextKey } from '../../../../desktop/dev/console/ui/panel.js';
+import { catchNextKey } from '#console/kernel/ui/panel.ts';
 
 export type ActiveBind = { command: string; profile: string | null } | null;
 export type KeyEvent = { key?: string; code?: string };

@@ -3,8 +3,8 @@ import { COLOR } from '../core/keys.ts';
 import { SCHEMA, ALIASES, unphrase } from '../state/schema.ts';
 import { showKey, baseKey, GAME_KEYS } from '../state/key-names.ts';
 import { hotkeyOf } from '../state/hotkeys.ts';
-import { runWords } from '../../../../desktop/dev/console/commands/registry.js';
-import { splitCommands } from '../../../../desktop/dev/console/dispatch.js';
+import { runWords } from './registry.ts';
+import { splitCommands } from '../dispatch.ts';
 import { FIRST_CAPTURE, QUOTED_COMMAND, WHITESPACE, WORD_SEPARATOR } from './keys.ts';
 import { COMMAND_TEXT as TEXT } from './text.ts';
 
@@ -12,13 +12,13 @@ type Hotkey = { what: string; key: string };
 
 const startsSomething = (word: string): boolean => {
   const lower = word.toLowerCase();
-  return (runWords as () => string[])().includes(lower) || Object.hasOwn(SCHEMA, lower) || Object.hasOwn(ALIASES, lower);
+  return runWords().includes(lower) || Object.hasOwn(SCHEMA, lower) || Object.hasOwn(ALIASES, lower);
 };
 const keyText = (key: string): string => showKey(key);
 
 export function commandText(words: readonly string[], usage: string): string {
   const command = words.join(WORD_SEPARATOR).replace(QUOTED_COMMAND, FIRST_CAPTURE).trim();
-  const parts = (splitCommands as (line: string) => string[])(command);
+  const parts = splitCommands(command);
   if (!parts.length) throw new Error(usage);
   for (const part of parts) {
     const first = unphrase(part).split(WHITESPACE)[0] ?? '';

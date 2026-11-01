@@ -1,5 +1,5 @@
 import { print } from '#console/kernel/ui/log.ts';
-import { setPanelHidden } from '../../../../desktop/dev/console/ui/panel.js';
+import { setPanelHidden } from '#console/kernel/ui/panel.ts';
 import { el } from '#console/kernel/ui/dom.ts';
 import { IN_OVERLAY } from '#console/kernel/ui/theme.ts';
 import { game } from '#console/kernel/game/bindings.ts';
@@ -15,7 +15,7 @@ type Overlay = { append(node: unknown): void };
 type Removable = { remove(): void };
 const overlay = (): Overlay => (game as unknown as { overlay(): Overlay }).overlay();
 const makeElement = el as (tag: string, style: Record<string, string>, text: string) => Removable;
-const hidePanel = setPanelHidden as (hidden: boolean) => void;
+const hidePanel = setPanelHidden;
 
 function notice(text: string, color: string): void {
   const node = makeElement(NOTICE_TAG, { ...(IN_OVERLAY as Record<string, string>), ...NOTICE_STYLE, color }, text);

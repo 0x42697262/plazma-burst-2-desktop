@@ -3,9 +3,9 @@ import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
-import { bootConsole, CONSOLE_ENTRY } from './fake-game.mjs';
+import { bootConsole, CONSOLE_ENTRY, LEGACY_CONSOLE_DIR } from './fake-game.mjs';
 
-const consoleModule = (rel) => import(pathToFileURL(path.join(path.dirname(CONSOLE_ENTRY), rel)).href);
+const consoleModule = (rel) => import(pathToFileURL(path.join(LEGACY_CONSOLE_DIR, rel)).href);
 // An error from the console's own code, as opposed to a refusal it means to print.
 const INTERNAL = /is not defined|is not a function|Cannot (read|set) propert|undefined is not/;
 const errorsOf = (out) => out.filter((l) => l.startsWith('error: '));
@@ -14,7 +14,7 @@ let c;
 before(async () => { c = await bootConsole({ sayTrigger: '#chat_in' }); });
 
 test('every command and subcommand has help, and every "Related" topic exists', async () => {
-  const { helpEntries } = await consoleModule('commands/registry.js');
+  const { helpEntries } = await consoleModule('../../../src/console/kernel/commands/registry.ts');
   for (const { id, def } of helpEntries()) {
     assert.ok(def.usage && def.desc, `${id}: usage and desc`);
     assert.ok(def.help || def.renderHelp, `${id}: no help`);
@@ -421,7 +421,7 @@ test('a ";" where a key name goes is the ";" key; everywhere else it ends a comm
 
 
 test('triggers exec runs a trigger pasted from the map editor\'s text view, once, in your game only', async () => {
-  const { pasteText } = await consoleModule('ui/panel.js');
+  const { pasteText } = await consoleModule('../../../src/console/kernel/ui/panel.ts');
   const pasted = [
     'uid: #trigger*1016',
     'enabled: true',

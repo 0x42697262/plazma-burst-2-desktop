@@ -14,3 +14,6 @@ export const MOVED_LABEL_DISTANCE = PAD * 4;
 export const BOTH_SIDES = 2;
 export const OVERLAY_MARGIN = 40;
 export const PAGE_WORD_COUNT = 2;
+export const BUTTON_STEP = 190;
+export const BUTTON_LEFT = 15;
+export const WORDS_BEFORE_ARGUMENTS = 2;

@@ -2,7 +2,7 @@ import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { game } from '#console/kernel/game/bindings.ts';
 import { GAME_FIELDS } from '#console/kernel/game/fields.ts';
-import { printPair } from '../../../../desktop/dev/console/commands/help.js';
+import { printPair } from '#console/kernel/commands/help.ts';
 import { EXAMPLE_WIDTH } from '../constants.ts';
 import { COMMAND, GAME_NAME, withSourceUrl } from '../keys.ts';
 import { TEXT } from '../text.ts';

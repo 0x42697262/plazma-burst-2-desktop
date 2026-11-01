@@ -11,3 +11,12 @@ export const TEXT = Object.freeze({
   pageUsage: 'usage: page <n>',
   alreadyLastPage: (pages: number) => `already on the last page (${pages}/${pages}). "page 1" goes back to the top.`,
 });
+
+export const PANEL_TEXT = Object.freeze({
+  multiplayer: 'MULTIPLAYER',
+  active: 'ACTIVE',
+  idle: 'IDLE: start a level to apply',
+  buttons: Object.freeze({ close: 'Close', clear: 'Clear', list: 'List values', help: 'Help' }),
+  keySource: (key: string) => `key ${key}`,
+  bindSource: (profile: string | null, key: string) => `${profile ? `profile ${profile} ` : ''}bind ${key}`,
+});

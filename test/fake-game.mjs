@@ -7,7 +7,8 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const REPO = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-export const CONSOLE_ENTRY = path.join(REPO, 'desktop/dev/console/index.js');
+export const CONSOLE_ENTRY = path.join(REPO, 'src/console/index.ts');
+export const LEGACY_CONSOLE_DIR = path.join(REPO, 'desktop/dev/console');
 
 // Every key the console can ask names.js for: the "keys" of find-names.js RULES.
 function nameKeys() {

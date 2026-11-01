@@ -13,7 +13,7 @@ test('not on the dedicated host: no "server", "who", "kick" or "say"', () => {
   const out = childOut(`
     const { bootConsole } = await import(${JSON.stringify(at('test/fake-game.mjs'))});
     await bootConsole();
-    const { findRunnable } = await import(${JSON.stringify(at('desktop/dev/console/commands/registry.js'))});
+    const { findRunnable } = await import(${JSON.stringify(at('src/console/kernel/commands/registry.ts'))});
     process.stdout.write(JSON.stringify(['server', 'who', 'kick', 'say'].map((w) => !!findRunnable(w))));
   `);
   assert.deepEqual(out, [false, false, false, false]);

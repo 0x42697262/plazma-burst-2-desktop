@@ -2,9 +2,9 @@ import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { bootConsole, CONSOLE_ENTRY } from '../../../test/fake-game.mjs';
+import { bootConsole, CONSOLE_ENTRY, LEGACY_CONSOLE_DIR } from '../../../test/fake-game.mjs';
 
-const consoleModule = (relative) => import(pathToFileURL(path.join(path.dirname(CONSOLE_ENTRY), relative)).href);
+const consoleModule = (relative) => import(pathToFileURL(path.join(LEGACY_CONSOLE_DIR, relative)).href);
 const errorsOf = (out) => out.filter((line) => line.startsWith('error: '));
 
 let game;
@@ -45,7 +45,7 @@ test('the anti-cheat scan report is logged as the game sends it, once', () => {
 });
 
 test('bypass checks: a red warning, then only the exact phrase typed on its own line turns the protection off', async (t) => {
-  const { run } = await consoleModule('dispatch.js');
+  const { run } = await consoleModule('../../../src/console/kernel/dispatch.ts');
   const danger = await consoleModule('../../../src/console/kernel/danger/bypass.ts');
   inMatch(t, RANKED);
   t.after(() => { danger.protectAgain(); game.run('reset'); game.frame(); });

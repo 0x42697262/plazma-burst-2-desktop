@@ -1,4 +1,5 @@
 export const CONSOLE_ENTRY: string;
+export const LEGACY_CONSOLE_DIR: string;
 
 export type FakeGameLog = { net: unknown[]; runs: unknown[]; ran: unknown[]; printed: string[]; frames?: unknown };
 

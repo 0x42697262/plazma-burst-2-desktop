@@ -3,7 +3,7 @@ import { settings, profiles, activeProfile, currentMap } from '#console/kernel/s
 import { parseKeyName, showKey } from '#console/kernel/state/key-names.ts';
 import { isActive } from '#console/kernel/game/level.ts';
 import { commandText, warnKeyUses } from '#console/kernel/commands/command-text.ts';
-import { run } from '../../../../desktop/dev/console/dispatch.js';
+import { run } from '#console/kernel/dispatch.ts';
 
 export type Profile = { values: Record<string, unknown>; binds: Record<string, string>; onload: string };
 export type ActiveProfile = Profile & { name: string };

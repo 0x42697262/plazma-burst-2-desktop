@@ -2,9 +2,9 @@ import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { bootConsole, CONSOLE_ENTRY } from '../../../test/fake-game.mjs';
+import { bootConsole, CONSOLE_ENTRY, LEGACY_CONSOLE_DIR } from '../../../test/fake-game.mjs';
 
-const consoleModule = (relative) => import(pathToFileURL(path.join(path.dirname(CONSOLE_ENTRY), relative)).href);
+const consoleModule = (relative) => import(pathToFileURL(path.join(LEGACY_CONSOLE_DIR, relative)).href);
 const errorsOf = (out) => out.filter((line) => line.startsWith('error: '));
 
 let game;

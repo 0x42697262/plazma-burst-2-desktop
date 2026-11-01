@@ -3,7 +3,7 @@ import type { ConsoleFeature } from '#console/feature-types.ts';
 import { KEY } from '#console/kernel/state/schema.ts';
 import { settings } from '#console/kernel/state/store.ts';
 import { REMOTE } from '#console/kernel/core/mode.ts';
-import { runKey } from '../../../desktop/dev/console/commands/settings.js';
+import { runKey } from '#console/kernel/commands/settings.ts';
 import { NET_TICK_MS, TICK_ERRORS_SHOWN } from './constants.ts';
 import { SETTING_NAME, type SettingName } from './keys.ts';
 import { TICK_NAME } from './text.ts';
@@ -38,7 +38,7 @@ const netlogCommand = createNetlogCommand({
   pageSize: () => store.effective(keys.PAGE_SIZE) as number,
   everythingOn: () => isSet(keys.NET_LOG_ALL),
   statesOn: () => isSet(keys.NET_LOG_STATE),
-  setKey: (setting, words) => { (runKey as (key: string, args: readonly string[]) => void)(KEY_OF_SETTING[setting], words); },
+  setKey: (setting, words) => { runKey(KEY_OF_SETTING[setting], words); },
 });
 
 export const netlogConsole: ConsoleFeature = Object.freeze({

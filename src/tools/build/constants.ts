@@ -1,4 +1,4 @@
-export const CONSOLE_SOURCE_ENTRY = 'desktop/dev/console/index.js';
+export const CONSOLE_SOURCE_ENTRY = 'src/console/index.ts';
 export const BROWSER_TARGET = 'es2024';
 export const WATCH_FLAG = '--watch';
 export const NODE_TARGET = 'node22';

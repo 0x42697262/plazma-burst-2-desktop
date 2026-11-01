@@ -5,7 +5,7 @@ import { player, isActive, requireLevel, isDown, charAt, charLabel, be, noCharac
 import { KEY } from '#console/kernel/state/schema.ts';
 import { settings, binds } from '#console/kernel/state/store.ts';
 import { hpBonusFor, hpBonusAppliedTo } from '#console/kernel/overrides/frame.ts';
-import { setKey, unsetKey, runKey } from '../../../../desktop/dev/console/commands/settings.js';
+import { setKey, unsetKey, runKey } from '#console/kernel/commands/settings.ts';
 import { takeOptions } from '#console/kernel/core/args.ts';
 import { isNumberText, parseIndex, capitalize } from '#console/kernel/core/words.ts';
 
@@ -51,9 +51,9 @@ export const hpBonus = {
 };
 
 export const keySetting = {
-  set: (key: string, value: unknown): void => { (setKey as (key: string, value: unknown) => void)(key, value); },
+  set: (key: string, value: unknown): void => { setKey(key, value); },
   unset: (key: string, note: string): void => { (unsetKey as (key: string, note: string) => void)(key, note); },
-  run: (key: string, args: readonly string[]): void => { (runKey as (key: string, args: readonly string[]) => void)(key, args); },
+  run: (key: string, args: readonly string[]): void => { runKey(key, args); },
 };
 
 export const words = {

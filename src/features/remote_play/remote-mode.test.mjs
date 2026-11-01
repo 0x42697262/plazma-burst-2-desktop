@@ -13,7 +13,7 @@ const REMOTE_CHILD = `
   const c = await bootConsole();
   const at = (rel) => new URL(rel, ${JSON.stringify(pathToFileURL(path.join(REPO, 'desktop/dev/console/')).href)}).href;
   const { attachLog, print } = await import(at('../../../src/console/kernel/ui/log.ts'));
-  const { findRunnable } = await import(at('commands/registry.js'));
+  const { findRunnable } = await import(at('../../../src/console/kernel/commands/registry.ts'));
   const pane = { childNodes: [], append(n) { this.childNodes.push(n); }, get firstChild() { return this.childNodes[0]; }, scrollTop: 0, scrollHeight: 0 };
   attachLog(pane);
   print('Overrides are saved to desktop/dev-overrides.json, chars is $0Ме1А');
@@ -42,7 +42,7 @@ const SWEEP_CHILD = `
   const c = await bootConsole();
   const at = (rel) => new URL(rel, ${JSON.stringify(pathToFileURL(path.join(REPO, 'desktop/dev/console/')).href)}).href;
   const { attachLog } = await import(at('../../../src/console/kernel/ui/log.ts'));
-  const { helpEntries } = await import(at('commands/registry.js'));
+  const { helpEntries } = await import(at('../../../src/console/kernel/commands/registry.ts'));
   const pane = { childNodes: [], append(n) { this.childNodes.push(n); }, get firstChild() { return this.childNodes[0]; }, scrollTop: 0, scrollHeight: 0 };
   attachLog(pane);
   const out = [];
