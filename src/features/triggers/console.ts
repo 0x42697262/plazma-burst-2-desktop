@@ -4,7 +4,7 @@ import type { ListSection } from '#console/kernel/list-sections.ts';
 import { triggersCommand } from '../../../desktop/dev/console/commands/triggers.js';
 import { regionsCommand } from './entry/regions-command.ts';
 import { varsCommand } from './entry/vars-command.ts';
-import { logicCommand } from '../../../desktop/dev/console/commands/logic.js';
+import { logicCommand } from './entry/logic-command.ts';
 import { syncTriggerHooks } from './run-log.ts';
 import { editedVars, showVar } from './vars.ts';
 import { logicShown, logicDescription } from './logic/view.ts';

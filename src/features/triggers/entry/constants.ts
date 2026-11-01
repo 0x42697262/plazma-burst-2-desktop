@@ -9,3 +9,5 @@ export const MODE_WHAT_WIDTH = 8;
 export const VERDICT_WIDTH = 12;
 export const SINGLE_ARGUMENT = 1;
 export const NAME_AND_VALUE = 2;
+export const LOGIC_DEPTH = Object.freeze({ show: 1, tree: 3, max: 10 });
+export const DEPTH_WORDS = 2;
