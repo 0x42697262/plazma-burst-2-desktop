@@ -7,12 +7,14 @@
 // stay the same, so every name is found with a pattern that matches the surrounding code
 // and treats all other obfuscated names as wildcards.
 //
-// Usage: node tools/find-names.js [gameDir] [--out file] [--check]
+// Usage: node tools/find-names.js [--sadburst] [gameDir] [--out file] [--check]
 //        node tools/find-names.js [gameDir] --decode scripts/frame2.js > frame2.decoded.js
 //   gameDir   folder with index.html, _strings.js and scripts/ (default: game/)
 //   --out     output file (default: desktop/dev/names.js)
 //   --check   only report, do not write
 //   --decode  print a game file with its string constants filled in (for manual searching)
+//   --sadburst  the Sad Burst 2 copy in game.sadburst/, into desktop/dev/names.sadburst.js
+//               ("npm run find-names -- --sadburst"; how: tools/find-names-sadburst.js)
 'use strict';
 
 const fs = require('fs');
@@ -572,28 +574,36 @@ function run(opts = {}) {
   return result;
 }
 
-module.exports = { run, findNames, RULES };
+module.exports = { run, findNames, RULES, CHECKS, decode, compile, render, gameVersion, ID_CHARS };
 
 if (require.main === module) {
-  const args = process.argv.slice(2);
+  // --sadburst: the Sad Burst 2 copy (desktop/clients.js, tools/find-names-sadburst.js).
+  const { clientFor, withoutClientFlag } = require('../desktop/clients');
+  const sadburst = clientFor().id === 'sadburst';
+  const args = withoutClientFlag(process.argv.slice(2));
   const opts = {};
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--out') opts.out = args[++i];
     else if (args[i] === '--check') opts.check = true;
     else if (args[i] === '--decode') opts.decode = args[++i];
     else if (args[i] === '-h' || args[i] === '--help') {
-      console.log('Usage: node tools/find-names.js [gameDir] [--out file] [--check] [--decode file]');
+      console.log('Usage: node tools/find-names.js [--sadburst] [gameDir] [--out file] [--check] [--decode file]');
       process.exit(0);
     } else opts.gameDir = args[i];
   }
   // process.exitCode (not process.exit) so piped output is fully written first.
   try {
-    if (opts.decode) {
+    if (opts.decode && sadburst) {
+      const sb = require('./find-names-sadburst');
+      const gameDir = path.resolve(opts.gameDir || require('../desktop/clients').CLIENTS.sadburst.gameDir);
+      const src = fs.readFileSync(path.join(gameDir, opts.decode), 'utf8');
+      process.stdout.write(decode(src, sb.loadCode(gameDir).strings));
+    } else if (opts.decode) {
       const gameDir = path.resolve(opts.gameDir || path.join(REPO, 'game'));
       const src = fs.readFileSync(path.join(gameDir, opts.decode), 'utf8');
       process.stdout.write(decode(src, loadStrings(gameDir)));
     } else {
-      const r = run(opts);
+      const r = sadburst ? require('./find-names-sadburst').run(opts) : run(opts);
       process.exitCode = r.missing.length || r.problems.length ? 1 : 0;
     }
   } catch (e) {
