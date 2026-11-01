@@ -16,7 +16,7 @@ export const SOURCE_DEFAULT = 'default';
 export const KEY_JOIN = '_';
 export const HELP_COMMAND = Object.freeze({ name: 'help', alias: '?' });
 export const SETTINGS_COMMAND = Object.freeze({
-  list: 'list', listAlias: 'ls', set: 'set', get: 'get', unset: 'unset', unsetAliases: Object.freeze(['del', 'rm']), reset: 'reset', builtin: 'builtin',
+  list: 'list', listAlias: 'ls', set: 'set', get: 'get', unset: 'unset', unsetAliases: Object.freeze(['del', 'rm']), reset: 'reset',
 });
 export const CONSOLE_COMMAND = Object.freeze({
   more: 'more', moreAliases: Object.freeze(['next', 'page', 'pg']), chain: 'chain', chainAlso: ';',

@@ -102,15 +102,13 @@ export const SETTINGS_TEXT = Object.freeze({
   allRemoved: 'All overrides removed (binds and profiles kept; "unbind --all" removes binds)',
   list: Object.freeze({
     usage: 'list [group]',
-    desc: (remote: boolean) => `Show all keys and values, then binds, traces, logic view, zoom, editor edits,${remote ? '' : ' hooks,'} changed vars`,
-    about: (remote: boolean) => [
+    desc: 'Show every key and its value, then what else you changed (binds, traces, zoom …, as this app has them)',
+    about: Object.freeze([
       'Every key with its current value and what it does. Keys you have set are',
       'green, the rest show "default". A value from this map\'s profile is tagged',
-      '[profile <name>, yours: <value>]. After the keys, everything else you changed:',
-      'key binds, traced players, the logic view, the map\'s profile, the zoom you set',
-      `with "zoom", the map editor's edits,${remote ? '' : ' the hooks that are loaded,'} and map variables`,
-      'you set or removed with "vars" in this level (with the value before).',
-    ],
+      '[profile <name>, yours: <value>]. After the keys, everything else you changed,',
+      'one section per feature that has something to show.',
+    ]),
     groupArgument: (groups: readonly string[]) => [['[group]', `only this group: ${groups.join(', ')}`]] as const,
     examples: Object.freeze([
       ['list', 'all keys, then binds and the rest'],
@@ -167,12 +165,6 @@ export const SETTINGS_TEXT = Object.freeze({
       'Profiles are kept too: "profile" shows them.',
     ]),
     see: Object.freeze(['unset', 'unbind']),
-  }),
-  builtin: Object.freeze({
-    usage: 'builtin [on|off]',
-    desc: 'Toggle silent built-in commands everywhere (see "get builtin")',
-    about: Object.freeze(['A key, so "builtin" toggles it and "builtin on" / "builtin off" set it.']),
-    see: Object.freeze(['game']),
   }),
 });
 

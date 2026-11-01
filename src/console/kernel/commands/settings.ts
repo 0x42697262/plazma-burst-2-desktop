@@ -1,7 +1,6 @@
 import { print, type Segment } from '../ui/log.ts';
 import { COLOR } from '../core/keys.ts';
-import { REMOTE } from '../core/mode.ts';
-import { SCHEMA, groupsOn, isKeyOn, KEY, resolveKey, parseValue, affectsGame, keyClientOnly, describeKey, showValue, type SettingKey, type SettingSpec } from '../state/schema.ts';
+import { SCHEMA, groupsOn, isKeyOn, resolveKey, parseValue, affectsGame, keyClientOnly, describeKey, showValue, type SettingKey, type SettingSpec } from '../state/schema.ts';
 import { settings } from '../state/store.ts';
 import { levelWasActive } from '../overrides/frame.ts';
 import { gameMaxHp } from '../overrides/max-hp.ts';
@@ -123,9 +122,9 @@ export const settingsCommands: readonly CommandDefinition[] = [
     name: SETTINGS_COMMAND.list,
     aliases: [SETTINGS_COMMAND.listAlias],
     usage: TEXT.list.usage,
-    desc: TEXT.list.desc(REMOTE),
+    desc: TEXT.list.desc,
     help: {
-      about: TEXT.list.about(REMOTE),
+      about: TEXT.list.about,
       get args() { return TEXT.list.groupArgument(listGroups()); },
       examples: TEXT.list.examples,
       see: TEXT.list.see,
@@ -176,12 +175,5 @@ export const settingsCommands: readonly CommandDefinition[] = [
       settings.clear();
       print(TEXT.allRemoved, COLOR.ok);
     },
-  },
-  {
-    name: SETTINGS_COMMAND.builtin,
-    usage: TEXT.builtin.usage,
-    desc: TEXT.builtin.desc,
-    help: { about: TEXT.builtin.about, see: TEXT.builtin.see },
-    run: (args) => { runKey(KEY.BUILTIN, args); },
   },
 ];
