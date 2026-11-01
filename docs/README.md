@@ -17,6 +17,7 @@
 - [binds.md](features/binds.md): `binds`, key binds and keyname
 - [cert-pinning.md](features/cert-pinning.md): `cert_pinning`
 - [client-sadburst.md](features/client-sadburst.md): `client_sadburst`, the Sad Burst 2 client and how the clients are kept apart
+- [dev-console.md](features/dev-console.md): `dev_console` and `console_core`, the console itself
 - [fingerprint.md](features/fingerprint.md): `fingerprint`, keeping and running the main server's fingerprinter
 - [game-chat.md](features/game-chat.md): `game_chat`, the game's own chat commands
 - [guns.md](features/guns.md): `guns`, the gun list, give and drop
