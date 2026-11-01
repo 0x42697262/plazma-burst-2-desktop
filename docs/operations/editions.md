@@ -7,7 +7,10 @@ on: that app says `"<id>" is not in this app` and stops.
 
 ## Edition files
 
-One file per edition in `editions/`, named after it:
+One file per edition in `editions/`, named after it. The files are tracked in git, like
+the code (only `data/`, `dist/` and `release/` are ignored): commit a new or changed
+edition with the code it builds, and the release workflow builds every committed one
+but `dev`.
 
 ```json
 {
