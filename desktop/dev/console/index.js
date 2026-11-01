@@ -30,7 +30,7 @@ import { load, reload as reloadStore, settings, binds, profiles, loadProblems, s
 import { currentMapId } from './game/level.js';
 import { applyOverrides, onActiveChange } from './overrides/frame.js';
 import { run } from './dispatch.js';
-import { SERVER } from './core/server.js';
+import { SERVER } from '../../../src/console/kernel/core/mode.ts';
 import { enabledConsoleFeatures, featureFrameHooks, featureTicks, featureListSections } from '../../../src/console/features.ts';
 import { registerListSection } from '../../../src/console/kernel/list-sections.ts';
 import { CLIENT_DETAILS } from '../../../src/shared/clients/keys.ts';

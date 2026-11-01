@@ -3,7 +3,7 @@ import type { ConsoleFeature } from '#console/feature-types.ts';
 import { gameNetwork } from '#console/kernel/game/network.ts';
 import { print } from '../../../desktop/dev/console/ui/log.js';
 import { COLOR } from '#console/kernel/core/keys.ts';
-import { REMOTE } from '../../../desktop/dev/console/core/remote.js';
+import { REMOTE } from '#console/kernel/core/mode.ts';
 import { isJoiningPrivateServer } from '#features/server_list/index.ts';
 import { CAPTURE_ERRORS_SHOWN, CAPTURE_TICK_MS } from './constants.ts';
 import { CAPTURE_TEXT } from './text.ts';

@@ -7,7 +7,7 @@ import { plural } from '../../../../src/console/kernel/core/words.ts';
 import { requireLevel } from '../game/level.js';
 import { LINK, logicGraph, findNode, placeOf, chatTriggerUid } from '../logic/graph.js';
 import { showLogic, hideLogic, logicShown, isVisible } from '../logic/view.js';
-import { REMOTE } from '../core/remote.js';
+import { REMOTE } from '../../../../src/console/kernel/core/mode.ts';
 
 const KINDS = Object.values(LINK);
 const DEFAULT_DEPTH = Object.freeze({ show: 1, tree: 3 });
@@ -255,7 +255,7 @@ export const logicCommand = {
           'the doors they are attached to); players where they are now.',
           'Like the game\'s "debug 1", but on its own layer: it only reads the camera, so',
           'it works in multiplayer.',
-          // How the anti-cheat works is not shown to remote testers (core/remote.js).
+          // How the anti-cheat works is not shown to remote testers (src/console/kernel/core/mode.ts).
           ...(REMOTE ? [] : ['(The game\'s debug switch is an anti-cheat checked value; changing it from',
             'outside its own code is reported.)']),
         ],

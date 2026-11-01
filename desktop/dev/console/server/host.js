@@ -11,7 +11,7 @@ import { print } from '../ui/log.js';
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { MAP_MARKER as MAP } from '../../../../src/shared/contract/keys.ts';
 import { stripHtml } from '../../../../src/console/kernel/core/words.ts';
-import { SERVER } from '../core/server.js';
+import { SERVER } from '../../../../src/console/kernel/core/mode.ts';
 import { game, NET } from '../game/bindings.js';
 
 const TICK_MS = 500;

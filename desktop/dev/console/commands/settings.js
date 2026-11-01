@@ -9,7 +9,7 @@ import { isActive } from '../game/level.js';
 import { levelWasActive, gameMaxHp } from '../overrides/frame.js';
 import { heldBack, refusal } from '../overrides/server-checks.js';
 import { CLIENT_TAG } from './help.js';
-import { REMOTE } from '../core/remote.js';
+import { REMOTE } from '../../../../src/console/kernel/core/mode.ts';
 import { listSections } from '../../../../src/console/kernel/list-sections.ts';
 import { checksBypassed } from '../state/danger.js';
 

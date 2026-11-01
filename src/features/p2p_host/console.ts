@@ -1,7 +1,7 @@
 import { FEATURE } from '#shared/features/keys.ts';
 import type { CommandDefinition, ConsoleFeature } from '#console/feature-types.ts';
 import { serverCommand, serverShortcuts } from '../../../desktop/dev/console/commands/server.js';
-import { SERVER } from '../../../desktop/dev/console/core/server.js';
+import { SERVER } from '#console/kernel/core/mode.ts';
 import { startHost } from '../../../desktop/dev/console/server/host.js';
 
 const commands: readonly CommandDefinition[] = [serverCommand, ...(serverShortcuts as CommandDefinition[])];

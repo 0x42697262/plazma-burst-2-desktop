@@ -17,7 +17,7 @@ test('"features" lists every flag as the wrapper resolved it, and a feature that
   assert.match(printed.find((line) => line.startsWith('hooks ')) ?? '', /^hooks\s+off\s+env\s/);
   assert.deepEqual(game.run('flags'), printed);
 
-  const { allowedHere } = await import('../../../../desktop/dev/console/core/remote.js');
+  const { allowedHere } = await import('../core/mode.ts');
   assert.equal(allowedHere({ name: 'x', feature: 'hooks' }), false);
   assert.equal(allowedHere({ name: 'x', feature: 'zoom' }), true);
   assert.equal(allowedHere({ name: 'x' }), true);

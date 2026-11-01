@@ -123,7 +123,7 @@ tester's connection falls behind, so the game doesn't lag.
 | `src/features/remote_play/adapters/lockdown.ts`, `domain/blocked-keys.ts`, `domain/game-page.ts` | What a tester's game window may not do |
 | `src/features/remote_play/adapters/testers-file.ts`, `testers.ts` | Tester links (`npm run testers`) |
 | `src/features/remote_play/client/` | The page testers open, built to `dist/remote-client/` (the only files they receive) |
-| `src/features/remote_play/domain/redactor.ts`, `desktop/dev/console/core/remote.js` | The console's remote mode (no `js` or `hooks`, hidden paths and names) |
+| `src/features/remote_play/domain/redactor.ts`, `src/console/kernel/core/mode.ts` | The console's remote mode (no `js` or `hooks`, hidden paths and names) |
 | `desktop/main.js` | `--host` mode: makes each tester's offscreen game window and session |
 
 Tests: `src/features/remote_play/*.test.*` (`npm test`). The feature is described in

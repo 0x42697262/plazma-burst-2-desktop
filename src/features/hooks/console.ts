@@ -1,7 +1,7 @@
 import { FEATURE } from '#shared/features/keys.ts';
 import type { ConsoleFeature } from '#console/feature-types.ts';
 import type { ListSection } from '#console/kernel/list-sections.ts';
-import { REMOTE } from '../../../desktop/dev/console/core/remote.js';
+import { REMOTE } from '#console/kernel/core/mode.ts';
 import { LIST_SECTION, STATUS } from './keys.ts';
 import { TEXT } from './text.ts';
 import { hooksApi, hooksCommand } from './entry/command.ts';
