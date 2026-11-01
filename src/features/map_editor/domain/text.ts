@@ -3,5 +3,5 @@ export const DOMAIN_TEXT = Object.freeze({
   headerLine: (header: string, value: string) => `${header}: ${value}`,
   actionLine: (name: string, targetA: string, targetB: string) => `${name}( "${targetA}", "${targetB}" );`,
   lineBreak: '\n',
-  labelledValue: (value: string, label: string) => `${value} (${label})`,
+  labeledValue: (value: string, label: string) => `${value} (${label})`,
 });

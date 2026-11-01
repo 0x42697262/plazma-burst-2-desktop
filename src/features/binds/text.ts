@@ -18,7 +18,7 @@ export const TEXT = Object.freeze({
   listRow: (key: string, command: string, profile: string | null) => `  ${key} ${command}${profile ? `  [profile ${profile} binds it here]` : ''}`,
   keynameUsage: 'usage: keyname   (then press a key)',
   keynamePrompt: 'Press a key (with Ctrl, Alt or Shift if you like); Esc cancels.',
-  keynameCancelled: 'keyname: cancelled',
+  keynameCanceled: 'keyname: canceled',
   typesCharacter: (character: string) => `types "${character}"`,
   keyNamed: (key: string) => `key "${key}"`,
   typedLine: (typed: string, code: string) => `  ${typed}, code ${code || '(none)'}`,

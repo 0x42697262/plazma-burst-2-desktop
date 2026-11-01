@@ -21,7 +21,7 @@ export type EditorDrawn = { outlines: number; selected: number | null; links: nu
 
 const BOUNDS = Object.freeze({ w: GAME_WIDTH, h: GAME_HEIGHT });
 
-const centre = (bounds: Box): Point => ({ x: bounds.x + bounds.w / HALF, y: bounds.y + bounds.h / HALF });
+const center = (bounds: Box): Point => ({ x: bounds.x + bounds.w / HALF, y: bounds.y + bounds.h / HALF });
 const onScreenRect = (rect: Box): boolean => rect.x + rect.w >= 0 && rect.x <= GAME_WIDTH && rect.y + rect.h >= 0 && rect.y <= GAME_HEIGHT;
 
 function screenRect(transform: Transform, bounds: Box): Box {
@@ -54,7 +54,7 @@ function selectionLinks(transform: Transform, doc: MapDoc, current: MapElement):
   const at = (node: GraphNode): End | null => {
     const item = elements.get(node.uid);
     const bounds = item && liveBounds(doc, item);
-    return item && bounds ? { point: toScreen(transform, centre(bounds)), uid: node.uid, active: isSelectable(item.tag) } : null;
+    return item && bounds ? { point: toScreen(transform, center(bounds)), uid: node.uid, active: isSelectable(item.tag) } : null;
   };
   const out = (graph.outOf.get(key) || []).map((link: Link) => ({ from: at(link.from), to: at(link.to), out: true }));
   const into = (graph.into.get(key) || []).map((link: Link) => ({ from: at(link.to), to: at(link.from), out: false }));
@@ -95,7 +95,7 @@ function drawPickMarkers(context: CanvasRenderingContext2D, transform: Transform
     if (!pick.kinds.includes(item.tag)) continue;
     const bounds = liveBounds(doc, item);
     if (!bounds) continue;
-    const point = toScreen(transform, centre(bounds));
+    const point = toScreen(transform, center(bounds));
     if (point.x < -size || point.x > GAME_WIDTH + size || point.y < -size || point.y > GAME_HEIGHT + size) continue;
     const distance = pointer ? Math.hypot(point.x - pointer.x, point.y - pointer.y) : Infinity;
     if (distance <= PICK_MARKER.reach && (!over || distance < over.distance)) over = { item, distance };
@@ -144,7 +144,7 @@ function drawEditor(context: CanvasRenderingContext2D, transform: Transform): Ed
       context.lineWidth = SELECTED_WIDTH;
       context.strokeStyle = color;
       context.strokeRect(rect.x, rect.y, rect.w, rect.h);
-      labels.push({ ...centre(rect), text: keyOf(doc, current) });
+      labels.push({ ...center(rect), text: keyOf(doc, current) });
     }
     for (const link of selectionLinks(transform, doc, current)) {
       drawConnection(context, link);

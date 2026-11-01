@@ -52,5 +52,5 @@ export function cancelLevelFailed(report: (text: string) => void): void {
     fade.visible = false;
   }
   if (pausedByFade) game.setRunning(true);
-  report(TEXT.failureCancelled);
+  report(TEXT.failureCanceled);
 }

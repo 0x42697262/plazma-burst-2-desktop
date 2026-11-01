@@ -202,8 +202,8 @@ test('triggers exec runs a trigger pasted from the map editor\'s text view, once
   assert.match(refusal('triggers exec movableto( "#door_a", "#spawn_spot" );'), /unknown action "movableto"\. Did you mean MovableTo\?/);
   assert.match(refusal('triggers exec Nope( "a", "b" );'), /unknown action "Nope"\. "triggers actions <text>" searches/);
   assert.match(refusal('triggers exec SetVar( "x", "1" ); heal'), /line 2 "heal": not an action/);
-  assert.match(refusal('triggers exec colour: red SetVar( "x", "1" );'), /unknown action "colour: red SetVar"/);
-  assert.match(refusal('triggers exec colour: red'), /line 1 "colour: red": "colour" is not uid, enabled, maxcalls/);
+  assert.match(refusal('triggers exec color: red SetVar( "x", "1" );'), /unknown action "color: red SetVar"/);
+  assert.match(refusal('triggers exec color: red'), /line 1 "color: red": "color" is not uid, enabled, maxcalls/);
   assert.match(refusal('triggers exec #god'), /"triggers run #god" runs that map trigger/);
   assert.match(refusal('triggers exec uid: #x'), /no actions in the script/);
   assert.match(refusal('triggers exec --bogus SetVar( "x", "1" );'), /unknown option "--bogus"/);
@@ -246,7 +246,7 @@ test('logic show draws every link where the camera puts it', async () => {
   assert.ok(all.lines > 5, `${all.lines} lines`);
   assert.ok(lineStarts().includes('110,70'), 'region #button at world 10,20 runs #open_door: drawn at world + camera, 110,70, in game units');
   assert.ok(game.log.drawn.some((call) => call[0] === 'setTransform' && call[1] === 2), 'two canvas pixels per game unit');
-  assert.ok(game.log.drawn.some((call) => call[0] === 'fillText' && call[1] === '#button'), 'labelled with its uid');
+  assert.ok(game.log.drawn.some((call) => call[0] === 'fillText' && call[1] === '#button'), 'labeled with its uid');
 
   cam.scaleX = cam.scaleY = 0.5;
   game.log.drawn.length = 0;

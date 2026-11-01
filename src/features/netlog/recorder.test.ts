@@ -233,7 +233,7 @@ test('a RESPONSE says which request it answers; the login password is never writ
 const LAYOUT = Object.freeze({ x: 1, y: 2, hp: 6, aimX: 7, aimY: 8, headHp: 12, faceHp: 13, killer: 16, clock: 19, respawns: 20, velScale: 5 });
 const LAYOUT_NAMES = Object.freeze({ x: 'stateX', y: 'stateY', hp: 'stateHp', aimX: 'stateAimX', aimY: 'stateAimY', headHp: 'stateHeadHp', faceHp: 'stateFaceHp', killer: 'stateKiller', clock: 'stateClock', respawns: 'stateRespawns', velScale: 'stateVelScale' });
 
-test('STATE lines on the main server connection are labelled: your state out, the snapshot in', async (context) => {
+test('STATE lines on the main server connection are labeled: your state out, the snapshot in', async (context) => {
   const { N } = game;
   const { playerState } = await import('./state.fixture.ts');
   const network = net();

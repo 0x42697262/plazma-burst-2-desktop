@@ -131,7 +131,7 @@ function show(rawArgs: readonly string[]): void {
   } else {
     print(TEXT.showing(plural(graph.links.filter(filter).length, TEXT.linkNoun), where, describe), COLOR.ok);
   }
-  print(TEXT.colours, COLOR.hint);
+  print(TEXT.colors, COLOR.hint);
   print(TEXT.crosshair, COLOR.hint);
 }
 

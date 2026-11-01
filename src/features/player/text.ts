@@ -12,7 +12,7 @@ export const TEXT = Object.freeze({
   removedNote: ' (removed)',
   repaired: (count: number) => `  repaired ${plural(count, 'broken body part')}`,
   refusedRevive: (index: number, broken: number) => `the game refused to revive #${index}${broken ? ` (${plural(broken, 'body part')} still broken)` : ''}`,
-  failureCancelled: '  level failure cancelled',
+  failureCanceled: '  level failure canceled',
   reviveUsage: 'usage: revive  |  revive <#>  |  revive --all',
   reviveFailed: (index: number, message: string) => `  #${index}: ${message}`,
   revivedCount: (count: number) => `Revived ${plural(count, 'character')}`,

@@ -120,7 +120,7 @@ function main(): void {
   const found = findNames(args.game);
   const missing = NEEDED_NAMES.filter((key) => !found.found[key]);
   if (missing.length) {
-    log.error(TEXT.notRecognised(missing));
+    log.error(TEXT.notRecognized(missing));
     process.exitCode = 1;
     return;
   }

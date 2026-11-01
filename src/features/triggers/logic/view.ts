@@ -3,7 +3,7 @@ import { setLayer, hasLayer, drawOverlay, currentTransform, toScreen, onScreen, 
 import { drawLabels, type LabelItem } from '#console/kernel/ui/labels.ts';
 import { ARROW, ARROW_SPREAD, HALF, LINE_WIDTH, NODE_SIZE } from './constants.ts';
 import { LAYER, LINK_COLOR, NODE_COLOR, OTHER_NODE_COLOR, type LinkKind } from './keys.ts';
-import { logicGraph, placeOf, centreOf, type GraphNode, type Link } from './graph.ts';
+import { logicGraph, placeOf, centerOf, type GraphNode, type Link } from './graph.ts';
 
 type Point = { x: number; y: number };
 export type LinkFilter = (link: Link) => boolean;
@@ -70,7 +70,7 @@ function drawLogic(context: CanvasRenderingContext2D, transform: Transform): Log
   const pointOf = (node: GraphNode): Point => {
     const known = points.get(node);
     if (known) return known;
-    const point = toScreen(transform, centreOf(placeOf(node)));
+    const point = toScreen(transform, centerOf(placeOf(node)));
     points.set(node, point);
     return point;
   };

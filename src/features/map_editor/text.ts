@@ -69,14 +69,14 @@ export const COMMAND_TEXT = Object.freeze({
 
 export const EDITOR_HELP = (remote: boolean): NonNullable<CommandDefinition['help']> => ({
   about: [
-    'Draws every object of the map over the game in its layer\'s colour, and takes the',
+    'Draws every object of the map over the game in its layer\'s color, and takes the',
     'mouse: click an object to select it, click the same spot again for the one',
     'below it. The game keeps running and the keyboard is still yours: walk around',
     'while you look.',
     'Drag the selection to move it, its edge or corner to resize it (snaps to 10;',
     'hold Alt for no snap). Tools (left): select or place new objects, copy,',
     'delete, undo, redo; keys Del, Ctrl+D, Ctrl+Z, Ctrl+Y.',
-    'Layers (left): click a name to list that layer in Objects, its colour square to',
+    'Layers (left): click a name to list that layer in Objects, its color square to',
     'hide or show it. Objects (right): click one to select it. Params: the selected',
     'object\'s attributes; click a value to change it. Its logic links are drawn like',
     '"logic show" draws them.',

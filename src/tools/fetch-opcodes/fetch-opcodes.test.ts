@@ -47,7 +47,7 @@ special_values_table['maxcalls']['[val]']='# calls';
   });
 });
 
-test('fetch-opcodes gives the action categories the editor\'s colours, in the order it meets them', () => {
+test('fetch-opcodes gives the action categories the editor\'s colors, in the order it meets them', () => {
   const src = String.raw`
 var rainbow=['#5f6887',
 '#94a4c1', '#efefef'];

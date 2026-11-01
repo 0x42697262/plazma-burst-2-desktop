@@ -972,10 +972,10 @@ const W = near[0];                                   // the wall to remove
 const cx = $сАоОo[W] + $с0МAр[W] / 2, cy = $o1О00[W] + $MМрTТ[W] / 2;
 const geometry = () => JSON.stringify([$сАоОo, $o1О00, $с0МAр, $MМрTТ]);
 const before = geometry();
-$рeHТрT(cx, cy);                                     // false: the wall's centre is solid
+$рeHТрT(cx, cy);                                     // false: the wall's center is solid
 ```
 
-Pick a wall with no movable over its centre, or `$рeHТрT` stays `false` because of the movable, not the wall.
+Pick a wall with no movable over its center, or `$рeHТрT` stays `false` because of the movable, not the wall.
 
 #### L1: change the locked rectangle (easy to fix, mostly caught)
 
@@ -997,7 +997,7 @@ for (const col of $АТHМрM)
   for (const cell of col)
     for (let k = cell.indexOf(W); k !== -1; k = cell.indexOf(W)) { cell.splice(k, 1); removed++; }
 
-$рeHТрT(cx, cy);                                     // true: the centre is now free
+$рeHТрT(cx, cy);                                     // true: the center is now free
 geometry() === before;                               // true: every locked array is untouched
 ```
 
@@ -1656,7 +1656,7 @@ if (hp > 0)
 
 **The numbers:** the game stage is 800 × 400 units (`<canvas width="800" height="400">`), and the camera is centered on you at zoom 1. A legitimate crosshair stays within about 400 units horizontally and 200 vertically of your character. The limit is the **full stage size plus 200**: `dx > 1000` or `dy > 600`.
 
-**Exact behaviour:**
+**Exact behavior:**
 
 - **Only right and down are checked.** The comparison is signed (`dx > 1000`, not `Math.abs(dx) > 1000`). Aiming 2000 units to the left (`dx = -2000`) or straight up never counts.
 - **Only samples where the aim changed count.** Holding the crosshair still outside the limit adds nothing after the first sample. The score is a leaky counter: +1 per changed sample outside, −1 per changed sample inside, floored at 0.
@@ -1808,7 +1808,7 @@ The obfuscated names change with every version; the structure and the string con
 | Forced 0 | `["RELIABLE_YOU_ARE_STILL_DEAD"]` | |
 | Network numbers | `$ММ.$Oоolр` / `$ММ.$OНННО`: the functions called on every part above; the digits are built by `+=c` in a `for(let i=1;i<127;i++)` loop | `netDigits` |
 
-When a `find-names` pattern stops matching, the run says which key (`problem: stateHp: pattern not found`). The network log keeps working: a missing position is simply not labelled, and a layout that no longer matches this version's (21 parts, the positions above) is shown with only the server's positions named (`net/state.js`).
+When a `find-names` pattern stops matching, the run says which key (`problem: stateHp: pattern not found`). The network log keeps working: a missing position is simply not labeled, and a layout that no longer matches this version's (21 parts, the positions above) is shown with only the server's positions named (`net/state.js`).
 
 ### 14.10 Names in this section
 
@@ -1930,7 +1930,7 @@ The scan's report goes to `$ММ.$ceTOI`, which is Sad Burst's lobby connection,
 
 > **Scope:** Sad Burst 2 build `20261030020533`, client version `1.23`. The official client has nothing like this: its `AUTHENTICATE` carries the literal `"version_h5"`.
 >
-> **Names:** the loader (`assets/index-Bq64YSI5.js`) is Vite output, so its functions are minified to two letters (`Tc`, `zc`, `Ac`, ...). Those letters change on every rebuild. The anchors in the right-hand column of 16.1 survive a rebuild. The code below is de-minified by hand: identifiers renamed, behaviour unchanged, with the minified name in a comment.
+> **Names:** the loader (`assets/index-Bq64YSI5.js`) is Vite output, so its functions are minified to two letters (`Tc`, `zc`, `Ac`, ...). Those letters change on every rebuild. The anchors in the right-hand column of 16.1 survive a rebuild. The code below is de-minified by hand: identifiers renamed, behavior unchanged, with the minified name in a comment.
 
 ### 16.1 Summary
 

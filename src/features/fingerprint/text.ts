@@ -42,7 +42,7 @@ export const COMMAND_TEXT = Object.freeze({
     'docs/research/fingerprinting.md), which the game runs and answers. Every version that arrives is',
     'saved once in data/fingerprint/ (not in git); a version seen again is not saved again.',
     '"fingerprint" runs the latest here, as the game does, and shows the answer: each',
-    'value labelled from what it is, the fingerprint\'s JSON one value a line. The',
+    'value labeled from what it is, the fingerprint\'s JSON one value a line. The',
     'fingerprinter joins its values into one text with a separator the server picks',
     'each session; they are split here by the separator in the source.',
     'Code from a private server\'s lobby is never saved here.',

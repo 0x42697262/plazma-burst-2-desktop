@@ -25,8 +25,8 @@ The plan is written so that **any later session can pick up the next unchecked s
 | Modularity | **Feature modules**: one folder per feature, holding a manifest, domain, adapters and entry | layered folders with flags (a feature stays spread out and can't be removed cleanly) |
 | Security fixes | **Inside the refactor**, in the phase of the feature they belong to. Those features are migrated first (P3.1–P3.3) so the fixes land early | a separate fix before the refactor |
 
-### Behavioural rule for the whole refactor
-It is a refactor: **behaviour stays the same unless a step says otherwise.** Flag defaults reproduce today's behaviour. Only the three security fixes change behaviour, and each has its own test and docs entry.
+### Behavioral rule for the whole refactor
+It is a refactor: **behavior stays the same unless a step says otherwise.** Flag defaults reproduce today's behavior. Only the three security fixes change behavior, and each has its own test and docs entry.
 
 ---
 
@@ -80,7 +80,7 @@ It is a refactor: **behaviour stays the same unless a step says otherwise.** Fla
 - **Boundaries validate.** Every HTTP route body and query, every file read, every game packet field and every env var is parsed with a schema at the edge.
 - **Persisted JSON is versioned.** It is `{ schemaVersion: N, ... }`, read through `kernel/persist/versioned.ts`, which runs migrations `vN → vN+1` on read and writes back the latest. A file with no version counts as v0.
 - **Tests first.**
-  - For a move: first a *characterization* test that pins today's behaviour; then move the code; the test stays green.
+  - For a move: first a *characterization* test that pins today's behavior; then move the code; the test stays green.
   - For a fix: a failing test first.
 - **One commit per step** (no Co-Authored-By trailers), made only when the user asks.
 
@@ -149,7 +149,7 @@ interface Tick { name: string; everyMs: number; errorBudget: number; run(): void
 
 ---
 
-## Feature catalog (initial ids; the defaults keep today's behaviour)
+## Feature catalog (initial ids; the defaults keep today's behavior)
 
 | id | default | availableIn | today's files | notes |
 |---|---|---|---|---|
@@ -227,7 +227,7 @@ Each step lists: **do**, **test first**, **done when**. After every step run `np
 3. `AGENTS.md`: conventions, plus how to resume (read `docs/refactor/progress.md`, take the first unchecked step).
 - **Done when:** `npm test` is still green (142) and no link in the code points to a moved file.
 
-### P1. Toolchain (no behaviour change)
+### P1. Toolchain (no behavior change)
 1. Add dev deps with exact versions (`npm i -DE`): `typescript`, `esbuild`, `eslint`, `typescript-eslint`, `@types/node`. Add `zod` as a runtime dep.
 2. `tsconfig.json` with the settings in the Build section, `allowJs: true`, `checkJs: false`, and path aliases.
 3. `tools/build.ts` (esbuild, the 3 outputs plus a `--watch` mode). The entries are still today's JS files (`desktop/main.js`, `desktop/dev/console/index.js`, `server/index.js`), so the bundle must reproduce today's app exactly.
@@ -262,7 +262,7 @@ Steps are listed in order. The recipe below applies to **each** feature.
 
 **Recipe (per feature `<id>`):**
 1. Read every file listed for `<id>` in the catalog table, and its tests.
-2. **Characterization tests:** move the feature's existing tests (the relevant blocks of `test/console.test.mjs` and its own test file) into `src/features/<id>/*.test.ts`, unchanged in meaning. Add tests for any behaviour that isn't pinned yet.
+2. **Characterization tests:** move the feature's existing tests (the relevant blocks of `test/console.test.mjs` and its own test file) into `src/features/<id>/*.test.ts`, unchanged in meaning. Add tests for any behavior that isn't pinned yet.
 3. Create the folder. Port the code to TS while splitting it:
    - pure logic → `domain/`;
    - file, fetch and game access → `adapters/`, using the console kernel's game adapter, never `game/names` directly;

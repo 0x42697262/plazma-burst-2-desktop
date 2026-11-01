@@ -64,7 +64,7 @@ export function choicesOf(valueKind: string | undefined): { value: string; label
 
 export function shownValue(valueKind: string | undefined, value: string): string {
   const label = valueKind && TABLE?.values?.[valueKind]?.[value];
-  return label ? TEXT.labelledValue(value, label) : value;
+  return label ? TEXT.labeledValue(value, label) : value;
 }
 
 export const pickKindsOf = (valueKind: string | undefined): readonly string[] | null => (valueKind && Object.hasOwn(PICKS, valueKind) ? PICKS[valueKind] ?? null : null);

@@ -64,7 +64,7 @@ session and draw again when it notifies them; the session never draws.
 - `pick` is a parameter waiting for an object clicked in the world (the map editor's
   quick pick): until one of its kinds is clicked (any layer, as in the map editor) or Esc,
   a click picks instead of selecting. The object a pick at a point takes is the one of
-  those kinds whose centre is nearest, within reach, or one whose box holds the point.
+  those kinds whose center is nearest, within reach, or one whose box holds the point.
 - `levelStarts` counts the level starts seen, editor on or off. `docLevel` is the level
   start the running level got the document's edits at. The running level has the
   document's edits when it plays the document's map and has not started over since they
@@ -113,7 +113,7 @@ session and draw again when it notifies them; the session never draws.
 
 ### Kinds (`domain/kinds.ts`)
 
-- Every kind of map element the editor shows: its name, its layer colour, and its shape
+- Every kind of map element the editor shows: its name, its layer color, and its shape
   in the world. Rectangles (walls, regions, ...) are x, y, w, h. Everything else is a
   point with a box around it, sized like the map editor's selection boxes
   (`level_editor/editor_scripts/lib_sources.js`); `side="-1"` mirrors it. The order is
@@ -188,7 +188,7 @@ session and draw again when it notifies them; the session never draws.
 - Regions: the loader rewrites hidden use keys to the plain ones (activation 8 → 1,
   11 → 9, 12 → 10, 15 → 1). Modes 1, 9 and 10 draw a switch at load: changing to or from
   one is not live (the switch is not drawn). A use-key region has its switch drawn at its
-  centre, moved with it. One attached to a movable keeps its offset from it: it is built
+  center, moved with it. One attached to a movable keeps its offset from it: it is built
   again to take a new one.
 - Triggers: actions as the loader stores them (types as numbers, targets resolved,
   `actions_1` to `actions_100`). `execute` runs it when the level starts (and when a match
@@ -288,7 +288,7 @@ session and draw again when it notifies them; the session never draws.
 ### The loader's later steps (`services/later.ts`)
 
 - Once the map is read, the loader goes over everything it made: it ties each attached
-  object to its movable, shows water (water, acid or the map's own colours) and widens the
+  object to its movable, shows water (water, acid or the map's own colors) and widens the
   area it acts on, gives each visible movable its texture and the two edges characters
   grab. Each step is a loop over every object; its body is read from the game's file (like
   the loader's branches) and run for the one index.
@@ -392,12 +392,12 @@ session and draw again when it notifies them; the session never draws.
 - The drop-down rows follow the map editor's `special_values_table[kind]`, walked like the
   editor walks it: values it offers (a model or a skin with its picture), "# calls" (type
   a number; `-[val]` means it is stored negative), objects of the map named as a parameter
-  names them, and trigger actions as "Category › what it does" in the category's colour.
+  names them, and trigger actions as "Category › what it does" in the category's color.
   A kind like `team+any` also offers its base kind's values (`team`).
 
 ### The overlay (`ui/view.ts`)
 
-- An outline for every element in its layer's colour (faint off the active layers, as the
+- An outline for every element in its layer's color (faint off the active layers, as the
   map editor draws them at 0.3), the selection highlighted, the selection's connections
   drawn the way the map editor draws them (`lib_render.js`: 1 px, dashed 4/4, green to what
   the selection points at, white from what points at it; uids at the far ends), the
@@ -425,7 +425,7 @@ session and draw again when it notifies them; the session never draws.
 - A press over the world (not on the console, a panel or outside the game) is the
   editor's: the game never sees it, nor the release that ends it.
 - A parameter waiting for an object: a press takes the nearest object of the kinds it
-  names (within 9 screen units of its centre, the editor's 20 px) instead.
+  names (within 9 screen units of its center, the editor's 20 px) instead.
 - Select tool: a press selects what is under it and can drag it right away: from inside it
   moves, from an edge or a corner of a rectangle (3 screen units) it resizes. A rectangle
   drags by its bounds, a point by the spot the map stores. A click on the selection without
@@ -463,7 +463,7 @@ session and draw again when it notifies them; the session never draws.
   blue when it is the value now. On top, a field: typing narrows the rows, Enter takes what
   is typed (a "# calls" row asks for that number). A row is taken on the press, before the
   field loses focus to it. Trigger actions get the editor's big box instead: a full-height
-  list left of the params (its 700 px box), the categories along the top in their colours
+  list left of the params (its 700 px box), the categories along the top in their colors
   (Everything, ..., Do Nothing), and a search field. It closes on a choice, Esc, or a press
   anywhere else (the press still does what it does).
 - A text field (as in the map editor's params): Enter applies it, Esc or clicking
@@ -473,7 +473,7 @@ session and draw again when it notifies them; the session never draws.
   loaded from the site like the rest of the game). The panels are dark like the game's own
   dark panels (HUD panel type 2, `#000000d9`: the Esc menu's side panels, where a match
   host sees the logs), with the map editor's Dark theme greys for everything on them (its
-  blue theme turned grey: `lib_gui.js`, ThemeSet). Sizes are game units (the overlay is
+  blue theme turned gray: `lib_gui.js`, ThemeSet). Sizes are game units (the overlay is
   800 x 400 of them); the editor's 10 px font is 5 units and a 16 px icon 8 units at the
   overlay's usual scale.
 - The map editor's scroll bars (`e_css.css`: 4 px, rounded, a faint track) are only

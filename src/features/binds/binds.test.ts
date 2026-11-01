@@ -51,6 +51,6 @@ test('shifted characters are Shift and their US key; keyname names the key you p
   game.run('keyname');
   assert.ok(game.press('Backquote', { key: '~', shiftKey: true }).includes('  cannot be bound: shift+` opens the console'));
   game.run('keyname');
-  assert.deepEqual(game.press('Escape', { key: 'Escape' }), ['keyname: cancelled']);
+  assert.deepEqual(game.press('Escape', { key: 'Escape' }), ['keyname: canceled']);
   game.run('unbind --all');
 });

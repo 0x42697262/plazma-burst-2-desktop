@@ -29,7 +29,7 @@ Code: `src/features/fingerprint/`. Background:
   - one part per string, number or boolean, the parts of an array, or nothing;
   - the fingerprinter's values are joined into one text by a separator the server picks
     per session (a Cyrillic letter), split here at the last `.join('…')` in the source;
-  - each value is labelled from what it is (§7.2 of the research): full or hardware-only
+  - each value is labeled from what it is (§7.2 of the research): full or hardware-only
     JSON, build tag, IP address, token, page origin, time zone, the MurmurHash3 hash in
     base 36.
 

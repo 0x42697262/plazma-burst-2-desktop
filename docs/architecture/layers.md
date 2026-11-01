@@ -68,7 +68,7 @@ credentials, saved maps, logs, the generated `names.js` and `opcodes.js`, and in
 - `src/console/index.ts` registers every command (`kernel/commands/register-all.ts`),
   builds the panel and starts the frame loop once the game's stage exists.
 - `src/console/kernel/` is the console's core, flagged `console_core` (it cannot be
-  turned off): `core/` (words, options, colours, the page's mode), `game/` (the only
+  turned off): `core/` (words, options, colors, the page's mode), `game/` (the only
   code that touches the game's obfuscated globals), `state/` (settings, binds, history,
   profiles), `overrides/` (what is forced every frame), `ui/`, `commands/` and
   `dispatch.ts`.

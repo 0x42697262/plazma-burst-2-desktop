@@ -171,7 +171,7 @@ export function placeOf(node: GraphNode): Place {
   return { x: node.x, y: node.y, w: node.w, h: node.h };
 }
 
-export const centreOf = (place: Place): { x: number; y: number } => ({
+export const centerOf = (place: Place): { x: number; y: number } => ({
   x: (place.x ?? Number.NaN) + (Number.isFinite(place.w) ? (place.w as number) / HALF : 0),
   y: (place.y ?? Number.NaN) + (Number.isFinite(place.h) ? (place.h as number) / HALF : 0),
 });

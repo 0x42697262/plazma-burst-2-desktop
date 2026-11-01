@@ -24,7 +24,7 @@ function usesOf(name: string): string[] {
 function report(event: KeyEvent | null): void {
   stopWaiting = null;
   if (!event) {
-    print(TEXT.keynameCancelled, COLOR.notice);
+    print(TEXT.keynameCanceled, COLOR.notice);
     return;
   }
   const name = keyNames.ofEvent(event);

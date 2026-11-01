@@ -60,7 +60,7 @@ With the flag off, `npm run host` logs that remote play is off and quits.
   console settings in `data/remote-data/<name>/`. It is logged in like the local
   window.
 - No DevTools (off at creation, closed if opened), no menu, no new windows, no
-  `<webview>`, every permission refused, downloads cancelled, muted.
+  `<webview>`, every permission refused, downloads canceled, muted.
 - It may load only the game's start page (any query or `#`). A page load
   (`sec-fetch-dest` document, iframe, frame, embed or object) of any other file is
   refused with 403 even before the lockdown sees it, so the window can never show the

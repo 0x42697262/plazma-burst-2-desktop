@@ -49,7 +49,7 @@ network logs with your login credentials, and the saved private servers.
 The payload was captured by the dev console. `src/features/fingerprint/`
 listens on the lobby connection and `src/features/fingerprint/` stores each version once. The
 console's `fingerprint` command runs the latest version locally and prints the reply
-(§11). Any claim about server behaviour is **inferred** and marked as such.
+(§11). Any claim about server behavior is **inferred** and marked as such.
 
 ### 1.2 Deobfuscation
 
@@ -585,7 +585,7 @@ on its own.
 1. **One version.** Everything about the payload describes version `b8354ed91036`. The
    collector is data, not code shipped in `game/`, so the server can change it at any time
    without a client update. The dev console keeps every version it sees (§11).
-2. **Server behaviour is not observable.** When the task is sent, how often, how the
+2. **Server behavior is not observable.** When the task is sent, how often, how the
    token and separator are generated, how F4 and F5 are checked, and what happens when no
    reply comes all live on the server. The roles in §6.6 are inferred.
 3. **Two sessions.** The per-session literals were identified by comparing two sessions.
@@ -649,7 +649,7 @@ Electron or Chromium bug. Inside the page, though, it can reach all of this:
 | **The game itself** | Read and change any game state, send any message as you (chat, votes, kicks, match actions), read `loaderInfo.parameters.l` / `.p` (the login and password field the game logs in with). | High |
 | **The page's storage** | Read and write the origin's cookies (the wrapper's login cookies), `localStorage` and IndexedDB (`localforage`). | Medium |
 | **Fingerprinter store**: `__dev/fingerprint` (POST) | Plant a "version" containing `getBrowserFingerprint`. Your later `fingerprint` command then runs it, on whatever server you are on at that point. | Medium |
-| **Maps**: `__dev/savemap`, `__dev/saveedited` | Write map XML into `data/maps/` (file names are sanitised; no path escape). With `fast_maps`, a saved map is loaded instead of the download, so a planted map changes what a match runs for you. | Low–Medium |
+| **Maps**: `__dev/savemap`, `__dev/saveedited` | Write map XML into `data/maps/` (file names are sanitized; no path escape). With `fast_maps`, a saved map is loaded instead of the download, so a planted map changes what a match runs for you. | Low–Medium |
 | **Network log writes**: `__dev/netlog` (POST) | Add forged lines to the log. | Low |
 | **Screenshot**: `__dev/screenshot` | Capture the window. | Low |
 | **Reads**: console source, `names.js`, `opcodes.js`, `__hooks/` | Read the console's code, the decoded game names and your hooks. | Low |

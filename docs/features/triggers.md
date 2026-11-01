@@ -99,7 +99,7 @@ The map editor needs this feature's model, so it is off as well.
 - A client sends and applies syncs only with the map's `var_sync` engine mark. The game
   never sets it back to false, so it can still be on from an earlier map in the session.
 - Triggers that write a variable and run once or at map start are the map's own
-  initialisers: a client that reloads the map runs them again, so it ends up with the
+  initializers: a client that reloads the map runs them again, so it ends up with the
   map's value whatever was synced to it earlier.
 
 ### The logic view (`logic/graph.ts`, `logic/view.ts`)
@@ -118,5 +118,5 @@ The map editor needs this feature's model, so it is off as well.
   (lib_classes.js, SourceLost) they are shown in a row above the map's top left corner.
 - Regions move with the doors they are attached to, so the game's own region is read for
   its place; characters are read where they are; everything else is where the map put it.
-- Link colours: green runs a trigger, yellow enables or disables, blue acts on an element,
-  grey moves with a door, pink is any other reference.
+- Link colors: green runs a trigger, yellow enables or disables, blue acts on an element,
+  gray moves with a door, pink is any other reference.
