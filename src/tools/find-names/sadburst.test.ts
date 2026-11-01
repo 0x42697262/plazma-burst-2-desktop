@@ -3,22 +3,20 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { createRequire } from 'node:module';
+import * as sadburst from './sadburst.ts';
+import { htmlRefs, moduleRefs, manifestFiles, assetPaths } from '../fetch-game/sadburst.ts';
 
-const require = createRequire(import.meta.url);
-const sb = require('./sadburst.ts');
-
-function copy(files) {
+function copy(files: Record<string, string>): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-sb-'));
-  for (const [rel, text] of Object.entries(files)) {
-    fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
-    fs.writeFileSync(path.join(dir, rel), text);
+  for (const [relative, text] of Object.entries(files)) {
+    fs.mkdirSync(path.dirname(path.join(dir, relative)), { recursive: true });
+    fs.writeFileSync(path.join(dir, relative), text);
   }
   return dir;
 }
 
 test('minified booleans are read as words, comparisons are left alone', () => {
-  assert.equal(sb.unminify('a.b=!0,c=!1;if(x!=0&&y!==1)z=!d'), 'a.b=true,c=false;if(x!=0&&y!==1)z=!d');
+  assert.equal(sadburst.unminify('a.b=!0,c=!1;if(x!=0&&y!==1)z=!d'), 'a.b=true,c=false;if(x!=0&&y!==1)z=!d');
 });
 
 test('a name is the official one when it is in the Sad Burst code; missing ones are said', () => {
@@ -29,20 +27,18 @@ test('a name is the official one when it is in the Sad Burst code; missing ones 
     'pb2-version.json': '{"version":"sadburst-1"}',
   });
   try {
-    const result = sb.findNames(dir, [{ label: 'official client', names: { net: '$ММ', netLog: '$НеAAO', chars: '$0Ме1А' } }]);
+    const result = sadburst.findNames(dir, [{ label: 'official client', names: { net: '$ММ', netLog: '$НеAAO', chars: '$0Ме1А' } }]);
     assert.equal(result.found.net, '$ММ');
     assert.equal(result.found.netLog, '$НеAAO');
-    assert.equal(result.info.net.file, 'same as the official client');
+    assert.equal(result.info.net?.file, 'same as the official client');
     assert.ok(result.missing.includes('chars'), 'not in this code: not found');
-    // No official names at all: says how to get them.
-    assert.match(sb.findNames(dir, []).problems.join('\n'), /run "npm run fetch-game"/);
+    assert.match(sadburst.findNames(dir, []).problems.join('\n'), /run "npm run fetch-game"/);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
 
 test('fetch-game --sadburst finds the page script\'s modules and the game\'s scripts', () => {
-  const { htmlRefs, moduleRefs, manifestFiles } = require('../fetch-game/sadburst.ts');
   assert.deepEqual(htmlRefs('<link href="logo.png"><script src="./assets/index-X.js"></script><img src="/static/a.png"><a href="https://x/">'),
     ['logo.png', './assets/index-X.js']);
   assert.deepEqual(moduleRefs('m.f=["./a-1.js","./b-2.css"];import(`./c-3.js`);fetch("other.js")'), ['a-1.js', 'b-2.css', 'c-3.js']);
@@ -52,8 +48,7 @@ test('fetch-game --sadburst finds the page script\'s modules and the game\'s scr
 });
 
 test('fetch-game --sadburst knows what the game loads: its lists, its sprite loader, paths in its code, kept.txt', () => {
-  const { assetPaths } = require('../fetch-game/sadburst.ts');
-  const strings = new Map([['$o', 'images/asphalt.png'], ['$s', 'flash_export/sky']]);
+  const strings = new Map<string, string>([['$o', 'images/asphalt.png'], ['$s', 'flash_export/sky']]);
   const paths = assetPaths({
     texts: [
       ['gamelogic/a.js', 'a("flash_export/guns",4,!0),e($s,3);sound_ogg_override.add("am_wind");x(`loading_screen.css`);y("https://cdn/x.png")'],
@@ -66,10 +61,10 @@ test('fetch-game --sadburst knows what the game loads: its lists, its sprite loa
     languages: ['en', 'zh'],
     kept: ['bitmap_overrides/mmenu.jpg', ''],
   });
-  for (const p of ['flash_export/guns.png', 'flash_export/guns.js', 'flash_export/sky/frame0001.jpg', 'flash_export/sky/frame0003.jpg',
+  for (const expected of ['flash_export/guns.png', 'flash_export/guns.js', 'flash_export/sky/frame0001.jpg', 'flash_export/sky/frame0003.jpg',
     'audio_overrides/am_wind.ogg', 'loading_screen.css', 'loading_screen/glow.png', 'flash_export/images/asphalt.png',
     'flash_export/sounds/body.mp3', 'flash_export/flash_skins/152.png', 'gamelogic/campaign/en/c0a.xml', 'gamelogic/campaign/zh/c0a.xml',
-    'bitmap_overrides/mmenu.jpg']) assert.ok(paths.includes(p), p);
+    'bitmap_overrides/mmenu.jpg']) assert.ok(paths.includes(expected), expected);
   assert.ok(!paths.includes('flash_export/sky/frame0004.jpg'), 'as many frames as the loader says');
-  assert.ok(!paths.some((p) => p.includes('cdn')), 'not other sites');
+  assert.ok(!paths.some((found) => found.includes('cdn')), 'not other sites');
 });

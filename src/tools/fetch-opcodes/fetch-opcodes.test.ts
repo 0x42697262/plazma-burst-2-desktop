@@ -18,10 +18,10 @@ addTrigger(12, "No alias, after a commented one", "string", "string");
 
 test('fetch-opcodes reads actions and aliases like the editor registers them', () => {
   const { actions, aliases } = parseParams(SRC);
-  assert.deepEqual(Object.keys(actions).map(Number).sort((a, b) => a - b), [-1, 0, 6, 8, 9, 10, 12]);
+  assert.deepEqual(Object.keys(actions).map(Number).sort((first, second) => first - second), [-1, 0, 6, 8, 9, 10, 12]);
   assert.deepEqual(actions[6], { desc: "Region › Make damage in Region 'B' with power of 'A' hit points", a: 'value', b: 'region', alias: 'DamageRegion' });
-  assert.equal(actions[8].desc, 'Url › see http://example.com/a // not a comment');
-  assert.equal(actions[12].alias, undefined, 'an alias in a comment belongs to nothing');
+  assert.equal(actions[8]?.desc, 'Url › see http://example.com/a // not a comment');
+  assert.equal(actions[12]?.alias, undefined, 'an alias in a comment belongs to nothing');
   assert.deepEqual(aliases, { MovableTo: 0, DamageRegion: 6, Same: 9 }, 'a name used twice is the lower number');
   assert.match(check({ actions, aliases }).join('\n'), /only 7 actions found/);
 });
@@ -39,11 +39,11 @@ special_values_table['region_activation'][1]='\'\'USE\'\' key (with button)';
 special_values_table['maxcalls']['[val]']='# calls';
 `;
   const { params, values } = parseParamTable(src);
-  assert.deepEqual(params.map((p) => p.name), ['uid', 'use_on'], 'not the commented one, not the loop');
-  assert.equal(params[1].desc, 'Determines when trigger which is defined by "Activation Trigger" parameter runs');
+  assert.deepEqual(params.map((param) => param.name), ['uid', 'use_on'], 'not the commented one, not the loop');
+  assert.equal(params[1]?.desc, 'Determines when trigger which is defined by "Activation Trigger" parameter runs');
   assert.deepEqual(values, {
     side: { '-1': '◄ Left' }, bool: { true: 'Yes' }, region_activation: { 1: "''USE'' key (with button)" },
-    maxcalls: { '[val]': '# calls' }, // "type a number"
+    maxcalls: { '[val]': '# calls' },
   });
 });
 
@@ -81,8 +81,6 @@ mark_pairs['mark_watercolor']="string";`;
   assert.deepEqual(parseMarkPairs(src), { sky: 'sky_model', he_nades_count: 'value>=0+round1', watercolor: 'string' });
 });
 
-// Sad Burst 2's editor bundles the same file minified: statements joined by commas and
-// a.b for a["b"].
 test('fetch-opcodes reads the minified editor bundle too', () => {
   const src = 'addTrigger(0,"Movable &#8250; Force Movable \'A\' move to region \'B\'","door","region"),AddOpcodeAlias("MovableTo"),'
     + 'param_type[23]=["use_on","region_activation","Activation on","When it runs","region"],'
@@ -90,7 +88,7 @@ test('fetch-opcodes reads the minified editor bundle too', () => {
     + 'mark_pairs.mark_sky="sky_model",x=1';
   assert.deepEqual(parseParams(src).aliases, { MovableTo: 0 });
   const { params, values } = parseParamTable(src);
-  assert.equal(params[0].name, 'use_on');
+  assert.equal(params[0]?.name, 'use_on');
   assert.deepEqual(values, { region_activation: { 1: "''USE'' key" }, textmsg: { '[color]': 'Custom color' } });
   assert.deepEqual(parseMarkPairs(src), { sky: 'sky_model' });
 });
