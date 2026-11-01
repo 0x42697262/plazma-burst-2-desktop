@@ -4,7 +4,8 @@ import type * as esbuild from 'esbuild';
 import type { Edition } from '#shared/editions/types.ts';
 import { REPO_ROOT } from '#kernel/config/paths.ts';
 import {
-  EDITION_MODULE, EDITION_PLUGIN_NAME, FEATURE_IMPORT, FEATURE_LIST_MODULES, LINE_BREAK, LIST_ENTRY, TYPESCRIPT_LOADER, exactPathFilter, wholeWord,
+  EDITION_MODULE, EDITION_PLUGIN_NAME, FEATURE_IMPORT, FEATURE_LIST_MODULES, LINE_BREAK, LIST_ENTRY, PACKAGED_ROOT_MODULE, ROOT_MODULE, ROOT_PLUGIN_NAME,
+  TYPESCRIPT_LOADER, exactPathFilter, wholeWord,
 } from './constants.ts';
 import { TEXT } from './text.ts';
 
@@ -41,3 +42,10 @@ export function editionPlugin(edition: Edition): esbuild.Plugin {
     },
   };
 }
+
+export const packagedRootPlugin = (): esbuild.Plugin => ({
+  name: ROOT_PLUGIN_NAME,
+  setup(build) {
+    build.onLoad({ filter: exactFile(ROOT_MODULE) }, () => ({ contents: PACKAGED_ROOT_MODULE, loader: TYPESCRIPT_LOADER }));
+  },
+});

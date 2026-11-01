@@ -6,11 +6,12 @@ import path from 'node:path';
 import * as esbuild from 'esbuild';
 import { CATALOG } from '#shared/features/catalog.ts';
 import type { Edition } from '#shared/editions/types.ts';
-import { pageBuildOptions } from './build.ts';
+import { pageBuildOptions, wrapperBuildOptions } from './build.ts';
 import { editionNames, oneOffEdition, readEdition } from './edition-file.ts';
 import { onlyEditionFeatures } from './edition-plugin.ts';
 
 const featureSideOrEntry = (id: string) => new RegExp(`^src/features/${id}/(console|page|wrapper)\\.ts$|^src/features/${id}/entry/`);
+const ALWAYS_IN_THE_MAIN_PROCESS = ['login', 'cert_pinning', 'client_sadburst'];
 const CONSOLE_ONLY = /^src\/console\/(index|features)\.ts$|^src\/console\/kernel\/(ui|commands|state)\//;
 
 async function buildInMemory(edition: Edition) {
@@ -24,7 +25,25 @@ async function buildInMemory(edition: Edition) {
   }
 }
 
+async function assertMainProcessHoldsOnly(edition: Edition) {
+  if (edition.features === null) return;
+  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-main-'));
+  try {
+    const { metafile, outputFiles } = await esbuild.build({ ...wrapperBuildOptions(path.join(outDir, 'main.cjs'), edition), metafile: true, write: false });
+    const inputs = Object.keys(metafile.inputs);
+    for (const { id } of CATALOG) {
+      if (edition.features.includes(id) || ALWAYS_IN_THE_MAIN_PROCESS.includes(id)) continue;
+      assert.deepEqual(inputs.filter((input) => input.startsWith(`src/features/${id}/`)), [], `${edition.name}: main process without ${id}`);
+    }
+    const main = outputFiles.find((file) => file.path.endsWith('main.cjs'))?.text ?? '';
+    assert.ok(main.includes(JSON.stringify(edition.name)), `${edition.name}: the edition is compiled into the main process`);
+  } finally {
+    fs.rmSync(outDir, { recursive: true, force: true });
+  }
+}
+
 async function assertHoldsOnly(edition: Edition) {
+  await assertMainProcessHoldsOnly(edition);
   const { inputs, outputs } = await buildInMemory(edition);
   const included = edition.features ?? CATALOG.map((definition) => definition.id);
   for (const { id } of CATALOG) {

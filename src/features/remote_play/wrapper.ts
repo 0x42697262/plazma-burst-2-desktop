@@ -1,6 +1,8 @@
 import type { Logger } from '#kernel/log/logger.ts';
-import { LOCAL_HOST_NAME, PUBLIC_BIND } from './keys.ts';
-import { LOG } from './text.ts';
+import { LOCAL_HOST_NAME, PUBLIC_BIND, REMOTE_PAGE_SCRIPT, SCALE_FACTOR_ONE, SCALE_FACTOR_SWITCH } from './keys.ts';
+import { LOG, TEXT } from './text.ts';
+import { isRefusedPageLoad } from './domain/game-page.ts';
+import { createRemoteGames, type RemoteGameDeps } from './adapters/remote-games.ts';
 import { CLIENT_DIST_DIR, TESTERS_FILE } from './paths.ts';
 import { parseHostArgs, type HostOptions } from './domain/host-args.ts';
 import { findTester, type Tester } from './adapters/testers-file.ts';
@@ -31,3 +33,23 @@ export async function startRemotePlay({ log, args, testersFile = TESTERS_FILE, c
     return null;
   }
 }
+
+export type RemotePlayStartDeps = RemoteGameDeps & { args: readonly string[] };
+
+async function startRemotePlayHost({ log, args, startUrl, handleRequest, applyLogin }: RemotePlayStartDeps): Promise<boolean> {
+  const games = createRemoteGames({ log, startUrl, handleRequest, applyLogin });
+  return (await startRemotePlay({ log, args }, games.createRemoteGame)) !== null;
+}
+
+export const remotePlayPart = Object.freeze({
+  pageScript: REMOTE_PAGE_SCRIPT,
+  notMarked: LOG.notMarked,
+  flagOff: LOG.flagOff,
+  notAvailable: TEXT.notAvailable,
+  scaleFactorSwitch: SCALE_FACTOR_SWITCH,
+  scaleFactorOne: SCALE_FACTOR_ONE,
+  refusesPageLoad: isRefusedPageLoad,
+  start: startRemotePlayHost,
+});
+
+export type RemotePlayPart = typeof remotePlayPart;

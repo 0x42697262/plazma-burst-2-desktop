@@ -5,6 +5,7 @@ export const TEXT = Object.freeze({
 export const APP_TEXT = Object.freeze({
   gameMissing: (root: string, runFlag: string) => `No game files found in ${root}.\n\nRun "npm run fetch-game${runFlag}" first (see README.md).`,
   gameMissingTitle: (title: string) => `${title}: game files missing`,
+  modeOff: (id: string, reason: string | null) => `"${id}" is off${reason ? ` (${reason})` : ''}; not starting it.`,
   sadburstHostModes: 'Sad Burst 2: remote play and the player-hosted host are for the official client only.',
   gameFrom: (prefix: string, version: string, root: string) => `${prefix}Game ${version} from ${root}`,
   clientPrefix: (title: string) => `${title}: `,

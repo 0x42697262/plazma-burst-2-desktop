@@ -1,18 +1,18 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import * as esbuild from 'esbuild';
-import { REPO_ROOT, PAGE_BUNDLE_DIR } from '#kernel/config/paths.ts';
+import { REPO_ROOT, PAGE_BUNDLE_DIR, WRAPPER_BUNDLE_DIR } from '#kernel/config/paths.ts';
 import { EDITION } from '#shared/editions/constants.ts';
 import type { Edition } from '#shared/editions/types.ts';
 import { FEATURE, type FeatureId } from '#shared/features/keys.ts';
-import { editionPlugin } from './edition-plugin.ts';
+import { editionPlugin, packagedRootPlugin } from './edition-plugin.ts';
 import {
   LAUNCHER_DIST_DIR, LAUNCHER_PRELOAD_SOURCE, LAUNCHER_SCRIPT_SOURCE, LAUNCHER_SOURCE_DIR, LAUNCHER_STATIC_FILES,
 } from '#features/server_list/paths.ts';
 import { RUNTIME_BUNDLE, RUNTIME_SOURCE } from '#features/hooks/paths.ts';
 import { CLIENT_DIST_DIR, CLIENT_SCRIPT_SOURCE, CLIENT_SOURCE_DIR } from '#features/remote_play/paths.ts';
 import { CLIENT_SCRIPT_FILE, CLIENT_STATIC_FILES } from '#features/remote_play/keys.ts';
-import { BROWSER_TARGET, CHUNK_NAMES, ELECTRON_MODULE, PAGE_ENTRIES, LAUNCHER_PRELOAD_FILE, LAUNCHER_SCRIPT_FILE, NODE_TARGET } from './constants.ts';
+import { BROWSER_TARGET, CHUNK_NAMES, ELECTRON_MODULE, PAGE_ENTRIES, WRAPPER_BUNDLE_FILE, WRAPPER_ENTRY, WRAPPER_TARGET, LAUNCHER_PRELOAD_FILE, LAUNCHER_SCRIPT_FILE, NODE_TARGET } from './constants.ts';
 
 
 const shared: esbuild.BuildOptions = { bundle: true, sourcemap: 'linked', legalComments: 'none', logLevel: 'warning' };
@@ -107,8 +107,24 @@ export async function buildLauncher(outDir: string = LAUNCHER_DIST_DIR): Promise
   return outDir;
 }
 
+export const wrapperBuildOptions = (outfile: string = path.join(WRAPPER_BUNDLE_DIR, WRAPPER_BUNDLE_FILE), edition: Edition = EDITION): esbuild.BuildOptions => ({
+  ...shared,
+  plugins: [editionPlugin(edition), packagedRootPlugin()],
+  entryPoints: [path.join(REPO_ROOT, WRAPPER_ENTRY)],
+  outfile,
+  format: 'cjs',
+  platform: 'node',
+  target: WRAPPER_TARGET,
+  external: [ELECTRON_MODULE],
+});
+
+export async function buildWrapperBundle(outfile: string = path.join(WRAPPER_BUNDLE_DIR, WRAPPER_BUNDLE_FILE), edition: Edition = EDITION): Promise<string> {
+  await esbuild.build(wrapperBuildOptions(outfile, edition));
+  return outfile;
+}
+
 export async function buildAll(edition: Edition = EDITION): Promise<string[]> {
-  const builds = [buildPage(PAGE_BUNDLE_DIR, edition)];
+  const builds = [buildPage(PAGE_BUNDLE_DIR, edition), buildWrapperBundle(path.join(WRAPPER_BUNDLE_DIR, WRAPPER_BUNDLE_FILE), edition)];
   if (hasFeature(edition, FEATURE.serverList)) builds.push(buildLauncher());
   if (hasFeature(edition, FEATURE.hooks)) builds.push(buildHooksRuntime());
   if (hasFeature(edition, FEATURE.remotePlay)) builds.push(buildRemoteClient());

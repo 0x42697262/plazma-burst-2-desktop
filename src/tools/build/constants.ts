@@ -24,3 +24,14 @@ const REGEX_SPECIAL = /[.*+?^${}()|[\]\\]/g;
 export const exactPathFilter = (file: string): RegExp => new RegExp(`^${file.replace(REGEX_SPECIAL, '\\$&')}$`);
 export const wholeWord = (name: string): RegExp => new RegExp(`\\b${name}\\b`);
 export const FAILED_EXIT_CODE = 1;
+export const ROOT_MODULE = 'src/kernel/config/root.ts';
+export const PACKAGED_ROOT_MODULE = [
+  "import path from 'node:path';",
+  "import { app } from 'electron';",
+  "export const APP_ROOT = path.join(__dirname, '..', '..');",
+  'export const USER_ROOT = app.isPackaged ? app.getPath(\'userData\') : APP_ROOT;',
+].join('\n');
+export const WRAPPER_ENTRY = 'src/wrapper/main.ts';
+export const WRAPPER_BUNDLE_FILE = 'main.cjs';
+export const WRAPPER_TARGET = 'node24';
+export const ROOT_PLUGIN_NAME = 'packaged-root';

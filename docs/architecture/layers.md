@@ -45,8 +45,9 @@ credentials, saved maps, logs, the generated `names.js` and `opcodes.js`, and in
   `src/console/index.ts`) and the `chunks/` they share, so shared modules load once; the
   server list page and its preload into `dist/launcher/`, the hooks runtime into
   `dist/hooks/runtime.cjs`, and the remote-play client into `dist/remote-client/`; see
-  [ADR 0001](../adr/0001-typescript-esbuild.md). The wrapper (`src/wrapper/main.ts`),
-  the server, the tools and the tests run the `.ts` sources directly.
+  [ADR 0001](../adr/0001-typescript-esbuild.md). The main process is bundled into
+  `dist/wrapper/main.cjs` for released apps; `npm start`, the server, the tools and the
+  tests run the `.ts` sources directly.
 - The page scripts must add no global besides `pb2dev`, because the game's
   anti-tamper scan compares globals ([anticheat research](../research/anticheat.md),
   §6).
@@ -55,6 +56,9 @@ credentials, saved maps, logs, the generated `names.js` and `opcodes.js`, and in
 
 ## The wrapper
 
+- Features reach the main process only through `src/wrapper/features.ts`
+  (`WRAPPER_PARTS`, one part per feature, each may be missing in an edition;
+  [editions](../operations/editions.md)). `src/wrapper/build-wrapper.ts` builds the parts.
 - `src/wrapper/main.ts` prints `--features` or starts `src/wrapper/app.ts`, the
   composition root: it builds the context (environment, flags, logger) once, refuses a
   start mode whose flag is off, builds the wrapper sides of the features, and answers
@@ -62,8 +66,10 @@ credentials, saved maps, logs, the generated `names.js` and `opcodes.js`, and in
   `__dev/` routes and files, then the game files, then the network.
 - `src/wrapper/platform/` holds what is Electron or file plumbing rather than a feature:
   the settings file sync (`kv-file.ts`), index.html preparation (`index-page.ts`), game
-  files (`game-files.ts`), `__dev/` files and start checks (`dev-files.ts`), the page
-  log, the remote-play windows and the dedicated host's window.
+  files (`game-files.ts`), `__dev/` files and start checks (`dev-files.ts`) and the page
+  log. The remote-play windows and the dedicated host's window belong to their features
+  (`src/features/remote_play/adapters/remote-games.ts`,
+  `src/features/p2p_host/adapters/host-window.ts`).
 
 ## The console
 

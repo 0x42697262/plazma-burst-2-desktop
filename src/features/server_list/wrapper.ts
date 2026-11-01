@@ -41,3 +41,11 @@ export function createServerListWrapper(deps: WrapperDeps, session: GameSession)
 }
 
 export type ServerListWrapper = ReturnType<typeof createServerListWrapper>;
+
+export const serverListPart = Object.freeze({
+  create: createServerListWrapper,
+  launcherPage: LAUNCHER_PAGE,
+  launcherPreload: LAUNCHER_PRELOAD,
+});
+
+export type ServerListPart = typeof serverListPart;

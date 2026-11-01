@@ -2,7 +2,7 @@ import { CATALOG } from '#shared/features/catalog.ts';
 import { EDITION } from '#shared/editions/constants.ts';
 import type { FlagStates } from '#shared/features/types.ts';
 import { parseEnvironment, type Environment } from '#kernel/config/environment.ts';
-import { FEATURES_FILE, REPO_ROOT } from '#kernel/config/paths.ts';
+import { FEATURES_FILE, USER_ROOT } from '#kernel/config/paths.ts';
 import { moveLegacyData, tellMoveReport } from '#kernel/data/move.ts';
 import { TEXT as CONFIG_TEXT } from '#kernel/config/text.ts';
 import { featuresFileStore, splitKnownFeatures, type FileOverrides } from '#kernel/flags/features-file.ts';
@@ -31,7 +31,7 @@ function stopWith(problems: readonly string[]): never {
 }
 
 function buildContext(): WrapperContext {
-  const dataMove = moveLegacyData(REPO_ROOT);
+  const dataMove = moveLegacyData(USER_ROOT);
   const { environment, problems: environmentProblems } = parseEnvironment(process.argv, process.env);
   const problems = [...environmentProblems];
   const fileFlags = readFeaturesFile(problems);

@@ -3,21 +3,16 @@ import fsSync from 'node:fs';
 import path from 'node:path';
 import { app, BrowserWindow, Menu, dialog, protocol, net, session, ipcMain, type MenuItemConstructorOptions, type Session } from 'electron';
 import { CLIENTS } from '#kernel/config/clients.ts';
-import { CONSOLE_BUNDLE_FILE, DATA_DIR, PAGE_BUNDLE_DIR, PAGE_CORE_FILE, REPO_ROOT } from '#kernel/config/paths.ts';
-import { CLIENT, MODE, PAGE_FLAGS_GLOBAL } from '#shared/features/keys.ts';
+import { CONSOLE_BUNDLE_FILE, DATA_DIR, PAGE_BUNDLE_DIR, PAGE_CORE_FILE, USER_ROOT } from '#kernel/config/paths.ts';
+import { CLIENT, FEATURE, MODE, PAGE_FLAGS_GLOBAL } from '#shared/features/keys.ts';
 import { DEV_DIR, ROUTE_NAME } from '#shared/contract/keys.ts';
-import { REMOTE_PAGE_SCRIPT, SCALE_FACTOR_ONE, SCALE_FACTOR_SWITCH } from '#features/remote_play/keys.ts';
-import { TEXT as REMOTE_TEXT, LOG as REMOTE_LOG } from '#features/remote_play/text.ts';
-import { isRefusedPageLoad } from '#features/remote_play/domain/game-page.ts';
-import { startRemotePlay } from '#features/remote_play/wrapper.ts';
-import { CONFIG_FILE_NAME, SETTINGS_FILE_NAME } from '#features/p2p_host/keys.ts';
-import { HOST_LOG } from '#features/p2p_host/text.ts';
 import { TEXT as SADBURST_TEXT } from '#features/client_sadburst/text.ts';
-import { LAUNCHER_PAGE, LAUNCHER_PRELOAD } from '#features/server_list/wrapper.ts';
 import { createLogin } from '#features/login/wrapper.ts';
 import { pinCertificates, type PinnedTarget } from '#features/cert_pinning/wrapper.ts';
+import type { ServerPage } from '#features/p2p_host/wrapper.ts';
 import type { WrapperContext } from './context.ts';
-import { buildWrapper } from './features.ts';
+import { WRAPPER_PARTS } from './features.ts';
+import { buildWrapper } from './build-wrapper.ts';
 import { createDevRouter, createInterceptor } from './http/router.ts';
 import { MAIN_WINDOW, FORBIDDEN, UNAVAILABLE } from './platform/constants.ts';
 import { FOLDER_END, HTML_TYPE, HTTPS_SCHEME, INDEX_FILE, NO_STORE, SCRIPT_TYPE, TEXT_ENCODING, callConsoleScript, moduleScriptTag, scriptTag } from './platform/keys.ts';
@@ -28,8 +23,6 @@ import { createGameFiles, readGameVersion, checkSadburstBuild } from './platform
 import { createDevFiles, checkNamesFile, checkPageBundle } from './platform/dev-files.ts';
 import { textResponse, typedResponse } from './platform/responses.ts';
 import { logPage } from './platform/page-log.ts';
-import { createRemoteGames } from './platform/remote-games.ts';
-import { startDedicatedServer, type ServerPage } from './platform/dedicated-host.ts';
 import type { PageContext } from './platform/context.ts';
 import { CONSTRAINT_SOURCE, DEBUG_LEVEL, FETCH_DEST, FILE_ERROR_METHOD, HTTPS_PREFIX, MENU_ROLE, RELOAD_METHOD, WINDOW_ALL_CLOSED } from './keys.ts';
 import { APP_TEXT as TEXT } from './text.ts';
@@ -41,7 +34,8 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
   const isSadburst = client.id === CLIENT.sadburst;
   const isRemoteHost = environment.mode === MODE.remote;
   const isDedicatedHost = environment.mode === MODE.server;
-  if (isRemoteHost) app.commandLine.appendSwitch(SCALE_FACTOR_SWITCH, SCALE_FACTOR_ONE);
+  const { remotePlayPart, p2pHostPart, serverListPart } = WRAPPER_PARTS;
+  if (isRemoteHost && remotePlayPart) app.commandLine.appendSwitch(remotePlayPart.scaleFactorSwitch, remotePlayPart.scaleFactorOne);
 
   const root = path.resolve(environment.gameDir || client.gameDir);
   const host = client.host;
@@ -54,7 +48,7 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
   const hasPageCoreFeature = flags.lobby_task_guard.on || flags.server_list.on;
   const pageCoreOn = devConsoleOn || hasPageCoreFeature;
   const devSettingsFile = path.join(DATA_DIR, client.settingsFileName);
-  const serverSettingsFile = path.join(DATA_DIR, SETTINGS_FILE_NAME);
+  const serverSettingsFile = p2pHostPart ? path.join(DATA_DIR, p2pHostPart.settingsFileName) : null;
 
   let mainWindow: BrowserWindow | null = null;
   let serverPage: ServerPage | null = null;
@@ -66,20 +60,21 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
   const applyCredentials = (): Promise<void> => login.applyCredentials(session.defaultSession.cookies);
 
   const wrapper = buildWrapper(
-    { log, gameVersion: version || '', isSadburst, repoRoot: REPO_ROOT, gameDir: root, devKvFile: devSettingsFile, host },
+    WRAPPER_PARTS,
+    { log, gameVersion: version || '', isSadburst, repoRoot: USER_ROOT, gameDir: root, devKvFile: devSettingsFile, host },
     {
       hooks: { namesFile: client.names, gamePrefix: prefix },
       gameSession: {
         startLoggedOut,
         applyCredentials,
         loadGame: () => { void liveWindow()?.loadURL(startUrl); },
-        showList: () => { void liveWindow()?.loadFile(LAUNCHER_PAGE); },
+        showList: () => { if (serverListPart) void liveWindow()?.loadFile(serverListPart.launcherPage); },
         setTitle: (title) => { liveWindow()?.setTitle(title); },
       },
     },
   );
   const serverList = wrapper.serverList;
-  const joinTarget = (): (JoinPage & PinnedTarget) | null => serverList.service.joinTarget();
+  const joinTarget = (): (JoinPage & PinnedTarget) | null => serverList?.service.joinTarget() ?? null;
   const isOn = (id: keyof typeof flags): boolean => flags[id].on;
   const intercept = createInterceptor(wrapper.features, isOn);
   const serveDev = createDevFiles({
@@ -99,7 +94,7 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
     onError: (message: string) => { callConsole(FILE_ERROR_METHOD, message); },
   };
   const devSettings = createKvFile(devSettingsFile, settingsEvents);
-  const serverSettings = createKvFile(serverSettingsFile, settingsEvents);
+  const serverSettings = serverSettingsFile ? createKvFile(serverSettingsFile, settingsEvents) : null;
 
   const pageCoreScripts = pageGlobalScript(PAGE_FLAGS_GLOBAL, flags)
     + scriptTag(DEV_DIR + ROUTE_NAME.names)
@@ -127,12 +122,12 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
   async function serveIndex(context: PageContext): Promise<Response> {
     const html = await fs.readFile(path.join(root, INDEX_FILE), TEXT_ENCODING);
     const prepared = prepareIndex(html, {
-      hooks: hooksOn ? wrapper.hooks.injectIndex : null,
+      hooks: hooksOn && wrapper.hooks ? wrapper.hooks.injectIndex : null,
       pageScripts,
       join: joinTarget(),
       serverPage,
-      remoteScript: context.remote ? REMOTE_PAGE_SCRIPT : null,
-      remoteNotMarked: REMOTE_LOG.notMarked,
+      remoteScript: context.remote ? remotePlayPart?.pageScript ?? null : null,
+      remoteNotMarked: remotePlayPart?.notMarked ?? '',
       verbose: log.on(DEBUG_LEVEL) && !isSadburst,
       isServer: !!context.server,
     });
@@ -146,14 +141,14 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
     if (relative === '' || relative.endsWith(FOLDER_END)) relative += INDEX_FILE;
     const preparesIndex = pageCoreOn || hooksOn || context.remote || !!context.server || !!joinTarget();
     if (preparesIndex && relative === INDEX_FILE) return serveIndex(context);
-    const hooked = hooksOn ? wrapper.hooks.changedScript(relative) : null;
+    const hooked = hooksOn && wrapper.hooks ? wrapper.hooks.changedScript(relative) : null;
     if (hooked !== null) return typedResponse(hooked, SCRIPT_TYPE, false);
     return gameFiles.serveFile(relative, url, context.fetch);
   }
 
   async function handleRequest(request: Request, context: PageContext): Promise<Response> {
     const url = new URL(request.url);
-    if (context.remote && isRefusedPageLoad(request.headers.get(FETCH_DEST), request.url, startUrl)) return textResponse(REMOTE_TEXT.notAvailable, FORBIDDEN);
+    if (context.remote && remotePlayPart?.refusesPageLoad(request.headers.get(FETCH_DEST), request.url, startUrl)) return textResponse(remotePlayPart.notAvailable, FORBIDDEN);
     const intercepted = await intercept(request, url, context);
     if (intercepted) return intercepted;
     if (url.hostname === host && url.pathname.startsWith(prefix)) {
@@ -171,11 +166,9 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
     return response;
   }
 
-  const remoteGames = createRemoteGames({ log, startUrl, handleRequest: handleRequestLogged, applyLogin: (cookies) => login.applyQuietly(cookies) });
-
   async function startRemoteHost(): Promise<void> {
-    const remoteHost = await startRemotePlay({ log, args: environment.args }, remoteGames.createRemoteGame);
-    if (!remoteHost) app.quit();
+    const started = await remotePlayPart?.start({ log, args: environment.args, startUrl, handleRequest: handleRequestLogged, applyLogin: (cookies) => login.applyQuietly(cookies) });
+    if (!started) app.quit();
   }
 
   function refuseToStart(): boolean {
@@ -186,17 +179,17 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
       log.error(message);
       dialog.showErrorBox(TEXT.gameMissingTitle(client.title), message);
     } else if (isSadburst && (isRemoteHost || isDedicatedHost)) log.error(TEXT.sadburstHostModes);
-    else if (isRemoteHost && !flags.remote_play.on) log.error(REMOTE_LOG.flagOff);
-    else if (isDedicatedHost && !flags.p2p_host.on) log.error(HOST_LOG.flagOff);
+    else if (isRemoteHost && !flags.remote_play.on) log.error(remotePlayPart?.flagOff ?? TEXT.modeOff(FEATURE.remotePlay, flags.remote_play.reason));
+    else if (isDedicatedHost && !flags.p2p_host.on) log.error(p2pHostPart?.flagOff ?? TEXT.modeOff(FEATURE.p2pHost, flags.p2p_host.reason));
     else return false;
     app.quit();
     return true;
   }
 
   function buildMenu(): void {
-    const showsServerList = !isRemoteHost && !isDedicatedHost && flags.server_list.on;
+    const showsServerList = !isRemoteHost && !isDedicatedHost && flags.server_list.on && serverList !== null;
     const serversMenu: MenuItemConstructorOptions[] = showsServerList
-      ? [{ label: TEXT.serversMenu, submenu: [{ label: TEXT.serverListItem, click: () => { serverList.service.showList(); } }] }]
+      ? [{ label: TEXT.serversMenu, submenu: [{ label: TEXT.serverListItem, click: () => { serverList?.service.showList(); } }] }]
       : [];
     Menu.setApplicationMenu(Menu.buildFromTemplate([
       { role: MENU_ROLE.file },
@@ -215,7 +208,7 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
       title: client.title,
       webPreferences: isSadburst
         ? { backgroundThrottling: false, partition: client.partition ?? undefined }
-        : { backgroundThrottling: false, preload: LAUNCHER_PRELOAD },
+        : { backgroundThrottling: false, preload: serverListPart?.launcherPreload },
     });
     mainWindow = window;
     logPage(window, '', log);
@@ -226,7 +219,7 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
         log.warn(TEXT.notWatching(devSettingsFile, (error as Error).message));
       }
     }
-    if (!flags.server_list.on) {
+    if (!flags.server_list.on || !serverList) {
       void window.loadURL(startUrl);
       return;
     }
@@ -244,7 +237,7 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
     }
     log.debug(TEXT.debugLevel);
     if (pageCoreOn) {
-      checkNamesFile({ namesFile: client.names, repoRoot: REPO_ROOT, gameVersion: version, runFlag: client.runFlag, log });
+      checkNamesFile({ namesFile: client.names, repoRoot: USER_ROOT, gameVersion: version, runFlag: client.runFlag, log });
       checkPageBundle({ pageDir: PAGE_BUNDLE_DIR, entries: devConsoleOn ? [PAGE_CORE_FILE, CONSOLE_BUNDLE_FILE] : [PAGE_CORE_FILE], log });
     }
     if (isRemoteHost || isDedicatedHost) await applyCredentials();
@@ -260,18 +253,19 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
       await startRemoteHost();
       return;
     }
-    if (isDedicatedHost) {
-      await startDedicatedServer({
+    if (isDedicatedHost && p2pHostPart && serverSettingsFile && serverSettings) {
+      const mapCache = wrapper.mapCache;
+      await p2pHostPart.start({
         log,
         args: environment.args,
-        defaultConfigFile: path.join(DATA_DIR, CONFIG_FILE_NAME),
+        defaultConfigFile: path.join(DATA_DIR, p2pHostPart.configFileName),
         devConsoleOn,
         namesFile: client.names,
         settingsFile: serverSettingsFile,
         settings: serverSettings,
         startUrl,
-        findLocalMap: (name) => wrapper.mapCache.findLocalMap(name),
-        mapsDir: wrapper.mapCache.mapsDir,
+        findLocalMap: (name) => mapCache?.findLocalMap(name) ?? Promise.resolve(null),
+        mapsDir: mapCache?.mapsDir ?? '',
         setServerPage: (page) => { serverPage = page; },
         setWindow: (window) => { mainWindow = window; },
         quit: () => { app.quit(); },

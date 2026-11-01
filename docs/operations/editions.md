@@ -58,12 +58,29 @@ The build resolves the list with the feature catalog (`src/kernel/editions/resol
   `import { x } from '#features/<id>/…'` lines and list entries of left-out features go.
   A left-out name still used elsewhere in a list stops the build.
 - Feature folders are named by feature id, which is what the plugin matches.
+- The main process is bundled the same way (`dist/wrapper/main.cjs`). Each feature with
+  main-process code exports one part (`netlogWrapper`, `serverListPart`,
+  `remotePlayPart`, `p2pHostPart` …), listed once in `src/wrapper/features.ts`; the app
+  (`src/wrapper/app.ts`) reaches them only through that list (`WRAPPER_PARTS`), and every
+  part may be missing. `login`, `cert_pinning` and the Sad Burst 2 start check are small
+  and imported directly, so their code is in every main process; their flags still turn
+  them off.
 - Code a feature keeps in the console kernel (the player overrides, the settings table)
   goes only with the whole console.
+
+## Where an installed app keeps its data
+
+`src/kernel/config/root.ts` gives two roots: the code (`APP_ROOT`) and the user's files
+(`USER_ROOT`). Run from the repository, both are the repository. The main-process bundle
+replaces that module (`packagedRootPlugin`): the code is next to the bundle, and once
+the app is installed (`app.isPackaged`) the user's files (`data/`, `game/`, `hooks/`) go
+to Electron's per-user folder for the app, which differs per edition's title.
 
 ## Tests
 
 `src/tools/build/editions.test.ts` builds every file in `editions/`, plus the smallest
 (page core only) and the largest edition, and checks that no left-out feature's side
 module or `entry/` is in the bundles, and that `console.js` exists only with
-`dev_console`. Adding an edition file adds it to the test.
+`dev_console`. It also builds each edition's main process and checks that no left-out
+feature is in it, apart from the three above, and that the edition is compiled in. Adding
+an edition file adds it to the test.
