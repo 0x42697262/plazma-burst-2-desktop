@@ -22,6 +22,7 @@
 12. [Appendix](#12-appendix)
 13. [`RELIABLE_PING` Reference](#13-reliable_ping-reference)
 14. [Server-Side State Checks (`$ММ.$pOeрМ`)](#14-server-side-state-checks-ммpoeрм) (**server side**: they run on the match's server)
+15. [Sad Burst 2 (community client)](#15-sad-burst-2-community-client)
 
 ---
 
@@ -1841,3 +1842,83 @@ When a `find-names` pattern stops matching, the run says which key (`problem: st
 | `$ррТcе(player)` | Your recent hit prediction for that player, if still fresh |
 | `$1eMМеТ(params)` | Server: accept a hit or heal (respawn count must match), subtract the damage |
 | `$cpТОpО(connection)` | Server: a player dies |
+
+---
+
+## 15. Sad Burst 2 (community client)
+
+> **Scope:** Sad Burst 2 build `20261030020533` (client version `1.23`), fetched with `npm run fetch-game -- --sadburst` into `game.sadburst/`, compared with the official client `v1769098419`. Hashed file names change with every Sad Burst build; each row below also names a text anchor that survives a rebuild.
+>
+> **Reading the code:** every Sad Burst script is minified onto one line. `node tools/find-names.js --sadburst --decode gamelogic/<file>.js` fills in its string constants (from the strings file `gamelogic/09094c58e1872195.js`); pipe it through a formatter to read it. The obfuscated names are the official ones, so sections 2–14 apply name for name.
+
+Sad Burst 2 is a fork of the official client: same obfuscated names, same code underneath, bundled and minified, with its own loader, servers, accounts and site around it. **Every client-side anti-cheat layer of sections 3–7 is present and unchanged in logic.** What differs is around them: how the code is loaded, what is global, what is reported where, and one addition that the official client does not have, the build hash sent with every login ([section 16](#16-the-client-build-hash-sad-burst-2)).
+
+### 15.1 Where each piece is
+
+| Official file | Sad Burst file (build `20261030020533`) | Anchor to search for | What |
+|---|---|---|---|
+| `index.html` script tags | `assets/index-Bq64YSI5.js` (the page's loader) + `gamelogic/scripts-manifest.json` | `scripts-manifest.json`, `PB2_CLIENT_BUILD` | Loads, hashes and runs the game scripts (§15.3, §16) |
+| `_strings.js` | `gamelogic/09094c58e1872195.js` (en), `gamelogic/c787a2f8549ff2b2.js` (zh) | `{let e=globalThis;e.$` | String constants, one file per language |
+| `scripts/flash.js` (loaderInfo, `isCompiled`) | `gamelogic/1c875a40b1fa8ffe.js` | `isCompiled=document.location.href.indexOf("/game/")` | Debug flags, error reporter ([§9.15](#915-the-error-reporting-kill-switch-еl1нсi)) |
+| `scripts/libs/tools.js` | `gamelogic/b55097df4cefc728.js` | `globalThis.$oITOo=`, `globalThis.$IeTlO=` | Stack checks, locked arrays (layers C, E) |
+| `scripts/libs/flash.js`, `scripts/connection.js` | `gamelogic/57221ca6425ecb64.js`, `gamelogic/782347948dd26491.js` | `class $ММ{`, `class $рсНAе{` | Network class, connection class, server-side checks (§14) |
+| `scripts/frame2.js` | `gamelogic/8c699c159547a19b.js` | `function $pМоcT(){`, `function $MеOHОe(){` | Value guard, punishment (layers A, B) |
+| `scripts/main.js` | `gamelogic/21894acaaf879a10.js` | `globalThis.$HHOеоH=` | Integrity scan (layer D) |
+| `scripts/screens/MPLobby.js` | `gamelogic/71c7e8f360dea371.js` | `PB2ConnectLobbyAuth` | Lobby login (falls back to the official code path) |
+| — (Sad Burst only) | `gamelogic/2bec0e3852dc7aa6.js` | `PB2ClientVersionField` | Lobby nodes, regions, the login message with the build hash (§16) |
+| — (Sad Burst only) | `gamelogic/68206bdf3a0fbb29.js`, `gamelogic/74cb81bee9b225d7.js` | `__pb2DevProxyInstalled`, `__pb2FlashExportCdnInstalled` | `fetch` and `<img src>` rewriters (§15.4) |
+
+### 15.2 Layer by layer
+
+| Layer | Official | Sad Burst 2 | Same? |
+|---|---|---|---|
+| **A. Value guard** `$pМоcT` / `$oеeес` (§3) | 84 slots, checked per guarded block in multiplayer; skipped when `$еHоНH` (custom map session) is true | The same 84 slots in the same order (diffed slot by slot, `$cАрlHc(<value>, i++)`), the same early exits (`currentFrame!==18`, `$рАIpН`, `!$pMМ1 \|\| $еHоНH`), the same encode/decode | Yes |
+| **B. Punishment** `$MеOHОe` (§4) | Turns the error reporter off, builds `"eval"` from base 36 (`["2t","3a","2p","30"]`), installs the `ENTER_FRAME` memory bomb | Identical | Yes |
+| **C. Stack checks** `$oITOo`, `$T0OMое`, `$oIeeol` (§5) | Reload when `new Error().stack` contains `"at <anonymous>:"` | Identical. The game's own frames are never anonymous here either: each script runs as an inline `<script>` with a random `//# sourceURL=<9 random><index><11 random>.js` (§15.3), so only DevTools and `eval` code is caught, as in the official client. The random names change on every page load, so a breakpoint set by file name does not survive a reload | Yes |
+| **D. Integrity scan** `$HHOеоH` / `$сMlcА1` (§6) | Saves the source of every non-native function on `globalThis` and `$ММ` at `window.onload`, plus the array identities registered with `$HpolеМ`; compares 300 ms slices; reports `RELIABLE_PING` code 1/2/3 and reloads | Identical algorithm and the same string canary ([§9.13](#913-the-string-canary-моеie)); 23 array identities registered with `$HpolеМ` (`$рHоеН`, the four `skin_color_*`, the wall, pusher and water arrays and others). **Active everywhere:** `isCompiled` is true on `sadburst2.com/gameplay/` (the URL has no `/game/`), so the scan runs in single-player too, as in the original official `main.js` | Logic yes; baseline differs (§15.4) |
+| **E. Locked arrays** `$IeTlO` (§7) | List in a top-level `let $pAТAMI` (reachable with an indirect `eval`) | Same registration and compare, but the list is a block-scoped `n` inside `{let e=...,t=...,n=[],o=new Map,i=!0,c=0; ...}`: unreachable from outside. `names.sadburst.js` leaves `lockedArrays` out on purpose | Logic yes; list hidden |
+| **Error reporter** (§9.15) | POSTs to `/h5/index.php?action=report_error` | Builds the report object, then **sends nothing** (no `fetch` in the reporter). `$еl1НсI` still exists and still flips the flag, which no longer matters | No: reporting removed |
+| **`RELIABLE_TASK` eval** ([FINGERPRINTING.md](FINGERPRINTING.md)) | Main server pushes JS source, client `eval`s it, returns the result | Identical handler (`if ($с0А0О \|\| connection !== $ММ.$ceTOI) return; eval("$lIcoН1=(" + src + ")(`...`)")`), so Sad Burst's lobby can run code in the client the same way | Yes |
+| **Device ID** (`JSON.strіngіfy`, Cyrillic `і`) | `$IooорO.$OОOeMе(JSON, save)` adds look-alike `JSON.strіngіfy` / `JSON.pаrsе`: the first returns the saved `first_uid`, whatever it is given; the second records `first_login` / `first_login_proof` | Identical; sent as part 7 of `AUTHENTICATE` (§16.5) | Yes |
+| **Server-side checks** (§14) | HP over `hmax`, respawn desync, aim (`dx > 800+200`, `dy > 400+200`), clock | The shipped server code is identical; the constants are only folded (`M>1e3\|\|r>600`, `>25`, `.99`, `600` doubled for P2P). What Sad Burst's own servers run is not in the client | Shipped code yes |
+| **Build hash** | None: `AUTHENTICATE` carries the literal `"version_h5"` | SHA-256 of every game script, sent in the version field of every lobby and region login | **New** ([§16](#16-the-client-build-hash-sad-burst-2)) |
+
+### 15.3 How the code gets into the page
+
+The official `index.html` lists the scripts as `<script src>` tags. Sad Burst's game page (`sadburst2.com/gameplay/`) has one module script, `assets/index-<hash>.js` (Vite + Vue), which:
+
+1. shows its entry screen (log in with a Sad Burst account, or play as a guest),
+2. fetches `asset-version.txt` and `gamelogic/scripts-manifest.json` (`no-store`),
+3. fetches the strings file of the chosen language and every script of the manifest's `order`, in parallel, each with `?v=<build>` appended,
+4. hashes them ([§16](#16-the-client-build-hash-sad-burst-2)), **before any of them runs**,
+5. runs them in manifest order, each as `document.createElement("script")` with the text set and a random `sourceURL` (`Pc`, `Nc` in the loader).
+
+Consequences for the layers:
+
+- **The scan file's start-up re-eval** (`21894acaaf879a10.js` evals `"//# sourceURL=" + script.src` for each `document.scripts[i]` unless the URL contains `:8383/PB2HTML5/game/`) still runs, but every game script is inline here (`src` is `""`), so it evaluates empty `sourceURL` comments: a no-op.
+- **Script identity is the manifest, not the URL.** DevTools shows the scripts under random names; map them back by content (the anchors in §15.1) or by the number between the two random parts of the name: `0` is the strings file, `1` the first file of `order`, and so on.
+- **This repository** serves the same bytes from `game.sadburst/` at the same URL (`npm run sadburst`, `desktop/main.js`). The dev console is injected as separate `<script>` tags, outside the manifest, so it is not hashed. Hooks would change the bytes of a manifest script, and so the hash: they are off for Sad Burst.
+
+### 15.4 What is global, so what the integrity scan watches
+
+Layer D saves the source of **every non-native function** on `globalThis` and `$ММ` at `window.onload`. Sad Burst adds globals the official client does not have, and they enter that baseline:
+
+| Global | Set by | Effect |
+|---|---|---|
+| `window.fetch` | `68206bdf3a0fbb29.js` (rewrites official-site API URLs to `PB2_API_PROXY_ORIGIN`, default `https://sadburst2.com`), then `74cb81bee9b225d7.js` (rewrites `flash_export/` to `PB2_FLASH_EXPORT_CDN` when set) | In the official client `fetch` is native and skipped by the scan (`[native code]`). Here it is a wrapper, so **replacing `window.fetch` after load trips code 2** (a function's source changed) |
+| `PB2ConnectLobbyAuth`, `PB2ClientVersionField`, `PB2AuthFailMessage`, `PB2HandleMatchRedirect`, `PB2ReconnectLobby`, `pb2RewriteOfficialApi`, ... | `2bec0e3852dc7aa6.js` and the others | Watched the same way: replacing one trips code 2. `PB2_CLIENT_BUILD` is an object, not a function, so the scan does not watch it |
+| `HTMLImageElement.prototype.src` setter | the same two files | On a prototype, not on `globalThis`: not watched |
+
+The scan's report goes to `$ММ.$ceTOI`, which is Sad Burst's lobby connection, not the official server.
+
+### 15.5 What this means for the dev console and this repository
+
+| Feature | Official client in this repo | Sad Burst 2 |
+|---|---|---|
+| Integrity scan | The local `game/scripts/main.js` has the scan removed ([13.9](#139-the-local-mainjs-is-modified)) | **Active**: `game.sadburst/` is the site's code, unmodified |
+| Console map editor (walls, water, pushers: locked arrays, [§7.2](#72-editing-the-level-live-the-dev-consoles-map-editor)) | Safe with the scan removed | **A locked-array edit is a code 3 failure**: the page reloads within about 0.3 s (in single-player too, since the scan runs everywhere), and a report is sent when a lobby connection exists |
+| Console overrides (`god`, `speed`, ...) | Forced from `ENTER_FRAME`, no global replaced | The same; nothing the scan watches is replaced |
+| Network recorder (`net_log`) | Wraps methods on connection objects, not globals | The same; not watched |
+| Hooks | Patch served scripts | Off: they would change the build hash (§16) |
+| Multiplayer protection (`bypass checks`, [§14.8](#148-summary-for-players)) | Uses the match's `approved` / `ranked` | The same fields, from Sad Burst's `MATCH_JOIN_RESPONSE` |
+| Anti-cheat scan report in the console (`net/scan-report.js`) | Names the locked array | Gives the index only (`lockedArrays` is unreachable) |
