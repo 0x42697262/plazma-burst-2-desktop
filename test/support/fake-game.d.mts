@@ -6,6 +6,8 @@ export type FakeGameLog = { net: unknown[]; runs: unknown[]; ran: unknown[]; pri
 export type FakeGame = {
   G: Record<string, any>;
   N: any;
+  globals: Record<string, any>;
+  names: any;
   log: FakeGameLog;
   store: Map<string, string>;
   chars: any[];

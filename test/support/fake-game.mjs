@@ -245,7 +245,7 @@ export async function bootConsole({ mapFile = path.join(REPO, 'test/fixtures/map
   intervals.shift()(); // the boot poll finds the game ready and starts the console
 
   return {
-    G, N, log, store, chars, triggers, globalsBeforeConsole,
+    G, N, globals: G, names: N, log, store, chars, triggers, globalsBeforeConsole,
     intervals, // every setInterval callback, in the order they were made
     player: chars[0],
     // Runs a line and returns what it printed (without the echoed command).
