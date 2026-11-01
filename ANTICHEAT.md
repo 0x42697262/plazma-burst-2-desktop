@@ -23,6 +23,7 @@
 13. [`RELIABLE_PING` Reference](#13-reliable_ping-reference)
 14. [Server-Side State Checks (`$ММ.$pOeрМ`)](#14-server-side-state-checks-ммpoeрм) (**server side**: they run on the match's server)
 15. [Sad Burst 2 (community client)](#15-sad-burst-2-community-client)
+16. [The client build hash (Sad Burst 2)](#16-the-client-build-hash-sad-burst-2)
 
 ---
 
@@ -1922,3 +1923,338 @@ The scan's report goes to `$ММ.$ceTOI`, which is Sad Burst's lobby connection,
 | Hooks | Patch served scripts | Off: they would change the build hash (§16) |
 | Multiplayer protection (`bypass checks`, [§14.8](#148-summary-for-players)) | Uses the match's `approved` / `ranked` | The same fields, from Sad Burst's `MATCH_JOIN_RESPONSE` |
 | Anti-cheat scan report in the console (`net/scan-report.js`) | Names the locked array | Gives the index only (`lockedArrays` is unreachable) |
+
+---
+
+## 16. The client build hash (Sad Burst 2)
+
+> **Scope:** Sad Burst 2 build `20261030020533`, client version `1.23`. The official client has nothing like this: its `AUTHENTICATE` carries the literal `"version_h5"`.
+>
+> **Names:** the loader (`assets/index-Bq64YSI5.js`) is Vite output, so its functions are minified to two letters (`Tc`, `zc`, `Ac`, ...). Those letters change on every rebuild. The anchors in the right-hand column of 16.1 survive a rebuild. The code below is de-minified by hand: identifiers renamed, behaviour unchanged, with the minified name in a comment.
+
+### 16.1 Summary
+
+Once per page load, after the player picks "log in" or "guest" on the entry screen, the page's loader downloads every game script listed in `gamelogic/scripts-manifest.json`, concatenates their raw bytes in a fixed order, and computes a **SHA-256** over them with WebCrypto. It stores `{ version, hash, bytes }` in `globalThis.PB2_CLIENT_BUILD`, **then** runs the scripts. Every later login, to a lobby node or to a region node, sends that triple in the version field of `RELIABLE_AUTHENTICATE`:
+
+```
+version_h5/<client version>/<sha256, 64 hex chars>/<total bytes hashed>
+version_h5/1.23/d43a92d54cdedf74941d422410256cc95177020f5ae03c50391e5252966871c9/1866990
+```
+
+The server answers `["ok", <user JSON>, <extra>]` or `["fail", <reason>]`. A reason of `"badversion"` is shown as `GAME VERSION MISMATCH. RESTART GAME OR DOWNLOAD NEW GAME VERSION FROM WEBSITE`. What the server does with the hash beyond that is server-side and not in the client.
+
+| Step | Where (build `20261030020533`) | Minified name | Anchor |
+|---|---|---|---|
+| Entry screen → load | `assets/index-Bq64YSI5.js` | `Uc(login, password)` | `await Tc(),await Promise.all([` |
+| Build id and client version | same | `Tc()`, globals `bc`, `xc` | `` `asset-version.txt`,{cache:`no-store`} `` |
+| Cache-busting URL | same | `wc(url)`, `Cc(url)` | `` ?v=${encodeURIComponent( `` |
+| Manifest | same | `Dc()`, `Ec()` | `` `scripts manifest` `` |
+| Download | same | `zc(lang, login, password)`, `kc(url)` | `` {cache:`default`} `` |
+| Hash input order | same | `_c(manifest)` | `e.strings.zh\|\|t` |
+| Hash | same | `Ac(manifest, bytesByPath)`, `yc(buffers)`, `vc(digest)` | `` crypto.subtle.digest(`SHA-256` `` |
+| Run the scripts | same | `Pc(index, code)`, `Nc(index)` | `` //# sourceURL= `` |
+| Version field | `gamelogic/2bec0e3852dc7aa6.js` | `D()` = `globalThis.PB2ClientVersionField` | `PB2ClientVersionField` |
+| Login message | same | `H(connection, done, kind)` | `RELIABLE_AUTHENTICATE` |
+| Lobby node loop | same | `y(done)`, `ee(url, generation, done)` | `Connecting to lobby node ` |
+| Region login | same | `ie(url, done)` | `Connecting to region ` |
+| Failure text | same | `m(reason)` = `globalThis.PB2AuthFailMessage` | `badversion` |
+| Fallback login path | `gamelogic/71c7e8f360dea371.js` (`MPLobby`) | — | `PB2ClientVersionField=="function"` |
+| Server-side handler (shipped) | `gamelogic/57221ca6425ecb64.js` (`$ММ.$c0рlc`) | `$с0A.$ITTНрl(...)` (`authLogin`) | `Refresh page to get new version of the game` |
+
+### 16.2 Phase 1: build id and client version (`Tc`)
+
+```js
+let assetBuild = '';          // bc: build id, used for ?v= cache busting
+let clientVersion = '';       // xc: the version reported to the lobby
+
+async function loadAssetVersion() {                       // Tc
+  if (assetBuild) return assetBuild;
+  try {
+    const res = await fetch('asset-version.txt', { cache: 'no-store' });
+    if (res.ok) {
+      const lines = String(await res.text() || '').trim().split(/\r?\n/);
+      if (lines[0]?.trim()) assetBuild = lines[0].trim();  // "20261030020533"
+      clientVersion = lines[1]?.trim() || '';               // "1.23"
+    }
+  } catch {}
+  assetBuild ||= String(Date.now());                       // no file: a fresh value per load
+  globalThis.PB2_ASSET_VERSION = assetBuild;
+  return assetBuild;
+}
+const stripQuery = (u) => String(u || '').split('?')[0] || '';                       // Cc
+const withBuild = (u) => stripQuery(u) && `${stripQuery(u)}?v=${encodeURIComponent(assetBuild || '0')}`;  // wc
+```
+
+- `asset-version.txt` is two lines: the build id (`20261030020533`) and the client version (`1.23`). Only line 2 goes into the version field. Line 1 only busts caches.
+- If the file cannot be read, `clientVersion` stays `""` and the field becomes `version_h5//<hash>/<bytes>`.
+- `Uc` (the entry point) calls `Tc` first, then loads `loading_screen.css` and `mobileControls.css` and the fonts, then calls `zc(lang, login, password)`. `Uc` has a re-entry guard (`Bc`): one load per page.
+
+### 16.3 Phase 2: download (`Dc`, `zc`, `kc`)
+
+```js
+async function loadManifest() {                                                      // Dc
+  const res = await fetch(withBuild('gamelogic/scripts-manifest.json'), { cache: 'no-store' });
+  if (!res.ok) throw Error('Failed to load gamelogic/scripts-manifest.json');
+  const m = await res.json();
+  if (!m || !Array.isArray(m.order) || !m.strings?.en) throw Error('Invalid scripts manifest');   // Ec
+  return m;
+}
+
+async function fetchScript(url) {                                                    // kc
+  const res = await fetch(url, { cache: 'default' });
+  if (!res.ok) throw Error(`Failed to load ${url}`);
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  return { url, code: new TextDecoder('utf-8').decode(bytes), bytes };
+}
+
+async function loadGame(lang, login, password) {                                     // zc
+  const info = loaderInfo();                                                         // Fc
+  info.parameters.l = login || ''; info.parameters.p = password || '';
+  globalThis.PB2_CAMPAIGN_MAP_BASE = 'gamelogic/campaign/';
+  const manifest = await loadManifest();
+  const strings = manifest.strings[lang] || manifest.strings.en;
+  if (!strings) throw Error('Missing strings entry');
+  const urls = [strings, ...manifest.order].map(withBuild);
+  const flash = manifest.flash ? stripQuery(manifest.flash) : '';
+  const fetched = await Promise.all(urls.map((u) => fetchScript(u)));   // parallel, progress bar per file
+  const bytesByPath = new Map(fetched.map((f) => [stripQuery(f.url), f.bytes]));
+  await hashBuild(manifest, bytesByPath);                               // Ac: BEFORE any script runs
+  for (let i = 0; i < fetched.length; i++) {
+    runScript(i, fetched[i].code);                                      // Pc
+    if (sameFile(fetched[i].url, flash)) { /* re-apply loaderInfo l/p after flash.js reset it */ }
+  }
+  return manifest;
+}
+```
+
+- `login` / `password` come from the entry screen. Account login: the site's login form (`ol(login, password)` → session token), then `T(login, password)`. Remembered session: `T(login, game_token)`. Guest: `T('', '')`. They reach the lobby through `loaderInfo.parameters.l` / `.p` (16.6).
+- Scripts are fetched with `cache: 'default'`, so the browser HTTP cache serves repeats. The `?v=<build>` suffix makes a new build a new URL. The manifest itself is `no-store`.
+- `bytes` are the response body **after** HTTP content decoding (gzip/brotli removed), so the hash is over the files as stored, not over the wire encoding.
+
+### 16.4 Phase 3: the hash (`_c`, `Ac`, `yc`, `vc`)
+
+```js
+const hashOrder = (m) => {                                                           // _c
+  const en = m.strings.en;
+  return [en, m.strings.zh || en, ...m.order];
+};
+const toHex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');  // vc
+
+async function sha256Concat(parts) {                                                 // yc
+  if (!globalThis.crypto?.subtle) return null;          // not a secure context: no hash at all
+  let total = 0;
+  for (const p of parts) total += p.length;
+  const all = new Uint8Array(total);
+  let at = 0;
+  for (const p of parts) { all.set(p, at); at += p.length; }
+  return { hash: toHex(await crypto.subtle.digest('SHA-256', all)), bytes: total };
+}
+
+async function hashBuild(manifest, bytesByPath) {                                    // Ac
+  globalThis.PB2_CLIENT_BUILD = undefined;
+  const parts = [];
+  for (const path of hashOrder(manifest)) {
+    let b = bytesByPath.get(path);
+    if (!b) b = (await fetchScript(withBuild(path))).bytes;   // e.g. the other language's strings
+    parts.push(b);
+  }
+  const r = await sha256Concat(parts);
+  if (r) globalThis.PB2_CLIENT_BUILD = { version: clientVersion, ...r };
+}
+```
+
+**The input, exactly:**
+
+```
+SHA-256( bytes(strings.en) ‖ bytes(strings.zh ?? strings.en) ‖ bytes(order[0]) ‖ … ‖ bytes(order[n-1]) )
+```
+
+- **Concatenation without separators or lengths**, in that fixed order. The order is the manifest's, so a manifest that lists the same files in another order is another hash.
+- **Both languages, always.** Only the chosen language's strings file is fetched for running. `Ac` fetches the other one now (`bytesByPath` misses it), so the hash is the same whatever the language. A build without `zh` hashes `en` twice.
+- **`bytes`** is the total length hashed (`1866990` for this build: 54 files, `en` + `zh` + 52 in `order`). It is reported next to the hash, so the server can tell a truncated download from a modified one before comparing digests.
+- **Not covered:** `index.html`, `assets/*` (the loader itself, the Vue shell), `asset-version.txt`, the manifest, CSS, fonts, and everything under `flash_export/` (images, sounds, and the sprite sheet `.js` files, which are fetched and parsed as data, not run). So a change to the loader, or to anything it runs that is not in the manifest, does not change the hash.
+- **No hash at all** when `crypto.subtle` is missing (an insecure context: `http:` other than `localhost`). `PB2_CLIENT_BUILD` then stays `undefined` and the field falls back to the plain `"version_h5"` (16.6).
+- **Computed before the code runs.** `Ac` finishes before the first `Pc`, so no game code can influence the computation.
+
+**Reproducing it** for a copy on disk (`game.sadburst/`):
+
+```bash
+node -e '
+const fs = require("fs"), crypto = require("crypto");
+const m = JSON.parse(fs.readFileSync("game.sadburst/gamelogic/scripts-manifest.json"));
+const files = [m.strings.en, m.strings.zh || m.strings.en, ...m.order];
+const all = Buffer.concat(files.map((f) => fs.readFileSync("game.sadburst/" + f)));
+const version = fs.readFileSync("game.sadburst/asset-version.txt", "utf8").trim().split(/\r?\n/)[1] || "";
+console.log(`version_h5/${version}/${crypto.createHash("sha256").update(all).digest("hex")}/${all.length}`);'
+```
+
+`npm run sadburst` serves these files byte for byte, so this is the value its logins carry. If it differs from what the site's own page computes, the copy is out of date: the app warns at start when the site's build id is newer (`checkSadburstBuild`, `desktop/main.js`).
+
+### 16.5 Phase 4: running the scripts (`Pc`, `Nc`)
+
+```js
+const names = new Map();
+function randomName(index) {                                                         // Nc
+  if (names.has(index)) return names.get(index);
+  const pick = () => ALPHANUM[Math.random() * 62 | 0];
+  const name = `${Array.from({ length: 9 }, pick).join('')}${index}${Array.from({ length: 11 }, pick).join('')}.js`;
+  names.set(index, name);
+  return name;
+}
+function runScript(index, code) {                                                    // Pc
+  const s = document.createElement('script');
+  s.textContent = `${code}\n//# sourceURL=${randomName(index)}`;
+  document.body.appendChild(s);
+}
+```
+
+- What runs is the decoded text of the same bytes that were hashed (`code` and `bytes` come from the same response). Index `0` is the strings file, `1` the first file of `order`.
+- Hashing and running are separate steps on the same data. **The hash says what was downloaded, not what is running.** Anything that changes the code after this point leaves the hash as it was: an extension, DevTools, a `RELIABLE_TASK` from the server ([FINGERPRINTING.md](FINGERPRINTING.md)), or the game's own runtime state.
+
+### 16.6 Phase 5: the login message (`D`, `H`)
+
+```js
+function versionField() {                                                            // D, globalThis.PB2ClientVersionField
+  const b = globalThis.PB2_CLIENT_BUILD;
+  return !b || !b.hash ? 'version_h5' : `version_h5/${String(b.version || '')}/${b.hash}/${String(b.bytes || 0)}`;
+}
+
+function authenticate(connection, done, kind) {                                      // H
+  let login = '.guest', password = '.guest';
+  const p = globalThis.loaderInfo?.parameters;
+  if (p && p.l !== '') { login = p.l; password = p.p; }
+  const r36 = () => Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(36);
+  connection.send(RELIABLE, [                                                        // $OMeTо($ММ.$МеoрО, ...)
+    $ММ.RELIABLE_AUTHENTICATE,
+    login,
+    password,
+    versionField(),                  // read now, at send time, from the global
+    'hash_h5',                       // legacy field, constant
+    $ММ.CALLBACK_PLACEHOLDER,        // $ММ.$p1еeс -> callback id (13.3)
+    nickname,                        // $1еT1Н: the name typed on the name prompt
+    JSON.strіngіfy(r36() + '.' + r36() + '.' + r36() + '.' + r36()),  // Cyrillic і: returns the saved device id
+    '1769098189070',                 // constant: the official client build timestamp
+  ], (reply) => {
+    if (reply[0] === 'ok') {
+      $ММ.user = JSON.pаrsе(reply[1]);          // Cyrillic а/е: also saves first_login / first_login_proof
+      applyRegions(reply);                       // Y: reply[2] = { regions: [...] }
+      $ММ.$1МАTMH = performance.now();           // the clock zero of state part 19 (14.7)
+      /* kind 'lobby':  PB2_LOBBY_CONN = $ММ.$00е0T = $ММ.$ceTOI = connection
+         kind 'region': PB2_REGION_CONN = $ММ.$ceTOI = connection */
+      done(null, connection);
+    } else done(authFailMessage(reply[1]) || 'auth failed');                         // m
+  });
+}
+```
+
+**On the wire** (one reliable message, framed as in [13.3](#133-on-the-wire); part 0 is the type, then):
+
+| Part | Value | Notes |
+|---|---|---|
+| 1 | login, or `.guest` | From the entry screen |
+| 2 | password, the site's game token, or `.guest` | Sent as text inside the TLS connection |
+| 3 | **`version_h5/1.23/<sha256>/<bytes>`** | `"version_h5"` when there is no hash |
+| 4 | `hash_h5` | Constant; despite its name, not the hash |
+| 5 | callback id | Encoded number (13.3); the reply's `RESPONSE` names it |
+| 6 | nickname | |
+| 7 | `"<device id>"` | JSON-quoted. The look-alike `JSON.strіngіfy` ignores its argument and returns the `first_uid` kept in the save data ([§15.2](#152-layer-by-layer)) |
+| 8 | `1769098189070` | Constant. The shipped server code refuses a login without part 8: `Server: Refresh page to get new version of the game` |
+
+In the network log (`npm run sadburst`, [README §7](README.md#7-network-log)) it is the first reliable message of each connection:
+
+```
+OUT  REL    #0 AUTHENTICATE(".guest", ".guest", "version_h5/1.23/d43a92d5…71c9/1866990", "hash_h5", "h", "Player", "\"k2…\"", "1769098189070")
+IN   REL    #0 RESPONSE(100, "ok", {"nickname":…}, {"regions":[…]})  <- answers #0 AUTHENTICATE (its part 5, "h", was callback ID 100), … ms later
+```
+
+**Where it is sent.** Every connection that logs in sends it, and the hash is the same each time:
+
+1. **Lobby.** `globalThis.PB2ConnectLobbyAuth` (`y`) marks a multiplayer session, then tries the lobby nodes in order: `ca.sadburst2.com:2053` (US), `helper.sytes.net:2053` (EU-DE), `106.14.73.83:2053` (CN-SH), `cn.sadburst2.com:2053` (CN-HK), with the last node that worked moved first (kept in memory; the old `localStorage` key `pb2_lobby_last_ok_url` is deleted at start). Each try is `ee`: a new socket.io connection (`$ММ.$OeАоoI(url)`), `H(..., 'lobby')`, and a 7 s timeout (`x = 7e3`). A timeout or connection error goes on to the next node. An authentication **failure** (`"fail"`) stops the loop: the reason goes to chat (`Unable to authenticate as <login>: <reason>`).
+2. **Regions.** Creating or joining a match can be answered with a redirect (`PB2HandleMatchRedirect`, `oe`): `{ ws_url, region_id, action: "create" | "join", ... }`. The client opens a second connection to `ws_url` and logs in there with `H(..., 'region')`, the same message. Only then does it send the `CREATE_MATCH` / `JOIN_MATCH`.
+3. **Fallback.** If `PB2ConnectLobbyAuth` is missing, the official `MPLobby` code logs in itself, and still asks `PB2ClientVersionField()` when it exists.
+
+### 16.7 Phase 6: the answer
+
+| Reply | Client |
+|---|---|
+| `["ok", user, extra]` | Logged in. `extra.regions` fills the region list (`PB2ApplyRegionList`). |
+| `["fail", "badversion"]` | `GAME VERSION MISMATCH. RESTART GAME OR DOWNLOAD NEW GAME VERSION FROM WEBSITE` (`PB2AuthFailMessage`). The name prompt shows the same text for this reason (`8c699c159547a19b.js`, anchor `t[0]=="badversion"`). |
+| `["fail", "badlogin" \| "badpassword" \| "banaccount" \| …]` | Shown as text; the strings file maps the codes to messages (`LOGIN IS INCORRECT`, `WRONG PASSWORD`, `YOUR ACCOUNT DISABLED FOR SOME REASON. ...`). |
+| `["fail", <anything else>]` | Shown as is. |
+| no reply in 7 s (lobby) | Next node; after the last one: `Could not reach any lobby server`. |
+
+**The server side.** The shipped server code (the code a player-hosted host runs, and in all likelihood the server's own, §14.1) reads the parts and hands them over:
+
+```js
+else if (type === $ММ.RELIABLE_AUTHENTICATE) {
+  const [, login, password, version, hash, callbackId] = parts;
+  const nickname = parts[6] || '';
+  let firstUid = parts[7] || '"0hash"'; firstUid = firstUid.substring(1, firstUid.length - 1);
+  const build = parts[8];
+  if (build === undefined) respond(callbackId, ['fail', 'Server: Refresh page to get new version of the game']);
+  if (now > connection.lastAuth + 3000) {
+    connection.lastAuth = now;
+    $с0A.$ITTНрl(connection, version, hash, login, password, nickname, firstUid, build,   // authLogin
+      (error = null) => respond(callbackId, error === null ? ['ok', JSON.stringify(connection.user)] : ['fail', error]));
+  } else respond(callbackId, ['fail', 'Server: Too frequently']);
+}
+```
+
+`$с0A.$ITTНрl` is the server's account module. Its code is not in the client: Sad Burst's lobby has its own (the same holds for the official server, §14.3). So the client shows only that `version` arrives at the account module as one string. The comparison itself, and the policy behind it, are on the server. The policy could be an exact allow-list, the latest build only, or log-and-accept. The client side proves only that `badversion` is an expected answer.
+
+### 16.8 Lifecycle
+
+```text
+page load (sadburst2.com/gameplay/)
+  entry screen: log in | remembered session | guest           assets/index-*.js
+  Uc(login, password)                                          once per page (Bc)
+    Tc   asset-version.txt  -> build id, client version         no-store
+    zc   manifest (no-store), strings[lang] + order (?v=build, cache default), in parallel
+    Ac   + the other language's strings; SHA-256 over en ‖ zh ‖ order
+         PB2_CLIENT_BUILD = { version: "1.23", hash, bytes }    <- START: the value exists
+    Pc   run every script, in order (random sourceURL)
+  ... single-player: nothing is sent ...
+  Multiplayer
+    PB2ConnectLobbyAuth -> node 1..4: AUTHENTICATE(..., versionField(), ...)   <- sent
+      ok   -> lobby connection; regions
+      fail -> chat message, no other node
+    create / join -> redirect -> region node: AUTHENTICATE(..., versionField(), ...)   <- sent again
+  Leaving multiplayer (PB2LeaveMultiplayer): connections closed; PB2_CLIENT_BUILD kept
+  Next multiplayer session: the same value is sent again
+page reload                                                    <- END: the next load computes it anew
+```
+
+- **Computed once per page load**, and never refreshed while the page lives.
+- **Read at send time.** `versionField()` reads `globalThis.PB2_CLIENT_BUILD` when each login is sent, not when the hash is made.
+- **Single-player sends nothing.** The hash only leaves the page in a login.
+
+### 16.9 Properties, for whoever relies on it
+
+| Property | Holds? | Why |
+|---|---|---|
+| Same files → same value | Yes | Deterministic: fixed order, raw bytes, both languages, independent of the chosen language |
+| A stale copy is noticed | Yes, if the server compares against the current build | The value changes with any byte of any manifest script |
+| A careless modification is noticed | Yes | Editing a game script on disk, or patching it as it is served (this repository's hooks), changes the bytes that are hashed |
+| The code that runs is the code that was hashed | **No** | Hashing ends before the scripts run. Nothing ties the running code to the digest afterwards (16.5) |
+| The value is authentic | **No** | It is computed and reported by the client, in a writable global, with no key, nonce or server challenge. A modified client can report whatever value it likes. So this is a version and integrity *signal*, not an attestation |
+| The loader is covered | **No** | `assets/*` and `index.html` are outside the hash, and the loader is the code that computes it |
+| Replay of a known-good value | Not prevented | The value is static per build and the same for every user and every login |
+
+For a server operator this means: the hash reliably separates current, stale and naively patched clients. As proof that a client is unmodified it is worth nothing on its own. It needs server-side authority (§10.5, §14.9) to be meaningful.
+
+### 16.10 Names in this section
+
+| Name | Where | Meaning |
+|---|---|---|
+| `globalThis.PB2_CLIENT_BUILD` | loader | `{ version, hash, bytes }`, or `undefined` before hashing / without WebCrypto |
+| `globalThis.PB2_ASSET_VERSION` | loader | The build id (line 1 of `asset-version.txt`) |
+| `globalThis.PB2ClientVersionField` | `2bec0e3852dc7aa6.js` | Builds the version field from `PB2_CLIENT_BUILD` |
+| `globalThis.PB2AuthFailMessage` | same | Turns `badversion` into its message |
+| `globalThis.PB2ConnectLobbyAuth` | same | Lobby node loop and login |
+| `globalThis.PB2HandleMatchRedirect` | same | Region redirect, second login |
+| `globalThis.PB2_LOBBY_CONN`, `PB2_REGION_CONN` | same | The logged-in connections |
+| `$ММ.$OeАоoI(url)` | `57221ca6425ecb64.js` | New socket.io connection to a lobby or region node |
+| `$ММ.$p1еeс` | same | Callback placeholder (13.3) |
+| `$ММ.$1МАTMH` | same | `performance.now()` at login: the zero of the clock in state part 19 (14.7) |
+| `$1еT1Н` | name prompt (`41749539d442b628.js`) | The nickname |
+| `$с0A.$ITTНрl` | server only (`names.js`: `authLogin`) | The account module's login handler |
