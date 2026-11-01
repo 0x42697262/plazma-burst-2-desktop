@@ -72,7 +72,7 @@ The community client Sad Burst 2 has commands of its own; the ones above never t
 | `game.sadburst/`, `desktop/dev/names.sadburst.js`, `desktop/dev/opcodes.sadburst.js` | Sad Burst 2: its game page, names and editor action names ([section 9](#9-sad-burst-2-community-client)) | no |
 | `src/tools/fetch-game/sadburst.ts`, `src/tools/find-names/sadburst.ts` | Sad Burst 2: its download and its names (called by `fetch-game` and `find-names` with `--sadburst`) | yes |
 | `game.previous/` | The copy before the last update | no |
-| `src/**/*.test.*`, `test/support/` | Tests next to the code they test, and the fake game they share (`npm test`) | yes |
+| `src/**/*.test.ts`, `src/**/*.fixture.ts` | Tests next to the code they test, and the fixtures they share, such as the fake game in `src/console/testing/` (`npm test`) | yes |
 
 ## 3. Getting the game files
 

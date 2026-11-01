@@ -15,7 +15,7 @@ Feature flag `map_editor` (on by default; local and server modes). It needs
   (`input.ts`), the panels (`panels.ts`, `trigger-panel.ts`, `dropdown.ts`,
   `fields.ts`) and their look (`style.ts`).
 
-Tests: `src/features/map_editor/map-editor.test.mjs`.
+Tests: `src/features/map_editor/map-editor.test.ts`.
 
 - `editor` turns the editor on and off; so does the editor key (setting `editor_key`),
   which only works while the flag is on.
