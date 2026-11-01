@@ -1,7 +1,9 @@
 export const CONSOLE_ENTRY: string;
 export const LEGACY_CONSOLE_DIR: string;
 
-export type FakeGameLog = { net: unknown[]; runs: unknown[]; ran: unknown[]; printed: string[]; frames?: unknown };
+export type FakeGameLog = { net: any[]; runs: any[]; ran: any[]; printed: Lines; frames: any[]; drawn: any[] };
+
+export type Lines = [string, ...string[]];
 
 export type FakeGame = {
   G: Record<string, any>;
@@ -15,9 +17,9 @@ export type FakeGame = {
   globalsBeforeConsole: string[];
   intervals: (() => void)[];
   player: any;
-  run(line: string): string[];
+  run(line: string): Lines;
   frame(count?: number): void;
-  press(code: string, modifiers?: Record<string, unknown>): string[];
+  press(code: string, modifiers?: Record<string, unknown>): Lines;
   setMP(on: boolean): void;
   dispatch(...args: any[]): unknown;
 };

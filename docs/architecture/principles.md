@@ -391,3 +391,9 @@ repositories.
 - **Modular.** One folder per feature under `src/features/<id>/`, wired in through one
   list per side (wrapper, console). See [layers.md](layers.md).
 - **Language variant.** American English in code, UI text and docs.
+
+
+## Tests and `any`
+
+Tests and fixtures (`*.test.ts`, `*.fixture.ts`) may use `any`: they drive a fake of the
+obfuscated, untyped game, whose objects have no useful static shape. Production code may not.
