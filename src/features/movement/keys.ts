@@ -1,1 +1,1 @@
-export const OVERRIDE_NAME = 'movement overrides';
+export const OVERRIDE_NAME = Object.freeze({ speed: 'speed override', jump: 'jump override', gravity: 'gravity override', fly: 'fly override', swords: 'swords override', worldGravity: 'world gravity override' });

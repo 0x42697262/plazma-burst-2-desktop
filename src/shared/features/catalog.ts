@@ -12,6 +12,8 @@ const NEEDS_CONSOLE: readonly FeatureId[] = Object.freeze([FEATURE.devConsole]);
 const capabilitiesOf = (feature: FeatureId, needs: Readonly<Record<string, readonly string[]>>): CapabilityDefinition[] =>
   Object.entries(needs).map(([id, requires]) => Object.freeze({ id, feature, requires: Object.freeze([...requires]) }));
 
+const noNeeds = (ids: Readonly<Record<string, string>>): Readonly<Record<string, readonly string[]>> => Object.fromEntries(Object.values(ids).map((id) => [id, []]));
+
 const define = (id: FeatureId, { capabilities = {}, ...spec }: FeatureSpec = {}): FeatureDefinition => Object.freeze({
   id,
   defaultOn: true,
@@ -36,7 +38,7 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   consoleFeature(FEATURE.health, {
     capabilities: { [CAPABILITY.health.god]: [], [CAPABILITY.health.hp]: [], [CAPABILITY.health.heal]: [], [CAPABILITY.health.revive]: [] },
   }),
-  consoleFeature(FEATURE.movement),
+  consoleFeature(FEATURE.movement, { capabilities: noNeeds(CAPABILITY.movement) }),
   consoleFeature(FEATURE.guns),
   consoleFeature(FEATURE.binds),
   consoleFeature(FEATURE.triggers),

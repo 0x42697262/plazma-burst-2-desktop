@@ -1,5 +1,5 @@
 import { FEATURE } from '#shared/features/keys.ts';
-import type { ConsoleFeature } from '#console/feature-types.ts';
-import { movementOverride } from './overrides.ts';
+import { consoleFeatureOf } from '#console/feature-types.ts';
+import { MOVEMENT_PARTS } from './capabilities.ts';
 
-export const movementConsole: ConsoleFeature = Object.freeze({ id: FEATURE.movement, overrides: [movementOverride] });
+export const movementConsole = consoleFeatureOf(FEATURE.movement, MOVEMENT_PARTS);

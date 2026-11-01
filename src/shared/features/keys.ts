@@ -46,6 +46,9 @@ export const capabilityId = (feature: FeatureId, name: string): string => featur
 
 export const CAPABILITY = Object.freeze({
   health: Object.freeze({ god: 'health.god', hp: 'health.hp', heal: 'health.heal', revive: 'health.revive' }),
+  movement: Object.freeze({
+    speed: 'movement.speed', jump: 'movement.jump', gravity: 'movement.gravity', fly: 'movement.fly', swords: 'movement.swords', worldGravity: 'movement.world_gravity',
+  }),
 });
 
 export const PAGE_CAPABILITIES_GLOBAL = 'PB2_CAPABILITIES';
