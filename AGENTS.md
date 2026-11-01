@@ -45,3 +45,4 @@ One line per behavior change: what to do, and the result to expect.
 - P2: `npm start -- --features` lists the flags. `PB2_FEATURES=-zoom npm start` stops
   with "cannot be changed yet" (until `zoom` is migrated). `PB2_HOOKS=0 npm run smoke -- --run features`
   shows `hooks off env`.
+- P3.1: `npm test` (src/features/netlog/*.test.ts). In the game with `net_log on`, log in and run `netlog show type:authenticate`: the password part reads `‹redacted›`. `PB2_FEATURES=-netlog npm start`: `netlog` is an unknown command, and `__dev/netlog` answers 404.

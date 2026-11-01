@@ -11,7 +11,7 @@ const injected = resolveFlags({
 test('"features" lists every flag as the wrapper resolved it, and a feature that is off registers nothing', async () => {
   Object.defineProperty(globalThis, 'PB2_FEATURES', { value: Object.freeze(injected) });
   const game = await bootConsole();
-  const printed = game.run('features') as string[];
+  const printed = game.run('features');
   assert.equal(printed[0], 'Feature flags');
   assert.equal(printed.length, CATALOG.length + 2);
   assert.match(printed.find((line) => line.startsWith('hooks ')) ?? '', /^hooks\s+off\s+env\s/);

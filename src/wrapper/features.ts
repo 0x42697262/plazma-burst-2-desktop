@@ -1,3 +1,6 @@
-import type { WrapperFeature } from './feature-types.ts';
+import type { WrapperDeps, WrapperFeature } from './feature-types.ts';
+import { netlogWrapper } from '#features/netlog/wrapper.ts';
 
-export const WRAPPER_FEATURES: readonly WrapperFeature[] = Object.freeze([]);
+export const wrapperFeatures = (deps: WrapperDeps): WrapperFeature[] => [
+  netlogWrapper(deps),
+];

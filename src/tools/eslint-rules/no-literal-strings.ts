@@ -2,14 +2,14 @@ import path from 'node:path';
 import type { Rule } from 'eslint';
 import type { Node as EstreeNode } from 'estree';
 import ts from 'typescript';
-import { LITERAL_HOME_FILES, TEST_FILE_SUFFIX, STRICT_DIRECTIVE, TYPEOF_OPERATOR, TS_NODE_PREFIX, MESSAGE_ID } from './constants.ts';
+import { LITERAL_HOME_FILES, TEST_FILE_SUFFIXES, STRICT_DIRECTIVE, TYPEOF_OPERATOR, TS_NODE_PREFIX, MESSAGE_ID } from './constants.ts';
 import { TEXT } from './text.ts';
 
 type ParentedNode = EstreeNode & { parent?: ParentedNode };
 
 const isLiteralHome = (fileName: string): boolean => {
   const baseName = path.basename(fileName);
-  return LITERAL_HOME_FILES.has(baseName) || baseName.endsWith(TEST_FILE_SUFFIX);
+  return LITERAL_HOME_FILES.has(baseName) || TEST_FILE_SUFFIXES.some((suffix) => baseName.endsWith(suffix));
 };
 
 const isModuleSpecifier = (parent: ParentedNode | undefined): boolean => parent !== undefined && (

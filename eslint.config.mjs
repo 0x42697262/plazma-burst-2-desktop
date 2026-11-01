@@ -25,11 +25,11 @@ export default tseslint.config(
     },
   },
   {
-    files: ['src/**/constants.ts', 'src/**/*.test.ts'],
+    files: ['src/**/constants.ts', 'src/**/*.test.ts', 'src/**/*.fixture.ts'],
     rules: { '@typescript-eslint/no-magic-numbers': 'off' },
   },
   {
-    files: ['src/**/*.test.ts'],
+    files: ['src/**/*.test.ts', 'src/**/*.fixture.ts'],
     rules: {
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
@@ -38,6 +38,7 @@ export default tseslint.config(
       '@typescript-eslint/no-floating-promises': 'off',
       '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/require-await': 'off',
+      '@typescript-eslint/unbound-method': 'off',
     },
   },
 );

@@ -4,7 +4,9 @@ import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { bootConsole, CONSOLE_ENTRY } from './fake-game.mjs';
+import { NET_DIGITS, encNum, netMsg, netPacket, fakeConnection } from './support/net-protocol.mjs';
 
+const SRC = path.join(path.dirname(CONSOLE_ENTRY), '../../../src');
 const consoleModule = (rel) => import(pathToFileURL(path.join(path.dirname(CONSOLE_ENTRY), rel)).href);
 // An error from the console's own code, as opposed to a refusal it means to print.
 const INTERNAL = /is not defined|is not a function|Cannot (read|set) propert|undefined is not/;
@@ -2370,250 +2372,8 @@ test('editor reset: every edit undone in the running level and forgotten, nothin
 });
 
 // ---------------------------------------------------------------------------
-// Network recorder (net/recorder.js) and "netlog"
+// The fingerprinter capture (net/fingerprint.js), next to the network recorder
 // ---------------------------------------------------------------------------
-// The game's number digits: characters 1-126 without "-", "~" and the two separators.
-const NET_DIGITS = [...Array(126)].map((_, i) => String.fromCharCode(i + 1)).filter((ch) => !['-', '~', '\x01', '\x02'].includes(ch)).join('');
-const encNum = (n) => { let s = ''; do { s = NET_DIGITS[n % NET_DIGITS.length] + s; n = Math.floor(n / NET_DIGITS.length); } while (n > 0); return s; };
-const netMsg = (type, ...parts) => [encNum(type), ...parts].join('\x02');
-const netPacket = (ack, state, rel = []) => [String(ack), state, ...rel.flatMap(([u, d]) => [String(u), d])].join('\x01');
-
-// A connection like scripts/connection.js makes: a receive method on its class, a
-// socket.io socket with volatile emit.
-function fakeConnection(N) {
-  class Conn { [N.connRecv](text) { this.got.push(text); } }
-  const c = new Conn();
-  c.got = [];
-  c.ping = 1000;
-  c.socket = {
-    connected: false, flags: {}, sent: [], io: { engine: { transport: { writable: true, name: 'websocket' } } },
-    get volatile() { this.flags.volatile = true; return this; },
-    emit(event, data) { if (!(this.flags.volatile && !this.io.engine.transport.writable)) this.sent.push(data); this.flags = {}; },
-  };
-  return c;
-}
-
-test('the network recorder logs messages readably and every kind of packet loss, not the normal repeats', async () => {
-  const { G, N } = c;
-  const rec = await consoleModule('net/recorder.js');
-  const net = G[N.net];
-  net[N.netDigits] = NET_DIGITS;
-  net[N.netTypeNames] = { 0: 'RELIABLE_RESPONSE', 5: 'RELIABLE_CHAT' };
-  const conn = fakeConnection(N);
-  const emit = conn.socket.emit;
-  let t = Date.now();
-  rec.setClock(() => t);
-  net.connections = [];
-  rec.netTick(); // the page line, first time
-  net.connections = [conn];
-  net[N.lobbyConn] = conn;
-  const since = rec.netlog.lines().length;
-  const fresh = () => rec.netlog.lines().slice(since).map((l) => l.slice(14)); // without the time
-  try {
-    rec.netTick();
-    conn.socket.connected = true;
-    conn.ping = 100;
-    rec.netTick(t += 50);
-    // Sent: a chat message with text and an encoded number, then the same message in the
-    // next packet (the game repeats it until its ack: no line), then a packet the busy
-    // socket drops.
-    const chat = netPacket(-1, '', [[0, netMsg(5, 'hello | world', encNum(7), 'plain text')]]);
-    conn.socket.volatile.emit('m', chat);
-    t += 16;
-    conn.socket.volatile.emit('m', chat);
-    conn.socket.io.engine.transport.writable = false;
-    conn.socket.volatile.emit('m', netPacket(-1, netMsg(1, 'x'), []));
-    conn.socket.io.engine.transport.writable = true;
-    // #0 is acknowledged 900 ms after it was sent, with a ping of 100 ms: a slow ack.
-    t += 884;
-    // Received: #0, then #2 before #1 (a gap), then #1 (late), then #1 again (a repeat: no line).
-    conn[N.connRecv](netPacket(0, '', [[0, netMsg(0, encNum(150))], [2, netMsg(5, 'b')]]));
-    conn[N.connRecv](netPacket(0, '', [[1, netMsg(5, 'a')]]));
-    conn[N.connRecv](netPacket(0, '', [[1, netMsg(5, 'a')]]));
-    assert.equal(conn.got.length, 3, 'the game still gets every packet');
-    assert.equal(conn.socket.sent.length, 2, 'and the socket still sends');
-    // #1 is sent and never acknowledged: "no ack" once, after 2 s.
-    conn.socket.volatile.emit('m', netPacket(2, '', [[1, netMsg(5, 'anyone?')]]));
-    rec.netTick(t += 1000);
-    rec.netTick(t += 1100);
-    rec.netTick(t += 500);
-    conn[N.connReason] = 'io server disconnect';
-    net.connections = [];
-    rec.netTick(t += 50);
-    const out = fresh();
-    const want = [
-      /^c\d+ server +--- +CONN +new connection \(socket\.io over websocket\)$/,
-      /^c\d+ server +--- +CONN +connected/,
-      /^c\d+ server +OUT +REL +#0 CHAT\("hello \| world", 7, "plain text"\)$/,
-      /^c\d+ server +OUT +LOSS +dropped: the socket was busy.*0 reliable messages.*its state update is lost\)$/,
-      /^c\d+ server +OUT +LOSS +slow ack: #0 CHAT acknowledged after 900 ms, ping 100 ms \(sent 2 times\): packets or acks were lost on the way$/,
-      /^c\d+ server +IN +REL +#0 RESPONSE\(150\)$/,
-      /^c\d+ server +IN +REL +#2 CHAT\("b"\)$/,
-      /^c\d+ server +IN +LOSS +gap: #2 arrived before #1 \(1 missing: lost or out of order\)$/,
-      /^c\d+ server +IN +REL +#1 CHAT\("a"\)$/,
-      /^c\d+ server +IN +LOSS +late #1 arrived \d+ ms after the gap was seen$/,
-      /^c\d+ server +OUT +REL +#1 CHAT\("anyone\?"\)$/,
-      /^c\d+ server +--- +STAT +ping 100 ms \| acks in 900 ms \| out 4 packets .* \| in 3 packets .* \| repeated 1 out, 1 in \| loss: 1 slow ack, 1 dropped, 1 gap, 1 late \| 1 waiting for ack$/,
-      /^c\d+ server +OUT +LOSS +no ack: #1 CHAT not acknowledged after 2100 ms \(sent 1 time\): nothing is getting through$/,
-      /^c\d+ server +--- +CONN +closed: io server disconnect \(the server closed the connection on purpose\) \| after .* \| acks in 900 ms \| loss: 1 slow ack, 1 no ack, 1 dropped, 1 gap, 1 late$/,
-    ];
-    assert.equal(out.length, want.length, out.join('\n'));
-    want.forEach((re, i) => assert.match(out[i], re));
-    assert.ok(!Object.hasOwn(conn, N.connRecv) && conn.socket.emit === emit, 'a closed connection is unwrapped');
-  } finally {
-    rec.setClock(null);
-    net.connections = [];
-  }
-});
-
-test('net_log off unwraps every connection and stops recording; on starts again', async () => {
-  const { G, N } = c;
-  const rec = await consoleModule('net/recorder.js');
-  const net = G[N.net];
-  const conn = fakeConnection(N);
-  const emit = conn.socket.emit;
-  conn.socket.connected = true;
-  net.connections = [conn];
-  let t = Date.now() + 100000;
-  try {
-    rec.netTick(t);
-    assert.ok(Object.hasOwn(conn, N.connRecv), 'wrapped while on');
-    c.run('net_log off');
-    rec.netTick(t += 50);
-    assert.ok(!Object.hasOwn(conn, N.connRecv) && conn.socket.emit === emit, 'unwrapped when off');
-    assert.match(rec.netlog.lines().at(-1), /PAGE +recording off \(net_log off\)$/);
-    const n = rec.netlog.lines().length;
-    conn[N.connRecv](netPacket(0, '', [[0, netMsg(5, 'x')]]));
-    assert.equal(rec.netlog.lines().length, n, 'nothing recorded while off');
-    c.run('net_log on');
-    rec.netTick(t += 50);
-    const back = rec.netlog.lines().slice(n).join('\n');
-    assert.match(back, /PAGE +recording on/);
-    assert.match(back, /CONN +already connected when recording started/);
-    // Recording started mid-stream: the first message seen is not a gap.
-    conn[N.connRecv](netPacket(0, '', [[40, netMsg(5, 'y')]]));
-    assert.doesNotMatch(rec.netlog.lines().slice(n).join('\n'), /gap/);
-  } finally {
-    c.run('unset net_log');
-    net.connections = [];
-    rec.netTick(t + 50);
-  }
-});
-
-test('netlog: status, the last lines with filters, other instances and on/off', async () => {
-  const { G, N } = c;
-  const rec = await consoleModule('net/recorder.js');
-  const net = G[N.net];
-  net[N.netDigits] = NET_DIGITS;
-  net[N.netTypeNames] = { 5: 'RELIABLE_CHAT', 9: 'RELIABLE_SHOT' };
-  const conn = fakeConnection(N);
-  net.connections = [conn];
-  net[N.lobbyConn] = conn;
-  const realFetch = G.fetch;
-  let t = Date.now() + 200000;
-  const since = rec.netlog.lines().length;
-  const last = () => `last:${rec.netlog.lines().length - since}`; // this test's lines only
-  try {
-    rec.netTick(t);
-    conn.socket.connected = true;
-    conn.ping = 45;
-    rec.netTick(t += 50);
-    conn.socket.volatile.emit('m', netPacket(-1, '', [[0, netMsg(5, 'hello there')], [1, netMsg(9, encNum(3))]]));
-    conn[N.connRecv](netPacket(1, '', [[0, netMsg(5, 'hi back')], [2, netMsg(9, encNum(4))]]));
-
-    const st = c.run('netlog');
-    assert.match(st[0], /^Network log: on \(net_log\)\. Everything \(every packet and state update\): off \(net_log_all\)\. State updates: counted only \(net_log_state\)\.$/);
-    assert.ok(st.some((l) => /^ {2}c\d+ server +connected, ping 45 ms, out 1 packets, in 1 packets \| loss: 1 gap \| 1 missing$/.test(l)), st.join('\n'));
-
-    const chat = c.run(`netlog show type:chat ${last()}`);
-    assert.match(chat[0], /^Network log, this page: 2 of the last \d+ lines match\.$/);
-    assert.match(chat[1], /OUT +REL +#0 CHAT\("hello there"\)$/);
-    assert.match(chat[2], /IN +REL +#0 CHAT\("hi back"\)$/);
-    const back = c.run(`net show --in hi ${last()}`);
-    assert.equal(back.length, 3, back.join('\n'));
-    assert.match(c.run(`netlog show --loss ${last()}`)[1], /LOSS +gap: #2 arrived before #1/);
-    assert.match(c.run(`netlog show --out type:shot ${last()}`)[1], / SHOT\(3\)$/);
-    assert.match(c.run('netlog show --in --out')[0], /^error: --in and --out do not go together/);
-    assert.match(c.run('netlog show nothing-like-this')[1], /Nothing matches/);
-
-    // Other instances: listed by the wrapper, read by name or by their number in the list.
-    const asked = [];
-    G.fetch = (url) => {
-      asked.push(url);
-      if (url.includes('netruns')) {
-        return Promise.resolve({ ok: true, json: async () => [
-          { name: '2026-11-01_05-30-12_local', size: 2048, updated: Date.now(), active: true, mine: true, current: true },
-          { name: '2026-11-01_05-31-00_local', size: 4096, updated: Date.now() - 2000, active: true, mine: false, current: false },
-        ] });
-      }
-      return Promise.resolve({ ok: true, text: async () => [
-        '05:31:01.000  c1 server     OUT  REL    #0 CHAT("from the other app")',
-        '05:31:02.000  c1 server     OUT  LOSS   resend #0 CHAT (try 2, first sent 2001 ms ago, not acknowledged yet)',
-      ].join('\n') });
-    };
-    c.run('netlog runs');
-    await new Promise((r) => setImmediate(r));
-    const list = c.log.printed.filter((l) => !l.startsWith('> '));
-    assert.match(list[0], /^Network logs in netlogs\/, newest first \(2\)/);
-    assert.match(list[1], /^ +1 {2}2026-11-01_05-30-12_local +this window +2\.0 KB {2}updated now$/);
-    assert.match(list[2], /^ +2 {2}2026-11-01_05-31-00_local +other app, running/);
-    c.run('netlog show run:2 --loss');
-    await new Promise((r) => setImmediate(r));
-    assert.match(asked.at(-1), /netread\?run=2026-11-01_05-31-00_local&lines=1000$/);
-    const other = c.log.printed.filter((l) => !l.startsWith('> '));
-    assert.match(other[0], /^Network log 2026-11-01_05-31-00_local: 1 of the last 2 lines match\.$/);
-    assert.match(other[1], /LOSS +resend #0 CHAT /);
-    assert.match(c.run('netlog show run:9')[0], /^error: no run 9/);
-
-    assert.match(c.run('netlog off')[0], /net_log = off/);
-    rec.netTick(t += 50);
-    assert.match(c.run('netlog')[0], /^Network log: off/);
-    c.run('netlog on');
-  } finally {
-    G.fetch = realFetch;
-    c.run('unset net_log');
-    net.connections = [];
-    rec.netTick(t + 50);
-  }
-});
-
-test('net_log_all (off by default) adds a PKT line per packet and every state update, decoded', async () => {
-  const { G, N } = c;
-  const rec = await consoleModule('net/recorder.js');
-  const net = G[N.net];
-  net[N.netDigits] = NET_DIGITS;
-  net[N.netTypeNames] = { 5: 'RELIABLE_CHAT' };
-  const conn = fakeConnection(N);
-  conn.socket.connected = true;
-  net.connections = [conn];
-  let t = Date.now() + 300000;
-  try {
-    rec.netTick(t);
-    const since = rec.netlog.lines().length;
-    const fresh = () => rec.netlog.lines().slice(since).map((l) => l.slice(14));
-    // Off by default: an ack-only packet and a state update leave no line.
-    conn[N.connRecv](netPacket(3, netMsg(1, encNum(250), 'x'), []));
-    assert.deepEqual(fresh(), []);
-    assert.match(c.run('netlog all')[0], /^net_log_all = off$/);
-    assert.match(c.run('netlog all on')[0], /net_log_all = on/);
-    conn[N.connRecv](netPacket(3, netMsg(1, encNum(250), 'x'), []));
-    conn.socket.volatile.emit('m', netPacket(-1, '', [[0, netMsg(5, 'hi')], [1, netMsg(5, 'yo')]]));
-    const out = fresh();
-    assert.equal(out.length, 5, out.join('\n'));
-    assert.match(out[0], /IN +PKT +8 chars \| ack #3 \| state \(3 parts\) 6 chars \| framing 2 chars$/);
-    assert.match(out[1], /IN +STATE +\(1, 250, "x"\)$/);
-    assert.match(out[2], /OUT +PKT +17 chars \| ack none \| #0 CHAT 4 chars, #1 CHAT 4 chars \| framing 9 chars$/);
-    assert.match(out[3], /OUT +REL +#0 CHAT\("hi"\)$/);
-    const shown = c.run('netlog show --pkt last:5');
-    assert.equal(shown.filter((l) => / PKT /.test(l)).length, 2, shown.join('\n'));
-    assert.match(c.run('netlog')[0], /Everything \(every packet and state update\): on \(net_log_all\)\. State updates: written\.$/);
-  } finally {
-    c.run('unset net_log_all');
-    net.connections = [];
-    rec.netTick(t + 50);
-  }
-});
-
 // A fingerprinter like the main server's (docs/research/fingerprinting.md), with what it writes in per
 // session: the IP address it sees, a token and the separator its values are joined with.
 const FP_SOURCE = `( v )=>{ try { let FP = class FP { static getBrowserFingerprint() {
@@ -2625,7 +2385,7 @@ const settle = async () => { for (let i = 0; i < 5; i++) await new Promise((r) =
 
 test('the fingerprinter is sent to the wrapper once from the lobby connection, whatever net_log is; "fingerprint" runs the latest', async () => {
   const { G, N } = c;
-  const rec = await consoleModule('net/recorder.js');
+  const { recorder: rec } = await import(pathToFileURL(path.join(SRC, 'features/netlog/console.ts')).href);
   const fp = await consoleModule('net/fingerprint.js');
   const net = G[N.net];
   net[N.netDigits] = NET_DIGITS;
@@ -2651,7 +2411,7 @@ test('the fingerprinter is sent to the wrapper once from the lobby connection, w
   let t = Date.now() + 500000;
   try {
     c.run('net_log off');
-    rec.netTick(t);
+    rec.tick(t);
     net[N.lobbyConn] = conn;
     net.connections = [conn];
     fp.fingerprintTick();
@@ -2674,12 +2434,12 @@ test('the fingerprinter is sent to the wrapper once from the lobby connection, w
     // The recorder listens on the same method: one wrapper, each records once, and turning
     // net_log off leaves the fingerprinter's listener on.
     c.run('net_log on');
-    rec.netTick(t += 50);
-    const since = rec.netlog.lines().length;
+    rec.tick(t += 50);
+    const since = rec.lines().length;
     conn[N.connRecv](netPacket(0, '', [[2, netMsg(5, 'hi')]]));
-    assert.equal(rec.netlog.lines().slice(since).filter((l) => l.includes('CHAT("hi")')).length, 1);
+    assert.equal(rec.lines().slice(since).filter((l) => l.includes('CHAT("hi")')).length, 1);
     c.run('net_log off');
-    rec.netTick(t += 50);
+    rec.tick(t += 50);
     assert.ok(Object.hasOwn(conn, N.connRecv), 'still listened to for the fingerprinter');
 
     c.log.printed.length = 0;
@@ -2716,87 +2476,10 @@ test('the fingerprinter is sent to the wrapper once from the lobby connection, w
     fp.fingerprintTick();
     c.run('unset net_log');
     net.connections = [];
-    rec.netTick(t + 50);
+    rec.tick(t + 50);
   }
 });
 
-test('the network log decodes a RESPONSE\'s callback ID even when it looks like a letter, and shows JSON as it is', async () => {
-  const rec = await consoleModule('net/recorder.js');
-  const names = (n) => ({ 0: 'RELIABLE_RESPONSE', 4: 'RELIABLE_GET_MATCH_LIST' })[n];
-  assert.equal(encNum(100), 'h', 'the callback counter starts at 100: one letter');
-  assert.equal(rec.describeMessage(netMsg(0, encNum(100), 'fail', 'Server: Unknown error [2]'), NET_DIGITS, names).text,
-    'RESPONSE(100, "fail", "Server: Unknown error [2]")');
-  assert.equal(rec.describeMessage(netMsg(0, encNum(101), 'ok', '[{"uid":1,"map_id":"a-b"}]'), NET_DIGITS, names).text,
-    'RESPONSE(101, "ok", [{"uid":1,"map_id":"a-b"}])');
-  assert.equal(rec.describeMessage(netMsg(4, 'h'), NET_DIGITS, names).text, 'GET_MATCH_LIST("h")', 'elsewhere a letter stays text');
-  assert.equal(rec.describeMessage(netMsg(77), NET_DIGITS, names).text, 'TYPE_77()');
-});
-
-test('a part over 2000 characters is cut, except with net_log_all', async () => {
-  const { G, N } = c;
-  const rec = await consoleModule('net/recorder.js');
-  const names = (n) => ({ 4: 'RELIABLE_TASK' })[n];
-  const code = '( v )=>{ return v; }'.padEnd(7370, ' ');
-  assert.equal(rec.describeMessage(netMsg(4, code, 'r'), NET_DIGITS, names).text,
-    `TASK(${JSON.stringify(code.slice(0, 2000))}...(7370 chars), "r")`);
-  assert.equal(rec.describeMessage(netMsg(4, code, 'r'), NET_DIGITS, names, true).text, `TASK(${JSON.stringify(code)}, "r")`);
-  const net = G[N.net];
-  net[N.netDigits] = NET_DIGITS;
-  net[N.netTypeNames] = { 4: 'RELIABLE_TASK' };
-  const conn = fakeConnection(N);
-  conn.socket.connected = true;
-  net.connections = [conn];
-  const t = Date.now() + 350000;
-  try {
-    rec.netTick(t);
-    const since = rec.netlog.lines().length;
-    const rel = () => rec.netlog.lines().slice(since).filter((l) => / REL /.test(l)).at(-1);
-    conn[N.connRecv](netPacket(-1, '', [[0, netMsg(4, code, 'r')]]));
-    assert.match(rel(), /\.\.\.\(7370 chars\), "r"\)$/);
-    c.run('net_log_all on');
-    conn[N.connRecv](netPacket(-1, '', [[1, netMsg(4, code, 'r')]]));
-    assert.ok(rel().endsWith(`#1 TASK(${JSON.stringify(code)}, "r")`), rel().slice(-80));
-  } finally {
-    c.run('unset net_log_all');
-    net.connections = [];
-    rec.netTick(t + 50);
-  }
-});
-
-test('a RESPONSE says which request it answers, and the PKT line adds up to the packet\'s size', async () => {
-  const { G, N } = c;
-  const rec = await consoleModule('net/recorder.js');
-  const net = G[N.net];
-  net[N.netDigits] = NET_DIGITS;
-  net[N.netTypeNames] = { 0: 'RELIABLE_RESPONSE', 3: 'RELIABLE_AUTHENTICATE', 26: 'RELIABLE_PING' };
-  const conn = fakeConnection(N);
-  conn.socket.connected = true;
-  net.connections = [conn];
-  let t = Date.now() + 400000;
-  try {
-    rec.netTick(t);
-    c.run('net_log_all on');
-    const since = rec.netlog.lines().length;
-    // The login: the game put callback ID 100 ("h") where its placeholder was.
-    conn.socket.volatile.emit('m', netPacket(-1, '', [[0, netMsg(3, '.guest', 'version_h5', encNum(100), 'x')]]));
-    // The server's answer, as in a real log: 39 characters.
-    const answer = netPacket(0, '', [[0, netMsg(0, encNum(100), 'fail', 'Server: Unknown error [2]')]]);
-    assert.equal(answer.length, 39);
-    conn[N.connRecv](answer);
-    // The server asks (a keep-alive with callback 7); our RESPONSE answers it.
-    conn[N.connRecv](netPacket(0, '', [[1, netMsg(26, encNum(7))]]));
-    conn.socket.volatile.emit('m', netPacket(1, '', [[1, netMsg(0, encNum(7))]]));
-    const out = rec.netlog.lines().slice(since).map((l) => l.slice(14));
-    assert.match(out[1], /OUT +REL +#0 AUTHENTICATE\(".guest", "version_h5", "h", "x"\)$/);
-    assert.match(out[2], /IN +PKT +39 chars \| ack #0 \| #0 RESPONSE 34 chars \| framing 5 chars$/);
-    assert.match(out[3], /IN +REL +#0 RESPONSE\(100, "fail", "Server: Unknown error \[2\]"\) {2}<- answers #0 AUTHENTICATE \(its part 3, "h", was callback ID 100\), \d+ ms later$/);
-    assert.match(out[7], /OUT +REL +#1 RESPONSE\(7\) {2}<- answers #1 PING \(its part 1, "\\n", was callback ID 7\), \d+ ms later$/);
-  } finally {
-    c.run('unset net_log_all');
-    net.connections = [];
-    rec.netTick(t + 50);
-  }
-});
 
 // ---------------------------------------------------------------------------
 // Ranked match protection (overrides/server-checks.js) and "bypass checks"
@@ -2908,78 +2591,3 @@ test('bypass checks: a red warning, then only the exact phrase typed on its own 
   assert.notEqual(c.player.hmax, 500, 'held back again');
 });
 
-// ---------------------------------------------------------------------------
-// State updates by position (net/state.js)
-// ---------------------------------------------------------------------------
-const encSigned = (n) => (n < 0 ? `-${encNum(-n)}` : encNum(n));
-// A player's state as flash.js $ТеeАp builds it (v1769098419): 21 parts.
-function playerState({ hp = 100, x = 1264, y = -520, aimX = 212, aimY = -40, respawns = 1, gun = 2, clock = 52310 } = {}) {
-  return ['', encSigned(x), encSigned(y), '', '', '', hp === '' ? '' : encNum(hp), encSigned(aimX), encSigned(aimY), '', encNum(gun), '',
-    encNum(60), encNum(90), encNum(60), encNum(75), '', '', '', encNum(clock), encNum(respawns)];
-}
-const LAYOUT = Object.freeze({ x: 1, y: 2, hp: 6, aimX: 7, aimY: 8, headHp: 12, faceHp: 13, killer: 16, clock: 19, respawns: 20, velScale: 5 });
-
-test('a state update is decoded by position, numbers that look like letters included (HP 100 is "h")', async () => {
-  const st = await consoleModule('net/state.js');
-  const parts = playerState();
-  assert.equal(parts[6], 'h', 'HP 100 travels as one letter');
-  const line = st.describeState(parts.join('\x02'), NET_DIGITS, 'player', LAYOUT);
-  assert.equal(line, 'hp 100 | respawns 1 | aim +212,-40 | pos 1264,-520 | vel 0,0 | body hp: head 60 face 90 arms 60 legs 75 | gun 2 | clock 52.310 s');
-  // Dead: part 16 is who killed you.
-  const dead = playerState({ hp: 0 });
-  dead[16] = encNum(3);
-  assert.match(st.describeState(dead.join('\x02'), NET_DIGITS, 'player', LAYOUT), /^hp 0 \| .* \| killed by 3 \|/);
-  // The server's snapshot: header (round timer), then each changed player with the server's HP.
-  const relayed = playerState({ hp: '' });
-  const snap = [encNum(12000), encNum(3), encNum(80), `${encNum(45)}~${encNum(123)}~${encNum(10)}`, encNum(relayed.length), ...relayed,
-    encNum(5), encNum(150), `${encNum(60)}~${encNum(100)}~${encNum(0)}`, encNum(0)];
-  assert.equal(st.describeState(snap.join('\x02'), NET_DIGITS, 'snapshot', LAYOUT),
-    'round timer 12.0 s | #3 hp 80 ping 45 ms [hp - | respawns 1 | aim +212,-40 | pos 1264,-520 | vel 0,0 | body hp: head 60 face 90 arms 60 legs 75 | gun 2 | clock 52.310 s] | #5 hp 150 ping 60 ms');
-  // Something else as a snapshot: shown part by part.
-  assert.equal(st.describeState(['x', 'y'].join('\x02'), NET_DIGITS, 'snapshot', LAYOUT), '("x", "y")');
-});
-
-test('a new game version: the server\'s positions come from the game, the rest is not guessed', async () => {
-  const st = await consoleModule('net/state.js');
-  // One part added before HP: the game's own positions moved by one.
-  const parts = playerState();
-  parts.splice(6, 0, encNum(7));
-  const moved = { ...LAYOUT, hp: 7, aimX: 8, aimY: 9, headHp: 13, faceHp: 14, killer: 17, clock: 20, respawns: 21 };
-  const line = st.describeState(parts.join('\x02'), NET_DIGITS, 'player', moved);
-  assert.match(line, /^hp 100 \| respawns 1 \| aim \+212,-40 \| pos 1264,-520 \| head hp 60, face hp 90 \| clock 52\.310 s \| \(22 parts; not this version's layout: only the server's positions are named\), p6 7, /);
-  // A name missing from names.js: that value is simply not labelled.
-  assert.doesNotMatch(st.describeState(playerState().join('\x02'), NET_DIGITS, 'player', { ...LAYOUT, hp: null }), /hp 100/);
-});
-
-test('STATE lines on the main server connection are labelled: your state out, the snapshot in', async (t) => {
-  const { G, N } = c;
-  const rec = await consoleModule('net/recorder.js');
-  const net = G[N.net];
-  net[N.netDigits] = NET_DIGITS;
-  for (const [k, key] of Object.entries({ x: 'stateX', y: 'stateY', hp: 'stateHp', aimX: 'stateAimX', aimY: 'stateAimY', headHp: 'stateHeadHp', faceHp: 'stateFaceHp', killer: 'stateKiller', clock: 'stateClock', respawns: 'stateRespawns', velScale: 'stateVelScale' })) net[N[key]] = LAYOUT[k];
-  const conn = fakeConnection(N);
-  conn.socket.connected = true;
-  net.connections = [conn];
-  net[N.lobbyConn] = conn;
-  t.after(() => { c.run('unset net_log_state'); net.connections = []; delete net[N.lobbyConn]; rec.netTick(Date.now() + 999999); });
-  rec.netTick(Date.now() + 600000);
-  c.run('net_log_state on');
-  const since = rec.netlog.lines().length;
-  conn.socket.volatile.emit('m', netPacket(-1, playerState({ hp: 150 }).join('\x02')));
-  conn[N.connRecv](netPacket(-1, [encNum(0), encNum(0), encNum(150), `${encNum(45)}~${encNum(0)}~${encNum(0)}`, encNum(0)].join('\x02')));
-  const out = rec.netlog.lines().slice(since).map((l) => l.slice(14));
-  assert.match(out[0], /^c\d+ server +OUT +STATE +hp 150 \| respawns 1 \| aim \+212,-40 \|/);
-  assert.match(out[1], /^c\d+ server +IN +STATE +#0 hp 150 ping 45 ms$/);
-});
-
-test('messages that carry HP or the respawn count are decoded as numbers even when a value looks like a letter', async () => {
-  const rec = await consoleModule('net/recorder.js');
-  const names = (n) => ({ 7: 'RELIABLE_RESPAWN', 8: 'RELIABLE_HIT_PLAYER' })[n];
-  // HP 100 and a respawn count of 40 travel as single letters.
-  assert.equal(rec.describeMessage(netMsg(7, encNum(1264), encSigned(-520), encNum(100)), NET_DIGITS, names).text, 'RESPAWN(1264, -520, 100)');
-  assert.equal(rec.describeMessage(netMsg(7, encNum(0), encNum(1264), encSigned(-520), encNum(100), encNum(40)), NET_DIGITS, names).text, 'RESPAWN(0, 1264, -520, 100, 40)');
-  // HIT_PLAYER: 14 numbers sent; from the server the shooter's slot first and the kill flag last.
-  const sent = [3, 2, 50, 100, 1, 600, 300, 10, 0, 4, 1, 7, 2500, 40].map(encNum);
-  assert.equal(rec.describeMessage(netMsg(8, ...sent), NET_DIGITS, names).text, 'HIT_PLAYER(3, 2, 50, 100, 1, 600, 300, 10, 0, 4, 1, 7, 2500, 40)');
-  assert.equal(rec.describeMessage(netMsg(8, encNum(1), ...sent, '1'), NET_DIGITS, names).text, 'HIT_PLAYER(1, 3, 2, 50, 100, 1, 600, 300, 10, 0, 4, 1, 7, 2500, 40, "1")');
-});

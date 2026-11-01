@@ -1,4 +1,5 @@
 import type { FeatureId } from '#shared/features/keys.ts';
+import type { Logger } from '#kernel/log/logger.ts';
 
 export type RequestContext = Readonly<{ remote?: boolean; server?: boolean; [field: string]: unknown }>;
 
@@ -10,4 +11,11 @@ export type DevRoute = Readonly<{
 export type WrapperFeature = Readonly<{
   id: FeatureId;
   routes?: readonly DevRoute[];
+}>;
+
+export type WrapperDeps = Readonly<{
+  log: Logger;
+  gameVersion: string;
+  isSadburst: boolean;
+  repoRoot: string;
 }>;

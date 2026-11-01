@@ -51,7 +51,16 @@ Notes from P2 for the feature steps:
 - An unknown log level now stops the app at start; it used to be a warning.
 
 ## P3. Feature migrations
-- [ ] P3.1 `netlog` + security fix 1 (AUTHENTICATE password redacted; `tools/redact-netlogs.ts`, run only after asking the user)
+- [x] P3.1 `netlog` + security fix 1 (AUTHENTICATE, JOIN_MATCH, CREATE_MATCH passwords redacted; `npm run redact-netlogs`, not run on the user's logs: ask first)
+  - Settings keys `net_log`, `net_log_state`, `net_log_all` are still defined in the old
+    `desktop/dev/console/state/schema.js`. Features contributing their own keys to the
+    schema is part of P4.1.
+  - The command now appears at the end of `help`, after the old commands; help order
+    follows registration.
+  - Test helpers: `test/support/net-protocol.mjs` (encNum, netMsg, netPacket,
+    fakeConnection) and the `.d.mts` declarations for the test helpers.
+  - A test that imports a module reading `game/names.js` must import it after
+    `bootConsole()` (dynamic import).
 - [ ] P3.2 `server_list` + security fix 2 (password dropped when address or pin changes; `servers.json` versioned)
 - [ ] P3.3 `fingerprint` + `private_lobby_tasks` + `net/tap` + security fix 3 (no RELIABLE_TASK from private lobbies)
 - [ ] P3.4 `screenshot`

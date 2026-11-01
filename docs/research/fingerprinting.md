@@ -661,10 +661,13 @@ them, and the code the server pushes runs in the page.** In a browser on plazmab
 the same RCE exists, but none of the `__dev/` surface: the desktop wrapper widens what a
 hostile or compromised lobby server can do.
 
-### 9.4 Mitigations (none implemented yet)
+### 9.4 Mitigations
 
-1. **Mask the password field in the network log.** The recorder should write
-   `AUTHENTICATE("<login>", "‹hidden›", …)`. Existing logs should be cleaned or deleted.
+1. **Mask the password field in the network log.** *Done (2026-11-02, refactor step
+   P3.1).* The recorder writes `AUTHENTICATE("<login>", "‹redacted›", …)`. It also hides
+   the match password in `JOIN_MATCH` and `CREATE_MATCH`
+   ([netlog](../features/netlog.md#secrets-are-never-written)). `npm run redact-netlogs`
+   cleans logs written before then.
 2. **Bind passwords to addresses.** `servers save` from the `__dev/` route should drop the
    saved password when `address` or `fingerprint` changes, or the route should be read-only
    with editing left to the list page's IPC bridge.

@@ -38,7 +38,7 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   consoleFeature(FEATURE.gameChat),
   consoleFeature(FEATURE.zoom),
   consoleFeature(FEATURE.screenshot),
-  consoleFeature(FEATURE.netlog),
+  consoleFeature(FEATURE.netlog, { migrated: true }),
   consoleFeature(FEATURE.fingerprint, { availableIn: LOCAL_AND_SERVER }),
   consoleFeature(FEATURE.privateLobbyTasks, { defaultOn: false, availableIn: LOCAL_ONLY }),
   consoleFeature(FEATURE.scanBypass, { availableIn: LOCAL_AND_SERVER }),

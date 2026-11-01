@@ -1,0 +1,9 @@
+export const FIELD_SEPARATOR = '\x01';
+export const PART_SEPARATOR = '\x02';
+export const ESCAPED_FIELD_SEPARATOR = '$.1';
+export const ESCAPED_PART_SEPARATOR = '$.2';
+export const NEGATIVE_SIGN = '-';
+export const PART_CHARS_MAX = 2000;
+export const LAST_CONTROL_CODE = 0x1f;
+export const DELETE_CODE = 0x7f;
+export const JSON_START = /^[[{]/;
