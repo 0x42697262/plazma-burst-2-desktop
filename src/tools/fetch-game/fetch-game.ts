@@ -42,10 +42,13 @@ export async function latestVersion(): Promise<string> {
   return version;
 }
 
-export async function fetchOfficial({ version, out, jobs }: { version: string; out: string; jobs: number }): Promise<string[]> {
+export type Say = (line: string) => void;
+const toTerminal: Say = (line) => { console.log(line); };
+
+export async function fetchOfficial({ version, out, jobs, say = toTerminal }: { version: string; out: string; jobs: number; say?: Say }): Promise<string[]> {
   const base = versionBase(version);
   const staging = out + DOWNLOAD_SUFFIX;
-  console.log(TEXT.header(version, base, out));
+  say(TEXT.header(version, base, out));
   fs.rmSync(staging, { recursive: true, force: true });
   fs.mkdirSync(staging, { recursive: true });
   const saved = new Map<string, number>();
@@ -68,7 +71,7 @@ export async function fetchOfficial({ version, out, jobs }: { version: string; o
     fs.writeFileSync(file, data);
     saved.set(relative, data.length);
     bytes += data.length;
-    if (saved.size % FILE_PROGRESS_EVERY === 0) console.log(TEXT.fileProgress(saved.size, megabytes(bytes)));
+    if (saved.size % FILE_PROGRESS_EVERY === 0) say(TEXT.fileProgress(saved.size, megabytes(bytes)));
     if (TEXT_EXTENSIONS.has(path.extname(relative).toLowerCase())) texts.push([relative, data.toString(TEXT_ENCODING)]);
   }
 
@@ -101,7 +104,7 @@ export async function fetchOfficial({ version, out, jobs }: { version: string; o
     if (!todo.length) break;
     for (const folder of todo) {
       probed.add(folder);
-      if (await crawl(folder)) console.log(TEXT.crawled(folder));
+      if (await crawl(folder)) say(TEXT.crawled(folder));
     }
   }
 
@@ -118,17 +121,17 @@ export async function fetchOfficial({ version, out, jobs }: { version: string; o
     problems.push(TEXT.noSoundsList);
   }
   if (problems.length) {
-    console.log(TEXT.problems);
-    for (const problem of problems) console.log(TEXT.problem(problem));
+    say(TEXT.problems);
+    for (const problem of problems) say(TEXT.problem(problem));
   }
   fs.writeFileSync(path.join(staging, VERSION_JSON), JSON.stringify({ version, source: base, fetched: new Date().toISOString(), files: saved.size, bytes }, null, JSON_INDENT) + LINE_END);
   const previous = out + PREVIOUS_SUFFIX;
   if (fs.existsSync(out)) {
     fs.rmSync(previous, { recursive: true, force: true });
     fs.renameSync(out, previous);
-    console.log(TEXT.oldCopyMoved(path.basename(previous)));
+    say(TEXT.oldCopyMoved(path.basename(previous)));
   }
   fs.renameSync(staging, out);
-  console.log(TEXT.done(saved.size, megabytes(bytes), out));
+  say(TEXT.done(saved.size, megabytes(bytes), out));
   return problems;
 }

@@ -90,10 +90,10 @@ function readKept(out: string): string[] {
   }
 }
 
-export async function fetchSadburst(client: GameClient, { out = client.gameDir, jobs = JOBS }: { out?: string; jobs?: number } = {}): Promise<FetchedSadburst> {
+export async function fetchSadburst(client: GameClient, { out = client.gameDir, jobs = JOBS, say = (line: string) => { console.log(line); } }: { out?: string; jobs?: number; say?: (line: string) => void } = {}): Promise<FetchedSadburst> {
   const base = client.site + client.gamePrefix(null);
   const staging = out + DOWNLOAD_SUFFIX;
-  console.log(TEXT.sadburstHeader(base, out));
+  say(TEXT.sadburstHeader(base, out));
   fs.rmSync(staging, { recursive: true, force: true });
   fs.mkdirSync(staging, { recursive: true });
   const saved = new Map<string, Buffer | null>();
@@ -154,10 +154,10 @@ export async function fetchSadburst(client: GameClient, { out = client.gameDir, 
   let done = 0;
   await pool(assets, jobs, async (file) => {
     await download(file);
-    if (++done % PROGRESS_EVERY === 0) console.log(TEXT.assetProgress(done, assets.length, megabytes(bytes)));
+    if (++done % PROGRESS_EVERY === 0) say(TEXT.assetProgress(done, assets.length, megabytes(bytes)));
   });
   const keptLines = kept.filter(Boolean);
-  console.log(TEXT.assetsDone(saved.size - before, assets.length, keptLines.length, KEPT));
+  say(TEXT.assetsDone(saved.size - before, assets.length, keptLines.length, KEPT));
   if (kept.length) fs.writeFileSync(path.join(staging, KEPT), keptLines.join(LINE_END) + LINE_END);
 
   const problems: string[] = [];
@@ -179,10 +179,10 @@ export async function fetchSadburst(client: GameClient, { out = client.gameDir, 
   if (fs.existsSync(out)) {
     fs.rmSync(previous, { recursive: true, force: true });
     fs.renameSync(out, previous);
-    console.log(TEXT.oldCopyMoved(path.basename(previous)));
+    say(TEXT.oldCopyMoved(path.basename(previous)));
   }
   fs.renameSync(staging, out);
-  console.log(TEXT.sadburstDone(version, versionText[1] || TEXT.unknownClientVersion, saved.size, megabytes(bytes), out));
-  console.log(TEXT.keptHint(KEPT));
+  say(TEXT.sadburstDone(version, versionText[1] || TEXT.unknownClientVersion, saved.size, megabytes(bytes), out));
+  say(TEXT.keptHint(KEPT));
   return { out, version, files: saved.size, bytes, problems };
 }

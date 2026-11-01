@@ -7,6 +7,7 @@ import { createHooksWrapper } from '#features/hooks/wrapper.ts';
 import { serverListPart } from '#features/server_list/wrapper.ts';
 import { remotePlayPart } from '#features/remote_play/wrapper.ts';
 import { p2pHostPart } from '#features/p2p_host/wrapper.ts';
+import { gameSetupPart } from '#features/game_setup/wrapper.ts';
 
 export const WRAPPER_PARTS: WrapperParts = Object.freeze({
   netlogWrapper,
@@ -17,4 +18,5 @@ export const WRAPPER_PARTS: WrapperParts = Object.freeze({
   serverListPart,
   remotePlayPart,
   p2pHostPart,
+  gameSetupPart,
 });

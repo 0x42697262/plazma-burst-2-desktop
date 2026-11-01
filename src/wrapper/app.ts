@@ -35,7 +35,6 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
   const isRemoteHost = environment.mode === MODE.remote;
   const isDedicatedHost = environment.mode === MODE.server;
   const { remotePlayPart, p2pHostPart, serverListPart } = WRAPPER_PARTS;
-  if (isRemoteHost && remotePlayPart) app.commandLine.appendSwitch(remotePlayPart.scaleFactorSwitch, remotePlayPart.scaleFactorOne);
 
   const root = path.resolve(environment.gameDir || client.gameDir);
   const host = client.host;

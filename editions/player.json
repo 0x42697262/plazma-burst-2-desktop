@@ -2,5 +2,9 @@
   "name": "player",
   "title": "Plazma Burst 2 Client",
   "appId": "io.github.plazma-burst-2-desktop.player",
-  "features": ["server_list", "client_sadburst"]
+  "features": [
+    "server_list",
+    "client_sadburst",
+    "game_setup"
+  ]
 }

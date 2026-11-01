@@ -24,6 +24,7 @@ export const FEATURE = Object.freeze({
   remotePlay: 'remote_play',
   p2pHost: 'p2p_host',
   clientSadburst: 'client_sadburst',
+  gameSetup: 'game_setup',
 });
 export type FeatureId = typeof FEATURE[keyof typeof FEATURE];
 

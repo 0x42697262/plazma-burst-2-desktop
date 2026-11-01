@@ -20,7 +20,7 @@ export type SadburstNames = {
   absent: string[];
   how: { pattern: number; same: number };
 };
-export type SadburstOptions = { gameDir?: string; out?: string; check?: boolean; officialDir?: string; officialNames?: string; previous?: string };
+export type SadburstOptions = { gameDir?: string; out?: string; check?: boolean; officialDir?: string; officialNames?: string; previous?: string; say?: (line: string) => void };
 
 
 export const unminify = (source: string): string => source.replace(MINIFIED_BOOLEAN, (_match, digit: string) => (digit === MINIFIED_TRUE ? TRUE_WORD : FALSE_WORD));
@@ -131,6 +131,7 @@ export function findNames(gameDir: string, sources: readonly NameSource[]): Sadb
 }
 
 export function run(options: SadburstOptions = {}): SadburstNames {
+  const say = options.say ?? ((line: string) => { console.log(line); });
   const client = CLIENTS.sadburst;
   const gameDir = path.resolve(options.gameDir || client.gameDir);
   const out = path.resolve(options.out || client.names);
@@ -143,15 +144,15 @@ export function run(options: SadburstOptions = {}): SadburstNames {
   const result = findNames(gameDir, sources);
   const version = gameVersion(gameDir);
   const total = result.expected.length;
-  console.log(TEXT.sadburstFound(total - result.missing.length, total, gameDir, version, result.how.pattern, result.how.same));
-  if (result.missing.length) console.log(TEXT.notFoundList(result.missing));
-  if (result.absent.length) console.log(TEXT.absentList(result.absent));
-  for (const problem of result.problems) console.log(TEXT.problem(problem));
+  say(TEXT.sadburstFound(total - result.missing.length, total, gameDir, version, result.how.pattern, result.how.same));
+  if (result.missing.length) say(TEXT.notFoundList(result.missing));
+  if (result.absent.length) say(TEXT.absentList(result.absent));
+  for (const problem of result.problems) say(TEXT.problem(problem));
   if (!options.check) {
     const notes = result.absent.map((key) => TEXT.absentNote(key, NOT_IN_CLIENT[key] ?? ''));
     const text = render(result, version).replace(NAMES_FILE_RUN, NAMES_FILE_RUN_SADBURST).replace(NAMES_OBJECT_START, [...notes, NAMES_OBJECT_START].join(LINE_END));
     fs.writeFileSync(out, text);
-    console.log(TEXT.wrote(path.relative(process.cwd(), out) || out));
+    say(TEXT.wrote(path.relative(process.cwd(), out) || out));
   }
   return result;
 }

@@ -25,5 +25,6 @@ export const FEATURE_DESCRIPTION: Readonly<Record<FeatureId, string>> = Object.f
   [FEATURE.certPinning]: 'Pinning private servers\' certificates',
   [FEATURE.remotePlay]: 'Streaming a game window to a tester (npm run host)',
   [FEATURE.p2pHost]: 'The player-hosted dedicated host (npm run p2p-host)',
+  [FEATURE.gameSetup]: 'Downloading the game when it is missing (and, in an installed app, when a new version is out), and finding its names',
   [FEATURE.clientSadburst]: 'The Sad Burst 2 client (--sadburst)',
 });
