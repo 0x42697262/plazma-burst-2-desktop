@@ -1,0 +1,6 @@
+{
+  "name": "player-tp",
+  "title": "Plazma Burst 2 Client TP",
+  "appId": "io.github.plazma-burst-2-desktop.player-tp",
+  "features": ["server_list", "client_sadburst", "game_setup", "player"]
+}

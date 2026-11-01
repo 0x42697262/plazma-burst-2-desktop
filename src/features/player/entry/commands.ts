@@ -1,6 +1,6 @@
 import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
-import { bindKey, unbindKey } from '#features/binds/index.ts';
+import { keyBinder } from '#console/kernel/ports/key-binder.ts';
 import { COORDINATE_ARGUMENTS, DISTANCE_WIDTH, HP_WIDTH, INDEX_WIDTH, NICKNAME_WIDTH, TEAM_WIDTH } from '../constants.ts';
 import { ALL_WORD, CHARS_HINT, COMMAND, HP_CHANGE, HP_PERCENT_NO_SIGN, NO_CHARACTER_NAMED, TO_WORD, TP_COMMAND, TP_OPTION, WORD_SEPARATOR, YOU } from '../keys.ts';
 import { CLIENT_ONLY, TEXT } from '../text.ts';
@@ -98,17 +98,20 @@ function teleportToCharacter(query: string): void {
 }
 
 function tpKeys(options: Set<string>, args: Args): boolean {
+  const isKeyOption = options.has(TP_OPTION.on) || options.has(TP_OPTION.off);
+  if (!isKeyOption) return false;
+  const binder = keyBinder();
+  if (!binder) throw new Error(TEXT.needsBinds);
   if (options.has(TP_OPTION.on)) {
     const [key] = args;
     if (options.has(TP_OPTION.off) || args.length !== 1 || key === undefined) throw new Error(TEXT.tpOnUsage);
-    bindKey([key, TP_COMMAND]);
+    binder.bind([key, TP_COMMAND]);
     return true;
   }
-  if (!options.has(TP_OPTION.off)) return false;
   if (args.length) throw new Error(TEXT.tpOffUsage);
   const bound = boundToTp(TP_COMMAND);
   if (!bound.length) print(TEXT.noTpKey, COLOR.notice);
-  for (const key of bound) unbindKey([key]);
+  for (const key of bound) binder.unbind([key]);
   return true;
 }
 

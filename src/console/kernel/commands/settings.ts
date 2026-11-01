@@ -1,7 +1,7 @@
 import { print, type Segment } from '../ui/log.ts';
 import { COLOR } from '../core/keys.ts';
 import { REMOTE } from '../core/mode.ts';
-import { SCHEMA, GROUPS, KEY, resolveKey, parseValue, affectsGame, keyClientOnly, describeKey, showValue, type SettingKey, type SettingSpec } from '../state/schema.ts';
+import { SCHEMA, groupsOn, isKeyOn, KEY, resolveKey, parseValue, affectsGame, keyClientOnly, describeKey, showValue, type SettingKey, type SettingSpec } from '../state/schema.ts';
 import { settings } from '../state/store.ts';
 import { levelWasActive, gameMaxHp } from '../overrides/frame.ts';
 import { heldBack, refusal } from '../overrides/server-checks.ts';
@@ -66,7 +66,7 @@ const EXTRAS: Readonly<Record<string, ListSection>> = Object.freeze({
   [CHECKS_SECTION]: () => checksBypassed() && [TEXT.checksTitle, [TEXT.checksRow]] as const,
 });
 const allExtras = (): Record<string, ListSection> => ({ ...EXTRAS, ...Object.fromEntries(listSections()) });
-const listGroups = (): string[] => [...GROUPS, ...Object.keys(allExtras())];
+const listGroups = (): string[] => [...groupsOn(), ...Object.keys(allExtras())];
 
 function listExtras(only?: string): void {
   for (const [name, make] of Object.entries(allExtras())) {
@@ -88,7 +88,7 @@ function listKeys(group?: string): void {
   }
   const byGroup = new Map<string, string[]>();
   for (const [key, spec] of Object.entries(SCHEMA as Record<string, SettingSpec>)) {
-    if (group && spec.group !== group) continue;
+    if (!isKeyOn(key) || (group && spec.group !== group)) continue;
     const keys = byGroup.get(spec.group) ?? [];
     keys.push(key);
     byGroup.set(spec.group, keys);

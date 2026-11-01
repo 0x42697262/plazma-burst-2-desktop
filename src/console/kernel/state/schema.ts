@@ -4,6 +4,7 @@ import { SCHEMA, aliasesFor, type KeyNames, type SettingKey, type SettingSpec } 
 import { CONSOLE_GROUPS, FALSE_WORDS, GROUP, NO_KEY_WORD, SETTING_TYPE, TRUE_WORDS, type Group } from './keys.ts';
 import { TEXT } from './text.ts';
 import { parseKeyName, showKey } from './key-names.ts';
+import { isFeatureOn } from '../../flags.ts';
 
 export { SCHEMA, GROUP };
 export type { SettingKey, SettingSpec };
@@ -28,13 +29,20 @@ const requireSpec = (key: string): SettingSpec => {
   return spec;
 };
 
-export const GROUPS: readonly Group[] = Object.freeze([...new Set(Object.values(SCHEMA).map((spec: SettingSpec) => spec.group))]);
+export const isKeyOn = (key: string): boolean => {
+  const spec = specOf(key);
+  return spec !== undefined && isFeatureOn(spec.feature);
+};
+
+export const keysOn = (): SettingKey[] => (Object.keys(SCHEMA) as SettingKey[]).filter(isKeyOn);
+
+export const groupsOn = (): Group[] => [...new Set(keysOn().map((key) => requireSpec(key).group))];
 
 export function resolveKey(word: string | null | undefined): SettingKey | null {
   if (!word) return null;
   const lowered = word.toLowerCase();
-  if (specOf(lowered)) return lowered as SettingKey;
-  return ALIASES[lowered] ?? null;
+  const key = specOf(lowered) ? lowered as SettingKey : ALIASES[lowered] ?? null;
+  return key !== null && isKeyOn(key) ? key : null;
 }
 
 export const aliasesOf = (key: string): string[] => Object.keys(ALIASES).filter((alias) => ALIASES[alias] === key);

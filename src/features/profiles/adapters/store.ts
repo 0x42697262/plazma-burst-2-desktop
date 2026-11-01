@@ -1,4 +1,4 @@
-import { SCHEMA, resolveKey, parseValue, affectsGame, showValue } from '#console/kernel/state/schema.ts';
+import { SCHEMA, isKeyOn, resolveKey, parseValue, affectsGame, showValue } from '#console/kernel/state/schema.ts';
 import { settings, profiles, activeProfile, currentMap } from '#console/kernel/state/store.ts';
 import { parseKeyName, showKey } from '#console/kernel/state/key-names.ts';
 import { isActive } from '#console/kernel/game/level.ts';
@@ -34,7 +34,7 @@ export const profileContext = {
   warnKeyUses,
   isLevelActive: (): boolean => isActive(),
   run: (line: string, source: string): void => { (run as (line: string, source: string) => void)(line, source); },
-  gameKeyGroups: (): string[] => [...new Set(Object.entries(SCHEMA as Record<string, { group: string }>).filter(([key]) => affectsGame(key)).map(([, schema]) => schema.group))],
+  gameKeyGroups: (): string[] => [...new Set(Object.entries(SCHEMA as Record<string, { group: string }>).filter(([key]) => isKeyOn(key) && affectsGame(key)).map(([, schema]) => schema.group))],
 };
 
 export type ProfileContext = typeof profileContext;

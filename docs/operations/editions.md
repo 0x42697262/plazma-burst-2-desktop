@@ -26,6 +26,10 @@ One file per edition in `editions/`, named after it:
 | `features` | Feature ids (`npm start -- --features` lists them), or `"all"` |
 
 `editions/dev.json` is every feature, which is also what `npm start` runs.
+`editions/player.json` is the player client (official and Sad Burst 2, private servers,
+the game download). `editions/player-tp.json` is that plus the `player` feature: the dev
+console with only `tp`, `pos`, `chars`, `heal`, `hp`, `revive` and the player keys
+(`god`, `speed`, `jump`, `fly` …); `tp --on <key>` needs `binds`, which it leaves out.
 
 ## Building one
 

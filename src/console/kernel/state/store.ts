@@ -8,7 +8,7 @@ import {
   SPACE_CHARACTER, SPACE_KEY, STORAGE_KEY, TELEPORT_COMMAND, TRAILING_BIND_WORD, type LoadSource,
 } from './keys.ts';
 import { TEXT } from './text.ts';
-import { SCHEMA, affectsGame, parseValue } from './schema.ts';
+import { SCHEMA, affectsGame, isKeyOn, parseValue } from './schema.ts';
 import { parseKeyName } from './key-names.ts';
 
 export { HISTORY_MAX, PROFILE_NAME };
@@ -65,9 +65,9 @@ const fromProfile = (key: string): ActiveProfile | null => {
 const defaultOf = (key: string): Value | undefined => (Object.hasOwn(SCHEMA, key) ? (SCHEMA as Record<string, { default?: Value }>)[key]?.default : undefined);
 
 export const settings = {
-  has: (key: string): boolean => !!fromProfile(key) || Object.hasOwn(values, key),
-  get: (key: string): Value | undefined => fromProfile(key)?.values[key] ?? values[key],
-  effective: (key: string): Value | undefined => (settings.has(key) ? settings.get(key) : defaultOf(key)),
+  has: (key: string): boolean => isKeyOn(key) && (!!fromProfile(key) || Object.hasOwn(values, key)),
+  get: (key: string): Value | undefined => (isKeyOn(key) ? fromProfile(key)?.values[key] ?? values[key] : undefined),
+  effective: (key: string): Value | undefined => (settings.has(key) ? settings.get(key) : isKeyOn(key) ? defaultOf(key) : undefined),
   source: (key: string): string => fromProfile(key)?.name ?? (Object.hasOwn(values, key) ? SOURCE.yours : SOURCE.default),
   hasOwn: (key: string): boolean => Object.hasOwn(values, key),
   own: (key: string): Value | undefined => values[key],

@@ -27,6 +27,7 @@ export const TEXT = Object.freeze({
   tpOnUsage: 'usage: bind <key> tp   e.g. bind f tp',
   tpOffUsage: 'usage: tp --off   (unbinds every key bound to "tp")',
   noTpKey: 'No key is bound to "tp"',
+  needsBinds: 'A key for "tp" needs key binds (the "binds" feature), which are not in this app.',
   oldHotkey: (message: string, option: string, rest: string) => `${message} For the old hotkey syntax, type "tp --${option}${rest ? ` ${rest}` : ''}".`,
   charRow: (index: string, nickname: string, team: string, hp: string, state: string, distance: string, tag: string) => `  #${index} ${nickname} team ${team} hp ${hp} ${state} ${distance}px${tag}`,
   noNickname: '-',

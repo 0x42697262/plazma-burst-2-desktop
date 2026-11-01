@@ -1,6 +1,7 @@
 import { print, type Segment } from '../ui/log.ts';
 import { COLOR } from '../core/keys.ts';
-import { SCHEMA, ALIASES, resolveKey, aliasesOf, keyClientOnly, affectsGame, describeKey, showValue, type SettingKey, type SettingSpec } from '../state/schema.ts';
+import { SCHEMA, ALIASES, keysOn, resolveKey, aliasesOf, keyClientOnly, affectsGame, describeKey, showValue, type SettingKey, type SettingSpec } from '../state/schema.ts';
+import { isFeatureOn } from '../../flags.ts';
 import { settings } from '../state/store.ts';
 import { findCommand, findSubcommand, findSubcommandAnywhere, helpEntries, findHelpEntry, type CommandDefinition, type CommandHelp, type HelpEntry } from './registry.ts';
 import { ARG_WIDTH, EXAMPLE_WIDTH, NEAR_SHOWN, USAGE_WIDTH } from './constants.ts';
@@ -112,7 +113,7 @@ export function printTopicHelp(raw: string): void {
     printEntry(findHelpEntry(command.name));
     return;
   }
-  const near = [...helpEntries().map((helpEntry) => helpEntry.id), ...Object.keys(SCHEMA), ...Object.keys(ALIASES)]
+  const near = [...helpEntries().map((helpEntry) => helpEntry.id), ...keysOn(), ...Object.keys(ALIASES).filter((alias) => resolveKey(alias) !== null)]
     .filter((name) => name.includes(first) || first.includes(name)).slice(0, NEAR_SHOWN);
   throw new Error(TEXT.noHelp(raw, near));
 }
@@ -124,12 +125,12 @@ function printOverview(): void {
     if (typeof definition.clientOnly === 'string') line.push(CLIENT_TAG);
     print(line);
   }
-  const keys = Object.keys(SCHEMA);
+  const keys = keysOn();
   print(TEXT.keysTitle, COLOR.title);
   print(TEXT.keysLine(keys));
   print([[TEXT.clientOnlyCount(keys.filter(keyClientOnly).length, keys.length), COLOR.warn, true]]);
   print([[TEXT.clientOnlyMeaning, COLOR.warn, true]]);
-  for (const line of TEXT.quickExamples) print(line, COLOR.hint);
+  for (const { feature, line } of TEXT.quickExamples) if (isFeatureOn(feature)) print(line, COLOR.hint);
   print(TEXT.savedTo, COLOR.hint);
   print(TEXT.moreHelp, COLOR.title);
 }

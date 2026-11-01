@@ -1,3 +1,4 @@
+import { FEATURE } from '#shared/features/keys.ts';
 export const TEXT = Object.freeze({
   usage: 'features',
   description: 'Every feature flag: on or off, and why (read-only)',
@@ -59,11 +60,11 @@ export const HELP_TEXT = Object.freeze({
   clientOnlyCount: (count: number, total: number) => `  ${count} of ${total} keys are client-only (see "list")`,
   clientOnlyMeaning: 'client-only = runs in your own game client, not through the server.',
   quickExamples: Object.freeze([
-    'Examples: god on | max_hp 500 | speed 1.8 | swords off | penetration 1 | unset speed',
-    'Guns: guns | guns rail | give 12 | give gun_railgun 2',
+    { feature: FEATURE.player, line: 'Examples: god on | max_hp 500 | speed 1.8 | swords off | unset speed' },
+    { feature: FEATURE.guns, line: 'Guns: guns | guns rail | give 12 | give gun_railgun 2 | penetration 1' },
   ]),
   savedTo: 'Overrides are saved to data/dev-overrides.json.',
-  moreHelp: '"help <command>" or "help <key>" explains one in full, e.g. "help triggers find".',
+  moreHelp: '"help <command>" or "help <key>" explains one in full, e.g. "help help".',
   usage: 'help [command | key]',
   description: 'List every command and key, or explain one in full (also "<command> help")',
   about: Object.freeze([
