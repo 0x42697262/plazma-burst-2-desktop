@@ -83,7 +83,7 @@ Notes from P2 for the feature steps:
 - [x] P3.4 `screenshot`
 - [x] P3.5 `js_eval`
 - [x] P3.6 `zoom` (features add `list` sections through `listSections`)
-- [ ] P3.7 `game_chat`
+- [x] P3.7 `game_chat`
 - [ ] P3.8 `trace`
 - [ ] P3.9 `profiles`
 - [ ] P3.10 `binds`

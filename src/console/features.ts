@@ -8,6 +8,7 @@ import { fingerprintConsole } from '#features/fingerprint/console.ts';
 import { screenshotConsole } from '#features/screenshot/console.ts';
 import { jsEvalConsole } from '#features/js_eval/console.ts';
 import { zoomConsole } from '#features/zoom/console.ts';
+import { gameChatConsole } from '#features/game_chat/console.ts';
 
 export const CONSOLE_FEATURES: readonly ConsoleFeature[] = Object.freeze([
   lobbyTaskGuardConsole,
@@ -17,6 +18,7 @@ export const CONSOLE_FEATURES: readonly ConsoleFeature[] = Object.freeze([
   screenshotConsole,
   jsEvalConsole,
   zoomConsole,
+  gameChatConsole,
 ]);
 
 export const enabledConsoleFeatures = (features: readonly ConsoleFeature[] = CONSOLE_FEATURES): ConsoleFeature[] => features.filter((feature) => isFeatureOn(feature.id));
