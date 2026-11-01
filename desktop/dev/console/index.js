@@ -33,12 +33,12 @@ import { applyOverrides, onActiveChange } from './overrides/frame.js';
 import { syncTriggerHooks } from './triggers/log.js';
 import { mapTick } from './maps/cache.js';
 import { editorTick } from './editor/index.js';
-import { zoomTick } from './commands/zoom.js';
 import { scanReportTick } from './net/scan-report.js';
 import { run } from './dispatch.js';
 import { SERVER } from './core/server.js';
 import { startHost } from './server/host.js';
-import { enabledConsoleFeatures, featureFrameHooks, featureTicks } from '../../../src/console/features.ts';
+import { enabledConsoleFeatures, featureFrameHooks, featureTicks, featureListSections } from '../../../src/console/features.ts';
+import { registerListSection } from '../../../src/console/kernel/list-sections.ts';
 
 // Sad Burst 2 has a settings file of its own (desktop/main.js, DEV_KV_FILE).
 const KV_FILE = SADBURST ? 'dev-overrides.sadburst.json' : 'dev-overrides.json';
@@ -57,6 +57,7 @@ const frameGuard = errorBudget(FRAME_ERRORS_SHOWN, reportError);
 const mapGuard = errorBudget(MAP_ERRORS_SHOWN, reportError);
 
 const features = enabledConsoleFeatures();
+for (const [name, make] of featureListSections(features)) registerListSection(name, make);
 const featureFrame = featureFrameHooks(features);
 
 function onFrame() {
@@ -64,7 +65,6 @@ function onFrame() {
   frameGuard('Trigger history', syncTriggerHooks);
   frameGuard('Frame', applyOverrides);
   frameGuard('Editor', editorTick);
-  frameGuard('Zoom', zoomTick);
   frameGuard('Scan report', scanReportTick);
 }
 

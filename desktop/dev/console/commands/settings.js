@@ -14,7 +14,7 @@ import { levelWasActive, gameMaxHp } from '../overrides/frame.js';
 import { heldBack, refusal } from '../overrides/server-checks.js';
 import { CLIENT_TAG } from './help.js';
 import { REMOTE } from '../core/remote.js';
-import { zoomChanges } from './zoom.js';
+import { listSections } from '../../../../src/console/kernel/list-sections.ts';
 import { editSummary } from '../editor/edit.js';
 import { checksBypassed } from '../state/danger.js';
 
@@ -100,7 +100,6 @@ const EXTRAS = Object.freeze({
     ];
     return [`profile: ${p.name} (map ${currentMap()})`, rows.length ? rows : ['  (sets nothing yet)']];
   },
-  zoom: () => { const rows = zoomChanges(); return rows && ['zoom', rows]; },
   checks: () => checksBypassed() && ['ranked match protection: OFF ("bypass checks")', ['  nothing is held back in ranked matches; "bypass off" turns it back on']],
   editor: () => {
     const sum = editSummary();
@@ -124,10 +123,11 @@ const EXTRAS = Object.freeze({
       changed.map((v) => `  ${v.name.padEnd(KEY_WIDTH)} ${showVar(v.now)}  (was ${showVar(v.was)})`)];
   },
 });
-const LIST_GROUPS = [...GROUPS, ...Object.keys(EXTRAS)];
+const allExtras = () => ({ ...EXTRAS, ...Object.fromEntries(listSections()) });
+const LIST_GROUPS = () => [...GROUPS, ...Object.keys(allExtras())];
 
 function listExtras(only) {
-  for (const [name, make] of Object.entries(EXTRAS)) {
+  for (const [name, make] of Object.entries(allExtras())) {
     if (only && name !== only) continue;
     const got = make();
     if (!got) { if (only) print(`[${name}] nothing`, COLOR.notice); continue; }
@@ -137,14 +137,14 @@ function listExtras(only) {
 }
 
 function listKeys(group) {
-  if (Object.hasOwn(EXTRAS, group)) { listExtras(group); return; }
+  if (Object.hasOwn(allExtras(), group)) { listExtras(group); return; }
   const byGroup = new Map();
   for (const [k, sc] of Object.entries(SCHEMA)) {
     if (group && sc.group !== group) continue;
     if (!byGroup.has(sc.group)) byGroup.set(sc.group, []);
     byGroup.get(sc.group).push(k);
   }
-  if (!byGroup.size) { print(`No group "${group}". Groups: ${LIST_GROUPS.join(', ')}`, COLOR.error); return; }
+  if (!byGroup.size) { print(`No group "${group}". Groups: ${LIST_GROUPS().join(', ')}`, COLOR.error); return; }
   for (const [g, keys] of byGroup) {
     print(`[${g}]`, COLOR.title);
     for (const k of keys) {
@@ -173,9 +173,7 @@ export const settingsCommands = [
         `with "zoom", the map editor's edits,${REMOTE ? '' : ' the hooks that are loaded,'} and map variables`,
         'you set or removed with "vars" in this level (with the value before).',
       ],
-      args: [
-        ['[group]', `only this group: ${LIST_GROUPS.join(', ')}`],
-      ],
+      get args() { return [['[group]', `only this group: ${LIST_GROUPS().join(', ')}`]]; },
       examples: [
         ['list', 'all keys, then binds and the rest'],
         ['list bullets', 'just the bullet keys'],

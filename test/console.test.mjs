@@ -2232,43 +2232,6 @@ $makeVehicle(mc,n,1);
   }
 });
 
-test('zoom: any amount once, or locked so the map cannot change it', () => {
-  const { G, N } = c;
-  const run = (line) => c.run(line).filter((l) => !l.startsWith('Note:'));
-  const was = G[N.zoom];
-  G[N.zoom] = 1;
-  try {
-    assert.deepEqual(run('zoom 35'), ['Zoom 35%']);
-    assert.equal(G[N.zoom], 0.35);
-    G[N.zoom] = 2; // a map trigger
-    c.frame();
-    assert.equal(G[N.zoom], 2, 'not held without --lock');
-    assert.match(run('zoom 50 --lock')[0], /^Zoom 50%, locked/);
-    G[N.zoom] = 0.75; // getting into a vehicle
-    c.frame();
-    assert.equal(G[N.zoom], 0.5, 'put back');
-    assert.deepEqual(run('zoom'), ['Zoom: 50%, locked at 50%']);
-    assert.deepEqual(c.run('list zoom'), ['[zoom]', '  locked at 50%  ("zoom --unlock" lets go)']);
-    assert.deepEqual(run('zoom 80'), ['Zoom 80% (unlocked)']);
-    assert.deepEqual(c.run('list zoom'), ['[zoom]', '  80%  (once: the map can change it)']);
-    G[N.zoom] = 1;
-    c.frame();
-    assert.equal(G[N.zoom], 1);
-    run('zoom 60 --lock');
-    assert.match(run('zoom --unlock')[0], /^Zoom unlocked/);
-    G[N.zoom] = 1;
-    c.frame();
-    assert.equal(G[N.zoom], 1);
-    assert.deepEqual(run('zoom default'), ['Zoom 100%']);
-    assert.deepEqual(c.run('list zoom'), ['[zoom] nothing']);
-    for (const bad of ['zoom 0', 'zoom 2000', 'zoom abc', 'zoom --lock', 'zoom 50 --lock --unlock']) {
-      assert.match(run(bad).join(' '), /usage|do not go together/, bad);
-    }
-  } finally {
-    run('zoom --unlock');
-    G[N.zoom] = was;
-  }
-});
 
 test('editor reset: every edit undone in the running level and forgotten, nothing put in again', async () => {
   const session = await consoleModule('editor/session.js');

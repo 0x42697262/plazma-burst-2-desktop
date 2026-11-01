@@ -46,9 +46,10 @@ test('modes and clients rule features out', () => {
 });
 
 test('unknown ids, turning off a locked feature and changing an unread flag are problems', () => {
-  const { states, problems } = resolve({
-    unknown: ['teleporter'],
-    env: [{ id: 'nope', on: true }, { id: 'console_core', on: false }, { id: 'zoom', on: false }],
+  const unread = CATALOG.map((definition) => (definition.id === 'zoom' ? { ...definition, migrated: false } : definition));
+  const { states, problems } = resolveFlags({
+    catalog: unread, fileOverrides: {}, fileUnknownIds: ['teleporter'], mode: 'local', client: 'official',
+    envToggles: [{ id: 'nope', on: true }, { id: 'console_core', on: false }, { id: 'zoom', on: false }],
   });
   assert.equal(problems.length, 4);
   assert.match(problems[0] ?? '', /features\.json: no feature "teleporter"/);
