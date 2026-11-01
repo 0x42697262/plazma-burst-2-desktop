@@ -8,8 +8,8 @@
 // map editor's action list, desktop/dev/opcodes.js). An element without a uid gets
 // "<tag>#<index>" as its name ("trigger#3"); real uids start with "#", so they never
 // clash.
-import { game } from '../game/bindings.js';
-import { ACTION, ACTION_NAMES, RUNS_REGION_TRIGGER } from '../game/actions.js';
+import { game } from '../../../../src/console/kernel/game/bindings.ts';
+import { ACTION, ACTION_NAMES, RUNS_REGION_TRIGGER } from '../../../../src/console/kernel/game/actions.ts';
 import { MAP_MARKER as MAP } from '../../../../src/shared/contract/keys.ts';
 import { triggerList, regionList } from '../triggers/model.js';
 import { actionInfo } from '../triggers/script.js';

@@ -2,7 +2,7 @@ import { print } from '../../../../desktop/dev/console/ui/log.js';
 import { setPanelHidden } from '../../../../desktop/dev/console/ui/panel.js';
 import { el } from '../../../../desktop/dev/console/ui/dom.js';
 import { IN_OVERLAY } from '../../../../desktop/dev/console/ui/theme.js';
-import { game } from '../../../../desktop/dev/console/game/bindings.js';
+import { game } from '#console/kernel/game/bindings.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { takeOptions } from '#console/kernel/core/args.ts';
 import { ROUTE } from '#shared/contract/routes.ts';

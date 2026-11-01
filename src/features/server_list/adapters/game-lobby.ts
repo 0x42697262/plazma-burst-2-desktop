@@ -1,4 +1,4 @@
-import { game } from '../../../../desktop/dev/console/game/bindings.js';
+import { game } from '#console/kernel/game/bindings.ts';
 
 type LobbyBindings = {
   setLobbyAddress(start: string): void;

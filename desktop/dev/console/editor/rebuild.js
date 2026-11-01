@@ -6,11 +6,11 @@
 // branch runs with the kind's counter at its index, so the game's arrays get a new
 // object in its place; what the old one put on screen is taken off first, and the
 // loader's later steps run for the new one (later.js).
-import { game } from '../game/bindings.js';
-import { F } from '../game/fields.js';
+import { game } from '../../../../src/console/kernel/game/bindings.ts';
+import { GAME_FIELDS } from '../../../../src/console/kernel/game/fields.ts';
 import { canRebuild, canBuild, buildElement, builtCount, loaderProblem } from './loader.js';
-import { textureAt, addWall, removeWall } from '../game/walls.js';
-import { findRect, moveRect } from '../game/layers.js';
+import { textureAt, addWall, removeWall } from '../../../../src/console/kernel/game/walls.ts';
+import { findRect, moveRect } from '../../../../src/console/kernel/game/layers.ts';
 import { boundsOf } from './kinds.js';
 import { unwrap } from '../triggers/log.js';
 import { claimNewestGun, removeGun, remakeGun } from './guns.js';
@@ -127,9 +127,9 @@ const REMOVE = Object.freeze({
     placeWallEdges({ x: w.x[i], y: w.y[i], w: w.w[i], h: w.h[i] }, null);
     removeWall(i);
   },
-  region: (i) => { const r = game.regions()[i]; detach(r.mc); r.mc = undefined; r.x = r.y = FAR; r[F.R_USE_ON] = 0; },
-  trigger: (i) => { const t = unwrap(game.triggers()[i]); t[F.T_ENABLED] = false; t[F.T_CALLS] = t[F.T_MAX_CALLS] = 0; setStart('trigger', t, 'enabled', false); },
-  timer: (i) => { const t = game.timers()[i]; t[F.T_ENABLED] = false; t[F.T_CALLS] = t[F.T_MAX_CALLS] = 0; setStart('timer', t, 'enabled', false); },
+  region: (i) => { const r = game.regions()[i]; detach(r.mc); r.mc = undefined; r.x = r.y = FAR; r[GAME_FIELDS.R_USE_ON] = 0; },
+  trigger: (i) => { const t = unwrap(game.triggers()[i]); t[GAME_FIELDS.T_ENABLED] = false; t[GAME_FIELDS.T_CALLS] = t[GAME_FIELDS.T_MAX_CALLS] = 0; setStart('trigger', t, 'enabled', false); },
+  timer: (i) => { const t = game.timers()[i]; t[GAME_FIELDS.T_ENABLED] = false; t[GAME_FIELDS.T_CALLS] = t[GAME_FIELDS.T_MAX_CALLS] = 0; setStart('timer', t, 'enabled', false); },
   decor: (i) => hide(game.decors()[i]),
   door: (i) => {
     const d = game.doors()[i];

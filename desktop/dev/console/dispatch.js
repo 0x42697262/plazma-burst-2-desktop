@@ -3,7 +3,7 @@
 import { print } from './ui/log.js';
 import { COLOR } from '../../../src/console/kernel/core/keys.ts';
 import { plural, isHelpArg } from '../../../src/console/kernel/core/words.ts';
-import { game } from './game/bindings.js';
+import { game } from '../../../src/console/kernel/game/bindings.ts';
 import { SCHEMA, resolveKey, keyClientOnly, unphrase } from '../../../src/console/kernel/state/schema.ts';
 import { findRunnable, findSubcommand, reachOf } from './commands/registry.js';
 import { printTopicHelp } from './commands/help.js';

@@ -11,9 +11,9 @@
 import { print } from '../ui/log.js';
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { plural, parseIndex } from '../../../../src/console/kernel/core/words.ts';
-import { game } from '../game/bindings.js';
-import { F } from '../game/fields.js';
-import { charAt, noCharacter } from '../game/level.js';
+import { game } from '../../../../src/console/kernel/game/bindings.ts';
+import { GAME_FIELDS } from '../../../../src/console/kernel/game/fields.ts';
+import { charAt, noCharacter } from '../../../../src/console/kernel/game/level.ts';
 import { isUsable } from './log.js';
 import { callsText } from './model.js';
 import { actionInfo } from './script.js';
@@ -54,16 +54,16 @@ function localOnly({ usable, activator, refused }) {
 // the command that forces it. Returns { send, putBack }.
 export function runTriggerAs(idx, t, { force, activator, region, power, refused = false, forceHint }) {
   const label = `#${idx}${t.uid ? ' ' + t.uid : ''}`;
-  const wasEnabled = t[F.T_ENABLED];
-  const wasCalls = t[F.T_CALLS];
+  const wasEnabled = t[GAME_FIELDS.T_ENABLED];
+  const wasCalls = t[GAME_FIELDS.T_CALLS];
   const usable = isUsable(t);
   if (!usable && !force) {
     const why = !wasEnabled ? 'is disabled' : `has no calls left (${callsText(t)})`;
     throw new Error(`trigger ${label} ${why}. "${forceHint}" runs it anyway.`);
   }
   if (force) {
-    t[F.T_ENABLED] = true;
-    if (wasCalls !== -1 && !(wasCalls > 0)) t[F.T_CALLS] = 1;
+    t[GAME_FIELDS.T_ENABLED] = true;
+    if (wasCalls !== -1 && !(wasCalls > 0)) t[GAME_FIELDS.T_CALLS] = 1;
   }
   const localWhy = localOnly({ usable, activator, refused });
   const send = game.isMP() && !localWhy;
@@ -78,7 +78,7 @@ export function runTriggerAs(idx, t, { force, activator, region, power, refused 
   } finally {
     game.setTriggerActivator(prevActivator);
     if (power !== undefined) game.setTriggerPower(prevPower);
-    if (putBack) { t[F.T_ENABLED] = wasEnabled; t[F.T_CALLS] = wasCalls; }
+    if (putBack) { t[GAME_FIELDS.T_ENABLED] = wasEnabled; t[GAME_FIELDS.T_CALLS] = wasCalls; }
   }
   if (send) game.sendTriggerRun(idx, region);
   return { label, send, putBack, localWhy };
@@ -86,7 +86,7 @@ export function runTriggerAs(idx, t, { force, activator, region, power, refused 
 
 // The line that says what happened, and why it stayed local when it did.
 export function reportRun(what, t, activator, { send, putBack, localWhy }) {
-  const n = t[F.T_ACTIONS] || 0;
+  const n = t[GAME_FIELDS.T_ACTIONS] || 0;
   const by = activator === game.me() ? '' : ` as #${activator}`;
   const where = !game.isMP() ? '' : send ? ', sent to all players' : '';
   print(`Ran ${what}${by} (${plural(n, 'action')})${putBack ? ', forced: enabled state and calls left kept' : `, calls ${callsText(t)}`}${where}`, COLOR.ok);
@@ -129,11 +129,11 @@ export function runScript(actions, { activator, uid }) {
   const idx = Math.max(list.length, game.triggerCount() || 0);
   const t = {
     uid: uid || undefined,
-    [F.T_ENABLED]: true, [F.T_AT_START]: false, [F.T_MAX_CALLS]: 1, [F.T_CALLS]: 1,
-    [F.T_ACTIONS]: actions.length,
-    [F.T_TYPES]: actions.map((a) => a.type),
-    [F.T_A]: actions.map((a) => a.A),
-    [F.T_B]: actions.map((a) => a.B),
+    [GAME_FIELDS.T_ENABLED]: true, [GAME_FIELDS.T_AT_START]: false, [GAME_FIELDS.T_MAX_CALLS]: 1, [GAME_FIELDS.T_CALLS]: 1,
+    [GAME_FIELDS.T_ACTIONS]: actions.length,
+    [GAME_FIELDS.T_TYPES]: actions.map((a) => a.type),
+    [GAME_FIELDS.T_A]: actions.map((a) => a.A),
+    [GAME_FIELDS.T_B]: actions.map((a) => a.B),
   };
   const length = list.length;
   const prevActivator = game.triggerActivator();

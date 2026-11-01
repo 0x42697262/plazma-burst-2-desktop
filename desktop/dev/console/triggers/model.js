@@ -1,7 +1,7 @@
 // Reading the map's triggers, regions and timers.
-import { game } from '../game/bindings.js';
-import { F } from '../game/fields.js';
-import { ACTION, RUNS_REGION_TRIGGER } from '../game/actions.js';
+import { game } from '../../../../src/console/kernel/game/bindings.ts';
+import { GAME_FIELDS } from '../../../../src/console/kernel/game/fields.ts';
+import { ACTION, RUNS_REGION_TRIGGER } from '../../../../src/console/kernel/game/actions.ts';
 import { parseIndex, quote } from '../../../../src/console/kernel/core/words.ts';
 import { MAP_MARKER as MAP } from '../../../../src/shared/contract/keys.ts';
 import { unwrap } from './log.js';
@@ -37,15 +37,15 @@ export const timerList = () => upTo(game.timers(), game.timerCount());
 
 // Every action of a trigger: { n (1-based), type, A, B }.
 export function* actionsOf(t) {
-  for (let a = 0; a < (t[F.T_ACTIONS] || 0); a++) {
-    yield { n: a + 1, type: t[F.T_TYPES][a], A: t[F.T_A][a], B: t[F.T_B][a] };
+  for (let a = 0; a < (t[GAME_FIELDS.T_ACTIONS] || 0); a++) {
+    yield { n: a + 1, type: t[GAME_FIELDS.T_TYPES][a], A: t[GAME_FIELDS.T_A][a], B: t[GAME_FIELDS.T_B][a] };
   }
 }
 
 // Action targets are numbers (indexes, values) or text once the map has loaded.
 export const showTarget = (v) => (v === undefined || v === null ? '-' : quote(v, TARGET_SHOWN));
 
-export const callsText = (t) => (t[F.T_MAX_CALLS] === -1 ? 'unlimited' : `${t[F.T_CALLS]}/${t[F.T_MAX_CALLS]} left`);
+export const callsText = (t) => (t[GAME_FIELDS.T_MAX_CALLS] === -1 ? 'unlimited' : `${t[GAME_FIELDS.T_CALLS]}/${t[GAME_FIELDS.T_MAX_CALLS]} left`);
 
 export const triggerLabel = (idx, t) => `#${idx}${t.uid ? ' ' + t.uid : ''}`;
 
@@ -108,16 +108,16 @@ export function triggerSources() {
   const regions = regionList();
   regions.forEach((r, i) => {
     // A "uses timer" region names a timer, not a trigger: it starts no trigger itself.
-    if (!r || !r[F.R_USE_ON] || r[F.R_USES_TIMER]) return;
-    const mode = regionModeName(r[F.R_USE_ON]);
-    add(r[F.R_TRIGGER], SOURCE.REGION, i, uids.region[i], `${named('region', i, uids.region[i])} at ${Math.round(r.x)}, ${Math.round(r.y)} (${mode})`);
+    if (!r || !r[GAME_FIELDS.R_USE_ON] || r[GAME_FIELDS.R_USES_TIMER]) return;
+    const mode = regionModeName(r[GAME_FIELDS.R_USE_ON]);
+    add(r[GAME_FIELDS.R_TRIGGER], SOURCE.REGION, i, uids.region[i], `${named('region', i, uids.region[i])} at ${Math.round(r.x)}, ${Math.round(r.y)} (${mode})`);
   });
-  timerList().forEach((t, i) => { if (t) add(t[F.TIMER_TARGET], SOURCE.TIMER, i, uids.timer[i], named('timer', i, uids.timer[i])); });
+  timerList().forEach((t, i) => { if (t) add(t[GAME_FIELDS.TIMER_TARGET], SOURCE.TIMER, i, uids.timer[i], named('timer', i, uids.timer[i])); });
   add(game.sayTrigger(), SOURCE.CHAT, undefined, undefined, 'chat message');
   const chars = game.chars() || [];
   for (let i = 0; i < (game.charCount() || 0); i++) {
     const c = chars[i];
-    if (c) add(triggerIndex(c[F.ON_DEATH]), SOURCE.DEATH, i, uids.player[i], `death of #${i}${c.nickname ? ' ' + c.nickname : ''}`);
+    if (c) add(triggerIndex(c[GAME_FIELDS.ON_DEATH]), SOURCE.DEATH, i, uids.player[i], `death of #${i}${c.nickname ? ' ' + c.nickname : ''}`);
   }
   triggerList().forEach((t, i) => {
     if (!t) return;
@@ -126,7 +126,7 @@ export function triggerSources() {
       const target = triggerIndex(A);
       if (type === ACTION.RUN_TRIGGER) add(target, SOURCE.TRIGGER, i, t.uid, by);
       else if (type === ACTION.JUMP_TO_TRIGGER) add(target, SOURCE.TRIGGER, i, t.uid, `${by} (continues in it)`);
-      else if (RUNS_REGION_TRIGGER.has(type) && regions[target]) add(regions[target][F.R_TRIGGER], SOURCE.TRIGGER, i, t.uid, `${by} (via region #${target})`);
+      else if (RUNS_REGION_TRIGGER.has(type) && regions[target]) add(regions[target][GAME_FIELDS.R_TRIGGER], SOURCE.TRIGGER, i, t.uid, `${by} (via region #${target})`);
     }
   });
   return src;
@@ -135,7 +135,7 @@ export function triggerSources() {
 // Everything that runs trigger t (index i): its sources, plus map start.
 export function sourcesOf(sources, i, t) {
   const list = sources.get(i) || [];
-  return t[F.T_AT_START] ? [{ kind: SOURCE.START, text: 'map start' }, ...list] : list;
+  return t[GAME_FIELDS.T_AT_START] ? [{ kind: SOURCE.START, text: 'map start' }, ...list] : list;
 }
 
 // A region's or timer's uid, from the map text: the game keeps uids only on triggers.

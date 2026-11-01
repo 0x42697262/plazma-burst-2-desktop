@@ -6,7 +6,7 @@ const errorsOf = (out: string[]) => out.filter((line) => line.startsWith('error:
 
 test('screenshot hides the console, asks the wrapper, and has a hotkey (F12) you can change', async () => {
   const game = await bootConsole();
-  const { game: bindings } = await import('../../../desktop/dev/console/game/bindings.js') as { game: { overlay(): { childNodes: { style: Record<string, string>; textContent?: string }[] } } };
+  const { game: bindings } = await import('#console/kernel/game/bindings.ts') as { game: { overlay(): { childNodes: { style: Record<string, string>; textContent?: string }[] } } };
   const panel = () => bindings.overlay().childNodes.find((node) => node.style.zIndex === '50');
   const calls: [string, string | undefined][] = [];
   let reply: Record<string, unknown> = { ok: true, json: async () => ({ file: 'screenshots/pb2-x.png' }) };

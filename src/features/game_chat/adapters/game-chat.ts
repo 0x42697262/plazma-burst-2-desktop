@@ -1,6 +1,6 @@
-import { game } from '../../../../desktop/dev/console/game/bindings.js';
-import { LEVEL_REQUIRED } from '../../../../desktop/dev/console/game/level.js';
-import { F } from '../../../../desktop/dev/console/game/fields.js';
+import { game } from '#console/kernel/game/bindings.ts';
+import { LEVEL_REQUIRED } from '#console/kernel/game/level.ts';
+import { GAME_FIELDS } from '#console/kernel/game/fields.ts';
 import { KEY } from '#console/kernel/state/schema.ts';
 import { settings } from '#console/kernel/state/store.ts';
 import { gameCommandHeldBack, refusal } from '../../../../desktop/dev/console/overrides/server-checks.js';
@@ -30,7 +30,7 @@ export const gameChat = {
   sayTrigger: () => bindings.sayTrigger(),
   setSayTrigger: (trigger: number) => bindings.setSayTrigger(trigger),
   inLevelFrame: () => bindings.inLevelFrame(),
-  chatTextField: (F as { CHAT_TEXT: string }).CHAT_TEXT,
+  chatTextField: (GAME_FIELDS as { CHAT_TEXT: string }).CHAT_TEXT,
   levelRequired: LEVEL_REQUIRED as string,
   builtinOn: () => (settings as { get(key: string): unknown }).get((KEY as { BUILTIN: string }).BUILTIN) === true,
   heldBack: (text: string) => (gameCommandHeldBack as (text: string) => string | false)(text),

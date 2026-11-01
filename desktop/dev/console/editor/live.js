@@ -1,7 +1,7 @@
 // Where an element is in the running game, which is not always where the map put it:
 // regions ride on the movables they are attached to, and characters walk around.
 // Everything else is drawn where the map puts it.
-import { game } from '../game/bindings.js';
+import { game } from '../../../../src/console/kernel/game/bindings.ts';
 import { kindOf, boundsOf } from './kinds.js';
 
 // Elements added since the level loaded are not in the game yet: drawn where the map

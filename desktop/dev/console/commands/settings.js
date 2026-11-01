@@ -5,7 +5,7 @@ import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { SCHEMA, GROUPS, KEY, resolveKey, parseValue, affectsGame, keyClientOnly, describeKey, showValue } from '../../../../src/console/kernel/state/schema.ts';
 import { settings, binds, activeProfile, currentMap } from '../../../../src/console/kernel/state/store.ts';
 import { showKey } from '../../../../src/console/kernel/state/key-names.ts';
-import { isActive } from '../game/level.js';
+import { isActive } from '../../../../src/console/kernel/game/level.ts';
 import { levelWasActive, gameMaxHp } from '../overrides/frame.js';
 import { heldBack, refusal } from '../overrides/server-checks.js';
 import { CLIENT_TAG } from './help.js';

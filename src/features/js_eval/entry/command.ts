@@ -1,7 +1,7 @@
 import { print } from '../../../../desktop/dev/console/ui/log.js';
 import { COLOR } from '#console/kernel/core/keys.ts';
-import { game } from '../../../../desktop/dev/console/game/bindings.js';
-import { F } from '../../../../desktop/dev/console/game/fields.js';
+import { game } from '#console/kernel/game/bindings.ts';
+import { GAME_FIELDS } from '#console/kernel/game/fields.ts';
 import { printPair } from '../../../../desktop/dev/console/commands/help.js';
 import { EXAMPLE_WIDTH } from '../constants.ts';
 import { COMMAND, GAME_NAME, withSourceUrl } from '../keys.ts';
@@ -9,7 +9,7 @@ import { TEXT } from '../text.ts';
 
 type Names = { typedName(key: string): string; namesVersion(): string };
 const names = game as unknown as Names;
-const fields = F as { HP: string; MAX_HP: string };
+const fields = GAME_FIELDS as { HP: string; MAX_HP: string };
 const example = (code: string, what: string): void => (printPair as (left: string, right: string, width: number) => void)(TEXT.example(code), what, EXAMPLE_WIDTH);
 
 function printGuide(): void {

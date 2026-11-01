@@ -4,7 +4,7 @@
 // widens the area it acts on, gives each visible movable its texture and the two edges
 // characters grab. Each step is a loop over every object; its body is read from the
 // game's file (like the loader's branches) and run for the one index.
-import { game } from '../game/bindings.js';
+import { game } from '../../../../src/console/kernel/game/bindings.ts';
 import { loaderSource, loopAt, runGameCode, GAME_ID as ID } from './loader.js';
 
 let steps = null; // { attach, waterShow, doorTexture, doorEdges, edgeOf, moveAttached }

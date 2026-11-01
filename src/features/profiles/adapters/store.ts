@@ -1,7 +1,7 @@
 import { SCHEMA, resolveKey, parseValue, affectsGame, showValue } from '#console/kernel/state/schema.ts';
 import { settings, profiles, activeProfile, currentMap } from '#console/kernel/state/store.ts';
 import { parseKeyName, showKey } from '#console/kernel/state/key-names.ts';
-import { isActive } from '../../../../desktop/dev/console/game/level.js';
+import { isActive } from '#console/kernel/game/level.ts';
 import { commandText, warnKeyUses } from '#console/kernel/commands/command-text.ts';
 import { run } from '../../../../desktop/dev/console/dispatch.js';
 

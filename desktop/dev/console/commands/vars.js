@@ -3,7 +3,7 @@ import { print } from '../ui/log.js';
 import { showPaged, takePage } from '../ui/pager.js';
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { plural } from '../../../../src/console/kernel/core/words.ts';
-import { game } from '../game/bindings.js';
+import { game } from '../../../../src/console/kernel/game/bindings.ts';
 import { showTarget } from '../triggers/model.js';
 import {
   requireVars, showVar, parseVarValue, SYNC_MODES, RECOMMENDED_MODE, VAR_MAX_LEN, fights, modeName,

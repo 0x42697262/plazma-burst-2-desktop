@@ -24,10 +24,10 @@ import { buildPanel, updateStatus, updateStatusIfOpen, openPanel, closePanel, on
 import { COLOR } from '../../../src/console/kernel/core/keys.ts';
 import { errorBudget } from '../../../src/console/kernel/core/guard.ts';
 import { plural } from '../../../src/console/kernel/core/words.ts';
-import { game } from './game/bindings.js';
-import { namesMissing, CLIENT_TITLE, FIND_NAMES, SADBURST } from './game/names.js';
+import { game } from '../../../src/console/kernel/game/bindings.ts';
+import { namesMissing, CLIENT_TITLE, FIND_NAMES, SADBURST } from '../../../src/console/kernel/game/names.ts';
 import { load, reload as reloadStore, settings, binds, profiles, loadProblems, setMapSource } from '../../../src/console/kernel/state/store.ts';
-import { currentMapId } from './game/level.js';
+import { currentMapId } from '../../../src/console/kernel/game/level.ts';
 import { applyOverrides, onActiveChange } from './overrides/frame.js';
 import { run } from './dispatch.js';
 import { SERVER } from '../../../src/console/kernel/core/mode.ts';

@@ -1,5 +1,5 @@
-import { game } from '../../../../desktop/dev/console/game/bindings.js';
-import { read } from '../../../../desktop/dev/console/game/names.js';
+import { game } from './bindings.ts';
+import { read } from './names.ts';
 import { CONNECTION_CLASS_NAME } from './keys.ts';
 
 export type StateLayout = Partial<Record<'x' | 'y' | 'hp' | 'aimX' | 'aimY' | 'headHp' | 'faceHp' | 'killer' | 'clock' | 'respawns' | 'velScale', number | null>>;

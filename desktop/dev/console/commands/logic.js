@@ -4,7 +4,7 @@ import { print } from '../ui/log.js';
 import { showPaged, takePage } from '../ui/pager.js';
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { plural } from '../../../../src/console/kernel/core/words.ts';
-import { requireLevel } from '../game/level.js';
+import { requireLevel } from '../../../../src/console/kernel/game/level.ts';
 import { LINK, logicGraph, findNode, placeOf, chatTriggerUid } from '../logic/graph.js';
 import { showLogic, hideLogic, logicShown, isVisible } from '../logic/view.js';
 import { REMOTE } from '../../../../src/console/kernel/core/mode.ts';
@@ -137,7 +137,7 @@ function show(rawArgs) {
     print(`Showing ${plural(g.links.filter(filter).length, 'link')} ${where}: ${describe}. Only the ones on screen are drawn; "logic hide" stops.`, COLOR.ok);
   }
   print('  green: starts a trigger   yellow: enables/disables   blue: acts on   white: attached   pink: other', COLOR.hint);
-  print('  Aim the crosshair at a label to open its group ("+N more", or hidden for lack of room).', COLOR.hint);
+  print('  Aim the crosshair at a label to open its group ("+NAMES more", or hidden for lack of room).', COLOR.hint);
 }
 
 // The links from one element to another, as one row: "actions 5, 12: 20 enable trigger A"
@@ -287,7 +287,7 @@ export const logicCommand = {
           'edge; with it, only links that start and end on screen, worked out every frame.',
           'A region or a door counts as on screen when any part of it is.',
           'Labels never overlap. Elements at the same spot share one, a big group shows',
-          '"+N more", and a label with no room left (zoomed far out) is hidden. Aim the',
+          '"+NAMES more", and a label with no room left (zoomed far out) is hidden. Aim the',
           'crosshair at a group to open it in full.',
           'Colours: green starts a trigger, yellow enables or disables, blue acts on,',
           'white is attached, pink is any other reference.',

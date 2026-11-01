@@ -1,8 +1,8 @@
 // "regions": the map's regions, and firing one without being in it.
 import { showPaged, takePage } from '../ui/pager.js';
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
-import { requireLevel } from '../game/level.js';
-import { F } from '../game/fields.js';
+import { requireLevel } from '../../../../src/console/kernel/game/level.ts';
+import { GAME_FIELDS } from '../../../../src/console/kernel/game/fields.ts';
 import { regionList, triggerList, regionModeName, regionUid, timerUid, findRegion, REGION_MODE } from '../triggers/model.js';
 import { fireRegion } from '../triggers/regions.js';
 import { takeRunOptions } from '../triggers/run.js';
@@ -13,9 +13,9 @@ const NO_TARGET = -1;
 
 // What a region fires, as text: "trigger #3 #open_door", "timer #2 #clock", or "nothing".
 function firesText(r) {
-  const target = r[F.R_TRIGGER];
+  const target = r[GAME_FIELDS.R_TRIGGER];
   if (typeof target !== 'number' || target === NO_TARGET) return 'nothing';
-  if (r[F.R_USES_TIMER]) return `timer #${target}${timerUid(target) ? ' ' + timerUid(target) : ''}`;
+  if (r[GAME_FIELDS.R_USES_TIMER]) return `timer #${target}${timerUid(target) ? ' ' + timerUid(target) : ''}`;
   const t = triggerList()[target];
   return `trigger #${target}${t && t.uid ? ' ' + t.uid : ''}`;
 }
@@ -36,7 +36,7 @@ function listRegions(rawArgs) {
     if (!r) return;
     const uid = regionUid(i) || '-';
     if (q && !uid.toLowerCase().includes(q)) return;
-    const mode = r[F.R_USE_ON];
+    const mode = r[GAME_FIELDS.R_USE_ON];
     rows.push([`  #${String(i).padEnd(4)} ${uid.padEnd(UID_WIDTH)} ${regionModeName(mode).padEnd(MODE_WIDTH)} -> ${firesText(r)}   at ${Math.round(r.x)}, ${Math.round(r.y)}`,
       mode === REGION_MODE.NEVER ? COLOR.muted : undefined]);
   });

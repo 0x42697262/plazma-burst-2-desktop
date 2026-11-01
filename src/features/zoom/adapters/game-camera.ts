@@ -1,5 +1,5 @@
-import { game } from '../../../../desktop/dev/console/game/bindings.js';
-import { requireLevel, isActive } from '../../../../desktop/dev/console/game/level.js';
+import { game } from '#console/kernel/game/bindings.ts';
+import { requireLevel, isActive } from '#console/kernel/game/level.ts';
 import { zoomHeldBack, refusal, BYPASS_HINT } from '../../../../desktop/dev/console/overrides/server-checks.js';
 
 type CameraBindings = { zoom(): number; setZoom(scale: number): void; inLevelFrame(): boolean };

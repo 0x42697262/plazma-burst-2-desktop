@@ -2,8 +2,8 @@
 // layers can be selected, which edits the running level does not have. Views (overlay,
 // panels) read it and redraw when it notifies them; nothing here touches the screen.
 // While no level runs (loading, menus) the editor stays on but is not shown.
-import { game } from '../game/bindings.js';
-import { isActive, requireLevel } from '../game/level.js';
+import { game } from '../../../../src/console/kernel/game/bindings.ts';
+import { isActive, requireLevel } from '../../../../src/console/kernel/game/level.ts';
 import { MapDoc } from './doc.js';
 import { KIND_TAGS, kindOf } from './kinds.js';
 import { liveBounds } from './live.js';

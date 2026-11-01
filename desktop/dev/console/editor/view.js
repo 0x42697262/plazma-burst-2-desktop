@@ -3,7 +3,7 @@
 // the way the map editor draws them (dashed: green to what it points at, white from
 // what points at it; uids at the far ends), the rectangle being placed, and quick-pick
 // markers.
-import { GAME_WIDTH, GAME_HEIGHT } from '../game/bindings.js';
+import { GAME_WIDTH, GAME_HEIGHT } from '../../../../src/console/kernel/game/bindings.ts';
 import { setLayer, drawOverlay, toScreen, crosshair } from '../ui/overlay.js';
 import { drawLabels } from '../ui/labels.js';
 import { buildGraph, nameless } from '../logic/graph.js';

@@ -2,8 +2,8 @@
 // Features add a layer (the logic view, player traces) instead of a canvas of their own.
 // Like the game's own debug view ("debug 1"), but nothing of the game is changed: the
 // debug view's switch is an anti-cheat guarded value, this only reads the camera.
-import { game, GAME_WIDTH, GAME_HEIGHT } from '../game/bindings.js';
-import { isActive, player } from '../game/level.js';
+import { game, GAME_WIDTH, GAME_HEIGHT } from '../../../../src/console/kernel/game/bindings.ts';
+import { isActive, player } from '../../../../src/console/kernel/game/level.ts';
 
 const MARGIN = 40; // game units past the screen edge that still count as on screen
 

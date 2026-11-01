@@ -12,7 +12,7 @@
 import { el } from '../ui/dom.js';
 import { IN_OVERLAY } from '../ui/theme.js';
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
-import { game } from '../game/bindings.js';
+import { game } from '../../../../src/console/kernel/game/bindings.ts';
 import { KINDS, KIND_TAGS, NOT_PLACED, kindOf, nameOf } from './kinds.js';
 import {
   editorDoc, selected, select, currentLayer, showLayer, countByTag, onChange, pendingCount,

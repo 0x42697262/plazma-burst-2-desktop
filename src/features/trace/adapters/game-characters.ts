@@ -1,6 +1,6 @@
-import { GAME_WIDTH, GAME_HEIGHT, game } from '../../../../desktop/dev/console/game/bindings.js';
-import { F } from '../../../../desktop/dev/console/game/fields.js';
-import { player, charAt, isDown, charLabel, BODY_MIDDLE, requireLevel, resolveChar, isActive } from '../../../../desktop/dev/console/game/level.js';
+import { GAME_WIDTH, GAME_HEIGHT, game } from '#console/kernel/game/bindings.ts';
+import { GAME_FIELDS } from '#console/kernel/game/fields.ts';
+import { player, charAt, isDown, charLabel, BODY_MIDDLE, requireLevel, resolveChar, isActive } from '#console/kernel/game/level.ts';
 import { setLayer, hasLayer, toScreen, crosshair } from '../../../../desktop/dev/console/ui/overlay.js';
 import { drawLabels } from '../../../../desktop/dev/console/ui/labels.js';
 import { parseIndex } from '#console/kernel/core/words.ts';
@@ -20,11 +20,11 @@ export const gameCharacters = {
   player: (): Character | null => (player as () => Character | null)(),
   isDown: (character: Character): boolean => (isDown as (character: Character) => boolean)(character),
   label: (index: number, character?: Character): string => (charLabel as (index: number, character?: Character) => string)(index, character),
-  isHuman: (character: Character): boolean => !!character[(F as { HUMAN: string }).HUMAN],
+  isHuman: (character: Character): boolean => !!character[(GAME_FIELDS as { HUMAN: string }).HUMAN],
   bodyMiddle: BODY_MIDDLE as number,
   requireLevel: (): void => { requireLevel(); },
   isLevelActive: (): boolean => isActive(),
-  resolve: (word: string): number => (resolveChar as (word: string) => number)(word),
+  resolve: (word: string): number => resolveChar(word),
   isIndexWord: (word: string): boolean => (parseIndex as (word: string) => number | null)(word) !== null,
 };
 

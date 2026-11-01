@@ -1,5 +1,5 @@
-import { game, NET } from '../../../../desktop/dev/console/game/bindings.js';
-import { isActive } from '../../../../desktop/dev/console/game/level.js';
+import { game, NET } from '#console/kernel/game/bindings.ts';
+import { isActive } from '#console/kernel/game/level.ts';
 import { KEY } from '#console/kernel/state/schema.ts';
 import { settings } from '#console/kernel/state/store.ts';
 

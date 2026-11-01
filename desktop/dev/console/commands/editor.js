@@ -5,7 +5,7 @@ import { showKey } from '../../../../src/console/kernel/state/key-names.ts';
 import { KEY } from '../../../../src/console/kernel/state/schema.ts';
 import { settings } from '../../../../src/console/kernel/state/store.ts';
 import { takeOptions } from '../../../../src/console/kernel/core/args.ts';
-import { game } from '../game/bindings.js';
+import { game } from '../../../../src/console/kernel/game/bindings.ts';
 import { editorOn, setEditorOn } from '../editor/index.js';
 import {
   editorDoc, editorShown, selected, pendingCount, isPending, setTool, showLayer, TOOL,
@@ -15,7 +15,7 @@ import {
   setAttr, saveMap, addElement, deleteElement, duplicateElement, undo, redo, notLiveReason, resetEdits,
 } from '../editor/edit.js';
 import { nameOf, kindOf, KINDS, KIND_TAGS, SHAPE } from '../editor/kinds.js';
-import { player } from '../game/level.js';
+import { player } from '../../../../src/console/kernel/game/level.ts';
 import { inputStatus } from '../editor/input.js';
 import { panelsOnPage } from '../editor/panels.js';
 import { hasLayer } from '../ui/overlay.js';

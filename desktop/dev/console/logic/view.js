@@ -1,6 +1,6 @@
 // The logic graph as an overlay layer: a line for every link, a marker for every element
 // it touches, and its uid in tiny text.
-import { GAME_WIDTH, GAME_HEIGHT } from '../game/bindings.js';
+import { GAME_WIDTH, GAME_HEIGHT } from '../../../../src/console/kernel/game/bindings.ts';
 import { setLayer, hasLayer, drawOverlay, currentTransform, toScreen, onScreen, crosshair } from '../ui/overlay.js';
 import { drawLabels } from '../ui/labels.js';
 import { LINK, logicGraph, placeOf, centreOf } from './graph.js';

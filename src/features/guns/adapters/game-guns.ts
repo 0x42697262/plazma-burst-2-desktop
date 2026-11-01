@@ -1,6 +1,6 @@
-import { game } from '../../../../desktop/dev/console/game/bindings.js';
-import { F, GUN_SLOTS, FIRST_SLOT, LAST_SLOT, EMPTY_SLOT, slotField } from '../../../../desktop/dev/console/game/fields.js';
-import { targetChar, takeCharSuffix, be, have } from '../../../../desktop/dev/console/game/level.js';
+import { game } from '#console/kernel/game/bindings.ts';
+import { GAME_FIELDS, GUN_SLOTS, FIRST_SLOT, LAST_SLOT, EMPTY_SLOT, slotField } from '#console/kernel/game/fields.ts';
+import { targetChar, takeCharSuffix, be, have } from '#console/kernel/game/level.ts';
 import { parseIndex, capitalize } from '#console/kernel/core/words.ts';
 
 export type GameCharacter = { x: number; y: number; curwea: number; [field: string]: unknown };
@@ -16,14 +16,14 @@ type GunBindings = {
 type Fields = { HP: string; DEAD: string; G_SLOT: string; INDEX: string; G_FIXED: string; G_PT_A: string; G_PT_B: string; AIM: string; FACING: string };
 
 export const gunBindings = game as unknown as GunBindings;
-export const gunFields = F as unknown as Fields;
-export const slots = { all: GUN_SLOTS, first: FIRST_SLOT as number, last: LAST_SLOT as number, empty: EMPTY_SLOT as number, field: slotField as (slot: number) => string };
+export const gunFields = GAME_FIELDS as unknown as Fields;
+export const slots = { all: GUN_SLOTS, first: FIRST_SLOT as number, last: LAST_SLOT as number, empty: EMPTY_SLOT as number, field: slotField };
 
 export const characters = {
-  target: (index: number | undefined): Target => (targetChar as (index: number | undefined) => Target)(index),
+  target: (index: number | undefined): Target => targetChar(index) as unknown as Target,
   takeSuffix: (args: readonly string[], word: string, usage: string): { args: string[]; target: number | undefined } => (takeCharSuffix as (args: readonly string[], word: string, usage: string) => { args: string[]; target: number | undefined })(args, word, usage),
-  be: (who: string): string => (be as (who: string) => string)(who),
-  have: (who: string): string => (have as (who: string) => string)(who),
+  be: (who: string): string => be(who),
+  have: (who: string): string => have(who),
   index: (word: string): number | null => (parseIndex as (word: string) => number | null)(word),
   capitalize: (text: string): string => capitalize(text),
 };

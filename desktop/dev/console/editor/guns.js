@@ -5,8 +5,8 @@
 // over. Moving one moves its two physics points, the way "drop" does; a new model,
 // upgrade or team is a new gun from the game's gun factory where the old one lies, the
 // old one sent out of play.
-import { game } from '../game/bindings.js';
-import { F } from '../game/fields.js';
+import { game } from '../../../../src/console/kernel/game/bindings.ts';
+import { GAME_FIELDS } from '../../../../src/console/kernel/game/fields.ts';
 
 const FAR = 1e7;
 const SEARCH = 400; // world units from the map's place that a fallen gun may be
@@ -36,7 +36,7 @@ export function gunOf(e) {
 
 // Puts a gun's physics points (and the gun) at x, y.
 function placeGun(g, x, y) {
-  const a = g[F.G_PT_A], b = g[F.G_PT_B];
+  const a = g[GAME_FIELDS.G_PT_A], b = g[GAME_FIELDS.G_PT_B];
   const X = game.ptX(), Y = game.ptY(), PX = game.ptPrevX(), PY = game.ptPrevY();
   const dx = x - g.x, dy = y - g.y;
   for (const p of [a, b]) {

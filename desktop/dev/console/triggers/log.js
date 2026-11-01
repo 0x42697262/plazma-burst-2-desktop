@@ -7,9 +7,9 @@
 // quicksave skips them, so F5/F9 would lose the enabled state. A Proxy keeps plain data
 // properties, so quicksave and everything else see no change.
 // Limit: triggers that run while the map loads ("at start") run before the wrap.
-import { game } from '../game/bindings.js';
-import { F } from '../game/fields.js';
-import { isActive } from '../game/level.js';
+import { game } from '../../../../src/console/kernel/game/bindings.ts';
+import { GAME_FIELDS } from '../../../../src/console/kernel/game/fields.ts';
+import { isActive } from '../../../../src/console/kernel/game/level.ts';
 import { KEY } from '../../../../src/console/kernel/state/schema.ts';
 import { settings } from '../../../../src/console/kernel/state/store.ts';
 
@@ -32,7 +32,7 @@ export const clearTriggerRuns = () => { runs.length = 0; };
 export const unwrap = (t) => targetOf.get(t) || t;
 
 // The runner's own check: enabled, with calls left (-1 = unlimited).
-export const isUsable = (t) => !!t[F.T_ENABLED] && (t[F.T_CALLS] === -1 || t[F.T_CALLS] > 0);
+export const isUsable = (t) => !!t[GAME_FIELDS.T_ENABLED] && (t[GAME_FIELDS.T_CALLS] === -1 || t[GAME_FIELDS.T_CALLS] > 0);
 
 // Name of the function that made the property read (the frame above the trap).
 function callerName(skipFn) {
@@ -68,14 +68,14 @@ function logRun(t) {
       return;
     }
   }
-  const why = ok ? '' : !t[F.T_ENABLED] ? 'disabled' : 'no calls left';
+  const why = ok ? '' : !t[GAME_FIELDS.T_ENABLED] ? 'disabled' : 'no calls left';
   runs.push({ idx, uid: t.uid, by, ok, why, count: 1, first: now, last: now });
   if (runs.length > TRIG_HISTORY_MAX) runs.splice(0, runs.length - TRIG_HISTORY_MAX);
 }
 
 const proxyHandler = {
   get: function trapGet(t, prop) {
-    if (prop === F.T_ENABLED && callerName(trapGet) === game.runTriggerName()) {
+    if (prop === GAME_FIELDS.T_ENABLED && callerName(trapGet) === game.runTriggerName()) {
       try { logRun(t); } catch {}
     }
     return t[prop];

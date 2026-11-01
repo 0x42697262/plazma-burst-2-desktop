@@ -2,9 +2,9 @@
 // game's anti-tamper check compares function source): values are forced from an
 // ENTER_FRAME listener and put back when a setting is removed or the level ends.
 import { isFeatureOn } from '../../../../src/console/flags.ts';
-import { game } from '../game/bindings.js';
-import { F } from '../game/fields.js';
-import { player, isActive } from '../game/level.js';
+import { game } from '../../../../src/console/kernel/game/bindings.ts';
+import { GAME_FIELDS } from '../../../../src/console/kernel/game/fields.ts';
+import { player, isActive } from '../../../../src/console/kernel/game/level.ts';
 import { KEY } from '../../../../src/console/kernel/state/schema.ts';
 import { settings } from '../../../../src/console/kernel/state/store.ts';
 import { force, original, restore, restoreObj, restoreAll } from './force.js';
@@ -46,7 +46,7 @@ export function hpBonusFor(base) {
 
 // Your character's own max HP, without max_hp or a bonus from the console; null
 // outside a level.
-export const gameMaxOf = (p) => (p ? original(p, F.MAX_HP) - hpBonusAppliedTo(p) : null);
+export const gameMaxOf = (p) => (p ? original(p, GAME_FIELDS.MAX_HP) - hpBonusAppliedTo(p) : null);
 export const gameMaxHp = () => (isActive() ? gameMaxOf(player()) : null);
 
 // max_hp is set and not held back.
@@ -73,16 +73,16 @@ function applyGod(p) {
   uninstallGodExcept(god ? p : null);
   if (!god) return;
   installGod(p, () => !!val(KEY.GOD));
-  if (p[F.DEAD] && p[F.HP] > 0) p[F.DEAD] = false;
+  if (p[GAME_FIELDS.DEAD] && p[GAME_FIELDS.HP] > 0) p[GAME_FIELDS.DEAD] = false;
 }
 
 function applyMaxHp(p) {
   if (maxHpOn(p)) {
-    force(p, F.MAX_HP, val(KEY.MAX_HP));
-    if (lastMaxHp.get(p) !== val(KEY.MAX_HP)) { p[F.HP] = val(KEY.MAX_HP); lastMaxHp.set(p, val(KEY.MAX_HP)); }
-  } else if (restore(p, F.MAX_HP)) {
+    force(p, GAME_FIELDS.MAX_HP, val(KEY.MAX_HP));
+    if (lastMaxHp.get(p) !== val(KEY.MAX_HP)) { p[GAME_FIELDS.HP] = val(KEY.MAX_HP); lastMaxHp.set(p, val(KEY.MAX_HP)); }
+  } else if (restore(p, GAME_FIELDS.MAX_HP)) {
     lastMaxHp.delete(p);
-    if (p[F.HP] > p[F.MAX_HP]) p[F.HP] = p[F.MAX_HP];
+    if (p[GAME_FIELDS.HP] > p[GAME_FIELDS.MAX_HP]) p[GAME_FIELDS.HP] = p[GAME_FIELDS.MAX_HP];
   }
 }
 
@@ -90,27 +90,27 @@ function applyMaxHp(p) {
 // got, so it is applied once per character object (a new life or level gets it again)
 // and never adds up frame after frame. Skipped while max_hp forces the max.
 function applyHpBonus(p) {
-  if (maxHpOn(p) || !(p[F.HP] > 0) || p[F.DEAD]) return;
+  if (maxHpOn(p) || !(p[GAME_FIELDS.HP] > 0) || p[GAME_FIELDS.DEAD]) return;
   const applied = hpBonusAppliedTo(p);
-  const want = hpBonusFor(p[F.MAX_HP] - applied); // max minus applied = the game's own max
+  const want = hpBonusFor(p[GAME_FIELDS.MAX_HP] - applied); // max minus applied = the game's own max
   if (want === applied) return;
-  const newMax = Math.max(1, p[F.MAX_HP] + (want - applied));
+  const newMax = Math.max(1, p[GAME_FIELDS.MAX_HP] + (want - applied));
   // Record only what was really added (max HP cannot go below 1), so removing the
   // bonus later takes back exactly that much.
-  const real = newMax - p[F.MAX_HP];
+  const real = newMax - p[GAME_FIELDS.MAX_HP];
   if (real === 0) return;
-  p[F.MAX_HP] = newMax;
+  p[GAME_FIELDS.MAX_HP] = newMax;
   // Raising max HP also gives that much HP; lowering it only caps current HP.
-  p[F.HP] = Math.max(1, Math.min(p[F.HP] + Math.max(real, 0), p[F.MAX_HP]));
+  p[GAME_FIELDS.HP] = Math.max(1, Math.min(p[GAME_FIELDS.HP] + Math.max(real, 0), p[GAME_FIELDS.MAX_HP]));
   hpBonusApplied.set(p, applied + real);
 }
 
 // Adds (speed - 1) x the game's own walk acceleration for the last tick. The game's
 // speed field also scales knockback and balance loss, so it is left alone.
 function applySpeed(p, running, dt) {
-  if (!on(KEY.SPEED) || !running || !(p[F.HP] > 0)) return;
+  if (!on(KEY.SPEED) || !running || !(p[GAME_FIELDS.HP] > 0)) return;
   const sp = val(KEY.SPEED);
-  const walk = p[F.WALK];
+  const walk = p[GAME_FIELDS.WALK];
   if (!walk) return;
   if (p.stand) p.tox += walk * STAND_WALK(p.sit) * dt * (sp - 1);
   else if (sp > 1 && p.tox * Math.sign(walk) < AIR_TOP_SPEED * sp) p.tox += walk * AIR_WALK * dt * (sp - 1);
@@ -123,15 +123,15 @@ function applyPlayer(p, running, dt) {
   applyHpBonus(p);
   // Ranked match: never more HP than your max (what was held back above lowered it). God
   // ignores decreases, so it steps aside for this one write; it is put back next frame.
-  if (guarding() && p[F.HP] > p[F.MAX_HP]) { uninstallGodExcept(null); p[F.HP] = p[F.MAX_HP]; }
+  if (guarding() && p[GAME_FIELDS.HP] > p[GAME_FIELDS.MAX_HP]) { uninstallGodExcept(null); p[GAME_FIELDS.HP] = p[GAME_FIELDS.MAX_HP]; }
   applySpeed(p, running, dt);
 
-  if (on(KEY.JUMP)) force(p, F.JUMP, val(KEY.JUMP));
-  else restore(p, F.JUMP);
+  if (on(KEY.JUMP)) force(p, GAME_FIELDS.JUMP, val(KEY.JUMP));
+  else restore(p, GAME_FIELDS.JUMP);
 
   // Gravity off: undo the gravity the last tick added (y moves before gravity is added).
   const fly = val(KEY.FLY) === true;
-  if ((val(KEY.GRAVITY) === false || fly) && running && p[F.HP] > 0 && !p.stand) {
+  if ((val(KEY.GRAVITY) === false || fly) && running && p[GAME_FIELDS.HP] > 0 && !p.stand) {
     p.toy -= game.getGravity() * dt;
   }
 
@@ -139,12 +139,12 @@ function applyPlayer(p, running, dt) {
   // re-evaluate. Maps that disable swords for everyone ("nopsi") still win over "on".
   if (on(KEY.SWORDS)) {
     const off = !val(KEY.SWORDS);
-    if (p[F.NO_SWORDS] !== off) { force(p, F.NO_SWORDS, off); game.refreshChar(game.me()); }
-  } else if (restore(p, F.NO_SWORDS)) {
+    if (p[GAME_FIELDS.NO_SWORDS] !== off) { force(p, GAME_FIELDS.NO_SWORDS, off); game.refreshChar(game.me()); }
+  } else if (restore(p, GAME_FIELDS.NO_SWORDS)) {
     game.refreshChar(game.me());
   }
 
-  if (fly && running && p[F.HP] > 0) {
+  if (fly && running && p[GAME_FIELDS.HP] > 0) {
     const flySpeed = settings.effective(KEY.FLY_SPEED);
     if (game.keyUp()) p.toy = -flySpeed;
     else if (game.keyDown()) p.toy = flySpeed;
@@ -160,18 +160,18 @@ function applyGun(p) {
   }
   if (!gun || typeof gun !== 'object') return;
   forcedGuns.add(gun);
-  forceMult(gun, F.G_RATE, KEY.FIRE_RATE);
-  if (on(KEY.PELLETS)) force(gun, F.G_PELLETS, val(KEY.PELLETS));
-  else restore(gun, F.G_PELLETS);
-  forceMult(gun, F.G_SPREAD, KEY.SPREAD);
-  if (on(KEY.SPREAD) && val(KEY.SPREAD) === 0) gun[F.G_BLOOM] = 0;
-  forceMult(gun, F.G_RECOIL, KEY.RECOIL);
+  forceMult(gun, GAME_FIELDS.G_RATE, KEY.FIRE_RATE);
+  if (on(KEY.PELLETS)) force(gun, GAME_FIELDS.G_PELLETS, val(KEY.PELLETS));
+  else restore(gun, GAME_FIELDS.G_PELLETS);
+  forceMult(gun, GAME_FIELDS.G_SPREAD, KEY.SPREAD);
+  if (on(KEY.SPREAD) && val(KEY.SPREAD) === 0) gun[GAME_FIELDS.G_BLOOM] = 0;
+  forceMult(gun, GAME_FIELDS.G_RECOIL, KEY.RECOIL);
 }
 
 // Lets a bullet keep `keep` of the damage the game takes off after each hit.
 function keepPenetration(b, keep) {
-  let v = b[F.B_DMG];
-  Object.defineProperty(b, F.B_DMG, {
+  let v = b[GAME_FIELDS.B_DMG];
+  Object.defineProperty(b, GAME_FIELDS.B_DMG, {
     configurable: true,
     enumerable: true,
     get() { return v; },
@@ -193,10 +193,10 @@ function applyBullets() {
     const b = arr[i];
     if (!b || typeof b !== 'object' || seenBullets.has(b)) continue;
     seenBullets.add(b);
-    if (b[F.B_OWNER] !== me) continue;
-    if (on(KEY.BULLET_DAMAGE)) b[F.B_DMG] *= val(KEY.BULLET_DAMAGE);
+    if (b[GAME_FIELDS.B_OWNER] !== me) continue;
+    if (on(KEY.BULLET_DAMAGE)) b[GAME_FIELDS.B_DMG] *= val(KEY.BULLET_DAMAGE);
     if (on(KEY.BULLET_SPEED)) { b.spx *= val(KEY.BULLET_SPEED); b.spy *= val(KEY.BULLET_SPEED); }
-    if (on(KEY.BULLET_LIFE)) b[F.B_LIFE] *= val(KEY.BULLET_LIFE);
+    if (on(KEY.BULLET_LIFE)) b[GAME_FIELDS.B_LIFE] *= val(KEY.BULLET_LIFE);
     if (on(KEY.PENETRATION) && val(KEY.PENETRATION) > 0) keepPenetration(b, val(KEY.PENETRATION));
   }
 }

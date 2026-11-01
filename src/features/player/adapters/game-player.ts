@@ -1,7 +1,7 @@
-import { game } from '../../../../desktop/dev/console/game/bindings.js';
-import { F } from '../../../../desktop/dev/console/game/fields.js';
-import { movePlayerTo } from '../../../../desktop/dev/console/game/teleport.js';
-import { player, isActive, requireLevel, isDown, charAt, charLabel, be, noCharacter, resolveChar } from '../../../../desktop/dev/console/game/level.js';
+import { game } from '#console/kernel/game/bindings.ts';
+import { GAME_FIELDS } from '#console/kernel/game/fields.ts';
+import { movePlayerTo } from '#console/kernel/game/teleport.ts';
+import { player, isActive, requireLevel, isDown, charAt, charLabel, be, noCharacter, resolveChar } from '#console/kernel/game/level.ts';
 import { KEY } from '#console/kernel/state/schema.ts';
 import { settings, binds } from '#console/kernel/state/store.ts';
 import { hpBonusFor, hpBonusAppliedTo } from '../../../../desktop/dev/console/overrides/frame.js';
@@ -28,21 +28,21 @@ type Settings = { has(key: string): boolean; get(key: string): unknown; effectiv
 type Options = { options: Set<string>; rest: string[]; literal: boolean };
 
 export const playerGame = game as unknown as PlayerBindings;
-export const playerFields = F as unknown as Fields;
+export const playerFields = GAME_FIELDS as unknown as Fields;
 export const settingKeys = KEY as unknown as Keys;
 export const playerSettings = settings as unknown as Settings;
 
 export const level = {
-  player: (): Character => (player as () => Character)(),
+  player: (): Character => player() as unknown as Character,
   isActive: (): boolean => isActive(),
   require: (): void => { requireLevel(); },
   isDown: (character: Character | null): boolean => (isDown as (character: Character | null) => boolean)(character),
   at: (index: number): Character | null => (charAt as (index: number) => Character | null)(index),
   label: (index: number, character?: Character): string => (charLabel as (index: number, character?: Character) => string)(index, character),
-  be: (who: string): string => (be as (who: string) => string)(who),
-  noCharacter: (index: number): Error => (noCharacter as (index: number) => Error)(index),
-  resolve: (word: string): number => (resolveChar as (word: string) => number)(word),
-  moveTo: (targetX: number, targetY: number): void => { (movePlayerTo as (targetX: number, targetY: number) => void)(targetX, targetY); },
+  be: (who: string): string => be(who),
+  noCharacter: (index: number): Error => noCharacter(index),
+  resolve: (word: string): number => resolveChar(word),
+  moveTo: (targetX: number, targetY: number): void => { movePlayerTo(targetX, targetY); },
 };
 
 export const hpBonus = {

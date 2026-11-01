@@ -12,7 +12,7 @@ import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { MAP_MARKER as MAP } from '../../../../src/shared/contract/keys.ts';
 import { stripHtml } from '../../../../src/console/kernel/core/words.ts';
 import { SERVER } from '../../../../src/console/kernel/core/mode.ts';
-import { game, NET } from '../game/bindings.js';
+import { game, NET } from '../../../../src/console/kernel/game/bindings.ts';
 
 const TICK_MS = 500;
 const MENU = 'menu';

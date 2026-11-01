@@ -5,11 +5,11 @@
 // Walls, water and pushers keep their geometry in arrays the game's integrity check
 // snapshots: writing them makes the game report the client and reload the page. They
 // are written like everything else; nothing hides it.
-import { game } from '../game/bindings.js';
-import { F } from '../game/fields.js';
+import { game } from '../../../../src/console/kernel/game/bindings.ts';
+import { GAME_FIELDS } from '../../../../src/console/kernel/game/fields.ts';
 import { unwrap } from '../triggers/log.js';
-import { moveWall, textureAt } from '../game/walls.js';
-import { findRect, moveRect } from '../game/layers.js';
+import { moveWall, textureAt } from '../../../../src/console/kernel/game/walls.ts';
+import { findRect, moveRect } from '../../../../src/console/kernel/game/layers.ts';
 import { boundsOf } from './kinds.js';
 import { rebuildable, rebuildLive } from './rebuild.js';
 import { moveGun, remakeGun } from './guns.js';
@@ -33,14 +33,14 @@ const region = {
   y: (r, v, attrs) => !attached(attrs) && finite(v) && moveRegion(r, r.x, parseFloat(v)),
   w: (r, v, attrs) => !attached(attrs) && finite(v) && sizeRegion(r, parseFloat(v), r.h),
   h: (r, v, attrs) => !attached(attrs) && finite(v) && sizeRegion(r, r.w, parseFloat(v)),
-  use_target: (r, v) => { r[F.R_TRIGGER] = game.resolveTarget(v); return true; },
+  use_target: (r, v) => { r[GAME_FIELDS.R_TRIGGER] = game.resolveTarget(v); return true; },
   use_on: (r, v) => {
     const mode = LOADER_USE_ON[int(v)] ?? int(v);
-    if (!Number.isFinite(mode) || SWITCH_MODES.has(mode) !== SWITCH_MODES.has(r[F.R_USE_ON])) return false;
-    r[F.R_USE_ON] = mode;
+    if (!Number.isFinite(mode) || SWITCH_MODES.has(mode) !== SWITCH_MODES.has(r[GAME_FIELDS.R_USE_ON])) return false;
+    r[GAME_FIELDS.R_USE_ON] = mode;
     return true;
   },
-  uses_timer: (r, v) => { r[F.R_USES_TIMER] = v === 'true' || v === '1'; return true; },
+  uses_timer: (r, v) => { r[GAME_FIELDS.R_USES_TIMER] = v === 'true' || v === '1'; return true; },
 };
 
 // A use-key region has its switch drawn at its centre.
@@ -62,20 +62,20 @@ function loadActions(t, attrs) {
     A.push(game.resolveTarget(attrs[`actions_${i}_targetA`]));
     B.push(game.resolveTarget(attrs[`actions_${i}_targetB`]));
   }
-  t[F.T_TYPES] = types;
-  t[F.T_A] = A;
-  t[F.T_B] = B;
-  t[F.T_ACTIONS] = types.length;
+  t[GAME_FIELDS.T_TYPES] = types;
+  t[GAME_FIELDS.T_A] = A;
+  t[GAME_FIELDS.T_B] = B;
+  t[GAME_FIELDS.T_ACTIONS] = types.length;
   return true;
 }
 
 // enabled and calls left are shared by triggers and timers; a new round puts back the
 // copies the loader keeps (start.js).
 const counted = (tag) => ({
-  enabled: (t, v) => { t[F.T_ENABLED] = v === 'true'; setStart(tag, t, 'enabled', v === 'true'); return true; },
+  enabled: (t, v) => { t[GAME_FIELDS.T_ENABLED] = v === 'true'; setStart(tag, t, 'enabled', v === 'true'); return true; },
   maxcalls: (t, v) => {
     if (!Number.isFinite(int(v))) return false;
-    t[F.T_MAX_CALLS] = t[F.T_CALLS] = int(v);
+    t[GAME_FIELDS.T_MAX_CALLS] = t[GAME_FIELDS.T_CALLS] = int(v);
     return true;
   },
 });
@@ -123,7 +123,7 @@ const door = { x: doorPlace, y: doorPlace, w: doorPlace, h: doorPlace, tarx: doo
 // A rectangle kind's new place, from all its attributes (the one that changed included).
 const rectOf = (tag, attrs) => boundsOf({ tag, attrs });
 
-// Walls: arrays, collision grid, body and trims (game/walls.js).
+// Walls: arrays, collision grid, body and trims (src/console/kernel/game/walls.ts).
 const wallPlace = (i) => (v, attrs) => {
   const r = rectOf('box', attrs);
   if (!r) return false;
@@ -182,7 +182,7 @@ const LIVE = Object.freeze({
   trigger: {
     of: (i) => (i < game.triggerCount() ? unwrap(game.triggers()?.[i]) : null),
     // execute: run when the level starts (and when a match starts a new round).
-    attrs: { ...unread, ...counted('trigger'), execute: (t, v) => { t[F.T_AT_START] = v === 'true'; return true; } },
+    attrs: { ...unread, ...counted('trigger'), execute: (t, v) => { t[GAME_FIELDS.T_AT_START] = v === 'true'; return true; } },
     other: (t, attr, v, attrs) => ACTION_ATTR.test(attr) && loadActions(t, attrs),
   },
   decor: { of: (i) => game.decors()?.[i], attrs: decor },
@@ -221,7 +221,7 @@ const LIVE = Object.freeze({
   },
   timer: {
     of: (i) => (i < game.timerCount() ? game.timers()?.[i] : null),
-    attrs: { ...unread, ...counted('timer'), target: (t, v) => { t[F.TIMER_TARGET] = game.resolveTarget(v); return true; } },
+    attrs: { ...unread, ...counted('timer'), target: (t, v) => { t[GAME_FIELDS.TIMER_TARGET] = game.resolveTarget(v); return true; } },
   },
 });
 

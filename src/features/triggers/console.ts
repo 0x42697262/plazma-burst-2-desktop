@@ -8,7 +8,7 @@ import { logicCommand } from '../../../desktop/dev/console/commands/logic.js';
 import { syncTriggerHooks } from '../../../desktop/dev/console/triggers/log.js';
 import { editedVars, showVar } from '../../../desktop/dev/console/triggers/vars.js';
 import { logicShown, logicDescription } from '../../../desktop/dev/console/logic/view.js';
-import { isActive } from '../../../desktop/dev/console/game/level.js';
+import { isActive } from '#console/kernel/game/level.ts';
 import { KEY_WIDTH } from './constants.ts';
 import { FRAME_HOOK_NAME, LIST_SECTION } from './keys.ts';
 import { TEXT } from './text.ts';

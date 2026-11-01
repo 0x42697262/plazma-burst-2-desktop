@@ -15,7 +15,7 @@
 // a rectangle can be dragged out instead. Positions snap to SNAP units; with Alt held
 // they do not. A drag is one step for undo.
 import { isUi } from '../ui/theme.js';
-import { game, GAME_WIDTH, GAME_HEIGHT } from '../game/bindings.js';
+import { game, GAME_WIDTH, GAME_HEIGHT } from '../../../../src/console/kernel/game/bindings.ts';
 import { currentTransform, toWorld } from '../ui/overlay.js';
 import { kindOf, anchorOf, SHAPE } from './kinds.js';
 import { liveBounds } from './live.js';

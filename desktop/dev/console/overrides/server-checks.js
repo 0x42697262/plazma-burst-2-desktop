@@ -11,7 +11,7 @@
 // (your saved values stay as they are). "bypass checks" turns this off (state/danger.js).
 // The respawn counter (§14.5) and the clock check (§14.7): no console command changes
 // either, so there is nothing to hold back.
-import { game } from '../game/bindings.js';
+import { game } from '../../../../src/console/kernel/game/bindings.ts';
 import { KEY } from '../../../../src/console/kernel/state/schema.ts';
 import { checksBypassed } from '../../../../src/console/kernel/danger/bypass.ts';
 

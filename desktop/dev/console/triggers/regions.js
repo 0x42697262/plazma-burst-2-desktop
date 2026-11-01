@@ -2,9 +2,9 @@
 // met (the region check in frame2.js), for any activator.
 import { print } from '../ui/log.js';
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
-import { game } from '../game/bindings.js';
-import { F } from '../game/fields.js';
-import { charAt } from '../game/level.js';
+import { game } from '../../../../src/console/kernel/game/bindings.ts';
+import { GAME_FIELDS } from '../../../../src/console/kernel/game/fields.ts';
+import { charAt } from '../../../../src/console/kernel/game/level.ts';
 import { triggerList, timerList, regionList, REGION_MODE, regionModeName, regionLabel, timerUid } from './model.js';
 import { runTriggerAs, reportRun } from './run.js';
 
@@ -18,9 +18,9 @@ const NO_TARGET = -1;
 export function modeRefuses(mode, i) {
   const c = charAt(i);
   const me = i === game.me() && !game.spectating();
-  const inVehicle = c[F.VEHICLE] !== NO_VEHICLE;
-  const alive = c[F.HP] > 0;
-  const human = !!c[F.HUMAN];
+  const inVehicle = c[GAME_FIELDS.VEHICLE] !== NO_VEHICLE;
+  const alive = c[GAME_FIELDS.HP] > 0;
+  const human = !!c[GAME_FIELDS.HUMAN];
   const onTeam = (team) => (c.team === team ? '' : `it is for team ${team}; #${i} is on team ${c.team}`);
   const useKey = () => (!me ? 'only your own use key fires it' : inVehicle ? 'not from a vehicle' : '');
   switch (mode) {
@@ -59,9 +59,9 @@ export function fireRegion(i, { force, activator }) {
   const r = regionList()[i];
   if (!r) throw new Error(`no region #${i}. This map has ${regionList().length}.`);
   const label = regionLabel(i);
-  const target = r[F.R_TRIGGER];
+  const target = r[GAME_FIELDS.R_TRIGGER];
   if (typeof target !== 'number' || target === NO_TARGET) throw new Error(`region ${label} runs nothing`);
-  const mode = r[F.R_USE_ON];
+  const mode = r[GAME_FIELDS.R_USE_ON];
   const refused = modeRefuses(mode, activator);
   if (refused && !force) {
     throw new Error(`region ${label} (${regionModeName(mode)}) would not fire for #${activator}: ${refused}. "regions run ${i} force" fires it anyway.`);
@@ -69,10 +69,10 @@ export function fireRegion(i, { force, activator }) {
   if (refused) print(`  forced past its condition: ${refused}`, COLOR.hint);
   if (mode === REGION_MODE.TEAM_INSIDE && !refused) print('  (the game also waits for every player of the team to be inside; not checked)', COLOR.hint);
 
-  if (r[F.R_USES_TIMER]) {
+  if (r[GAME_FIELDS.R_USES_TIMER]) {
     const timer = timerList()[target];
     if (!timer) throw new Error(`region ${label} starts timer #${target}, which does not exist`);
-    timer[F.T_ENABLED] = true;
+    timer[GAME_FIELDS.T_ENABLED] = true;
     print(`Fired region ${label}: started timer #${target}${timerUid(target) ? ' ' + timerUid(target) : ''}`, COLOR.ok);
     if (game.isMP()) print('Note: in your game only. For a timer region the game sends a trigger run with the timer\'s number, which would run the wrong trigger for everyone else, so nothing is sent.', COLOR.warn);
     return;

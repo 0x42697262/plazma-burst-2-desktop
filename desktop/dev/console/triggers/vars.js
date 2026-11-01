@@ -3,12 +3,12 @@
 // map loads. A value from the map went through the loader's own conversion: a whole
 // number becomes a number, everything else stays text. The "variable equals" actions
 // compare with ===, so that difference decides whether a gate fires.
-import { game } from '../game/bindings.js';
-import { F } from '../game/fields.js';
-import { ACTION, VAR_WRITE_TYPES } from '../game/actions.js';
+import { game } from '../../../../src/console/kernel/game/bindings.ts';
+import { GAME_FIELDS } from '../../../../src/console/kernel/game/fields.ts';
+import { ACTION, VAR_WRITE_TYPES } from '../../../../src/console/kernel/game/actions.ts';
 import { MAP_MARKER as MAP } from '../../../../src/shared/contract/keys.ts';
 import { quote, pluralSuffix } from '../../../../src/console/kernel/core/words.ts';
-import { requireLevel } from '../game/level.js';
+import { requireLevel } from '../../../../src/console/kernel/game/level.ts';
 import { triggerList, actionsOf } from './model.js';
 
 // The map's engine mark that allows syncing (an <inf mark="var_sync"> element).
@@ -107,8 +107,8 @@ export function seedersFor(name) {
   const out = [];
   triggerList().forEach((t, i) => {
     if (!t) return;
-    const atStart = !!t[F.T_AT_START];
-    const once = t[F.T_MAX_CALLS] === 1;
+    const atStart = !!t[GAME_FIELDS.T_AT_START];
+    const once = t[GAME_FIELDS.T_MAX_CALLS] === 1;
     if (!atStart && !once) return;
     for (const { n, type, A } of actionsOf(t)) {
       if (VAR_WRITE_TYPES.has(type) && String(A) === name) { out.push({ idx: i, uid: t.uid, action: n, atStart, once }); break; }

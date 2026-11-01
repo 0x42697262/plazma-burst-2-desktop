@@ -1,4 +1,4 @@
-import { game, NET } from '../../../../desktop/dev/console/game/bindings.js';
+import { game, NET } from '#console/kernel/game/bindings.ts';
 import { UNLOCK_PHRASE, checksBypassed, askToBypass, protectAgain } from '#console/kernel/danger/bypass.ts';
 import { REASON, rankedMatch } from '../../../../desktop/dev/console/overrides/server-checks.js';
 

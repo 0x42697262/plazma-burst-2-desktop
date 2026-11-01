@@ -3,10 +3,10 @@ import { print } from '../ui/log.js';
 import { showPaged, takePage } from '../ui/pager.js';
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { plural, pluralSuffix, agoText, parseIndex } from '../../../../src/console/kernel/core/words.ts';
-import { game } from '../game/bindings.js';
-import { F } from '../game/fields.js';
-import { ACTION_NAMES } from '../game/actions.js';
-import { requireLevel, charLabel } from '../game/level.js';
+import { game } from '../../../../src/console/kernel/game/bindings.ts';
+import { GAME_FIELDS } from '../../../../src/console/kernel/game/fields.ts';
+import { ACTION_NAMES } from '../../../../src/console/kernel/game/actions.ts';
+import { requireLevel, charLabel } from '../../../../src/console/kernel/game/level.ts';
 import { KEY } from '../../../../src/console/kernel/state/schema.ts';
 import { settings } from '../../../../src/console/kernel/state/store.ts';
 import {
@@ -26,7 +26,7 @@ const actionName = (type) => {
   const what = ACTION_NAMES[type] || actionInfo(type)?.desc;
   return what ? `  (${what})` : '';
 };
-const disabledColor = (t) => (t[F.T_ENABLED] ? undefined : COLOR.muted);
+const disabledColor = (t) => (t[GAME_FIELDS.T_ENABLED] ? undefined : COLOR.muted);
 const actionWord = (n) => `action${pluralSuffix(n)}`;
 
 // The map's triggers, or null after saying there are none.
@@ -43,11 +43,11 @@ function showOne(list, idx, page) {
   const t = list[idx];
   if (!t) throw new Error(`no trigger #${idx}. This map has ${list.length} (0-${list.length - 1}).`);
   const by = triggerSources().get(idx);
-  const n = t[F.T_ACTIONS] || 0;
+  const n = t[GAME_FIELDS.T_ACTIONS] || 0;
   const rows = [...actionsOf(t)].map(({ n: a, type, A, B }) => [
     `    ${String(a).padStart(3)}. type ${String(type).padEnd(4)} A = ${showTarget(A)}   B = ${showTarget(B)}${actionName(type)}`]);
   print(`Trigger ${triggerLabel(idx, t)}`, COLOR.title);
-  print(`  ${t[F.T_ENABLED] ? 'enabled' : 'disabled'}, calls ${callsText(t)}${t[F.T_AT_START] ? ', runs at map start' : ''}`);
+  print(`  ${t[GAME_FIELDS.T_ENABLED] ? 'enabled' : 'disabled'}, calls ${callsText(t)}${t[GAME_FIELDS.T_AT_START] ? ', runs at map start' : ''}`);
   print(`  started by: ${by ? by.map((src) => src.text).join('; ') : 'nothing found (maybe a shot at an object, or another trigger through a variable)'}`);
   showPaged({ title: `  ${plural(n, 'action')} (type = the map editor's action number):`, color: COLOR.plain, rows, cmd: `triggers ${idx}`, page });
 }
@@ -62,17 +62,17 @@ function listTriggers(rawArgs) {
   if (idx >= 0) { showOne(list, idx, page); return; }
 
   const sources = triggerSources();
-  const on = list.filter((t) => t && t[F.T_ENABLED]).length;
+  const on = list.filter((t) => t && t[GAME_FIELDS.T_ENABLED]).length;
   const rows = [];
   list.forEach((t, i) => {
     if (!t) return;
-    const enabled = !!t[F.T_ENABLED];
+    const enabled = !!t[GAME_FIELDS.T_ENABLED];
     if (lc === 'on' && !enabled) return;
     if (lc === 'off' && enabled) return;
     if (lc && lc !== 'on' && lc !== 'off' && !String(t.uid).toLowerCase().includes(lc)) return;
     const by = sources.get(i);
-    const flags = [t[F.T_AT_START] ? 'at start' : '', by ? `by ${by[0].text}${by.length > 1 ? ` +${by.length - 1}` : ''}` : ''].filter(Boolean).join(', ');
-    const n = t[F.T_ACTIONS] || 0;
+    const flags = [t[GAME_FIELDS.T_AT_START] ? 'at start' : '', by ? `by ${by[0].text}${by.length > 1 ? ` +${by.length - 1}` : ''}` : ''].filter(Boolean).join(', ');
+    const n = t[GAME_FIELDS.T_ACTIONS] || 0;
     rows.push([`  #${String(i).padEnd(4)} ${String(t.uid || '-').padEnd(UID_WIDTH)} ${enabled ? 'on ' : 'off'}  ${callsText(t).padEnd(12)} ${String(n).padStart(3)} ${n === 1 ? 'action ' : 'actions'}  ${flags}`,
       disabledColor(t)]);
   });
@@ -143,7 +143,7 @@ const COMPARE = Object.freeze({
   '<': (a, b) => a < b, '>=': (a, b) => a >= b, '<=': (a, b) => a <= b,
 });
 const asCount = (n) => (n === UNLIMITED ? Infinity : n);
-const countOf = (t, field) => asCount(t[field === FIELD.calls ? F.T_CALLS : F.T_MAX_CALLS]);
+const countOf = (t, field) => asCount(t[field === FIELD.calls ? GAME_FIELDS.T_CALLS : GAME_FIELDS.T_MAX_CALLS]);
 
 function parseCount(field, text) {
   const m = text.match(/^(<=|>=|!=|<|>|=)?(.+)$/);
@@ -245,10 +245,10 @@ function find(rawArgs) {
     if (byHits.includes(null)) return;
     // Nothing left to match in the actions: one row for the trigger, not for actions.
     if (actionTerms.every((term) => term.field === FIELD.any && uidMatches(t, term))) {
-      const n = t[F.T_ACTIONS] || 0;
+      const n = t[GAME_FIELDS.T_ACTIONS] || 0;
       const how = [...new Set(byHits.flat().map((src) => src.text))];
       const shown = how.slice(0, SOURCES_SHOWN).join('; ') + (how.length > SOURCES_SHOWN ? ` +${how.length - SOURCES_SHOWN} more` : '');
-      trigRows.push([`  #${String(i).padEnd(4)} ${String(t.uid || '-').padEnd(FIND_UID_WIDTH)} trigger   ${t[F.T_ENABLED] ? 'on ' : 'off'}  ${callsText(t).padEnd(12)} ${String(n).padStart(3)} ${actionWord(n)}${how.length ? `  by ${shown}` : ''}`,
+      trigRows.push([`  #${String(i).padEnd(4)} ${String(t.uid || '-').padEnd(FIND_UID_WIDTH)} trigger   ${t[GAME_FIELDS.T_ENABLED] ? 'on ' : 'off'}  ${callsText(t).padEnd(12)} ${String(n).padStart(3)} ${actionWord(n)}${how.length ? `  by ${shown}` : ''}`,
         disabledColor(t)]);
     }
     if (!actionTerms.length) return; // only trigger terms: the trigger row is the whole answer

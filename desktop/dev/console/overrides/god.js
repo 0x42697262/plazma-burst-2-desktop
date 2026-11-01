@@ -1,13 +1,13 @@
 // God mode: replace a character's HP with an accessor that ignores decreases. Bullets are
 // processed before the death check in the same tick, so refilling HP each frame is too late.
-import { F } from '../game/fields.js';
+import { GAME_FIELDS } from '../../../../src/console/kernel/game/fields.ts';
 
 const godObjs = new Set();
 
 export function installGod(p, isOn) {
   if (godObjs.has(p)) return;
-  let v = p[F.HP];
-  Object.defineProperty(p, F.HP, {
+  let v = p[GAME_FIELDS.HP];
+  Object.defineProperty(p, GAME_FIELDS.HP, {
     configurable: true,
     enumerable: true,
     get() { return v; },
@@ -21,9 +21,9 @@ export function installGod(p, isOn) {
 
 export function uninstallGod(p) {
   if (!godObjs.has(p)) return;
-  const v = p[F.HP];
-  delete p[F.HP];
-  p[F.HP] = v;
+  const v = p[GAME_FIELDS.HP];
+  delete p[GAME_FIELDS.HP];
+  p[GAME_FIELDS.HP] = v;
   godObjs.delete(p);
 }
 

@@ -4,12 +4,12 @@
 // (frame2.js: mc.<start x>=mc["x"]=parseFloat(b["#x"])); an edit that is live writes the
 // copy too, or the round would take it back. The copies' names are read from the
 // loader's branches; one this game version does not have is left alone.
-import { F } from '../game/fields.js';
+import { GAME_FIELDS } from '../../../../src/console/kernel/game/fields.ts';
 import { branchNames, loaderSource, GAME_ID as ID } from './loader.js';
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const copyOf = (attr) => new RegExp(String.raw`mc\.(${ID})=mc\["${attr}"\]=parseFloat\(b\["#${attr}"\]\)`);
-const enabledCopy = () => new RegExp(String.raw`\.(${ID})=${ID}\[${ID}\]\.${escapeRe(F.T_ENABLED || '?')};`);
+const enabledCopy = () => new RegExp(String.raw`\.(${ID})=${ID}\[${ID}\]\.${escapeRe(GAME_FIELDS.T_ENABLED || '?')};`);
 
 const PATTERNS = Object.freeze({
   door: () => ({ x: copyOf('x'), y: copyOf('y'), tarx: copyOf('tarx'), tary: copyOf('tary') }),
