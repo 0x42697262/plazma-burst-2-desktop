@@ -6,6 +6,8 @@ import {
   LAUNCHER_DIST_DIR, LAUNCHER_PRELOAD_SOURCE, LAUNCHER_SCRIPT_SOURCE, LAUNCHER_SOURCE_DIR, LAUNCHER_STATIC_FILES,
 } from '#features/server_list/paths.ts';
 import { RUNTIME_BUNDLE, RUNTIME_SOURCE } from '#features/hooks/paths.ts';
+import { CLIENT_DIST_DIR, CLIENT_SCRIPT_SOURCE, CLIENT_SOURCE_DIR } from '#features/remote_play/paths.ts';
+import { CLIENT_SCRIPT_FILE, CLIENT_STATIC_FILES } from '#features/remote_play/keys.ts';
 import { BROWSER_TARGET, CONSOLE_SOURCE_ENTRY, ELECTRON_MODULE, LAUNCHER_PRELOAD_FILE, LAUNCHER_SCRIPT_FILE, NODE_TARGET } from './constants.ts';
 
 export const defaultConsoleOutFile = path.join(CONSOLE_BUNDLE_DIR, CONSOLE_BUNDLE_FILE);
@@ -45,6 +47,26 @@ async function copyLauncherStatic(outDir: string): Promise<void> {
   for (const name of LAUNCHER_STATIC_FILES) await fs.copyFile(path.join(LAUNCHER_SOURCE_DIR, name), path.join(outDir, name));
 }
 
+export const remoteClientOptions = (outDir: string = CLIENT_DIST_DIR): esbuild.BuildOptions => ({
+  ...shared,
+  sourcemap: false,
+  entryPoints: [CLIENT_SCRIPT_SOURCE],
+  outfile: path.join(outDir, CLIENT_SCRIPT_FILE),
+  format: 'iife',
+  platform: 'browser',
+  target: BROWSER_TARGET,
+});
+
+async function copyRemoteClientStatic(outDir: string): Promise<void> {
+  await fs.mkdir(outDir, { recursive: true });
+  for (const name of CLIENT_STATIC_FILES) await fs.copyFile(path.join(CLIENT_SOURCE_DIR, name), path.join(outDir, name));
+}
+
+export async function buildRemoteClient(outDir: string = CLIENT_DIST_DIR): Promise<string> {
+  await Promise.all([esbuild.build(remoteClientOptions(outDir)), copyRemoteClientStatic(outDir)]);
+  return outDir;
+}
+
 export const hooksRuntimeOptions = (outfile: string = RUNTIME_BUNDLE): esbuild.BuildOptions => ({
   ...shared,
   sourcemap: false,
@@ -71,12 +93,13 @@ export async function buildLauncher(outDir: string = LAUNCHER_DIST_DIR): Promise
 }
 
 export async function buildAll(): Promise<string[]> {
-  return Promise.all([buildConsole(), buildLauncher(), buildHooksRuntime()]);
+  return Promise.all([buildConsole(), buildLauncher(), buildHooksRuntime(), buildRemoteClient()]);
 }
 
 export async function watchAll(): Promise<esbuild.BuildContext[]> {
-  const contexts = await Promise.all([consoleBuildOptions(), launcherPageOptions(), launcherPreloadOptions(), hooksRuntimeOptions()].map((options) => esbuild.context(options)));
+  const contexts = await Promise.all([consoleBuildOptions(), launcherPageOptions(), launcherPreloadOptions(), hooksRuntimeOptions(), remoteClientOptions()].map((options) => esbuild.context(options)));
   await copyLauncherStatic(LAUNCHER_DIST_DIR);
+  await copyRemoteClientStatic(CLIENT_DIST_DIR);
   await Promise.all(contexts.map((context) => context.watch()));
   return contexts;
 }

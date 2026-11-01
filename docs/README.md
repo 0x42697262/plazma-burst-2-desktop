@@ -28,6 +28,7 @@
 - [player.md](features/player.md): `player`, commands and overrides on your character
 - [profiles.md](features/profiles.md): `profiles`, settings for some maps
 - [scan-bypass.md](features/scan-bypass.md): `scan_bypass`, the anti-cheat scan report and turning the protection off
+- [remote-play.md](features/remote-play.md): `remote_play`, streaming a game to a tester's browser
 - [screenshot.md](features/screenshot.md): `screenshot`
 - [server-list.md](features/server-list.md): `server_list`, the server list and private servers
 - [trace.md](features/trace.md): `trace`, lines to other characters

@@ -10,8 +10,13 @@ const { createKvFile } = require('./kv-file');
 // Settings, feature flags and the log, built once by src/wrapper/context.ts.
 const { wrapperContext } = require('../src/wrapper/context.ts');
 const { environment: ENVIRONMENT, flags: FLAGS, log } = wrapperContext;
-const { REMOTE_PAGE_SCRIPT, REMOTE_WEB_PREFERENCES, isGamePage, lockDownSession, lockDownWindow } = require('./remote/lockdown');
-const { startHost, parseHostArgs } = require('./remote/host');
+const { REMOTE_PAGE_SCRIPT, PARTITION_PREFIX, SCALE_FACTOR_SWITCH, SCALE_FACTOR_ONE, TESTER_SETTINGS_FILE_NAME, FETCH_DEST_HEADER } = require('../src/features/remote_play/keys.ts');
+const { REMOTE_WEB_PREFERENCES } = require('../src/features/remote_play/constants.ts');
+const { TEXT: REMOTE_TEXT, LOG: REMOTE_LOG } = require('../src/features/remote_play/text.ts');
+const { REMOTE_DATA_DIR } = require('../src/features/remote_play/paths.ts');
+const { isRefusedPageLoad } = require('../src/features/remote_play/domain/game-page.ts');
+const { lockDownSession, lockDownWindow } = require('../src/features/remote_play/adapters/lockdown.ts');
+const { startRemotePlay } = require('../src/features/remote_play/wrapper.ts');
 const serverConfig = require('./p2p-host/config');
 // Which game: the official client, or Sad Burst 2 with "npm run sadburst" (desktop/clients.js).
 const { CLIENTS } = require('./clients');
@@ -21,12 +26,10 @@ const CLIENT_FLAG = SADBURST ? ' -- --sadburst' : ''; // in the commands this fi
 
 // Remote play host: "npm run host" (electron . --host). No window here: every tester who
 // opens their link gets an offscreen game instance on this machine, streamed to their
-// browser (desktop/remote/). Guide: docs/operations/remote-play.md.
+// browser (src/features/remote_play/). Guide: docs/operations/remote-play.md.
 const HOST_MODE = ENVIRONMENT.mode === 'remote';
-const REMOTE_TESTERS_FILE = path.join(__dirname, 'remote-testers.json');
-const REMOTE_DATA_DIR = path.join(__dirname, 'remote-data'); // per tester: their console settings
 // Frames are exactly the window's size, whatever this screen's scaling.
-if (HOST_MODE) app.commandLine.appendSwitch('force-device-scale-factor', '1');
+if (HOST_MODE) app.commandLine.appendSwitch(SCALE_FACTOR_SWITCH, SCALE_FACTOR_ONE);
 
 // Player-hosted dedicated host: "npm run p2p-host" (electron . --p2p-host). One offscreen
 // game window hosts a player-hosted match, listed by the official lobby, from
@@ -273,11 +276,11 @@ async function serveLocal(url, ctx) {
       else log.warn('Verbose: scripts/flash.js not found in index.html; the game\'s trace() stays silent');
     }
     if (ctx.remote) {
-      // A tester's game: PB2_REMOTE before every other script (desktop/remote/lockdown.js).
+      // A tester's game: PB2_REMOTE before every other script (src/features/remote_play/keys.ts).
       // Without it the console would show "js" and the host's paths: no page at all then.
       const at = out.search(/<script\b/i);
       if (at < 0) {
-        log.error('Remote play: could not mark index.html as remote (no <script> tag); not serving it');
+        log.error(REMOTE_LOG.notMarked);
         return new Response('Not available', { status: 503 });
       }
       out = out.slice(0, at) + REMOTE_PAGE_SCRIPT + out.slice(at);
@@ -363,6 +366,11 @@ app.whenReady().then(async () => {
     app.quit();
     return;
   }
+  if (HOST_MODE && !FLAGS.remote_play.on) {
+    log.error(REMOTE_LOG.flagOff);
+    app.quit();
+    return;
+  }
   log.info(`${SADBURST ? `${CLIENT.title}: ` : ''}Game ${VERSION} from ${ROOT}`);
   if (SADBURST) {
     if (FLAGS.hooks.source === 'constraint') log.info('Sad Burst 2: hooks are off (its loader sends a hash of the game scripts with the login; docs/features/hooks.md).');
@@ -440,9 +448,8 @@ async function handleRequest(request, ctx) {
   const url = new URL(request.url);
   // A tester's window shows the game's start page and nothing else: a page load of any
   // other file (the console's source, a hook) is refused here too, not only by the lockdown.
-  if (ctx.remote && ['document', 'iframe', 'frame', 'embed', 'object'].includes(request.headers.get('sec-fetch-dest'))
-    && !isGamePage(request.url, START_URL)) {
-    return new Response('Not available', { status: 403 });
+  if (ctx.remote && isRefusedPageLoad(request.headers.get(FETCH_DEST_HEADER), request.url, START_URL)) {
+    return new Response(REMOTE_TEXT.notAvailable, { status: 403 });
   }
   const intercepted = await intercept(request, url, ctx);
   if (intercepted) return intercepted;
@@ -481,7 +488,7 @@ function logPage(win, who) {
 }
 
 // ---------------------------------------------------------------------------
-// Remote play host (desktop/remote/)
+// Remote play host (src/features/remote_play/)
 // ---------------------------------------------------------------------------
 const remoteCtx = new Map(); // tester name -> their request context (read by their session's handler)
 
@@ -489,7 +496,7 @@ const remoteCtx = new Map(); // tester name -> their request context (read by th
 // settings survive), locked down, logged in like the local window, and its requests
 // answered with their context.
 async function remoteSession(name) {
-  const ses = session.fromPartition(`persist:remote-${name}`);
+  const ses = session.fromPartition(PARTITION_PREFIX + name);
   let ctx = remoteCtx.get(name);
   if (!ctx) {
     lockDownSession(ses);
@@ -500,7 +507,7 @@ async function remoteSession(name) {
       name,
       window: null,
       fetch: (request) => ses.fetch(request, { bypassCustomProtocolHandlers: true }),
-      kvFile: createKvFile(path.join(dir, 'dev-overrides.json'), { onChange() {}, onError() {} }),
+      kvFile: createKvFile(path.join(dir, TESTER_SETTINGS_FILE_NAME), { onChange() {}, onError() {} }),
     };
     remoteCtx.set(name, ctx);
     ses.protocol.handle('https', (request) => handleRequestLogged(request, ctx));
@@ -510,7 +517,7 @@ async function remoteSession(name) {
 }
 
 // One tester's game: an offscreen, muted, locked-down game window. Returns the game
-// object desktop/remote/host.js expects.
+// object src/features/remote_play/services/host.ts expects.
 async function createRemoteGame(tester, opt) {
   const { ses, ctx } = await remoteSession(tester.name);
   const win = new BrowserWindow({
@@ -518,7 +525,7 @@ async function createRemoteGame(tester, opt) {
     width: opt.width,
     height: opt.height,
     useContentSize: true,
-    title: `Plazma Burst 2 (${tester.name})`,
+    title: REMOTE_TEXT.windowTitle(tester.name),
     webPreferences: { ...REMOTE_WEB_PREFERENCES, session: ses, offscreen: true },
   });
   lockDownWindow(win, START_URL);
@@ -553,24 +560,8 @@ async function createRemoteGame(tester, opt) {
 }
 
 async function startRemoteHost() {
-  const { options, problems } = parseHostArgs(ENVIRONMENT.args);
-  for (const p of problems) log.warn(`Host: ${p}`);
-  const host = startHost({
-    ...options,
-    testersFile: REMOTE_TESTERS_FILE,
-    createGame: (tester) => createRemoteGame(tester, options),
-    log,
-  });
-  try {
-    const port = await host.ready;
-    const local = `http://${options.bind === '0.0.0.0' ? 'localhost' : options.bind}:${port}`;
-    log.info(`Remote play: listening on ${options.bind}:${port} (${options.width}x${options.height}, ${options.fps} fps, JPEG quality ${options.quality}, up to ${options.maxGames} games)`);
-    log.info(`Remote play: testers open their link, e.g. ${local}/#t=<token>. Add one: npm run testers -- add <name>`);
-    if (options.bind !== '0.0.0.0') log.info('Remote play: only this machine can connect. For the internet, use a tunnel (docs/operations/remote-play.md) or --public.');
-  } catch (e) {
-    log.error(`Remote play: could not listen on ${options.bind}:${options.port}: ${e.message}`);
-    app.quit();
-  }
+  const host = await startRemotePlay({ log, args: ENVIRONMENT.args }, createRemoteGame);
+  if (!host) app.quit();
 }
 
 // ---------------------------------------------------------------------------

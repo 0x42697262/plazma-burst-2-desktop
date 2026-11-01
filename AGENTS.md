@@ -40,7 +40,7 @@ Each fact says where it was verified.
 
 ## Verification checklist
 One line per behavior change: what to do, and the result to expect.
-- P0.2: `npm test`; the redactor case in `test/remote.test.mjs` hides a `docs/…` path
+- P0.2: `npm test`; the redactor case in `src/features/remote_play/domain.test.ts` hides a `docs/…` path
 - P1: `npm run smoke` prints the console's `help`, so the game page loaded the `dist/console/` bundle.
 - P2: `npm start -- --features` lists the flags. `PB2_FEATURES=-zoom npm start` stops
   with "cannot be changed yet" (until `zoom` is migrated). `PB2_HOOKS=0 npm run smoke -- --run features`
@@ -49,3 +49,4 @@ One line per behavior change: what to do, and the result to expect.
 - P3.2: `npm start` shows the list (from `dist/launcher/`). Save a server with a password, then change its address with Edit and leave the password empty: the row says "needs a password (Edit)", and the terminal says the password was dropped. `PB2_FEATURES=-server_list npm start` goes straight to the official game.
 - P3.3: join a private server built from `server/`. Nothing changes, because it sends no tasks. A server that sends a `RELIABLE_TASK` gets "It was not run" in the console, and the code never runs. `fingerprint list` still lists the official server's versions.
 - P3.18: `npm test` (src/features/login, src/features/cert_pinning). `PB2_FEATURES=-login npm start`, then play the official server: the log says "Login is off" and the game is logged out. `PB2_FEATURES=-cert_pinning npm start`: a self-signed private server is refused.
+- P3.19: `npm test` (src/features/remote_play). `npm run host`, then `npm run testers -- add me` and open the link: the game streams. `PB2_FEATURES=-remote_play npm run host` logs "Remote play is off" and quits.

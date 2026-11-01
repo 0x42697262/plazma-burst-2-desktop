@@ -16,7 +16,7 @@
     "fetch-game": "node tools/fetch-game.js",
     "find-names": "node tools/find-names.js",
     "fetch-opcodes": "node tools/fetch-opcodes.js",
-    "testers": "node tools/remote-testers.js",
+    "testers": "node src/features/remote_play/testers.ts",
     "check": "tsc --noEmit -p .",
     "lint": "eslint --max-warnings 0 src",
     "test": "node --test 'test/**/*.test.mjs' 'src/**/*.test.ts' 'src/**/*.test.mjs'",

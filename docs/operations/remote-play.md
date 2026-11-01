@@ -118,15 +118,16 @@ tester's connection falls behind, so the game doesn't lag.
 
 | File | What |
 |---|---|
-| `desktop/remote/host.js` | The server: client page, WebSocket, one game per tester |
-| `desktop/remote/input.js` | Browser keys and mouse → the game window's input events (paste dropped) |
-| `desktop/remote/lockdown.js` | What a tester's game window may not do |
-| `desktop/remote/testers.js`, `tools/remote-testers.js` | Tester links |
-| `desktop/remote/client/` | The page testers open (the only files they receive) |
-| `desktop/dev/console/core/remote.js` | The console's remote mode (no `js` or `hooks`, hidden paths and names) |
+| `src/features/remote_play/services/host.ts` | The server: client page, WebSocket, one game per tester |
+| `src/features/remote_play/domain/input.ts` | Browser keys and mouse → the game window's input events (paste dropped) |
+| `src/features/remote_play/adapters/lockdown.ts`, `domain/blocked-keys.ts`, `domain/game-page.ts` | What a tester's game window may not do |
+| `src/features/remote_play/adapters/testers-file.ts`, `testers.ts` | Tester links (`npm run testers`) |
+| `src/features/remote_play/client/` | The page testers open, built to `dist/remote-client/` (the only files they receive) |
+| `src/features/remote_play/domain/redactor.ts`, `desktop/dev/console/core/remote.js` | The console's remote mode (no `js` or `hooks`, hidden paths and names) |
 | `desktop/main.js` | `--host` mode: makes each tester's offscreen game window and session |
 
-Tests: `test/remote.test.mjs` (`npm test`).
+Tests: `src/features/remote_play/*.test.*` (`npm test`). The feature is described in
+[remote-play](../features/remote-play.md).
 
 ## Limits
 
