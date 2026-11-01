@@ -2,10 +2,6 @@
 import { register } from './registry.js';
 import { helpCommand } from './help.js';
 import { settingsCommands } from './settings.js';
-import { triggersCommand } from './triggers.js';
-import { varsCommand } from './vars.js';
-import { logicCommand } from './logic.js';
-import { regionsCommand } from './regions.js';
 import { moreCommand, chainTopic, consoleCommands } from './console.js';
 import { editorCommand } from './editor.js';
 import { serverCommand, serverShortcuts } from './server.js';
@@ -17,7 +13,7 @@ const [list, set, get, unset, reset, builtin] = settingsCommands;
 register(
   serverCommand, ...serverShortcuts, // the dedicated host only (core/server.js)
   helpCommand, list, set, get, unset, reset,
-  triggersCommand, regionsCommand, varsCommand, logicCommand, editorCommand, chainTopic, moreCommand,
+  editorCommand, chainTopic, moreCommand,
   builtin, featuresCommand, ...consoleCommands,
   ...featureCommands(enabledConsoleFeatures()),
 );

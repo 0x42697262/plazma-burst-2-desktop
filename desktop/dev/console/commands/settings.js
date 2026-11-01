@@ -6,8 +6,6 @@ import { SCHEMA, GROUPS, KEY, resolveKey, parseValue, affectsGame, keyClientOnly
 import { settings, binds, activeProfile, currentMap } from '../state/store.js';
 import { showKey } from '../state/keys.js';
 import { isActive } from '../game/level.js';
-import { logicShown, logicDescription } from '../logic/view.js';
-import { editedVars, showVar } from '../triggers/vars.js';
 import { levelWasActive, gameMaxHp } from '../overrides/frame.js';
 import { heldBack, refusal } from '../overrides/server-checks.js';
 import { CLIENT_TAG } from './help.js';
@@ -75,7 +73,6 @@ export function runKey(key, args) {
 
 // What else you changed, after the keys: [title, rows] or null when there is nothing.
 const EXTRAS = Object.freeze({
-  logic: () => logicShown() && ['logic: shown', [`  ${logicDescription() || 'on'}`]],
   checks: () => checksBypassed() && ['ranked match protection: OFF ("bypass checks")', ['  nothing is held back in ranked matches; "bypass off" turns it back on']],
   editor: () => {
     const sum = editSummary();
@@ -85,11 +82,6 @@ const EXTRAS = Object.freeze({
       `  ${sum.inLevel ? 'in the running level' : 'kept, not in the running level'}; put in again when the level starts over on this map`,
       '  ("editor reset" undoes and forgets them)',
     ]];
-  },
-  vars: () => {
-    const changed = isActive() ? editedVars() : [];
-    return changed.length && [`vars you changed: ${changed.length}`,
-      changed.map((v) => `  ${v.name.padEnd(KEY_WIDTH)} ${showVar(v.now)}  (was ${showVar(v.was)})`)];
   },
 });
 const allExtras = () => ({ ...EXTRAS, ...Object.fromEntries(listSections()) });

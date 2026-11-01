@@ -96,7 +96,10 @@ Notes from P2 for the feature steps:
 - [x] P3.13 `scan_bypass` (the protection stays in the console; with the flag off it cannot be turned off)
 - [x] P3.14 `map_cache` (wrapper features can intercept requests outside `__dev/` with `interceptors`; `map_cache` no longer needs `dev_console`)
 - [x] P3.15 `hooks` (the page runtime is TypeScript, bundled to `dist/hooks/runtime.cjs` and served wrapped, so it adds no global but `PB2Hooks`)
-- [ ] P3.16 `triggers`
+- [x] P3.16 `triggers`, gated: `src/features/triggers/console.ts` registers the old
+  commands, frame hook and list sections. The code stays JavaScript in
+  `desktop/dev/console/{commands,triggers,logic}`, and its tests stay in
+  `test/console.test.mjs`. Both move and become TypeScript in P6.1.
 - [ ] P3.17a `map_editor` domain (doc, history, edit)
 - [ ] P3.17b `map_editor` UI (view, panels, dropdown)
 - [ ] P3.17c `map_editor` services (session, loader, apply)
@@ -115,7 +118,7 @@ Notes from P2 for the feature steps:
 - [ ] P5.2 `tools/*.ts`
 
 ## P6. Finish
-- [ ] P6.1 `allowJs` off; lint everywhere at zero warnings; the `src/**/*.test.mjs` integration tests converted to TypeScript
+- [ ] P6.1 `allowJs` off; lint everywhere at zero warnings; the gated JavaScript (triggers, map editor, console kernel) converted into its feature folders; the `src/**/*.test.mjs` integration tests converted to TypeScript
 - [ ] P6.2 Every feature doc, operations doc and `docs/README.md` complete; research docs point at new paths
 - [ ] P6.3 (optional) local data in `data/`
 - [ ] P6.4 (optional) CI workflow
