@@ -1,0 +1,17 @@
+export const GUN_KIND = Object.freeze({ standard: 'standard', custom: 'custom', items: 'items' });
+export type GunKind = typeof GUN_KIND[keyof typeof GUN_KIND];
+export const GUN_KINDS: readonly GunKind[] = Object.freeze([GUN_KIND.standard, GUN_KIND.custom, GUN_KIND.items]);
+export const ITEM_PREFIX = 'item_';
+export const STANDARD_PREFIX = 'gun_';
+export const GRENADE_CLASS_PREFIX = 'item_grenade_';
+export const ITEM_PREFIX_AT_START = /^item_/;
+export const ITEM_SLOT_TEXT = 'item';
+export const UNKNOWN_SLOT_TEXT = '?';
+export const INDEX_PREFIX = '#';
+export const NUMBER_WORD = /^\d+$/;
+export const TARGET_WORD = Object.freeze({ give: 'to', drop: 'from' });
+export const ALL_WORD = 'all';
+export const YOU = 'you';
+export const MATCH_SEPARATOR = ', ';
+export const WORD_SEPARATOR = ' ';
+export const COMMAND = Object.freeze({ guns: 'guns', gunsAliases: ['weapons'], give: 'give', drop: 'drop', dropAliases: ['throw'] });

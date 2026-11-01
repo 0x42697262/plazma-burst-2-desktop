@@ -1,0 +1,8 @@
+export const ITEM_SLOT = -2;
+export const MAX_UPGRADE = 3;
+export const NO_COMMAND = -1;
+export const MODEL_WIDTH = 30;
+export const NUMBER_WIDTH = 5;
+export const SLOT_WIDTH = 5;
+export const MATCHES_SHOWN = 6;
+export const TOSS = Object.freeze({ speedA: 7, liftA: 2, speedB: 1, sinkB: 2, ahead: 20 });

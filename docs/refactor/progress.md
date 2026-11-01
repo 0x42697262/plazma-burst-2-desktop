@@ -91,7 +91,7 @@ Notes from P2 for the feature steps:
     `src/features/trace/trace.test.mjs`). Converting them to TypeScript is P6.1.
 - [x] P3.9 `profiles` (the store ignores profiles while the flag is off)
 - [x] P3.10 `binds` (saved binds do not run while the flag is off; `commandText`/`warnKeyUses` are in the console kernel)
-- [ ] P3.11 `guns`
+- [x] P3.11 `guns`
 - [ ] P3.12 `player`
 - [ ] P3.13 `scan_bypass`
 - [ ] P3.14 `map_cache`
