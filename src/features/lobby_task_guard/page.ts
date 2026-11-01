@@ -14,6 +14,8 @@ const lobbyTaskGuard = createLobbyTaskGuard({
   missing: () => { report(TEXT.missing, REPORT_LEVEL.error); },
 });
 
+export const isGuardingPrivateLobby = (): boolean => lobbyTaskGuard.isGuarding();
+
 export const lobbyTaskGuardPage: PageFeature = Object.freeze({
   id: FEATURE.lobbyTaskGuard,
   start: lobbyTaskGuard.start,

@@ -7,10 +7,14 @@ import { JOIN_TEXT } from './text.ts';
 import { createJoinClient } from './services/join-client.ts';
 import { pageJoinTarget } from './index.ts';
 import { gameLobby } from './adapters/game-lobby.ts';
+import { isFeatureOn } from '#console/flags.ts';
+import { isGuardingPrivateLobby } from '#features/lobby_task_guard/index.ts';
 
 function startJoin(): void {
   const target = pageJoinTarget();
   if (!target) return;
+  const isUnguarded = isFeatureOn(FEATURE.lobbyTaskGuard) && !isGuardingPrivateLobby();
+  if (isUnguarded) return;
   const client = createJoinClient({ target, lobby: gameLobby, report: (message) => { report(message, REPORT_LEVEL.error); } });
   client.tick();
   setInterval(client.tick, JOIN_TICK_MS);

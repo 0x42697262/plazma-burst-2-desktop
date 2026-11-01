@@ -44,4 +44,7 @@ server's tasks run. A server built from this repository never sends tasks, so wi
 guard on nothing is lost.
 
 If `names.js` has no `connClass` (an old names file), the guard cannot sit on the class.
-It then prints an error saying that the server's code would run.
+Then the page core does not join the private server at all: the join client does not
+start, so the lobby stays the official one, and the error says why (in an app without the
+dev console, as an alert). With `lobby_task_guard` turned off on purpose, the join goes
+ahead without it, as before.

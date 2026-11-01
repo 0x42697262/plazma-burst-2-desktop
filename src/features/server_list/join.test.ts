@@ -6,6 +6,8 @@ test('join mode: the lobby address points at the server, the login is set from t
   Object.defineProperty(globalThis, 'PB2_JOIN', { value: Object.freeze({ address: '1.2.3.4:2053', nickname: 'Pal', password: 'pw' }) });
   const loaderInfo = { parameters: { l: '', p: '' } };
   Reflect.set(globalThis, 'loaderInfo', loaderInfo);
+  class GuardedConnection { __pb2_connRecv(_text: string) { return undefined; } }
+  Reflect.set(globalThis, '__pb2_connClass', GuardedConnection);
   const game = await bootConsole();
   const network = game.G[game.N.net] as Record<string, unknown>;
   network[game.N.lobbyHosts] = ['', 'https://vvvv.', 'https://www.'];

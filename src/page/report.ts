@@ -5,7 +5,10 @@ export type ReportSink = (message: string, level: ReportLevel) => void;
 
 const toPageConsole: ReportSink = (message, level) => {
   const line = TEXT.terminalLine(PAGE_REPORT_TAG, message);
-  if (level === REPORT_LEVEL.error) console.error(line);
+  if (level === REPORT_LEVEL.error) {
+    console.error(line);
+    globalThis.alert?.(message);
+  }
   else if (level === REPORT_LEVEL.warn) console.warn(line);
   else console.log(line);
 };
