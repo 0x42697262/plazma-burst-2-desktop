@@ -344,11 +344,13 @@ export const game = {
 
   // ----- Anti-cheat -----
   // The console name of locked array i (the scan's code 3 detail), or null.
+  // Sad Burst 2 cannot reach the list (names.sadburst.js leaves it out): no names then.
   lockedArrayName: (i) => {
+    if (!N.lockedArrays) return null;
     const arr = (read('lockedArrays') || [])[i];
     return (arr && LOCKED_NAMED.find((k) => N[k] && read(k) === arr)) || null;
   },
-  lockedArrayCount: () => (read('lockedArrays') || []).length,
+  lockedArrayCount: () => (N.lockedArrays ? (read('lockedArrays') || []).length : '?'),
   clearMapChunks: () => { read('net')[nameOf('mapChunks')] = null; },
 
   // ----- Chat -----

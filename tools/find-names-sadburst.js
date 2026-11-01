@@ -23,6 +23,18 @@ const { CLIENTS } = require('../desktop/clients');
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+// Names this client does not have, and why. Left out of names.sadburst.js (so the console
+// does not list them as missing); anything that asks for one gets "not in names.sadburst.js".
+const NOT_IN_CLIENT = Object.freeze({
+  // Used only by the own lobby server (server/, "npm run server"), which runs the
+  // official client's code. Sad Burst handles report, endorse, kick and ban in one handler.
+  authReport: 'only for the own lobby server (server/); Sad Burst handles reports in one merged handler',
+  authEndorse: 'only for the own lobby server (server/); Sad Burst handles endorsements in one merged handler',
+  // A block-scoped "let" in its minified tools script ({let ...,n=[],o=new Map,...}): it
+  // cannot be reached from outside. Only the anti-cheat scan report's array names need it.
+  lockedArrays: 'block-scoped in its minified tools script, so not reachable from outside (the scan report names no arrays)',
+});
+
 // The strings file (gamelogic/<hash>.js): {let e=globalThis;e.$name="...",...}.
 function loadStrings(gameDir, manifest) {
   const ctx = {};
@@ -124,8 +136,10 @@ function findNames(gameDir, sources) {
     }
   }
   if (!sources.length) problems.push('no official names to compare with: run "npm run fetch-game" (the official client) for the names patterns cannot find');
-  const missing = expected.filter((k) => !found[k]);
-  return { found, info, problems, missing, expected, how };
+  const absent = expected.filter((k) => !found[k] && NOT_IN_CLIENT[k]);
+  const wanted = expected.filter((k) => !absent.includes(k));
+  const missing = wanted.filter((k) => !found[k]);
+  return { found, info, problems, missing, expected: wanted, absent, how };
 }
 
 function run(opts = {}) {
@@ -146,12 +160,16 @@ function run(opts = {}) {
   console.log(`Found ${total - result.missing.length} of ${total} names in ${gameDir} (${version}): `
     + `${result.how.pattern} by pattern, ${result.how.same} the same as the official client's.`);
   if (result.missing.length) console.log(`  not found: ${result.missing.join(', ')}`);
+  if (result.absent.length) console.log(`  not in this client (fine): ${result.absent.join(', ')}`);
   for (const p of result.problems) console.log(`  problem: ${p}`);
   if (!opts.check) {
-    fs.writeFileSync(out, fsn.render(result, version).replace('run "npm run find-names"', 'run "npm run find-names -- --sadburst"'));
+    const notes = result.absent.map((k) => `// ${k}: not in this client: ${NOT_IN_CLIENT[k]}`);
+    const text = fsn.render(result, version).replace('run "npm run find-names"', 'run "npm run find-names -- --sadburst"')
+      .replace('globalThis.PB2_NAMES = {', [...notes, 'globalThis.PB2_NAMES = {'].join('\n'));
+    fs.writeFileSync(out, text);
     console.log(`Wrote ${path.relative(process.cwd(), out) || out}`);
   }
   return result;
 }
 
-module.exports = { run, findNames, loadCode, unminify, nameSources };
+module.exports = { run, findNames, loadCode, unminify, nameSources, NOT_IN_CLIENT };
