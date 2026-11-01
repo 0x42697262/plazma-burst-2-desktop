@@ -1,8 +1,5 @@
 export const LOCAL_MAP_PREFIX = 'local-';
 export const MAP_EXTENSIONS: readonly string[] = Object.freeze(['.xml', '.txt', '']);
-export const SAVED_EXTENSION = '.xml';
-export const UNSAFE_ID_CHARACTER = /[^A-Za-z0-9 _.-]/g;
-export const ESCAPE_PREFIX = '%';
 export const EDITED_NAME = /^[A-Za-z0-9 _.-]{1,60}$/;
 export const HIDDEN_PREFIX = '.';
 export const BYTE_ORDER_MARK = /^\uFEFF/;
@@ -25,4 +22,3 @@ export const REPLY_OK = 'ok';
 export const SEND_WRAP_NAME = 'pb2dev send wrapper';
 export const MESSAGE_NAME = Object.freeze({ joinMatch: 'JOIN_MATCH', matchList: 'GET_MATCH_LIST' });
 export const TICK_NAME = 'Map cache';
-export const ESCAPE_PAD = '0';

@@ -16,7 +16,7 @@ import { stringOf } from '#kernel/text/text-of.ts';
 import { BANS_INDENT, CERT_DAYS, CERT_KEY_SIZE, CLOSE_DELAY_MS, KEY_FILE_MODE, MATCH_NUMBER_WIDTH, NICKNAME_WIDTH, NOT_FOUND, OK, ADDRESS_WIDTH, PING_WIDTH } from './constants.ts';
 import {
   ARG, BANS_FILE, CERT_ALGORITHM, CERT_FILE, CERT_NAME, CONFIG_FILE, CONNECTION_EVENT, ERROR_EVENT, GAME_DIR_VARIABLE, GAME_FOLDER, GET_METHOD,
-  INTERRUPT_SIGNAL, IPV4, JSON_TYPE, KEY_FILE, LINE_EVENT, MAPS_FOLDER, NEEDED_NAMES, NO_STORE, ORIGIN, QUIT_WORDS, SPACE, STATUS_PATH, STRINGS_FILE,
+  INTERRUPT_SIGNAL, IPV4, JSON_TYPE, KEY_FILE, LINE_EVENT, NEEDED_NAMES, NO_STORE, ORIGIN, QUIT_WORDS, SPACE, STATUS_PATH, STRINGS_FILE,
   TEXT_ENCODING, VERSION_FILE, WORDS, LINE_JOIN, HEADER,
 } from './keys.ts';
 import { SERVER_LOG as TEXT } from './text.ts';
@@ -124,7 +124,7 @@ function main(): void {
     process.exitCode = 1;
     return;
   }
-  const maps = createMaps({ mapsDir: CLIENT_PATHS.official.mapsDir, cacheDir: path.join(dataDir, MAPS_FOLDER), unpack: makeUnpacker(args.game) });
+  const maps = createMaps({ mapsDir: CLIENT_PATHS.official.mapsDir, unpack: makeUnpacker(args.game) });
   const game = new GameServer({ gameDir: args.game, names: found.found, config, log, maps });
   game.onBans = (bans) => { writeBans(dataDir, bans); };
 

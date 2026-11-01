@@ -22,12 +22,13 @@ export const LEGACY_MOVES: readonly LegacyMove[] = Object.freeze([
   { from: 'screenshots', to: 'data/screenshots' },
   { from: 'features.json', to: 'data/features.json' },
   { from: 'server/server.json', to: 'data/server/server.json' },
+  { from: 'server/data', to: 'data/server' },
+  { from: 'data/server/maps', to: 'data/maps' },
 ]);
 
 export const LEGACY_PREFIX_MOVES: readonly LegacyPrefixMove[] = Object.freeze([
   { fromDir: 'desktop', prefix: 'credentials.json', toDir: 'data' },
   { fromDir: 'desktop', prefix: 'dev-overrides', toDir: 'data' },
-  { fromDir: 'server/data', prefix: '', toDir: 'data/server' },
 ]);
 
-export const LEGACY_FOLDERS_REMOVED_WHEN_EMPTY: readonly string[] = Object.freeze(['desktop/dev', 'desktop', 'server/data', 'server']);
+export const LEGACY_FOLDERS_REMOVED_WHEN_EMPTY: readonly string[] = Object.freeze(['desktop/dev', 'desktop', 'server/data', 'server', 'data/server/maps']);

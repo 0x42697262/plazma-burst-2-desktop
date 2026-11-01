@@ -52,3 +52,19 @@ test('when both the old and the new place exist, nothing is overwritten and it s
   assert.equal(read(root, 'desktop/servers.json'), 'old');
   assert.equal(read(root, 'desktop/notes.txt'), 'mine', 'a folder that is not empty stays');
 });
+
+test('the private server\'s downloaded maps join the one maps folder; an identical copy is not a conflict', () => {
+  const root = withRoot({
+    'data/server/maps/site-map.xml': '<a/>', 'data/server/maps/same.xml': '<same/>', 'data/server/maps/differs.xml': 'server',
+    'data/maps/same.xml': '<same/>', 'data/maps/differs.xml': 'client', 'server/data/maps/older.xml': '<old/>',
+  });
+  const report = moveLegacyData(root);
+  assert.equal(read(root, 'data/maps/site-map.xml'), '<a/>');
+  assert.equal(read(root, 'data/maps/older.xml'), '<old/>', 'from before data/ too');
+  assert.equal(exists(root, 'data/server/maps/same.xml'), false, 'the same map twice: the extra copy goes');
+  assert.equal(read(root, 'data/server/maps/differs.xml'), 'server', 'two different files: both stay');
+  assert.deepEqual(report.problems, [
+    'Both data/server/maps/differs.xml and data/maps/differs.xml exist: data/maps/differs.xml is used. Merge data/server/maps/differs.xml into it by hand, or delete data/server/maps/differs.xml.',
+  ]);
+  assert.ok(report.moved.some((line) => line.includes('data/server/maps/same.xml')), 'the dropped copy is reported');
+});

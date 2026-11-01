@@ -21,6 +21,14 @@ const everyMove = (root: string): LegacyMove[] => [
     filesWithPrefix(root, fromDir, prefix).map((name) => ({ from: path.posix.join(fromDir, name), to: path.posix.join(toDir, name) }))),
 ];
 
+const isSameFile = (first: string, second: string): boolean => {
+  try {
+    return fs.statSync(first).isFile() && fs.statSync(second).isFile() && fs.readFileSync(first).equals(fs.readFileSync(second));
+  } catch {
+    return false;
+  }
+};
+
 const removeIfEmpty = (folder: string): void => {
   try {
     fs.rmdirSync(folder);
@@ -29,27 +37,46 @@ const removeIfEmpty = (folder: string): void => {
   }
 };
 
-export function moveLegacyData(root: string): MoveReport {
-  const moved: string[] = [];
-  const problems: string[] = [];
-  for (const { from, to } of everyMove(root)) {
-    const source = path.join(root, from);
-    const target = path.join(root, to);
-    if (!fs.existsSync(source)) continue;
-    if (fs.existsSync(target)) {
-      problems.push(TEXT.bothExist(from, to));
-      continue;
-    }
-    try {
-      fs.mkdirSync(path.dirname(target), { recursive: true });
-      fs.renameSync(source, target);
-      moved.push(TEXT.moved(from, to));
-    } catch (error) {
-      problems.push(TEXT.notMoved(from, (error as Error).message));
-    }
+const isFolder = (place: string): boolean => {
+  try {
+    return fs.statSync(place).isDirectory();
+  } catch {
+    return false;
   }
+};
+
+function moveOne(root: string, { from, to }: LegacyMove, report: { moved: string[]; problems: string[] }): void {
+  const source = path.join(root, from);
+  const target = path.join(root, to);
+  if (!fs.existsSync(source)) return;
+  if (isSameFile(source, target)) {
+    fs.rmSync(source);
+    report.moved.push(TEXT.droppedCopy(from, to));
+    return;
+  }
+  if (isFolder(source) && isFolder(target)) {
+    for (const name of fs.readdirSync(source)) moveOne(root, { from: path.posix.join(from, name), to: path.posix.join(to, name) }, report);
+    removeIfEmpty(source);
+    return;
+  }
+  if (fs.existsSync(target)) {
+    report.problems.push(TEXT.bothExist(from, to));
+    return;
+  }
+  try {
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.renameSync(source, target);
+    report.moved.push(TEXT.moved(from, to));
+  } catch (error) {
+    report.problems.push(TEXT.notMoved(from, (error as Error).message));
+  }
+}
+
+export function moveLegacyData(root: string): MoveReport {
+  const report = { moved: [] as string[], problems: [] as string[] };
+  for (const move of everyMove(root)) moveOne(root, move, report);
   for (const folder of LEGACY_FOLDERS_REMOVED_WHEN_EMPTY) removeIfEmpty(path.join(root, folder));
-  return { moved, problems };
+  return report;
 }
 
 export type MoveListener = Readonly<{ info(message: string): void; warn(message: string): void }>;

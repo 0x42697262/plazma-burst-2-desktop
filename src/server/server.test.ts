@@ -113,10 +113,9 @@ test('own server: the game\'s server code logs players in, lists, creates and jo
   }
 });
 
-test('maps: this server\'s first, then the site (unpacked to plain XML and kept), only then missing', { skip: !HAS_GAME && 'no game files' }, async () => {
+test('maps: this server\'s first, then the site (unpacked to plain XML and kept in the same folder), only then missing', { skip: !HAS_GAME && 'no game files' }, async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-maps-'));
   const mapsDir = path.join(dir, 'maps');
-  const cacheDir = path.join(dir, 'cache');
   fs.mkdirSync(mapsDir);
   fs.writeFileSync(path.join(mapsDir, 'mine.xml'), '<player x="1" y="2" />\n');
   const asked: { id: string | null; login: boolean }[] = [];
@@ -126,12 +125,13 @@ test('maps: this server\'s first, then the site (unpacked to plain XML and kept)
     return { ok: true, text: async () => (id === 'site-map' ? '<q.^f10^Q20^030^Q40" />' : '<not_published />') };
   };
   try {
-    const maps = createMaps({ mapsDir, cacheDir, unpack: makeUnpacker(path.join(REPO, 'game')), fetch: siteAnsweringCompressedOrNotPublished as any });
+    const maps = createMaps({ mapsDir, unpack: makeUnpacker(path.join(REPO, 'game')), fetch: siteAnsweringCompressedOrNotPublished as any });
     assert.equal(maps.local('local-mine'), '<player x="1" y="2" />');
     assert.equal(maps.local('site-map'), null);
     const xml = await maps.download('site-map');
     assert.equal(xml, '<player x="10" y="20" />\n<player x="30" y="40" />\n', 'unpacked, one tag per line');
     assert.equal(maps.local('site-map'), xml.trim(), 'kept: not downloaded again');
+    assert.ok(fs.existsSync(path.join(mapsDir, 'site-map.xml')), 'kept in the one maps folder, where the game client saves maps too');
     assert.equal(await maps.download('nope'), null);
     assert.deepEqual(asked, [{ id: 'site-map', login: false }, { id: 'nope', login: false }], 'no login is sent');
     assert.deepEqual(maps.list().sort(), ['mine', 'site-map']);

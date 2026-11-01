@@ -3,8 +3,7 @@ import assert from 'node:assert/strict';
 import { isEditedName, isLocalMapId, localMapId, localNameOf, mapFileName } from './map-id.ts';
 
 test('map IDs become safe file names; local IDs and edited names are recognized', () => {
-  assert.equal(mapFileName('author-name 2'), 'author-name 2.xml');
-  assert.equal(mapFileName('a/b:c'), 'a%2fb%3ac.xml');
+  assert.equal(mapFileName('a/b:c'), 'a%2fb%3ac.xml', 'the shared naming in #kernel/maps/file-name.ts');
   assert.equal(isLocalMapId('LOCAL-arena'), true);
   assert.equal(isLocalMapId('arena'), false);
   assert.equal(localNameOf('local-arena'), 'arena');

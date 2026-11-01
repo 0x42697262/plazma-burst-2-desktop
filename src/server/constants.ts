@@ -36,5 +36,3 @@ export const PING_WIDTH = 5;
 export const NICKNAME_WIDTH = 20;
 export const ADDRESS_WIDTH = 16;
 export const MATCH_NUMBER_WIDTH = 2;
-export const HEX_RADIX = 16;
-export const HEX_DIGITS = 2;

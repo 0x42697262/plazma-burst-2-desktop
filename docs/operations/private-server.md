@@ -107,7 +107,7 @@ they happen. Players can be named by the start of their nickname.
 | `admins` | `[]` | nicknames with the game's staff rights: `-announce`, ending any match, kicking from any match, the in-game ban (a server ban) |
 | `max_players` | 64 | players online at once |
 | `skin` | 1 | the skin everyone starts with; players change it in the game as usual |
-| `download_maps` | `true` | published map IDs are downloaded from the site's public map download (and kept in `data/server/maps`); `false` = only `data/maps` |
+| `download_maps` | `true` | published map IDs are downloaded from the site's public map download (and kept in `data/maps`); `false` = only `data/maps` |
 | `random_maps` | `[]` | your list of map IDs that `random approved` and `random approved in rotation` pick from (the example has one); empty = every map in `data/maps` |
 | `cheat_reports` | `"log"` | the game's anti-cheat reports: `"log"` them, or `"kick"` the player too |
 | `welcome` | `""` | a line each player gets in chat after logging in |
@@ -118,8 +118,9 @@ A match's map ID is looked up on the server's computer:
 - **`local-<name>` or `<name>`:** `data/maps/<name>.xml` (or `.txt`), the same local
   maps as the wrapper's.
 - **Any other ID:** a published map, downloaded from plazmaburst2.com (no login needed),
-  unpacked to plain XML with the game's own function, and kept in `data/server/maps`, so
-  each map is downloaded once. This is the only time the server contacts the site.
+  unpacked to plain XML with the game's own function, and kept in `data/maps/<map id>.xml`
+  (the same folder and file names the game client saves downloaded maps to, through
+  `src/kernel/maps/file-name.ts`), so each map is downloaded once, by either. This is the only time the server contacts the site.
 - **Only if the site doesn't have it either** does the match get an error ("does not exist:
   not on this server, not on plazmaburst2.com"). A map without player starts (an add-on
   such as `nanotech-cht`) leaves the player count to the match's own setting.
