@@ -2614,9 +2614,13 @@ test('net_log_all (off by default) adds a PKT line per packet and every state up
   }
 });
 
-// A fingerprinter like the main server's (FINGERPRINTING.md), with what it writes in per session.
-const FP_SOURCE = `( v )=>{ let FP = class FP { static getBrowserFingerprint() { return JSON.stringify({ canvas: 7, userAgent: 'UA', languages: ['en'] }); } };
-  return [FP.getBrowserFingerprint(), JSON.stringify({ canvas: 7, width: 1920 }), v, "https://www.plazmaburst2.com", "180.190.136.53", "s27zkf", Intl.DateTimeFormat().resolvedOptions().timeZone]; }`;
+// A fingerprinter like the main server's (FINGERPRINTING.md), with what it writes in per
+// session: the IP address it sees, a token and the separator its values are joined with.
+const FP_SOURCE = `( v )=>{ try { let FP = class FP { static getBrowserFingerprint() {
+  FP.hash1 = JSON.stringify({ canvas: 7, width: 1920 }); FP.hash2 = JSON.stringify({ canvas: 7, userAgent: 'UA', languages: ['en'] }); return 12345; } };
+  let arr = []; arr.push( FP.getBrowserFingerprint( false, true ).toString( 36 ) ); arr.push( Intl.DateTimeFormat().resolvedOptions().timeZone );
+  arr.push( 's27zkf' ); arr.push( '180.190.136.53' ); arr.push( location.origin ); arr.push( v ); arr.push( FP.hash1 ); arr.push( FP.hash2 );
+  return arr.reverse().join( 'У' ); } catch(e){ return e.toString(); } }`;
 const settle = async () => { for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r)); };
 
 test('the fingerprinter is sent to the wrapper once from the lobby connection, whatever net_log is; "fingerprint" runs the latest', async () => {
@@ -2627,6 +2631,9 @@ test('the fingerprinter is sent to the wrapper once from the lobby connection, w
   net[N.netDigits] = NET_DIGITS;
   net[N.netTypeNames] = { 5: 'RELIABLE_CHAT', 46: 'RELIABLE_TASK', 47: 'RELIABLE_TASK_ASNYC' };
   G[N.buildTag] = 'mkpnduz2';
+  const hadLocation = 'location' in G;
+  const realLocation = G.location;
+  G.location = { origin: 'https://www.plazmaburst2.com' };
   const conn = fakeConnection(N);
   conn.socket.connected = true;
   const realFetch = G.fetch;
@@ -2680,20 +2687,23 @@ test('the fingerprinter is sent to the wrapper once from the lobby connection, w
     await settle();
     const out = c.log.printed.filter((l) => !l.startsWith('> '));
     assert.match(out[0], /^Fingerprinter a1b2c3d4e5f6 \(fingerprint\/2026-11-01_05-30-12_a1b2c3d4e5f6\.js\): sync, \d+ chars, seen 1 time, last /);
-    assert.match(out[1], /^The game would answer with 7 parts/);
+    assert.match(out[1], /^The game would answer with 1 part \(RESPONSE, callback ID, then these\): one text, 8 values joined by "У" \(U\+0423, this session's separator\):$/);
     assert.match(out[2], /^ {2}\[0\] fingerprint, full \(3 values\)$/);
     assert.match(out[3], /^ {8}canvas +7$/);
     assert.match(out[5], /^ {8}languages +\["en"\]$/);
     assert.match(out[6], /^ {2}\[1\] fingerprint, hardware only \(2 values\)$/);
     assert.match(out[9], /^ {2}\[2\] build tag \(its argument v\) +mkpnduz2$/);
     assert.match(out[10], /^ {2}\[3\] page origin +https:\/\/www\.plazmaburst2\.com$/);
-    assert.match(out[11], /^ {2}\[4\] IP address +180\.190\.136\.53$/);
-    assert.match(out[12], /^ {2}\[5\] \? +s27zkf$/);
+    assert.match(out[11], /^ {2}\[4\] IP address \(the server's view, in the source\) +180\.190\.136\.53$/);
+    assert.match(out[12], /^ {2}\[5\] token \(the server wrote it into the source\) +s27zkf$/);
     assert.match(out[13], /^ {2}\[6\] time zone +/);
+    assert.match(out[14], /^ {2}\[7\] fingerprint hash \(MurmurHash3, base 36\) +9ix$/);
     c.log.printed.length = 0;
     c.run('fingerprint --raw');
     await settle();
-    assert.ok(c.log.printed.includes('  [2] "mkpnduz2"'), c.log.printed.join('\n'));
+    const raw = c.log.printed.filter((l) => !l.startsWith('> '));
+    assert.equal(raw.length, 3, raw.join('\n'));
+    assert.match(raw[2], /^ {2}\[0\] ".*У180\.190\.136\.53Уs27zkfУ.*У9ix"$/);
 
     // A new lobby connection (a reconnect): the old one is let go.
     net[N.lobbyConn] = null;
@@ -2701,6 +2711,7 @@ test('the fingerprinter is sent to the wrapper once from the lobby connection, w
     assert.ok(!Object.hasOwn(conn, N.connRecv), 'the old connection is as it was');
   } finally {
     G.fetch = realFetch;
+    if (hadLocation) G.location = realLocation; else delete G.location;
     delete net[N.lobbyConn];
     fp.fingerprintTick();
     c.run('unset net_log');

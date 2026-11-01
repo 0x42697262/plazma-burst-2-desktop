@@ -1,7 +1,10 @@
 // "fingerprint": runs the latest fingerprinter the main server sent (net/fingerprint.js
 // saves every version in fingerprint/, desktop/fingerprint.js) the way the game does, and
-// shows what the game answers with: the parts of its RESPONSE, labelled, with the
-// fingerprint's JSON one value a line. Nothing is sent anywhere.
+// shows what the game answers with, labelled, with the fingerprint's JSON one value a line.
+// Nothing is sent anywhere.
+// The fingerprinter returns one text: its values joined by a separator the server writes
+// into each session's source (a Cyrillic letter, "У" one time, "с" the next), which the
+// game sends as one part. It is split here by the last .join('<separator>') in the source.
 import { print } from '../ui/log.js';
 import { COLOR } from '../core/colors.js';
 import { ROUTE } from '../core/shared.js';
@@ -16,6 +19,8 @@ const KEY_WIDTH = 20;
 const IPV4 = /^\d{1,3}(\.\d{1,3}){3}$/;
 const IPV6 = /^[0-9a-f]*:[0-9a-f:]+$/i;
 const ORIGIN = /^https?:\/\/[^/\s]+$/;
+const BASE36 = /^[0-9a-z]{1,7}$/; // a 32-bit hash written with toString(36)
+const JOIN = /\.join\(\s*(['"])((?:\\.|(?!\1)[^\\])*)\1\s*\)/g;
 
 const jsonObject = (text) => {
   if (!/^\{/.test(text)) return null;
@@ -23,15 +28,29 @@ const jsonObject = (text) => {
 };
 const localZone = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return null; } };
 
-// What a part is, from its value (FINGERPRINTING.md §7.2): the fingerprinter's return has
-// no names, and a new version may order it differently.
-function labelOf(text, tag) {
+// The separator of the source's last .join('...'), or null.
+function separatorOf(code) {
+  let sep = null;
+  for (const m of code.matchAll(JOIN)) {
+    try { sep = JSON.parse(`"${m[2].replace(/"/g, '\\"')}"`); } catch { sep = m[2]; }
+  }
+  return sep;
+}
+const codePoint = (ch) => [...ch].map((c) => `U+${c.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}`).join(' ');
+
+// What a value is, from the value itself (FINGERPRINTING.md §7.2): the fingerprinter's
+// return has no names, and a new version may order it differently.
+function labelOf(text, tag, code) {
   const obj = jsonObject(text);
   if (obj) return 'userAgent' in obj ? `fingerprint, full (${plural(Object.keys(obj).length, 'value')})` : `fingerprint, hardware only (${plural(Object.keys(obj).length, 'value')})`;
   if (text === tag) return 'build tag (its argument v)';
-  if (IPV4.test(text) || IPV6.test(text)) return 'IP address';
+  // In quotes in the source: the server wrote it there for this session.
+  const written = !!text && (code.includes(`'${text}'`) || code.includes(`"${text}"`));
+  if (IPV4.test(text) || IPV6.test(text)) return written ? 'IP address (the server\'s view, in the source)' : 'IP address';
+  if (written) return 'token (the server wrote it into the source)';
   if (ORIGIN.test(text)) return 'page origin';
   if (text === localZone()) return 'time zone';
+  if (BASE36.test(text)) return 'fingerprint hash (MurmurHash3, base 36)';
   return '?';
 }
 
@@ -54,11 +73,17 @@ function evaluate(fp, tag) {
   });
 }
 
-function showReply(parts, tag, raw) {
-  print(`The game would answer with ${plural(parts.length, 'part')} (RESPONSE, callback ID, then these):`, COLOR.title);
-  parts.forEach((text, i) => {
-    if (raw) { print(`  [${i}] ${JSON.stringify(text)}`, COLOR.plain); return; }
-    const label = labelOf(text, tag);
+function showReply(parts, tag, raw, code) {
+  const sep = parts.length === 1 ? separatorOf(code) : null;
+  const values = sep && parts[0].includes(sep) ? parts[0].split(sep) : parts;
+  print(`The game would answer with ${plural(parts.length, 'part')} (RESPONSE, callback ID, then these)`
+    + `${values !== parts ? `: one text, ${plural(values.length, 'value')} joined by "${sep}" (${codePoint(sep)}, this session's separator)` : ''}:`, COLOR.title);
+  if (raw) {
+    parts.forEach((text, i) => print(`  [${i}] ${JSON.stringify(text)}`, COLOR.plain));
+    return;
+  }
+  values.forEach((text, i) => {
+    const label = labelOf(text, tag, code);
     const obj = jsonObject(text);
     if (!obj) { print(`  [${i}] ${label.padEnd(LABEL_WIDTH)} ${text}`, label === '?' ? COLOR.notice : COLOR.plain); return; }
     print(`  [${i}] ${label}`, COLOR.bright);
@@ -88,7 +113,7 @@ function run(args) {
         + `${fp.versions > 1 ? `; ${fp.versions} versions saved ("fingerprint list")` : ''}.`, COLOR.hint);
       const parts = replyOf(await evaluate(fp, tag));
       if (!parts) { print('It returned no string, number, boolean or array: the game would send no answer.', COLOR.warn); return; }
-      showReply(parts, tag, raw);
+      showReply(parts, tag, raw, fp.code);
       if (!raw) print('Values the server wrote into the source (the IP address, tokens) are from when it was saved. Nothing was sent.', COLOR.hint);
     })
     .catch((e) => print(`error: could not run the fingerprinter: ${e.message}`, COLOR.error));
@@ -122,10 +147,12 @@ export const fingerprintCommand = {
       'FINGERPRINTING.md), which the game runs and answers. Every version that arrives is',
       'saved once in fingerprint/ (not in git); a version seen again is not saved again.',
       '"fingerprint" runs the latest here, as the game does, and shows the answer: each',
-      'part labelled from its value, the fingerprint\'s JSON one value a line.',
+      'value labelled from what it is, the fingerprint\'s JSON one value a line. The',
+      'fingerprinter joins its values into one text with a separator the server picks',
+      'each session; they are split here by the separator in the source.',
     ],
     args: [
-      ['--raw', 'the parts exactly as the game would send them, in quotes'],
+      ['--raw', 'the parts exactly as the game would send them, in quotes, not split'],
     ],
     examples: [
       ['fingerprint', 'what the server learns about this machine'],
