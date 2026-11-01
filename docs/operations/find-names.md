@@ -43,12 +43,12 @@ String constants are matched as literals: the game keeps them in `_strings.js` a
 - `net, netNum`: The same shot, in multiplayer: tells the server so every other client runs it too.
 - `lobbyConn, netSend`: Joining a match from the lobby: [type, match uid, callback, slot, "1" = send me the map, password].
 - `netLog`: Kept for the game's multiplayer logs screen. A sent message is always added (scripts/connection.js); a received one only with TRACK_MP_LOGS.
-### Network recorder (desktop/dev/console/net/recorder.js)
+### Network recorder (src/features/netlog/)
 
 - `connRecv`: A connection's raw packet in (socket "m" event or P2P data), its P2P peer, and the text it gives when it closes.
 - `netDigits`: Numbers in messages are written in base N with this alphabet (built at load).
 - `buildTag`: The main server's tasks (RELIABLE_TASK, docs/research/fingerprinting.md): JavaScript the game runs with eval, called with this build tag; net/fingerprint.js runs the fingerprinter so.
-### Dedicated host (desktop/dev/console/server/, "npm run p2p-host")
+### Dedicated host (src/features/p2p_host/, "npm run p2p-host")
 
 - `netChannel, netReplyTo`: Leaving a match: [type, -1, where the reply goes, slot -1, "", ""] on the reliable channel.
 - `enterMatch`: What the lobby does with a join or create reply: connects to a player-hosted match (the reply carries the host's WebRTC offer), or leaves one ("", -1).

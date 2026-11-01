@@ -379,4 +379,4 @@ wrappers use ids from `1000000` up.
 | `hooks` (dev console) | Every hook: status, functions, patch count, multiplayer, errors, description |
 | `npm run find-names` | Refreshes `desktop/dev/names.js` after a game update (§6.1) |
 | `npm start -- --verbose` | Also logs every request, including `__hooks/...` and the changed scripts |
-| `npm test` | Includes `test/hooks.test.mjs` |
+| `npm test` | Includes `src/features/hooks/hooks.test.mjs` |

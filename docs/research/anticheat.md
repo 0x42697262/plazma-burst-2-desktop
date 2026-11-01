@@ -945,7 +945,7 @@ Names below are copied from the source. The obfuscator uses look-alike Cyrillic 
 
 1. **Load.** The map loader fills the wall arrays x/y/w/h (`$сАоОo`, `$o1О00`, `$с0МAр`, `$MМрTТ`, `frame2.js:10739–10742`); `$T0МММ` (`frame2.js:4714`) is the wall count. These four arrays are locked ([§7](#7-layer-e-locked-array-snapshots-toolsjs)).
 2. **Grid build.** After parsing, the loader makes a fresh grid (`$АТHМрM=[]`, `frame2.js:11470–11484`): `$1еНсН` columns × `$Ао1АlA` rows of cells, each cell `$оАlTeН` units wide (at least 100, sized so a side has at most 64 cells, `frame2.js:11446–11453`), offset by `$Hoс1M` / `$сlН1pe`. Then, for every wall, `$0cоAHo(i)` (`frame2.js:10299`, called at `11506`) pushes `i` into every cell within **100 units** of the wall (`frame2.js:10342`). Finally every cell is marked `.fixed=true` (`frame2.js:11596`).
-3. **Never again.** `$0cоAHo` has no other caller, the wall arrays have no other writer, and `actions.js` touches neither. Walls do not move during play (doors are movables, `$АAHОе`, tested separately). The grid is static from map load to the next map load. The only other writer is this repo's dev editor (`desktop/dev/console/game/walls.js`, `moveWall`), which rewrites the cells and reloads by the scan anyway ([§7.2](#72-editing-the-level-live-the-dev-consoles-map-editor)).
+3. **Never again.** `$0cоAHo` has no other caller, the wall arrays have no other writer, and `actions.js` touches neither. Walls do not move during play (doors are movables, `$АAHОе`, tested separately). The grid is static from map load to the next map load. The only other writer is this repo's dev editor (`src/console/kernel/game/walls.ts`, `moveWall`), which rewrites the cells and reloads by the scan anyway ([§7.2](#72-editing-the-level-live-the-dev-consoles-map-editor)).
 4. **Every collision goes through the grid.** `$о001lO(x, y)` turns a point into a cell and returns that cell's list of wall indices (`frame2.js:10348–10407`; the shared empty `$ооlIOo` outside the grid). Callers then test only those walls' rectangles:
 
 | Caller | `frame2.js` | Does |
@@ -1001,7 +1001,7 @@ $рeHТрT(cx, cy);                                     // true: the centre is n
 geometry() === before;                               // true: every locked array is untouched
 ```
 
-This is the same splice `moveWall` uses before re-listing a wall (`desktop/dev/console/game/walls.js`), without the re-listing and without touching the arrays.
+This is the same splice `moveWall` uses before re-listing a wall (`src/console/kernel/game/walls.ts`), without the re-listing and without touching the arrays.
 
 **Expected:** the wall is still drawn, but characters fall through it, walk through it and shoot through it. Nothing reloads, no `RELIABLE_PING` is sent, and `$рeHТрT` agrees the wall is gone.
 
@@ -1208,13 +1208,13 @@ Every reliable message goes through `connection.$OMeTо(channel, parts, callback
 2. Every part is escaped with `$рсНAе.$eIеIс` (`connection.js:99`). Anything that isn't a string becomes text first (`value += ""`), so **`undefined` becomes `"undefined"`**. Then `\x01` → `$.1` and `\x02` → `$.2`.
 3. Part 0, the type, is encoded with `$ММ.$Oоolр` (a compact number code). The parts are joined with `\x02`.
 4. The message gets the next sequence number (`$eеcА1`) and the send time, and waits in `connection.$ОOe0A` until the other side acknowledges that number.
-5. On a client (not a dedicated server), every reliable message sent is also logged in `$ММ.$НеAAO` as `{ type, parts, time }`. The View logs screen and the dev console's scan report (`desktop/dev/console/net/scan-report.js`) read this log.
+5. On a client (not a dedicated server), every reliable message sent is also logged in `$ММ.$НеAAO` as `{ type, parts, time }`. The View logs screen and the dev console's scan report (`src/features/scan_bypass/`) read this log.
 
 On arrival, `$ММ.$pOeрМ` / `$ММ.$c0рlc` split the text at `\x02`, undo the escaping, and decode part 0 back to `26`.
 
 **The packet around the messages** (`connection.js`, `$AОAcc` sends, `$AoH1e` receives): one text per network tick, fields split by `\x01` (escaped `$.1`): `ack`, the newest unreliable state, then `uid`, message, `uid`, message, ... for every reliable message not yet acknowledged. `ack` is the highest uid received in order. Unacknowledged messages are repeated in every packet until their ack arrives: each packet received sets the "sent up to" mark (`$IHОHp`) back to its ack (`connection.js:824`), so the next packet carries every unacknowledged message again. When nothing arrives, the same reset happens 2 s after the last new message (6 s when it was over 1000 characters). So a reliable message normally goes out once per tick for about one round trip; that repeating is not loss. Over a socket the packet goes out with `socket.volatile.emit("m", text)`, which socket.io drops when the socket is busy; peer to peer it goes over an unordered data channel with no retransmits.
 
-The dev console's network log ([README.md §7](../../README.md#7-network-log), `desktop/dev/console/net/recorder.js`) decodes all of this into `netlogs/`: each reliable message with its type name and decoded numbers, and every resend, dropped packet, gap, late and duplicate message.
+The dev console's network log ([README.md §7](../../README.md#7-network-log), `src/features/netlog/`) decodes all of this into `netlogs/`: each reliable message with its type name and decoded numbers, and every resend, dropped packet, gap, late and duplicate message.
 
 ### 13.4 Keep-alive: start, run, end
 
@@ -1465,7 +1465,7 @@ So the same function runs in three places:
 | 19 | `$ММ.$ОHIАAA` = 19 | `:593` | **Client clock**: `performance.now() - $ММ.$1МАTMH` |
 | 20 | `$ММ.$TТoМоА` = 20 | `:595` | **Respawn count**: `char["respawns"]` |
 
-The network log labels these values in its `STATE` lines (`net_log_state on`): `hp 150 | respawns 1 | aim +212,-40 | pos 1264,-520 | ...` (14.9, `desktop/dev/console/net/state.js`).
+The network log labels these values in its `STATE` lines (`net_log_state on`): `hp 150 | respawns 1 | aim +212,-40 | pos 1264,-520 | ...` (14.9, `src/features/netlog/`).
 
 **Receiving (server):** packets arrive in `connection.$AoH1e` (`connection.js:763`), which keeps only the newest state in `connection.$eМОсM`. Once per tick `connection.$AОAcc` first runs every reliable message in order, then the state, through `$ММ.$pOeрМ(data, connection)` (`connection.js:982`, `libs/flash.js:869`). So a reliable message (like `RESPAWN`) and a state in the **same packet** are handled reliable first.
 
@@ -1707,7 +1707,7 @@ All four run on the match's server (14.1), on what your game reports.
 | Aimed more than 1000 units right or 600 down, moving, for ~0.5 s, on an approved map mid-round | 3 | "aims outside of their view area" to the other players (not you, not your IP); a logged report once a minute |
 | Page clock running ≥ 1.2 % off the server's | clock | "Server and client time mismatch", then disconnected |
 
-**The dev console holds these back in approved, ranked matches** (`desktop/dev/console/overrides/server-checks.js`; the match's `approved` above 0 and `ranked` true, from `MATCH_JOIN_RESPONSE`). It refuses raising your HP (`max_hp` above your normal max, `hp_bonus`, `hp_bonus_pct`, `hp +<n>`, `game god`, `game grow`) and zooming out (`zoom` below 100%, `game zoom 25` / `50`). A setting you already had is not applied there and your saved value is kept. Whole kinds are held back, not values tuned to stay under a limit. No console command changes the respawn count or the page clock, so check 2 and the clock check have nothing to hold back. Unranked matches, unapproved maps and single-player are left alone. The server still runs checks 1 and 3 on **every approved map**, ranked or not (14.4, 14.6), so an unranked match on an approved map is checked with no protection from the console.
+**The dev console holds these back in approved, ranked matches** (`src/console/kernel/overrides/server-checks.ts`; the match's `approved` above 0 and `ranked` true, from `MATCH_JOIN_RESPONSE`). It refuses raising your HP (`max_hp` above your normal max, `hp_bonus`, `hp_bonus_pct`, `hp +<n>`, `game god`, `game grow`) and zooming out (`zoom` below 100%, `game zoom 25` / `50`). A setting you already had is not applied there and your saved value is kept. Whole kinds are held back, not values tuned to stay under a limit. No console command changes the respawn count or the page clock, so check 2 and the clock check have nothing to hold back. Unranked matches, unapproved maps and single-player are left alone. The server still runs checks 1 and 3 on **every approved map**, ranked or not (14.4, 14.6), so an unranked match on an approved map is checked with no protection from the console.
 
 `bypass checks` turns this off: a red warning, then the next line typed into the console must be exactly `ALLOW DANGEROUS COMMANDS` (case-sensitive); any other line turns it down and is not run. It is refused from binds, profiles and `;` chains, does not exist in remote play, and lasts until the page reloads or `bypass off`.
 
@@ -1898,7 +1898,7 @@ Consequences for the layers:
 
 - **The scan file's start-up re-eval** (`21894acaaf879a10.js` evals `"//# sourceURL=" + script.src` for each `document.scripts[i]` unless the URL contains `:8383/PB2HTML5/game/`) still runs, but every game script is inline here (`src` is `""`), so it evaluates empty `sourceURL` comments: a no-op.
 - **Script identity is the manifest, not the URL.** DevTools shows the scripts under random names; map them back by content (the anchors in §15.1) or by the number between the two random parts of the name: `0` is the strings file, `1` the first file of `order`, and so on.
-- **This repository** serves the same bytes from `game.sadburst/` at the same URL (`npm run sadburst`, `desktop/main.js`). The dev console is injected as separate `<script>` tags, outside the manifest, so it is not hashed. Hooks would change the bytes of a manifest script, and so the hash: they are off for Sad Burst.
+- **This repository** serves the same bytes from `game.sadburst/` at the same URL (`npm run sadburst`, `src/wrapper/app.ts`). The dev console is injected as separate `<script>` tags, outside the manifest, so it is not hashed. Hooks would change the bytes of a manifest script, and so the hash: they are off for Sad Burst.
 
 ### 15.4 What is global, so what the integrity scan watches
 
@@ -2088,7 +2088,7 @@ const version = fs.readFileSync("game.sadburst/asset-version.txt", "utf8").trim(
 console.log(`version_h5/${version}/${crypto.createHash("sha256").update(all).digest("hex")}/${all.length}`);'
 ```
 
-`npm run sadburst` serves these files byte for byte, so this is the value its logins carry. If it differs from what the site's own page computes, the copy is out of date: the app warns at start when the site's build id is newer (`checkSadburstBuild`, `desktop/main.js`).
+`npm run sadburst` serves these files byte for byte, so this is the value its logins carry. If it differs from what the site's own page computes, the copy is out of date: the app warns at start when the site's build id is newer (`checkSadburstBuild`, `src/wrapper/app.ts`).
 
 ### 16.5 Phase 4: running the scripts (`Pc`, `Nc`)
 

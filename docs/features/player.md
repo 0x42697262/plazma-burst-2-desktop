@@ -27,7 +27,7 @@ same flag.
   - `tp --on <key>` and `tp --off` are the old hotkey syntax: a bind to `tp`, through the
     binds feature's `index.ts`.
   - The move itself is the game's own "move character to region" steps
-    (`desktop/dev/console/game/teleport.js`, shared with the map editor).
+    (`src/console/kernel/game/teleport.ts`, shared with the map editor).
 - `pos` shows your position and the crosshair's. `chars` lists the characters, with
   index, team, HP, alive or dead, and distance.
 - Everything here is client-only. With the flag off, these commands do not exist and

@@ -1,7 +1,7 @@
 # profiles: settings for some maps
 
 Feature flag `profiles` (on by default; all modes). Code: `src/features/profiles/`. The
-profile data itself is kept by the console's store (`desktop/dev/console/state/store.js`,
+profile data itself is kept by the console's store (`src/console/kernel/state/store.ts`,
 the `profiles` and `maps` parts of `dev-overrides.json`) until the console kernel moves
 (P4).
 

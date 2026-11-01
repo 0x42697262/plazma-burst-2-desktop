@@ -119,6 +119,6 @@ Notes from P2 for the feature steps:
 
 ## P6. Finish
 - [ ] P6.1 (in progress: done so far are `src/features/triggers/` run log, model, script, run, regions, vars and `logic/`, and `src/features/p2p_host/services/host.ts` + `entry/command.ts`; left: `desktop/dev/console/commands/{triggers,vars,regions,logic,editor}.js`, `editor/`, the `.mjs` tests and the fake game) `allowJs` off; lint everywhere at zero warnings; the gated JavaScript (triggers, map editor, console kernel) converted into its feature folders; the `src/**/*.test.mjs` integration tests converted to TypeScript
-- [ ] P6.2 Every feature doc, operations doc and `docs/README.md` complete; research docs point at new paths
+- [ ] P6.2 Every feature doc, operations doc and `docs/README.md` complete; research docs point at new paths. Done so far: layers.md describes the tree, a dev-console doc, research and operations docs point at the new paths. Left: map-editor.md after its port; a running doc (`docs/operations/running.md`) from the README's start modes.
 - [ ] P6.3 (optional) local data in `data/`
 - [ ] P6.4 (optional) CI workflow

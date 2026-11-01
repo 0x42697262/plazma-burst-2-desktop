@@ -46,8 +46,8 @@ network logs with your login credentials, and the saved private servers.
 | `fingerprint/2026-11-01_10-57-35_b8354ed91036.js` | The complete payload, exactly as received |
 | A reply captured on 2026-11-01 (from an earlier session) | The values the payload produced in that session |
 
-The payload was captured by the dev console. `desktop/dev/console/net/fingerprint.js`
-listens on the lobby connection and `desktop/fingerprint.js` stores each version once. The
+The payload was captured by the dev console. `src/features/fingerprint/`
+listens on the lobby connection and `src/features/fingerprint/` stores each version once. The
 console's `fingerprint` command runs the latest version locally and prints the reply
 (§11). Any claim about server behaviour is **inferred** and marked as such.
 
@@ -602,7 +602,7 @@ on its own.
 - **Official server.** The connection goes to `https://www.plazmaburst2.com:2053`, or to
   `https://vvvv.plazmaburst2.com:2053` with CONNECTION METHOD = ALT (§2.1).
 - **Private servers.** Joining one from the server list repoints the game's lobby address
-  to that server (`desktop/dev/console/join/client.js:27`, `game.setLobbyAddress`). The
+  to that server (`src/features/server_list/services/join-client.ts:27`, `game.setLobbyAddress`). The
   private server then *is* `$ММ.$ceTOI`, and the client's only guard,
   `connection === $ММ.$ceTOI` (§4.2), lets it push tasks too. **Its operator gets
   everything in §9.3**, with no involvement from the official server.
@@ -633,9 +633,9 @@ on its own.
 
 ### 9.3 What the code can reach in this desktop app
 
-The game window (`desktop/main.js`, `new BrowserWindow`) uses Electron's defaults:
+The game window (`src/wrapper/app.ts`, `new BrowserWindow`) uses Electron's defaults:
 `nodeIntegration` off, `contextIsolation` on, `sandbox` on. Its preload
-(`desktop/launcher/preload.js`) creates the `pb2servers` bridge only on `file:` pages, and
+(`src/features/server_list/launcher/preload.ts`) creates the `pb2servers` bridge only on `file:` pages, and
 the main process answers that bridge only from the list page
 (`main.js`, `serveServerList`, which checks `e.senderFrame.url`). So the pushed code has
 **no Node.js and no direct file or process access**; escaping the page would take an
@@ -708,10 +708,10 @@ hostile or compromised lobby server can do.
 
 ## 11. Reproducing This
 
-- **Capture.** `desktop/dev/console/net/fingerprint.js` listens on the lobby connection's
+- **Capture.** `src/features/fingerprint/` listens on the lobby connection's
   receive method (through `net/tap.js`) and spots a `RELIABLE_TASK` whose source contains
   `getBrowserFingerprint`. It sends that source to the wrapper.
-- **Storage.** `desktop/fingerprint.js` stores each version once in `fingerprint/` (not in
+- **Storage.** `src/features/fingerprint/` stores each version once in `fingerprint/` (not in
   git). A version is the code with its string and number contents, comments and spacing
   removed, so the per-session literals of §6.6 are not a new version. A known version that
   arrives with new literals rewrites its file. `fingerprint/index.json` records first and
