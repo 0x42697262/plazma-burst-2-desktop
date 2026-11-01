@@ -35,8 +35,9 @@ step is done, the old code under `desktop/`, `server/` and `tools/` still runs.
 
 ## Build
 
-- esbuild bundles three entries into `dist/`: the wrapper (Node, `electron` external),
-  the console (browser ESM) and the server (Node).
+- esbuild bundles only the console, into `dist/console/index.js` (browser ESM); see
+  [ADR 0001](../adr/0001-typescript-esbuild.md). The wrapper, server, tools and tests
+  run the `.ts` sources directly.
 - The console bundle must add no global besides `pb2dev`, because the game's
   anti-tamper scan compares globals ([anticheat research](../research/anticheat.md),
   §6).

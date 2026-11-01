@@ -1,0 +1,11 @@
+{
+  "type": "module",
+  "imports": {
+    "#shared/*": "./shared/*",
+    "#kernel/*": "./kernel/*",
+    "#features/*": "./features/*",
+    "#console/*": "./console/*",
+    "#wrapper/*": "./wrapper/*",
+    "#tools/*": "./tools/*"
+  }
+}

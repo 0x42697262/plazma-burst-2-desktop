@@ -30,6 +30,15 @@ Each fact says where it was verified.
 - Once a lobby server has connected, it broadcasts RELIABLE_VAR_SYNC to every client.
   Verified live; this cannot be derived from `game/`.
 
+- Node 26 and Electron 45 (Node 24.22) run `.ts` ES modules directly, including
+  `require()` from CommonJS. Verified 2026-11-02 ([ADR 0001](docs/adr/0001-typescript-esbuild.md)).
+
+## Commands
+- `npm run verify`: lint, type check, tests, console build. Must pass before every commit.
+- `npm run smoke -- --run help --run "get speed"`: starts the real app, plays the
+  official server from the launcher, and prints what each console line printed.
+
 ## Verification checklist
 One line per behavior change: what to do, and the result to expect.
 - P0.2: `npm test`; the redactor case in `test/remote.test.mjs` hides a `docs/…` path
+- P1: `npm run smoke` prints the console's `help`, so the game page loaded the `dist/console/` bundle.

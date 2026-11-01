@@ -54,7 +54,7 @@ const FAKE_OPCODES = Object.freeze({
 // Installs the fake game on globalThis, then loads and starts the real console.
 // Returns helpers to drive it.
 // sayTrigger: uid of the map's "player says" trigger (the game sets it when the map runs).
-export async function bootConsole({ mapFile = path.join(REPO, 'test/fixtures/map.xml'), sayTrigger } = {}) {
+export async function bootConsole({ mapFile = path.join(REPO, 'test/fixtures/map.xml'), sayTrigger, entry = CONSOLE_ENTRY } = {}) {
   const G = globalThis;
   const N = Object.fromEntries(nameKeys().map((k) => [k, `__pb2_${k}`]));
   N.version = 'vTEST';
@@ -244,12 +244,13 @@ export async function bootConsole({ mapFile = path.join(REPO, 'test/fixtures/map
   const realLog = console.log;
   console.log = (...a) => { const line = a.join(' '); if (line.startsWith('[pb2dev] ')) log.printed.push(line.slice(9)); else realLog(...a); };
 
-  await import(pathToFileURL(CONSOLE_ENTRY).href);
+  const globalsBeforeConsole = Object.keys(G);
+  await import(pathToFileURL(entry).href);
   await new Promise((r) => setImmediate(r));
   intervals.shift()(); // the boot poll finds the game ready and starts the console
 
   return {
-    G, N, log, store, chars, triggers,
+    G, N, log, store, chars, triggers, globalsBeforeConsole,
     intervals, // every setInterval callback, in the order they were made
     player: chars[0],
     // Runs a line and returns what it printed (without the echoed command).

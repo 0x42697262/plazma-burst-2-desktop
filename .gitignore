@@ -55,3 +55,9 @@ server/data/
 # The main server's fingerprinter, every version once (desktop/fingerprint.js, console "fingerprint").
 /fingerprint/
 /fingerprint.sadburst/
+
+# Build output ("npm run build").
+/dist/
+
+# Local feature flag overrides (docs/architecture/feature-flags.md).
+/features.json

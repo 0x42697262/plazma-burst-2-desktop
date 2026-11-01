@@ -20,13 +20,15 @@ The game files are **not** in this repository. You download them with a script.
 
 ## 1. Quick start
 
-Requirements: Node.js 18 or newer, npm.
+Requirements: Node.js 22.18 or newer, npm.
 
 ```bash
 npm install          # Electron (its binary downloads on the first start)
 npm run fetch-game   # the game files, about 57 MB, about 1 minute
-npm start
+npm start            # builds the dev console (dist/console/), then starts the game
 ```
+
+Working on the code: `npm run verify` runs lint, the type check, the tests and the build; see [AGENTS.md](AGENTS.md).
 
 In the game, press Shift+`` ` `` (`~`) for the dev console and type `help`.
 

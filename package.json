@@ -5,28 +5,41 @@
   "description": "Desktop wrapper for the Plazma Burst 2 HTML5 game, with a dev console",
   "main": "desktop/main.js",
   "scripts": {
-    "start": "electron .",
-    "start:verbose": "electron . --verbose",
-    "sadburst": "electron . --sadburst",
+    "build": "node src/tools/build/cli.ts",
+    "build:watch": "node src/tools/build/cli.ts --watch",
+    "start": "npm run build && electron .",
+    "start:verbose": "npm run build && electron . --verbose",
+    "sadburst": "npm run build && electron . --sadburst",
+    "host": "npm run build && electron . --host",
+    "p2p-host": "npm run build && electron . --p2p-host",
+    "server": "node server/index.js",
     "fetch-game": "node tools/fetch-game.js",
     "find-names": "node tools/find-names.js",
     "fetch-opcodes": "node tools/fetch-opcodes.js",
-    "test": "node --test test/",
-    "host": "electron . --host",
-    "server": "node server/index.js",
-    "p2p-host": "electron . --p2p-host",
-    "testers": "node tools/remote-testers.js"
+    "testers": "node tools/remote-testers.js",
+    "check": "tsc --noEmit -p .",
+    "lint": "eslint --max-warnings 0 src",
+    "test": "node --test 'test/**/*.test.mjs' 'src/**/*.test.ts'",
+    "verify": "npm run lint && npm run check && npm test && npm run build",
+    "smoke": "npm run build && node src/tools/smoke/cli.ts"
   },
   "type": "commonjs",
   "engines": {
-    "node": ">=18"
+    "node": ">=22.18"
   },
   "devDependencies": {
-    "electron": "^45.0.0"
+    "@eslint/js": "10.0.1",
+    "@types/node": "26.6.6",
+    "electron": "^45.0.0",
+    "esbuild": "0.28.2",
+    "eslint": "10.14.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1"
   },
   "dependencies": {
     "selfsigned": "^2.4.1",
     "socket.io": "^4.8.1",
-    "ws": "^8.22.0"
+    "ws": "^8.22.0",
+    "zod": "4.6.7"
   }
 }

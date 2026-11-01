@@ -380,7 +380,10 @@ repositories.
 - **One source of truth.** Each fact (a route name, a file path, a default, a flag) is
   defined in exactly one module.
 - **No magic strings or values (hard rule).** Each feature has its own `constants.ts`,
-  `text.ts`, `events.ts` and `keys.ts`.
+  `text.ts`, `events.ts` and `keys.ts`; file and folder locations go in `paths.ts`. The
+  lint rule `local/no-literal-strings` enforces this. It exempts a literal that
+  TypeScript checks against a union of string literals (an esbuild `format`, an AST
+  `node.type`), because such a literal is checked like an enum member.
 - **Test first.** A move starts with a characterization test, a fix with a failing
   test.
 - **One docs directory.** All documentation lives under `docs/`. The root holds only

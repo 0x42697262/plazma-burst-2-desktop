@@ -10,14 +10,20 @@ tick the step here, and note anything the next session must know under the step.
 - [x] P0.3 `AGENTS.md`
 
 ## P1. Toolchain
-- [ ] P1.1 Dev deps pinned (typescript, esbuild, eslint, typescript-eslint, @types/node), zod
-- [ ] P1.2 `tsconfig.json`
-- [ ] P1.3 `tools/build.ts` (wrapper, console, server; `--watch`)
-- [ ] P1.4 App runs from `dist/`; console served from `dist/console/`; `src/kernel/config/paths.ts`
-- [ ] P1.5 ESLint config + local rules `no-comments`, `no-literal-strings` (with tests)
-- [ ] P1.6 Scripts `build`, `check`, `lint`, `test`, `verify`
-- [ ] P1.7 `.gitignore`: `/dist/`, `/features.json`
+- [x] P1.1 Dev deps pinned (typescript, esbuild, eslint, typescript-eslint, @types/node), zod
+- [x] P1.2 `tsconfig.json`
+- [x] P1.3 `src/tools/build/` bundles the console only (`--watch`); the rest runs `.ts` directly (ADR 0001)
+- [x] P1.4 Console served from `dist/console/`; `src/kernel/config/paths.ts`; `npm run smoke` (`src/tools/smoke/`) drives the real app
+- [x] P1.5 ESLint config + local rules `no-comments`, `no-literal-strings` (with tests)
+- [x] P1.6 Scripts `build`, `check`, `lint`, `test`, `verify`
+- [x] P1.7 `.gitignore`: `/dist/`, `/features.json`
 - [ ] P1 tests: the bundle boots in the fake game; no new globals besides `pb2dev`
+
+Notes for later steps:
+- New code lives in `src/` (ES modules). The old `tools/` and `server/` move to
+  `src/tools/` and `src/server/` in P5, not to `tools/*.ts`.
+- The console tests still import the console sources; `test/fake-game.mjs`
+  `bootConsole({ entry })` can boot a built bundle instead.
 
 ## P2. Kernel
 - [ ] P2.1 `src/shared/contract/routes.ts` replaces `desktop/dev/console/shared.json`
