@@ -6,7 +6,7 @@ each message means. For a first hook, read [README.md](hooks.md) instead.
 Source: `src/features/hooks/`. The loader runs in the wrapper (`services/plan.ts`,
 `domain/patching.ts`, the dry run in `adapters/sandbox.ts`). The runtime runs in the
 game page (`runtime/runtime.ts`, bundled to `dist/hooks/runtime.cjs` by `npm run build`).
-Tests are in `src/features/hooks/hooks.test.mjs`. Feature flag `hooks`.
+Tests are in `src/features/hooks/hooks.test.ts`. Feature flag `hooks`.
 
 ## Contents
 
@@ -379,4 +379,4 @@ wrappers use ids from `1000000` up.
 | `hooks` (dev console) | Every hook: status, functions, patch count, multiplayer, errors, description |
 | `npm run find-names` | Refreshes `desktop/dev/names.js` after a game update (§6.1) |
 | `npm start -- --verbose` | Also logs every request, including `__hooks/...` and the changed scripts |
-| `npm test` | Includes `src/features/hooks/hooks.test.mjs` |
+| `npm test` | Includes `src/features/hooks/hooks.test.ts` |

@@ -8,7 +8,7 @@ Feature flag `triggers` (on by default; all modes). Code: `src/features/triggers
   model, running, the run log, regions, variables and the map-editor script format;
 - `logic/` is the logic graph and its overlay.
 
-Tests: `src/features/triggers/triggers.test.mjs`.
+Tests: `src/features/triggers/triggers.test.ts`.
 
 - `triggers` lists map triggers, shows one trigger's actions, keeps a history of trigger
   runs (a frame hook watches the game's runner), finds triggers by uid, value, action
