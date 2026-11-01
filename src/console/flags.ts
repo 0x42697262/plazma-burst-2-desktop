@@ -1,4 +1,5 @@
 import { CATALOG } from '#shared/features/catalog.ts';
+import { EDITION } from '#shared/editions/constants.ts';
 import { CLIENT, MODE, PAGE_FLAGS_GLOBAL, type ClientId, type FeatureId, type Mode } from '#shared/features/keys.ts';
 import type { FlagStates } from '#shared/features/types.ts';
 import { resolveFlags } from '#kernel/flags/resolve.ts';
@@ -21,7 +22,7 @@ function pageClient(): ClientId {
 }
 
 const defaultsForThisPage = (): FlagStates => resolveFlags({
-  catalog: CATALOG, fileOverrides: {}, fileUnknownIds: [], envToggles: [], mode: pageMode(), client: pageClient(),
+  catalog: CATALOG, fileOverrides: {}, fileUnknownIds: [], envToggles: [], mode: pageMode(), client: pageClient(), edition: EDITION,
 }).states;
 
 export const pageFlags = (): FlagStates => (pageGlobal(PAGE_FLAGS_GLOBAL) as FlagStates | undefined) ?? defaultsForThisPage();

@@ -1,0 +1,44 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { z } from 'zod';
+import { CATALOG } from '#shared/features/catalog.ts';
+import { EVERY_FEATURE } from '#shared/editions/keys.ts';
+import type { Edition } from '#shared/editions/types.ts';
+import { EDITIONS_DIR, REPO_ROOT } from '#kernel/config/paths.ts';
+import { resolveEdition, type EditionList } from '#kernel/editions/resolve.ts';
+import { APP_ID_PATTERN, EDITION_FILE_EXTENSION, EDITION_NAME_PATTERN, ONE_OFF_EDITION_NAME } from './constants.ts';
+import { TEXT } from './text.ts';
+
+const editionFileSchema = z.object({
+  name: z.string().regex(EDITION_NAME_PATTERN),
+  title: z.string().min(1),
+  appId: z.string().regex(APP_ID_PATTERN),
+  features: z.union([z.literal(EVERY_FEATURE), z.array(z.string())]),
+}).strict();
+
+export type BuiltEdition = Readonly<{ edition: Edition; added: readonly string[]; problems: readonly string[] }>;
+
+const withFeatures = (base: Omit<Edition, 'features'>, listed: EditionList): BuiltEdition => {
+  const resolved = resolveEdition(CATALOG, listed);
+  const features = listed === EVERY_FEATURE ? null : resolved.features;
+  return Object.freeze({ edition: Object.freeze({ ...base, features }), added: resolved.added, problems: resolved.problems });
+};
+
+export function readEdition(name: string, folder: string = EDITIONS_DIR): BuiltEdition {
+  const file = path.join(folder, name + EDITION_FILE_EXTENSION);
+  const shown = path.relative(REPO_ROOT, file);
+  let parsed: z.infer<typeof editionFileSchema>;
+  try {
+    parsed = editionFileSchema.parse(JSON.parse(fs.readFileSync(file, 'utf8')));
+  } catch (error) {
+    throw new Error(TEXT.editionUnreadable(shown, (error as Error).message), { cause: error });
+  }
+  if (parsed.name !== name) throw new Error(TEXT.nameMismatch(shown, parsed.name));
+  return withFeatures({ name: parsed.name, title: parsed.title, appId: parsed.appId }, parsed.features);
+}
+
+export const oneOffEdition = (features: readonly string[]): BuiltEdition =>
+  withFeatures({ name: ONE_OFF_EDITION_NAME, title: TEXT.oneOffTitle, appId: TEXT.oneOffAppId }, features);
+
+export const editionNames = (folder: string = EDITIONS_DIR): string[] =>
+  fs.readdirSync(folder).filter((file) => file.endsWith(EDITION_FILE_EXTENSION)).map((file) => file.slice(0, -EDITION_FILE_EXTENSION.length)).sort();

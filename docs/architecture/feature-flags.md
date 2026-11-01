@@ -23,11 +23,13 @@ Code: `src/shared/features/`,
 Resolved once at boot by the pure `resolve()` in `src/kernel/flags/resolve.ts`. Later
 layers win:
 
+0. the app's edition: a feature it leaves out is off (source `edition`) and stays off
+   ([editions](../operations/editions.md));
 1. the catalog default;
-2. `data/features.json` at the repo root (gitignored, versioned);
+2. `data/features.json` (gitignored, versioned);
 3. the environment: `PB2_FEATURES=+id,-id`, plus the aliases `PB2_DEV=0`
    (`-dev_console`) and `PB2_HOOKS=0` (`-hooks`);
-4. hard constraints: `locked`, `requires`, `conflicts`, `availableIn`.
+4. hard constraints: `locked`, `requires`, `unavailableForClients`, `availableIn`.
 
 The wrapper logs one `flags.resolved` line listing every flag that is not at its
 default, with its source. The console gets the resolved flags before any script runs.
@@ -40,8 +42,11 @@ on.
 ## Adding a feature
 
 1. Add a catalog entry.
-2. Create `src/features/<id>/` with its `console.ts` and/or `wrapper.ts`.
-3. Add those to `src/console/features.ts` / `src/wrapper/features.ts`.
+2. Create `src/features/<id>/` (the folder is named by the id) with its `console.ts`,
+   `page.ts` and/or `wrapper.ts`.
+3. Add those to `src/console/features.ts`, `src/page/features.ts` or
+   `src/wrapper/features.ts`, one `import { x } from '#features/<id>/…'` line and one
+   list entry each, so an edition build can leave it out.
 4. Write `docs/features/<id>.md`.
 5. Add a flag-off test: no commands, routes 404, no ticks, nothing written.
 
@@ -60,5 +65,6 @@ on.
 Each of these stops the app before a window opens, with one line per problem:
 - an unknown feature id;
 - turning off a locked feature;
+- turning on a feature the app's edition leaves out;
 - a malformed `PB2_FEATURES`;
 - an unreadable `data/features.json`.

@@ -3,6 +3,8 @@ import { REPORT_COLUMN } from './constants.ts';
 export const TEXT = Object.freeze({
   unknownFeature: (id: string, where: string) => `${where}: no feature "${id}" (see "npm start -- --features")`,
   locked: (id: string, where: string) => `${where}: "${id}" cannot be turned off`,
+  notInEdition: (id: string, where: string, edition: string) => `${where}: "${id}" is not in this app (edition "${edition}")`,
+  notInEditionReason: 'not in this app',
   notAvailableInMode: (mode: string) => `not available in ${mode} mode`,
   notForClient: (client: string) => `not available for the ${client} client`,
   needs: (required: string) => `needs ${required}`,

@@ -34,7 +34,7 @@ export const ALL_MODES: readonly Mode[] = Object.freeze([MODE.local, MODE.remote
 export const CLIENT = Object.freeze({ official: 'official', sadburst: 'sadburst' });
 export type ClientId = typeof CLIENT[keyof typeof CLIENT];
 
-export const FLAG_SOURCE = Object.freeze({ default: 'default', file: 'file', env: 'env', constraint: 'constraint' });
+export const FLAG_SOURCE = Object.freeze({ default: 'default', file: 'file', env: 'env', constraint: 'constraint', edition: 'edition' });
 export type FlagSource = typeof FLAG_SOURCE[keyof typeof FLAG_SOURCE];
 
 export const FEATURE_OWNER = '0x42697262';

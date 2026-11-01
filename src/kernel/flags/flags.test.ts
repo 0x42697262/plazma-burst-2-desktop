@@ -78,3 +78,15 @@ test('features.json is versioned; ids the catalog does not know are kept apart',
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('a feature left out of the app\'s edition is off, and no file or variable turns it on', () => {
+  const edition = { name: 'player', features: ['server_list', 'lobby_task_guard', 'cert_pinning', 'login'] as const };
+  const { states, problems } = resolveFlags({
+    catalog: CATALOG, fileOverrides: { hooks: true }, fileUnknownIds: [], mode: 'local', client: 'official', edition,
+    envToggles: [{ id: 'dev_console', on: true }, { id: 'js_eval', on: false }, { id: 'login', on: false }],
+  });
+  assert.deepEqual(problems, ['features.json: "hooks" is not in this app (edition "player")', 'PB2_FEATURES: "dev_console" is not in this app (edition "player")']);
+  assert.deepEqual(states.dev_console, { on: false, source: 'edition', reason: 'not in this app' });
+  assert.equal(states.server_list.on, true);
+  assert.equal(states.login.on, false, 'what the edition has can still be turned off');
+});

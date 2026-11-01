@@ -2,6 +2,10 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import * as esbuild from 'esbuild';
 import { REPO_ROOT, PAGE_BUNDLE_DIR } from '#kernel/config/paths.ts';
+import { EDITION } from '#shared/editions/constants.ts';
+import type { Edition } from '#shared/editions/types.ts';
+import { FEATURE, type FeatureId } from '#shared/features/keys.ts';
+import { editionPlugin } from './edition-plugin.ts';
 import {
   LAUNCHER_DIST_DIR, LAUNCHER_PRELOAD_SOURCE, LAUNCHER_SCRIPT_SOURCE, LAUNCHER_SOURCE_DIR, LAUNCHER_STATIC_FILES,
 } from '#features/server_list/paths.ts';
@@ -13,9 +17,18 @@ import { BROWSER_TARGET, CHUNK_NAMES, ELECTRON_MODULE, PAGE_ENTRIES, LAUNCHER_PR
 
 const shared: esbuild.BuildOptions = { bundle: true, sourcemap: 'linked', legalComments: 'none', logLevel: 'warning' };
 
-export const pageBuildOptions = (outdir: string = PAGE_BUNDLE_DIR): esbuild.BuildOptions => ({
+export const hasFeature = (edition: Edition, id: FeatureId): boolean => edition.features === null || edition.features.includes(id);
+
+const pageEntriesOf = (edition: Edition): Record<string, string> => {
+  const entries: Record<string, string> = { page: path.join(REPO_ROOT, PAGE_ENTRIES.page) };
+  if (hasFeature(edition, FEATURE.devConsole)) entries.console = path.join(REPO_ROOT, PAGE_ENTRIES.console);
+  return entries;
+};
+
+export const pageBuildOptions = (outdir: string = PAGE_BUNDLE_DIR, edition: Edition = EDITION): esbuild.BuildOptions => ({
   ...shared,
-  entryPoints: Object.fromEntries(Object.entries(PAGE_ENTRIES).map(([name, source]) => [name, path.join(REPO_ROOT, source)])),
+  plugins: [editionPlugin(edition)],
+  entryPoints: pageEntriesOf(edition),
   outdir,
   splitting: true,
   chunkNames: CHUNK_NAMES,
@@ -83,9 +96,9 @@ export async function buildHooksRuntime(outfile: string = RUNTIME_BUNDLE): Promi
   return outfile;
 }
 
-export async function buildPage(outdir: string = PAGE_BUNDLE_DIR): Promise<string> {
+export async function buildPage(outdir: string = PAGE_BUNDLE_DIR, edition: Edition = EDITION): Promise<string> {
   await fs.rm(outdir, { recursive: true, force: true });
-  await esbuild.build(pageBuildOptions(outdir));
+  await esbuild.build(pageBuildOptions(outdir, edition));
   return outdir;
 }
 
@@ -94,8 +107,12 @@ export async function buildLauncher(outDir: string = LAUNCHER_DIST_DIR): Promise
   return outDir;
 }
 
-export async function buildAll(): Promise<string[]> {
-  return Promise.all([buildPage(), buildLauncher(), buildHooksRuntime(), buildRemoteClient()]);
+export async function buildAll(edition: Edition = EDITION): Promise<string[]> {
+  const builds = [buildPage(PAGE_BUNDLE_DIR, edition)];
+  if (hasFeature(edition, FEATURE.serverList)) builds.push(buildLauncher());
+  if (hasFeature(edition, FEATURE.hooks)) builds.push(buildHooksRuntime());
+  if (hasFeature(edition, FEATURE.remotePlay)) builds.push(buildRemoteClient());
+  return Promise.all(builds);
 }
 
 export async function watchAll(): Promise<esbuild.BuildContext[]> {

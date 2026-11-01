@@ -9,6 +9,7 @@ export type ResolveInput = Readonly<{
   envToggles: readonly FeatureToggle[];
   mode: Mode;
   client: ClientId;
+  edition?: Readonly<{ name: string; features: readonly FeatureId[] | null }>;
 }>;
 
 export type ResolveResult = Readonly<{ states: FlagStates; problems: readonly string[] }>;
@@ -27,12 +28,20 @@ function constraintReason(definition: FeatureDefinition, mode: Mode, client: Cli
 }
 
 export function resolveFlags(input: ResolveInput): ResolveResult {
-  const { catalog, fileOverrides, fileUnknownIds, envToggles, mode, client } = input;
+  const { catalog, fileOverrides, fileUnknownIds, envToggles, mode, client, edition } = input;
   const byId = new Map(catalog.map((definition) => [definition.id, definition]));
-  const states = new Map<FeatureId, FlagState>(catalog.map((definition) => [definition.id, stateOf(definition.defaultOn, FLAG_SOURCE.default)]));
+  const isInEdition = (id: FeatureId): boolean => !edition?.features || edition.features.includes(id);
+  const initialState = (definition: FeatureDefinition): FlagState => (isInEdition(definition.id)
+    ? stateOf(definition.defaultOn, FLAG_SOURCE.default)
+    : stateOf(false, FLAG_SOURCE.edition, TEXT.notInEditionReason));
+  const states = new Map<FeatureId, FlagState>(catalog.map((definition) => [definition.id, initialState(definition)]));
   const problems: string[] = fileUnknownIds.map((id) => TEXT.unknownFeature(id, TEXT.sourceFile));
 
   const applyOverride = (definition: FeatureDefinition, on: boolean, source: FlagSource, where: string): void => {
+    if (!isInEdition(definition.id)) {
+      if (on) problems.push(TEXT.notInEdition(definition.id, where, edition?.name ?? ''));
+      return;
+    }
     const problem = overrideProblem(definition, on, where);
     if (problem) problems.push(problem);
     else states.set(definition.id, stateOf(on, source));

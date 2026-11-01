@@ -1,0 +1,69 @@
+# Editions: apps with different features
+
+An edition is one app you build and hand out, with its own set of features
+([ADR 0005](../adr/0005-editions-and-page-core.md)). The code of a feature the edition
+leaves out is not in its bundles, and no `features.json` or `PB2_FEATURES` can turn it
+on: that app says `"<id>" is not in this app` and stops.
+
+## Edition files
+
+One file per edition in `editions/`, named after it:
+
+```json
+{
+  "name": "player",
+  "title": "Plazma Burst 2 Client",
+  "appId": "io.github.plazma-burst-2-desktop.player",
+  "features": ["server_list", "client_sadburst"]
+}
+```
+
+| Field | What |
+|---|---|
+| `name` | The file's name: lower case letters, digits and `-` |
+| `title` | The app's name, shown to players |
+| `appId` | Reverse-domain id; installed editions with different ids keep their settings and logins apart |
+| `features` | Feature ids (`npm start -- --features` lists them), or `"all"` |
+
+`editions/dev.json` is every feature, which is also what `npm start` runs.
+
+## Building one
+
+```
+npm run build -- --edition player            # an edition file
+npm run build -- --features server_list,zoom  # a one-off list (edition "custom")
+```
+
+The build prints the edition's features and why each one it added is there, then builds
+only what the edition needs: the page core always, the dev console only with
+`dev_console`, the server list page only with `server_list`, the hooks runtime only with
+`hooks`, the remote-play client only with `remote_play`.
+
+## What the build adds or refuses
+
+The build resolves the list with the feature catalog (`src/kernel/editions/resolve.ts`):
+- a feature's `requires` are added (`map_editor` brings `dev_console`, `map_cache`,
+  `triggers`);
+- a locked feature comes with what it needs (`console_core` with `dev_console`);
+- `server_list` always brings `lobby_task_guard` and `cert_pinning`
+  (`ALWAYS_WITH` in `src/shared/editions/keys.ts`): an app that joins private servers is
+  always protected from their code and their certificates;
+- an unknown id stops the build.
+
+## How left-out code stays out
+
+- The build's esbuild plugin (`src/tools/build/edition-plugin.ts`) compiles the edition
+  into `src/shared/editions/constants.ts` and filters the feature lists
+  (`src/console/features.ts`, `src/page/features.ts`, `src/wrapper/features.ts`): their
+  `import { x } from '#features/<id>/…'` lines and list entries of left-out features go.
+  A left-out name still used elsewhere in a list stops the build.
+- Feature folders are named by feature id, which is what the plugin matches.
+- Code a feature keeps in the console kernel (the player overrides, the settings table)
+  goes only with the whole console.
+
+## Tests
+
+`src/tools/build/editions.test.ts` builds every file in `editions/`, plus the smallest
+(page core only) and the largest edition, and checks that no left-out feature's side
+module or `entry/` is in the bundles, and that `console.js` exists only with
+`dev_console`. Adding an edition file adds it to the test.

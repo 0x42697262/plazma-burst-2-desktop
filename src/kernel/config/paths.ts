@@ -4,6 +4,7 @@ const LEVELS_UP_TO_REPO = ['..', '..', '..'];
 
 export const REPO_ROOT = path.resolve(import.meta.dirname, ...LEVELS_UP_TO_REPO);
 export const DIST_DIR = path.join(REPO_ROOT, 'dist');
+export const EDITIONS_DIR = path.join(REPO_ROOT, 'editions');
 export const PAGE_BUNDLE_DIR = path.join(DIST_DIR, 'page');
 export const PAGE_CORE_FILE = 'page.js';
 export const CONSOLE_BUNDLE_FILE = 'console.js';

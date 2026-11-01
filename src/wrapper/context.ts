@@ -1,4 +1,5 @@
 import { CATALOG } from '#shared/features/catalog.ts';
+import { EDITION } from '#shared/editions/constants.ts';
 import type { FlagStates } from '#shared/features/types.ts';
 import { parseEnvironment, type Environment } from '#kernel/config/environment.ts';
 import { FEATURES_FILE, REPO_ROOT } from '#kernel/config/paths.ts';
@@ -41,6 +42,7 @@ function buildContext(): WrapperContext {
     envToggles: environment.featureToggles,
     mode: environment.mode,
     client: environment.client,
+    edition: EDITION,
   });
   problems.push(...flagProblems);
   if (problems.length) stopWith(problems);
