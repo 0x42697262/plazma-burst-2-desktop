@@ -43,7 +43,7 @@ written with mode `0600` because it holds passwords:
 - A private server's `fingerprint` is the SHA-256 of its certificate, as the server's
   terminal prints it.
 - The game connects to that address only when the certificate there is exactly this one
-  (the session's certificate check, `pinServerCertificates` in `desktop/main.js`).
+  (the session's certificate check, `src/features/cert_pinning/`).
 - `/status` (name, description, players, version, whether a password is needed) is read
   only from a server showing the pinned certificate. Another certificate is reported as
   "not the saved one", because someone else may be at that address.

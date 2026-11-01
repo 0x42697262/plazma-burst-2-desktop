@@ -3,7 +3,7 @@
 Feature flag `client_sadburst` (on by default; all modes). The client map:
 `src/shared/clients/keys.ts` (what the page may know: titles, hosts, page prefix,
 settings file name, session partition, run flags) and `src/kernel/config/clients.ts` (the
-same plus the game, names and opcodes files). The gate: `desktop/main.js` until P4.3.
+same plus the game, names and opcodes files). The gate: `src/wrapper/app.ts`.
 
 ## The two clients
 - `official`: Plazma Burst 2, `www.plazmaburst2.com/h5/versions/<version>/`, the default

@@ -1,0 +1,9 @@
+export const WATCH_DELAY_MS = 200;
+export const JSON_INDENT = 2;
+export const MAIN_WINDOW = Object.freeze({ width: 1280, height: 720 });
+export const FORBIDDEN = 403;
+export const NOT_FOUND = 404;
+export const UNAVAILABLE = 503;
+export const BAD_REQUEST = 400;
+export const CONFLICT = 409;
+export const OK = 200;

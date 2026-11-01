@@ -1,3 +1,17 @@
 export const TEXT = Object.freeze({
   flagsFileUnreadable: (message: string) => `features.json cannot be read: ${message}`,
 });
+
+export const APP_TEXT = Object.freeze({
+  gameMissing: (root: string, runFlag: string) => `No game files found in ${root}.\n\nRun "npm run fetch-game${runFlag}" first (see README.md).`,
+  gameMissingTitle: (title: string) => `${title}: game files missing`,
+  sadburstHostModes: 'Sad Burst 2: remote play and the player-hosted host are for the official client only.',
+  gameFrom: (prefix: string, version: string, root: string) => `${prefix}Game ${version} from ${root}`,
+  clientPrefix: (title: string) => `${title}: `,
+  sadburstHooksOff: 'Sad Burst 2: hooks are off (its loader sends a hash of the game scripts with the login; docs/features/hooks.md).',
+  debugLevel: 'Log level: debug (requests, window events, the game\'s trace() output)',
+  serversMenu: 'Servers',
+  serverListItem: 'Server list',
+  windowMenu: 'Window',
+  notWatching: (file: string, message: string) => `Not watching ${file}: ${message}`,
+});

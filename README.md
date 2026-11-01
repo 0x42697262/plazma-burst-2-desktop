@@ -42,7 +42,7 @@ The community client Sad Burst 2 has commands of its own; the ones above never t
 
 | Path | What | In git |
 |---|---|---|
-| `desktop/main.js` | Electron app: serves `game/`, injects the dev console | yes |
+| `src/wrapper/` | Electron app: serves `game/`, injects the dev console (`app.ts`, `platform/`) | yes |
 | `desktop/dev/console/` | The dev console: ES modules, entry `index.js` (layout in its header comment) | yes |
 | `desktop/dev/console/shared.json` | Routes and map markers shared by `main.js` and the console | yes |
 | `desktop/dev/names.js` | Obfuscated game names for the current game version (generated) | no |
@@ -50,7 +50,7 @@ The community client Sad Burst 2 has commands of its own; the ones above never t
 | `desktop/maps/` | Local maps (`local-<name>` as the map ID), plus every downloaded map saved as `<map id>.xml`, uncompressed (console keys `save_maps`, `fast_maps`) | yes |
 | `desktop/credentials.json` | Your login (copy `credentials.example.json`) | no |
 | `desktop/dev-overrides.json` | Dev console settings, binds and profiles (per-map settings, `profile` in the console). Editing it while the game runs reloads it | no |
-| `desktop/kv-file.js` | Shares `dev-overrides.json` between the console and your edits | yes |
+| `src/wrapper/platform/kv-file.ts` | Shares `dev-overrides.json` between the console and your edits | yes |
 | `hooks/` | Your hooks: Frida-style scripts that change the game's code as it loads. Guide: `docs/features/hooks.md`, reference: `docs/features/hooks-reference.md` | only `README.md`, `REFERENCE.md` and `*.example.js` |
 | `src/features/remote_play/` | Remote play: testers play a game running on this machine from their browser (`npm run host`). Guide: `docs/operations/remote-play.md` | yes |
 | `desktop/remote-testers.json`, `desktop/remote-data/` | Remote play: tester links, and each tester's console settings | no |

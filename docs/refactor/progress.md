@@ -17,12 +17,12 @@ tick the step here, and note anything the next session must know under the step.
 - [x] P1.5 ESLint config + local rules `no-comments`, `no-literal-strings` (with tests)
 - [x] P1.6 Scripts `build`, `check`, `lint`, `test`, `verify`
 - [x] P1.7 `.gitignore`: `/dist/`, `/features.json`
-- [ ] P1 tests: the bundle boots in the fake game; no new globals besides `pb2dev`
+- [x] P1 tests: the bundle boots in the fake game; no new globals besides `pb2dev` (`src/tools/build/build.test.ts`)
 
 Notes for later steps:
 - New code lives in `src/` (ES modules). The old `tools/` and `server/` move to
   `src/tools/` and `src/server/` in P5, not to `tools/*.ts`.
-- The console tests still import the console sources; `test/fake-game.mjs`
+- The console tests still import the console sources; `test/support/fake-game.mjs`
   `bootConsole({ entry })` can boot a built bundle instead.
 
 ## P2. Kernel
@@ -111,7 +111,7 @@ Notes from P2 for the feature steps:
   Method: port a module, then `python3 docs/refactor/retarget-imports.py <old.js> <new.ts> ... [--rename Old=New]` rewrites every import of it (relative paths recomputed, `#console/` aliases from feature files) and deletes the old file. Tests that load modules by path are fixed by hand.
   `dev-overrides.json` stays unversioned: it is edited by hand and its loader reports any unknown top-level key.
 - [x] P4.2 `test/console.test.mjs` split: kernel tests in `src/console/kernel/console.test.mjs`, trigger and logic tests in `src/features/triggers/triggers.test.mjs`, map editor tests in `src/features/map_editor/map-editor.test.mjs`. The fake game moved to `test/support/fake-game.mjs`; it becomes TypeScript in P6.1 with the `.mjs` tests that use it (their types decide its types).
-- [ ] P4.3 Rest of `desktop/main.js` to `src/wrapper/platform/`; `desktop/main.js` deleted
+- [x] P4.3 `desktop/main.js` is gone. `src/wrapper/app.ts` is the composition root (start-mode gates, request handling, menu, main window); `src/wrapper/platform/` holds the settings file sync (`kv-file.ts`), index.html preparation (`index-page.ts`, tested), game file serving and Sad Burst's kept files (`game-files.ts`), the `__dev/` files and start checks (`dev-files.ts`), the page log, the remote play windows and the dedicated host window. `desktop/kv-file.js` is gone; `desktop/log.js` and `desktop/map-text.js` stay for `server/` until P5.
 
 ## P5. Server and tools
 - [ ] P5.1 `server/src/`

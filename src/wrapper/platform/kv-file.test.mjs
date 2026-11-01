@@ -1,12 +1,9 @@
-// desktop/kv-file.js on a real file in a temp folder: "npm test".
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { createRequire } from 'node:module';
-
-const { createKvFile } = createRequire(import.meta.url)('../desktop/kv-file.js');
+import { createKvFile } from './kv-file.ts';
 
 function setup(initial) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-kv-'));

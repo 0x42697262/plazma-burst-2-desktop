@@ -15,7 +15,7 @@ const SITE = 'https://www.plazmaburst2.com/pb2/server.php';
 
 const TIMEOUT_MS = 15000;
 
-// Map ID -> file name, as desktop/main.js names saved maps.
+// Map ID -> file name, as the map cache names saved maps (src/features/map_cache/).
 const fileName = (id) => id.replace(/[^A-Za-z0-9 _.\-]/g, (c) => '%' + c.charCodeAt(0).toString(16).padStart(2, '0')) + '.xml';
 
 function readIn(dir, name) {

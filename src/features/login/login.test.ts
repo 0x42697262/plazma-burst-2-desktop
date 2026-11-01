@@ -11,7 +11,7 @@ import type { Logger } from '#kernel/log/logger.ts';
 
 const HOST = 'www.plazmaburst2.com';
 
-type StoredCookie = Cookie & { value: string };
+type StoredCookie = Cookie & { value: string; domain: string; path: string };
 type FakeStore = CookieStore & { jar(): StoredCookie[]; flushed: number };
 
 function cookieStore(initial: readonly (Omit<StoredCookie, 'path'> & { path?: string })[]): FakeStore {

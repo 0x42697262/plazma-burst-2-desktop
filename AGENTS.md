@@ -51,4 +51,5 @@ One line per behavior change: what to do, and the result to expect.
 - P3.18: `npm test` (src/features/login, src/features/cert_pinning). `PB2_FEATURES=-login npm start`, then play the official server: the log says "Login is off" and the game is logged out. `PB2_FEATURES=-cert_pinning npm start`: a self-signed private server is refused.
 - P3.19: `npm test` (src/features/remote_play). `npm run host`, then `npm run testers -- add me` and open the link: the game streams. `PB2_FEATURES=-remote_play npm run host` logs "Remote play is off" and quits.
 - P3.20: `npm test` (src/features/p2p_host). `npm run p2p-host` with `desktop/p2p-host.json` hosts as before. `PB2_FEATURES=-p2p_host npm run p2p-host` logs that the host is off and quits.
+- P4.3: `npm run smoke` plays the official server and the console answers; `npx electron . --host --port=8799` listens on 127.0.0.1; `npm start -- --features` lists the flags.
 - P3.21: `npm test` (src/kernel/config/clients.test.ts). `npm run sadburst` starts Sad Burst 2 as before (its own session and settings file). `PB2_FEATURES=-client_sadburst npm run sadburst` logs "Sad Burst 2 is off" and quits.
