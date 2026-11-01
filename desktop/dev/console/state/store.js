@@ -4,6 +4,7 @@
 // the wrapper is not there). The wrapper reloads the console's copy when you edit the file.
 //
 // A setting's value in effect: the current map's profile, then yours, then the default.
+import { isFeatureOn } from '../../../../src/console/flags.ts';
 import { SCHEMA, parseValue, affectsGame } from './schema.js';
 import { parseKeyName } from './keys.js';
 import { ROUTE } from '../core/shared.js';
@@ -29,6 +30,7 @@ export const currentMap = () => { try { const id = mapNow(); return id ? String(
 
 // The profile the current map uses, when it exists: { name, values, binds, onload } or null.
 export function activeProfile() {
+  if (!isFeatureOn('profiles')) return null;
   const id = currentMap();
   const name = id && mapProfiles[id];
   return name && profileMap[name] ? { name, ...profileMap[name] } : null;

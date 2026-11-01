@@ -83,16 +83,6 @@ const EXTRAS = Object.freeze({
     })];
   },
   logic: () => logicShown() && ['logic: shown', [`  ${logicDescription() || 'on'}`]],
-  profile: () => {
-    const p = activeProfile();
-    if (!p) return null;
-    const rows = [
-      ...Object.keys(p.values).sort().map((k) => `  ${k.padEnd(KEY_WIDTH)} ${showValue(k, p.values[k])}`),
-      ...Object.keys(p.binds).sort().map((k) => `  bind ${showKey(k).padEnd(KEY_WIDTH - 5)} ${p.binds[k]}`),
-      ...(p.onload ? [`  onload         ${p.onload}`] : []),
-    ];
-    return [`profile: ${p.name} (map ${currentMap()})`, rows.length ? rows : ['  (sets nothing yet)']];
-  },
   checks: () => checksBypassed() && ['ranked match protection: OFF ("bypass checks")', ['  nothing is held back in ranked matches; "bypass off" turns it back on']],
   editor: () => {
     const sum = editSummary();

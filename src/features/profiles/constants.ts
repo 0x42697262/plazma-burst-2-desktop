@@ -1,0 +1,10 @@
+export const KEY_WIDTH = 14;
+export const NAME_WIDTH = 16;
+export const VALUE_WIDTH = 9;
+export const BIND_KEY_WIDTH = KEY_WIDTH - 5;
+export const SET_ARGUMENTS = 3;
+export const UNSET_ARGUMENTS = 2;
+export const BIND_MIN_ARGUMENTS = 2;
+export const PROFILE_TICK_MS = 250;
+export const PROFILE_ERRORS_SHOWN = 3;
+export const USE_MAX_ARGUMENTS = 2;

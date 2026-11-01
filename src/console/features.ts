@@ -10,6 +10,7 @@ import { jsEvalConsole } from '#features/js_eval/console.ts';
 import { zoomConsole } from '#features/zoom/console.ts';
 import { gameChatConsole } from '#features/game_chat/console.ts';
 import { traceConsole } from '#features/trace/console.ts';
+import { profilesConsole } from '#features/profiles/console.ts';
 
 export const CONSOLE_FEATURES: readonly ConsoleFeature[] = Object.freeze([
   lobbyTaskGuardConsole,
@@ -21,6 +22,7 @@ export const CONSOLE_FEATURES: readonly ConsoleFeature[] = Object.freeze([
   zoomConsole,
   gameChatConsole,
   traceConsole,
+  profilesConsole,
 ]);
 
 export const enabledConsoleFeatures = (features: readonly ConsoleFeature[] = CONSOLE_FEATURES): ConsoleFeature[] => features.filter((feature) => isFeatureOn(feature.id));

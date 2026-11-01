@@ -89,7 +89,7 @@ Notes from P2 for the feature steps:
     `*.test.mjs`, one shared `bootConsole()` per file
     (`tools`: the scratchpad move script is not kept; the pattern is the header of
     `src/features/trace/trace.test.mjs`). Converting them to TypeScript is P6.1.
-- [ ] P3.9 `profiles`
+- [x] P3.9 `profiles` (the store ignores profiles while the flag is off)
 - [ ] P3.10 `binds`
 - [ ] P3.11 `guns`
 - [ ] P3.12 `player`

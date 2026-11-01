@@ -28,7 +28,6 @@ import { game } from './game/bindings.js';
 import { namesMissing, CLIENT_TITLE, FIND_NAMES, SADBURST } from './game/names.js';
 import { load, reload as reloadStore, settings, binds, profiles, loadProblems, setMapSource } from './state/store.js';
 import { currentMapId } from './game/level.js';
-import { profileTick } from './commands/profile.js';
 import { applyOverrides, onActiveChange } from './overrides/frame.js';
 import { syncTriggerHooks } from './triggers/log.js';
 import { mapTick } from './maps/cache.js';
@@ -86,7 +85,7 @@ function start(source) {
   print(`Loaded ${plural(n, 'override')}, ${plural(binds.keys().length, 'bind')}${p ? ` and ${plural(p, 'profile')}` : ''} from ${source === 'file' ? `desktop/${KV_FILE}` : 'localStorage'}.`, COLOR.hint);
   printProblems();
   setInterval(updateStatusIfOpen, STATUS_EVERY_MS);
-  setInterval(() => { mapGuard('Map cache', mapTick); mapGuard('Profiles', profileTick); }, MAP_TICK_MS);
+  setInterval(() => { mapGuard('Map cache', mapTick); }, MAP_TICK_MS);
   for (const tick of featureTicks(features)) {
     const guard = errorBudget(tick.errorsShown, reportError);
     setInterval(() => guard(tick.name, tick.run), tick.everyMs);

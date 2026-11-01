@@ -27,7 +27,7 @@ const consoleFeature = (id: FeatureId, spec: FeatureSpec = {}): FeatureDefinitio
 export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   define(FEATURE.devConsole, { migrated: true }),
   consoleFeature(FEATURE.consoleCore, { locked: true }),
-  consoleFeature(FEATURE.profiles),
+  consoleFeature(FEATURE.profiles, { migrated: true }),
   consoleFeature(FEATURE.player),
   consoleFeature(FEATURE.guns),
   consoleFeature(FEATURE.binds),

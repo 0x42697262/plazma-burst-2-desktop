@@ -2,7 +2,6 @@
 import { register } from './registry.js';
 import { helpCommand } from './help.js';
 import { settingsCommands } from './settings.js';
-import { profileCommand } from './profile.js';
 import { playerCommands, tpCommand, posCommand, charsCommand } from './player.js';
 import { gunsCommand, gunCommands } from './guns.js';
 import { bindCommands } from './binds.js';
@@ -24,7 +23,7 @@ const [list, set, get, unset, reset, builtin] = settingsCommands;
 
 register(
   serverCommand, ...serverShortcuts, // the dedicated host only (core/server.js)
-  helpCommand, list, set, get, unset, reset, profileCommand,
+  helpCommand, list, set, get, unset, reset,
   ...playerCommands, gunsCommand, tpCommand, posCommand, ...gunCommands, charsCommand,
   ...bindCommands, keynameCommand, triggersCommand, regionsCommand, varsCommand, logicCommand, editorCommand, chainTopic, moreCommand,
   builtin, mapsCommand, bypassCommand, hooksCommand, featuresCommand, ...consoleCommands,
