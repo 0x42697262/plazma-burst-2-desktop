@@ -1,15 +1,14 @@
 # triggers: map triggers, regions, variables and the logic view
 
-Feature flag `triggers` (on by default; all modes). Feature wiring:
-`src/features/triggers/console.ts`. The code itself is still the console's JavaScript
-in `desktop/dev/console/`:
-- `commands/triggers.js`, `commands/regions.js`, `commands/vars.js`, `commands/logic.js`;
-- `triggers/` (the trigger model, running, the run log, variables, regions, map-editor
-  script);
-- `logic/` (the logic graph and its overlay).
+Feature flag `triggers` (on by default; all modes). Code: `src/features/triggers/`:
+- `console.ts` wires the feature (commands, the run-log frame hook, the logic and vars
+  list sections);
+- `entry/` holds the `triggers`, `regions`, `vars` and `logic` commands;
+- `run-log.ts`, `model.ts`, `run.ts`, `regions.ts`, `vars.ts`, `script.ts` are the trigger
+  model, running, the run log, regions, variables and the map-editor script format;
+- `logic/` is the logic graph and its overlay.
 
-Converting them to TypeScript in the feature folder is refactor step P6.1. Their tests
-are still in `test/console.test.mjs`, because they build on each other's state there.
+Tests: `src/features/triggers/triggers.test.mjs`.
 
 - `triggers` lists map triggers, shows one trigger's actions, keeps a history of trigger
   runs (a frame hook watches the game's runner), finds triggers by uid, value, action
