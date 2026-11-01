@@ -32,7 +32,6 @@ import { applyOverrides, onActiveChange } from './overrides/frame.js';
 import { syncTriggerHooks } from './triggers/log.js';
 import { mapTick } from './maps/cache.js';
 import { editorTick } from './editor/index.js';
-import { scanReportTick } from './net/scan-report.js';
 import { run } from './dispatch.js';
 import { SERVER } from './core/server.js';
 import { startHost } from './server/host.js';
@@ -64,7 +63,6 @@ function onFrame() {
   frameGuard('Trigger history', syncTriggerHooks);
   frameGuard('Frame', applyOverrides);
   frameGuard('Editor', editorTick);
-  frameGuard('Scan report', scanReportTick);
 }
 
 function start(source) {

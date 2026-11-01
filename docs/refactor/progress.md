@@ -93,7 +93,7 @@ Notes from P2 for the feature steps:
 - [x] P3.10 `binds` (saved binds do not run while the flag is off; `commandText`/`warnKeyUses` are in the console kernel)
 - [x] P3.11 `guns`
 - [x] P3.12 `player` (the per-frame player overrides follow the flag)
-- [ ] P3.13 `scan_bypass`
+- [x] P3.13 `scan_bypass` (the protection stays in the console; with the flag off it cannot be turned off)
 - [ ] P3.14 `map_cache`
 - [ ] P3.15 `hooks`
 - [ ] P3.16 `triggers`

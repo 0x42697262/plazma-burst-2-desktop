@@ -10,7 +10,6 @@ import { moreCommand, chainTopic, consoleCommands } from './console.js';
 import { mapsCommand } from './maps.js';
 import { editorCommand } from './editor.js';
 import { hooksCommand } from './hooks.js';
-import { bypassCommand } from './bypass.js';
 import { serverCommand, serverShortcuts } from './server.js';
 import { featuresCommand } from '../../../../src/console/kernel/commands/features.ts';
 import { enabledConsoleFeatures, featureCommands } from '../../../../src/console/features.ts';
@@ -21,6 +20,6 @@ register(
   serverCommand, ...serverShortcuts, // the dedicated host only (core/server.js)
   helpCommand, list, set, get, unset, reset,
   triggersCommand, regionsCommand, varsCommand, logicCommand, editorCommand, chainTopic, moreCommand,
-  builtin, mapsCommand, bypassCommand, hooksCommand, featuresCommand, ...consoleCommands,
+  builtin, mapsCommand, hooksCommand, featuresCommand, ...consoleCommands,
   ...featureCommands(enabledConsoleFeatures()),
 );

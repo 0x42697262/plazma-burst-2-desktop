@@ -41,7 +41,7 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   consoleFeature(FEATURE.netlog, { migrated: true }),
   consoleFeature(FEATURE.fingerprint, { availableIn: LOCAL_AND_SERVER, migrated: true }),
   consoleFeature(FEATURE.lobbyTaskGuard, { availableIn: LOCAL_ONLY, migrated: true }),
-  consoleFeature(FEATURE.scanBypass, { availableIn: LOCAL_AND_SERVER }),
+  consoleFeature(FEATURE.scanBypass, { availableIn: LOCAL_AND_SERVER, migrated: true }),
   consoleFeature(FEATURE.jsEval, { availableIn: LOCAL_AND_SERVER, migrated: true }),
   define(FEATURE.hooks, { unavailableForClients: ONLY_OFFICIAL, migrated: true }),
   define(FEATURE.serverList, { availableIn: LOCAL_ONLY, unavailableForClients: ONLY_OFFICIAL, migrated: true }),

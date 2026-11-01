@@ -9,7 +9,7 @@ import { findRunnable, findSubcommand, reachOf } from './commands/registry.js';
 import { printTopicHelp } from './commands/help.js';
 import { runKey } from './commands/settings.js';
 import { askingToBypass, answerBypass } from './state/danger.js';
-import { BYPASSED_LINES, NOT_BYPASSED_LINE } from './commands/bypass.js';
+import { BYPASSED_LINES, NOT_BYPASSED_LINE } from '../../../src/console/kernel/danger/text.ts';
 
 // How Chrome marks a stack frame from DevTools or eval.
 const ANONYMOUS_FRAME = 'at <anonymous>:';
