@@ -12,7 +12,10 @@ import { traceConsole } from '#features/trace/console.ts';
 import { profilesConsole } from '#features/profiles/console.ts';
 import { bindsConsole } from '#features/binds/console.ts';
 import { gunsConsole } from '#features/guns/console.ts';
-import { playerConsole } from '#features/player/console.ts';
+import { teleportConsole } from '#features/teleport/console.ts';
+import { playerInfoConsole } from '#features/player_info/console.ts';
+import { healthConsole } from '#features/health/console.ts';
+import { movementConsole } from '#features/movement/console.ts';
 import { scanBypassConsole } from '#features/scan_bypass/console.ts';
 import { mapCacheConsole } from '#features/map_cache/console.ts';
 import { hooksConsole } from '#features/hooks/console.ts';
@@ -32,7 +35,10 @@ export const CONSOLE_FEATURES: readonly ConsoleFeature[] = Object.freeze([
   profilesConsole,
   bindsConsole,
   gunsConsole,
-  playerConsole,
+  teleportConsole,
+  playerInfoConsole,
+  healthConsole,
+  movementConsole,
   scanBypassConsole,
   mapCacheConsole,
   hooksConsole,

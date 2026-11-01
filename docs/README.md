@@ -30,7 +30,10 @@
 - [map-editor.md](features/map-editor.md): `map_editor`, the in-game map editor
 - [netlog.md](features/netlog.md): `netlog`, the network recorder
 - [p2p-host.md](features/p2p-host.md): `p2p_host`, the player-hosted dedicated host
-- [player.md](features/player.md): `player`, commands and overrides on your character
+- [teleport.md](features/teleport.md): `teleport`, `tp`
+- [player-info.md](features/player-info.md): `player_info`, `pos` and `chars`
+- [health.md](features/health.md): `health`, `heal`, `hp`, `revive` and the HP keys
+- [movement.md](features/movement.md): `movement`, the movement keys
 - [profiles.md](features/profiles.md): `profiles`, settings for some maps
 - [scan-bypass.md](features/scan-bypass.md): `scan_bypass`, the anti-cheat scan report and turning the protection off
 - [remote-play.md](features/remote-play.md): `remote_play`, streaming a game to a tester's browser

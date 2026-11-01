@@ -1,0 +1,1 @@
+export const COORDINATE_ARGUMENTS = 2;

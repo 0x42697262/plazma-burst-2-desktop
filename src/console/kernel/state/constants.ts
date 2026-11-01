@@ -19,33 +19,33 @@ export const SAVE_DELAY_MS = 150;
 export const HISTORY_MAX = 200;
 
 export const SCHEMA = Object.freeze({
-  god: { feature: FEATURE.player, type: SETTING_TYPE.bool, group: GROUP.player, desc: 'Ignore all damage' },
+  god: { feature: FEATURE.health, type: SETTING_TYPE.bool, group: GROUP.player, desc: 'Ignore all damage' },
   max_hp: {
-    feature: FEATURE.player, type: SETTING_TYPE.number, group: GROUP.player, min: 1, max: 1e9, desc: 'Force max HP (refills HP when changed)',
+    feature: FEATURE.health, type: SETTING_TYPE.number, group: GROUP.player, min: 1, max: 1e9, desc: 'Force max HP (refills HP when changed)',
     about: ['Refills your HP whenever you change it. "hp 500" sets this key.'], example: '500',
   },
   hp_bonus: {
-    feature: FEATURE.player, type: SETTING_TYPE.number, group: GROUP.player, min: -1e9, max: 1e9,
+    feature: FEATURE.health, type: SETTING_TYPE.number, group: GROUP.player, min: -1e9, max: 1e9,
     desc: 'Added to max HP once per life/level, never stacks ("hp +100" / "hp -100")',
     about: ['Added once per life and per level, so it never stacks. "hp +100" sets this.'], example: '100',
   },
   hp_bonus_pct: {
-    feature: FEATURE.player, type: SETTING_TYPE.number, group: GROUP.player, min: -100, max: 1e6,
+    feature: FEATURE.health, type: SETTING_TYPE.number, group: GROUP.player, min: -100, max: 1e6,
     desc: 'Percent of the game\'s max HP added once per life/level ("hp +50%" / "hp -25%")',
     about: ['A percentage of the game\'s own max, added once per life and per level.', '"hp +50%" sets this.'],
     example: '50',
   },
-  speed: { feature: FEATURE.player, type: SETTING_TYPE.number, group: GROUP.player, min: 0.1, max: 10, desc: 'Run speed multiplier, 1 = normal', example: '1.8' },
-  jump: { feature: FEATURE.player, type: SETTING_TYPE.number, group: GROUP.player, min: 0, max: 20, desc: 'Jump strength multiplier, 1 = normal', example: '2' },
-  gravity: { feature: FEATURE.player, type: SETTING_TYPE.bool, group: GROUP.player, desc: 'Player gravity on/off' },
+  speed: { feature: FEATURE.movement, type: SETTING_TYPE.number, group: GROUP.player, min: 0.1, max: 10, desc: 'Run speed multiplier, 1 = normal', example: '1.8' },
+  jump: { feature: FEATURE.movement, type: SETTING_TYPE.number, group: GROUP.player, min: 0, max: 20, desc: 'Jump strength multiplier, 1 = normal', example: '2' },
+  gravity: { feature: FEATURE.movement, type: SETTING_TYPE.bool, group: GROUP.player, desc: 'Player gravity on/off' },
   fly: {
-    feature: FEATURE.player, type: SETTING_TYPE.bool, group: GROUP.player, desc: 'Fly with jump/crouch keys (turns gravity off)',
+    feature: FEATURE.movement, type: SETTING_TYPE.bool, group: GROUP.player, desc: 'Fly with jump/crouch keys (turns gravity off)',
     about: ['Fly with the jump and crouch keys. Turns gravity off while it is on.'],
   },
-  fly_speed: { feature: FEATURE.player, type: SETTING_TYPE.number, group: GROUP.player, min: 0.5, max: 50, default: 6, desc: 'Vertical fly speed', example: '10' },
-  swords: { feature: FEATURE.player, type: SETTING_TYPE.bool, group: GROUP.player, desc: 'Your swords on/off (other characters unaffected)' },
+  fly_speed: { feature: FEATURE.movement, type: SETTING_TYPE.number, group: GROUP.player, min: 0.5, max: 50, default: 6, desc: 'Vertical fly speed', example: '10' },
+  swords: { feature: FEATURE.movement, type: SETTING_TYPE.bool, group: GROUP.player, desc: 'Your swords on/off (other characters unaffected)' },
   world_gravity: {
-    feature: FEATURE.player, type: SETTING_TYPE.number, group: GROUP.world, min: -5, max: 5, desc: 'Gravity for everything (map default is usually 0.5)',
+    feature: FEATURE.movement, type: SETTING_TYPE.number, group: GROUP.world, min: -5, max: 5, desc: 'Gravity for everything (map default is usually 0.5)',
     about: ['Applies to everything, not just you. Most maps use 0.5.'], example: '0.2',
   },
   bullet_damage: { feature: FEATURE.guns, type: SETTING_TYPE.number, group: GROUP.bullets, min: 0, max: 1000, desc: 'Damage multiplier for your bullets', example: '5' },

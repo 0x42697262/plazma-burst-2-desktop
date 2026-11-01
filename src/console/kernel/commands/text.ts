@@ -60,7 +60,8 @@ export const HELP_TEXT = Object.freeze({
   clientOnlyCount: (count: number, total: number) => `  ${count} of ${total} keys are client-only (see "list")`,
   clientOnlyMeaning: 'client-only = runs in your own game client, not through the server.',
   quickExamples: Object.freeze([
-    { feature: FEATURE.player, line: 'Examples: god on | max_hp 500 | speed 1.8 | swords off | unset speed' },
+    { feature: FEATURE.health, line: 'Examples: god on | max_hp 500 | hp +100 | unset god' },
+    { feature: FEATURE.movement, line: 'Moving: speed 1.8 | jump 2 | fly on | swords off | unset speed' },
     { feature: FEATURE.guns, line: 'Guns: guns | guns rail | give 12 | give gun_railgun 2 | penetration 1' },
   ]),
   savedTo: 'Overrides are saved to data/dev-overrides.json.',

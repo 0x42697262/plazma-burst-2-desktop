@@ -36,7 +36,8 @@ function printSections(help: CommandHelp): void {
     for (const [example, what] of help.examples) printPair(example, what, EXAMPLE_WIDTH);
   }
   for (const line of help.notes ?? []) print([[TEXT.indent(line), COLOR.hint, true]]);
-  if (help.see) print(TEXT.related(help.see), COLOR.hint);
+  const related = (help.see ?? []).filter((word) => findCommand(word.split(WHITESPACE)[0]) !== undefined || resolveKey(word) !== null);
+  if (related.length) print(TEXT.related(related), COLOR.hint);
 }
 
 function printEntry(entry: HelpEntry | undefined): void {

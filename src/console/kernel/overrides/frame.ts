@@ -244,7 +244,7 @@ export function applyOverrides(): void {
   const running = !!game.isRunning();
   const tick = previousTick ?? game.playerDt();
   previousTick = game.playerDt();
-  if (isFeatureOn(FEATURE.player)) applyPlayer(character, running, tick);
+  if (isFeatureOn(FEATURE.health) || isFeatureOn(FEATURE.movement)) applyPlayer(character, running, tick);
   applyGun(character);
   applyBullets();
   applyWorld();

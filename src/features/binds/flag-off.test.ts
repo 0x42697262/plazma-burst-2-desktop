@@ -17,4 +17,5 @@ test('with the binds flag off there are no bind commands, and a saved bind does 
   game.press('KeyF');
   assert.equal(game.run('get god')[0], 'god = default');
   assert.ok(game.run('tp --on t').some((line) => /A key for "tp" needs key binds/.test(line)), 'tp still works, its key option says why it cannot');
+  assert.equal(game.run('help tp').at(-1), 'Related: pos  |  chars', 'help does not point at commands this app does not have');
 });

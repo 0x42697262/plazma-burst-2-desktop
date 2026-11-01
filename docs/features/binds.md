@@ -19,7 +19,7 @@ panel's key handler runs them.
 - `keyname` names the next key you press, what it types, and what it does now.
 - `list binds` shows your binds.
 - With the flag off there is no `bind`, `unbind` or `keyname`, and saved binds stay in
-  the file but do not run. `tp --on` and `tp --off` (the `player` feature) bind through the
+  the file but do not run. `tp --on` and `tp --off` (the `teleport` feature) bind through the
   console core's key binder (`src/console/kernel/ports/key-binder.ts`), which this feature
-  provides when it starts; without it they say they need key binds. So `player` does not
+  provides when it starts; without it they say they need key binds. So `teleport` does not
   import this feature, and an edition can have one without the other.

@@ -29,7 +29,7 @@
   reported once and never written over until fixed. The file is not versioned: it is
   edited by hand, and its loader reports any unknown top-level key.
 - Every settings key belongs to a feature (`feature` in `kernel/state/constants.ts`:
-  `god`, `speed` … to `player`, `bullet_damage`, `fire_rate` … to `guns`, `net_log` to
+  `god`, `max_hp` … to `health`, `speed`, `fly` … to `movement`, `bullet_damage`, `fire_rate` … to `guns`, `net_log` to
   `netlog` …). A key whose feature is off is not listed, completed, set or applied, as if
   it did not exist; a value saved for it stays in the file for when the feature is on.
 - A line run from DevTools or `eval` (`pb2dev.run` in DevTools, `js pb2dev.run(...)`)
