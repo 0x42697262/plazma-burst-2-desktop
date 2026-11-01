@@ -45,18 +45,16 @@ test('modes and clients rule features out', () => {
   assert.equal(resolve({ mode: 'server' }).states.p2p_host.on, true);
 });
 
-test('unknown ids, turning off a locked feature and changing an unread flag are problems', () => {
-  const unread = CATALOG.map((definition) => (definition.id === 'zoom' ? { ...definition, migrated: false } : definition));
+test('unknown ids and turning off a locked feature are problems', () => {
   const { states, problems } = resolveFlags({
-    catalog: unread, fileOverrides: {}, fileUnknownIds: ['teleporter'], mode: 'local', client: 'official',
+    catalog: CATALOG, fileOverrides: {}, fileUnknownIds: ['teleporter'], mode: 'local', client: 'official',
     envToggles: [{ id: 'nope', on: true }, { id: 'console_core', on: false }, { id: 'zoom', on: false }],
   });
-  assert.equal(problems.length, 4);
+  assert.equal(problems.length, 3);
   assert.match(problems[0] ?? '', /features\.json: no feature "teleporter"/);
   assert.match(problems[1] ?? '', /PB2_FEATURES: no feature "nope"/);
   assert.match(problems[2] ?? '', /"console_core" cannot be turned off/);
-  assert.match(problems[3] ?? '', /"zoom" cannot be changed yet/);
-  assert.equal(states.zoom.on, true);
+  assert.equal(states.zoom.on, false, 'any other feature can be turned off');
 });
 
 test('the report lists every feature with its state, source and description', () => {

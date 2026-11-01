@@ -36,5 +36,4 @@ same plus the game, names and opcodes files). The gate: `src/wrapper/app.ts`.
 
 ## The flag
 - With the flag off, `npm run sadburst` logs that Sad Burst 2 is off and quits. The
-  official client is not affected. The download and names tools are not gated (P5 moves
-  them).
+  official client is not affected. The download and names tools are not gated.

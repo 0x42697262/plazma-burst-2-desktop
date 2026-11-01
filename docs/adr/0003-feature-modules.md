@@ -15,8 +15,6 @@ places.
   - its own constants, text, events and keys;
   - its tests.
 - One list per side wires the features in ([layers](../architecture/layers.md)).
-- Code is moved there feature by feature (strangler pattern). The old code keeps
-  running until its feature has moved.
 
 ## Rejected
 - **Keep the layered folders (`core/`, `net/`, `commands/` …) and add flags at the
@@ -25,5 +23,4 @@ places.
 
 ## Consequences
 - Cross-feature calls go through a feature's `index.ts`, enforced by a lint rule.
-- The old file paths in the research docs change as code moves; they are updated in
-  step P6.
+- Docs name file paths under `src/features/<id>/`; a moved file means updating them.

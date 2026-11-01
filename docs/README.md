@@ -49,6 +49,3 @@
 - [anticheat.md](research/anticheat.md): the game's anti-cheat, client and server side
 - [fingerprinting.md](research/fingerprinting.md): the main server's browser fingerprinter and the RELIABLE_TASK code path
 
-## Refactor
-- [plan.md](refactor/plan.md): the refactor plan
-- [progress.md](refactor/progress.md): what is done, and the next step

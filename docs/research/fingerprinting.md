@@ -663,15 +663,14 @@ hostile or compromised lobby server can do.
 
 ### 9.4 Mitigations
 
-1. **Mask the password field in the network log.** *Done (2026-11-02, refactor step
-   P3.1).* The recorder writes `AUTHENTICATE("<login>", "‹redacted›", …)`. It also hides
+1. **Mask the password field in the network log.** *Done (2026-11-02).* The recorder writes `AUTHENTICATE("<login>", "‹redacted›", …)`. It also hides
    the match password in `JOIN_MATCH` and `CREATE_MATCH`
    ([netlog](../features/netlog.md#secrets-are-never-written)). `npm run redact-netlogs`
    cleans logs written before then.
-2. **Bind passwords to addresses.** *Done (2026-11-02, refactor step P3.2).* Saving a
+2. **Bind passwords to addresses.** *Done (2026-11-02).* Saving a
    server drops its saved password when `address` or `fingerprint` changes, unless the save
    gives a password itself ([server list](../features/server-list.md#passwords-never-move-to-a-new-address-security-fix-2)).
-3. **Refuse tasks from private servers.** *Done (2026-11-02, refactor step P3.3).* On a
+3. **Refuse tasks from private servers.** *Done (2026-11-02).* On a
    private-server lobby, every `RELIABLE_TASK` and `RELIABLE_TASK_ASNYC` reaches the game
    with its code replaced by `()=>undefined`, before the first packet
    ([lobby task guard](../features/lobby-task-guard.md)). The fingerprint capture no longer

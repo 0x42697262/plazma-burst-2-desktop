@@ -17,10 +17,7 @@ const stateOf = (on: boolean, source: FlagSource, reason: string | null = null):
 
 function overrideProblem(definition: FeatureDefinition, on: boolean, where: string): string | null {
   const turnsOffLocked = definition.locked && !on;
-  if (turnsOffLocked) return TEXT.locked(definition.id, where);
-  const changesUnreadFlag = !definition.migrated && on !== definition.defaultOn;
-  if (changesUnreadFlag) return TEXT.notMigrated(definition.id, where);
-  return null;
+  return turnsOffLocked ? TEXT.locked(definition.id, where) : null;
 }
 
 function constraintReason(definition: FeatureDefinition, mode: Mode, client: ClientId): string | null {

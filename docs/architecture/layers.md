@@ -1,7 +1,6 @@
 # Layers, feature modules and the build
 
-Status: **in place**. Everything that runs is under `src/` ([progress](../refactor/progress.md)
-lists what is left of the refactor). `data/` holds only local data: settings,
+Everything that runs is under `src/`. `data/` holds only local data: settings,
 credentials, saved maps, logs, the generated `names.js` and `opcodes.js`, and in
 `data/server/` the private server's settings and data
 ([running](../operations/running.md#local-data)).

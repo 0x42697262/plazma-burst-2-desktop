@@ -2,8 +2,7 @@
 
 Feature flag `profiles` (on by default; all modes). Code: `src/features/profiles/`. The
 profile data itself is kept by the console's store (`src/console/kernel/state/store.ts`,
-the `profiles` and `maps` parts of `dev-overrides.json`) until the console kernel moves
-(P4).
+the `profiles` and `maps` parts of `dev-overrides.json`).
 
 - **What a profile holds.** A profile is a set of game keys (`god`, `speed` …; never
   console keys, which are the same on every map), key binds, and `onload` commands. A

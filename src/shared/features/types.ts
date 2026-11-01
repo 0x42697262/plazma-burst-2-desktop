@@ -7,7 +7,6 @@ export type FeatureDefinition = Readonly<{
   requires: readonly FeatureId[];
   unavailableForClients: readonly ClientId[];
   locked: boolean;
-  migrated: boolean;
   owner: string;
   description: string;
 }>;

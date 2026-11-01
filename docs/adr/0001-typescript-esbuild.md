@@ -23,8 +23,7 @@ CI. The console is served to the game page file by file from
   `#tools/*`.
 - Modules under `src/` that the wrapper loads never use top-level `await`, because
   `require()` of an ES module refuses it.
-- During the migration `allowJs` lets old JS and new TS share the bundle; it is
-  removed at the end (step P6).
+- `allowJs` is off: every source file and test is TypeScript.
 
 ## Rejected
 - **JSDoc and `checkJs`, no build.** Pros: nothing changes in how files are served.

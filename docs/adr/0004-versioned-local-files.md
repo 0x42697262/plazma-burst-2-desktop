@@ -23,8 +23,9 @@ The guidelines require that everything persisted carries a version
   - writes atomically (temporary file, then rename);
   - refuses a version newer than it knows, with a clear error, instead of overwriting
     it.
-- Each file gets its version when its feature is migrated (step P3).
+- Every persisted JSON file the app writes is versioned; `dev-overrides.json` is not,
+  because it is edited by hand ([dev console](../features/dev-console.md)).
 
 ## Consequences
-- Once a file is migrated, an older checkout of the app refuses it rather than
+- Once a file is versioned, an older checkout of the app refuses it rather than
   silently dropping fields.

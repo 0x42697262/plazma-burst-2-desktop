@@ -1,6 +1,6 @@
 # Feature flags
 
-Status: **implemented** (refactor step P2). Code: `src/shared/features/`,
+Code: `src/shared/features/`,
 `src/kernel/flags/`, `src/wrapper/context.ts`, `src/console/flags.ts`.
 
 ## Catalog
@@ -14,9 +14,8 @@ Status: **implemented** (refactor step P2). Code: `src/shared/features/`,
 | `owner` | Who decides about the flag |
 | `availableIn` | The modes it can run in: `local`, `remote` (remote play), `server` (p2p host) |
 | `requires` | Features that must be on for this one to be on |
-| `conflicts` | Conditions that force it off, e.g. hooks with the Sad Burst 2 client |
+| `unavailableForClients` | Clients it is forced off for, e.g. hooks with the Sad Burst 2 client |
 | `locked` | It cannot be turned off (`console_core`) |
-| `migrated` | Whether its code has moved to `src/features/`; until then, only its default is allowed |
 | `description` | One line, shown by the `features` command |
 
 ## Override order
@@ -26,7 +25,7 @@ layers win:
 
 1. the catalog default;
 2. `data/features.json` at the repo root (gitignored, versioned);
-3. the environment: `PB2_FEATURES=+id,-id`, plus the legacy aliases `PB2_DEV=0`
+3. the environment: `PB2_FEATURES=+id,-id`, plus the aliases `PB2_DEV=0`
    (`-dev_console`) and `PB2_HOOKS=0` (`-hooks`);
 4. hard constraints: `locked`, `requires`, `conflicts`, `availableIn`.
 
@@ -61,6 +60,5 @@ on.
 Each of these stops the app before a window opens, with one line per problem:
 - an unknown feature id;
 - turning off a locked feature;
-- changing a flag whose code does not read it yet (`migrated: false`);
 - a malformed `PB2_FEATURES`;
 - an unreadable `data/features.json`.
