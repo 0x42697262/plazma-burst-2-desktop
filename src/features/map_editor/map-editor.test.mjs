@@ -1,518 +1,24 @@
-// The dev console against a fake game (test/fake-game.mjs): "npm test".
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { pathToFileURL } from 'node:url';
 import path from 'node:path';
-import { bootConsole, CONSOLE_ENTRY, LEGACY_CONSOLE_DIR } from './fake-game.mjs';
+import { pathToFileURL } from 'node:url';
+import { bootConsole, LEGACY_CONSOLE_DIR } from '../../../test/support/fake-game.mjs';
 
-const consoleModule = (rel) => import(pathToFileURL(path.join(LEGACY_CONSOLE_DIR, rel)).href);
-// An error from the console's own code, as opposed to a refusal it means to print.
-const INTERNAL = /is not defined|is not a function|Cannot (read|set) propert|undefined is not/;
-const errorsOf = (out) => out.filter((l) => l.startsWith('error: '));
-
-let c;
-before(async () => { c = await bootConsole({ sayTrigger: '#chat_in' }); });
-
-test('every command and subcommand has help, and every "Related" topic exists', async () => {
-  const { helpEntries } = await consoleModule('../../../src/console/kernel/commands/registry.ts');
-  for (const { id, def } of helpEntries()) {
-    assert.ok(def.usage && def.desc, `${id}: usage and desc`);
-    assert.ok(def.help || def.renderHelp, `${id}: no help`);
-    assert.deepEqual(errorsOf(c.run(`help ${id}`)), [], `help ${id}`);
-    for (const see of def.help?.see || []) assert.deepEqual(errorsOf(c.run(`help ${see}`)), [], `${id} -> ${see}`);
-  }
-});
-
-test('"<command> help" is "help <command>"', () => {
-  for (const cmd of ['tp', 'triggers', 'vars', 'list', 'more']) assert.deepEqual(c.run(`${cmd} help`), c.run(`help ${cmd}`), cmd);
-});
-
-test('no command fails with an internal error', () => {
-  const lines = [
-    'help', 'list', 'list player', 'get speed', 'set speed 2', 'speed', 'speed default', 'god', 'god', 'reset',
-    'hp 500', 'hp +10', 'hp -5%', 'unset max_hp', 'heal', 'revive', 'revive all', 'chars', 'pos', 'tp 1 2', 'tp 1',
-    'guns', 'give rifle', 'drop', 'bind', 'bind f tp', 'binds', 'unbind f', 'triggers', 'triggers on', 'triggers 1',
-    'triggers find god', 'triggers find type:225', 'triggers run #god', 'triggers history', 'vars', 'vars get door_1',
-    'vars set x 5', 'vars sync door_1', 'vars sync x r', 'js 1+1', 'game help', 'builtin', 'maps', 'more', 'nonsense',
-  ];
-  for (const line of lines) {
-    const out = c.run(line);
-    assert.equal(out.filter((l) => INTERNAL.test(l)).length, 0, `${line}: ${out.join(' | ')}`);
-  }
-});
-
-test('vars sync explains, sends with the chosen mode, and refuses a mode that cannot work', () => {
-  const explain = c.run('vars sync door_1');
-  assert.ok(explain.some((l) => l.includes('#resync') && l.includes('mode x (max)')), 'names the trigger that re-sends it');
-  assert.ok(explain.some((l) => l.includes('#init') && l.includes('one call only')), 'names the seeder');
-  assert.ok(explain.some((l) => l.startsWith('  Recommended: vars sync door_1 r')));
-
-  c.log.net.length = 0;
-  c.run('vars set var_mods "CTHC Lenaa honor23"; vars sync var_mods r');
-  assert.deepEqual(c.log.net, [['VSYNC', 'r', 'var_mods', 'CTHC Lenaa honor23']]);
-
-  c.log.net.length = 0;
-  assert.match(errorsOf(c.run('vars sync var_mods x'))[0], /cannot deliver/);
-  c.setMP(false);
-  assert.match(errorsOf(c.run('vars sync var_mods r'))[0], /single-player/);
-  c.setMP(true);
-  assert.deepEqual(c.log.net, [], 'nothing sent when refused');
-});
-
-test('a ";" chain runs in order and stops at the first failure', () => {
-  const out = c.run('vars set a 1; nonsense; vars set b 2');
-  assert.ok(out.some((l) => l.startsWith('a = 1')));
-  assert.ok(out.some((l) => l.startsWith('Stopped: 1 command after this one did not run.')));
-  assert.equal(c.G[c.N.mapVars].b, undefined, 'the command after the failure did not run');
-  assert.equal(c.run('vars set q "a;b"; vars get q').at(-1), 'q = "a;b"', 'a quoted ";" stays in the value');
-  assert.deepEqual(c.run('js let n = 0; for (let i = 0; i < 3; i++) n += i; n'), ['3'], 'js is never split');
-});
-
-test('vars set types values like the map loader does', async () => {
-  const { parseVarValue } = await consoleModule('triggers/vars.js');
-  // The loader's rule, from scripts/frame2.js.
-  const loader = (v) => (parseInt(v) + '' === v ? parseInt(v) : v);
-  for (const v of ['5', '0', '-1', '-0', '01', '3.5', '1e3', '0x10', '', 'abc', '5abc', '+5', 'NaN', '99999999']) {
-    assert.ok(Object.is(parseVarValue(v), loader(v)), v);
-  }
-  assert.equal(parseVarValue('"5"'), '5', 'quotes force text');
-});
-
-test('triggers run broadcasts a normal run, and keeps a forced one local', () => {
-  c.log.net.length = 0;
-  assert.ok(c.run('triggers run #open_door')[0].endsWith('sent to all players'));
-  assert.deepEqual(c.log.net, [['EXEC', 'n0', '', '']]);
-
-  c.log.net.length = 0;
-  const locked = c.triggers.findIndex((t) => t.uid === '#locked');
-  assert.match(errorsOf(c.run('triggers run #locked'))[0], /is disabled/);
-  const out = c.run('triggers run #locked force');
-  assert.ok(out.some((l) => l.startsWith('Note: ran in your game only')));
-  assert.deepEqual(c.log.net, [], 'not sent');
-  assert.equal(c.triggers[locked][c.N.trigEnabled], false, 'its enabled state is put back');
-});
-
-test('the run log records runs through the game\'s runner', () => {
-  c.frame(2); // hooks the triggers
-  c.run('triggers history clear');
-  c.run('triggers run #open_door');
-  c.run('triggers run #open_door');
-  assert.ok(c.run('triggers history').some((l) => l.includes('#open_door') && l.includes('ran x2')));
-});
-
-test('settings are forced every frame and put back when removed', () => {
-  const p = c.player;
-  c.run('max_hp 500; jump 3; swords off');
-  c.frame();
-  assert.equal(p.hmax, 500);
-  assert.equal(p[c.N.jump], 3);
-  assert.equal(p[c.N.noSwords], true);
-  c.run('god on');
-  c.frame();
-  p.hea = 1;
-  assert.equal(p.hea, 500, 'god ignores damage');
-  c.run('reset');
-  c.frame();
-  assert.equal(p.hmax, 130);
-  assert.equal(p[c.N.jump], 1);
-  assert.equal(p[c.N.noSwords], false);
-});
-
-
-test('typed commands are saved with the settings', async () => {
-  const { history } = await consoleModule('../../../src/console/kernel/state/store.ts');
-  history.add('vars');
-  history.add('vars'); // a repeat is kept once
-  const saved = JSON.parse(c.store.get('pb2dev_kv'));
-  assert.deepEqual(saved.history.slice(-1), ['vars']);
-  assert.equal(saved.history.filter((l) => l === 'vars').length, 1);
-});
-
-test('leaving the level puts every forced value back', () => {
-  const p = c.player;
-  c.run('max_hp 400; jump 2; world_gravity 0.1');
-  c.frame();
-  assert.equal(p.hmax, 400);
-  assert.equal(c.G.gravity, 0.1);
-  c.G.stage.currentFrameLabel = 'menu';
-  c.frame();
-  assert.equal(p.hmax, 130, 'max HP back');
-  assert.equal(p[c.N.jump], 1, 'jump back');
-  assert.equal(c.G.gravity, 0.5, 'world gravity back');
-  c.G.stage.currentFrameLabel = 'gaming';
-  c.run('reset');
-  c.frame();
-});
-
-test('triggers find by: finds what runs a trigger', () => {
-  // The rows of a "by:" search: [uid, what runs it].
-  const found = (q) => c.run(`triggers find ${q}`).slice(1).map((l) => l.trim().split(/\s+/)[1]);
-  const row = (q, uid) => c.run(`triggers find ${q}`).find((l) => l.includes(` ${uid} `)) || '';
-  assert.deepEqual(found('by:region'), ['#open_door']);
-  assert.match(row('by:region', '#open_door'), /by region #0 #button at 10, 20 \(use key\)/);
-  assert.deepEqual(found('by:timer'), ['#open_door', '#resync']);
-  // Index and uid differ: timer #0 is the one the map calls #Clock*7.
-  assert.deepEqual(found('by:timer#0'), ['#resync']);
-  assert.deepEqual(found('by:#Clock*7'), ['#resync']);
-  assert.deepEqual(found('by:#clock*7'), ['#resync'], 'uids ignore case');
-  assert.match(row('by:timer#0', '#resync'), /by timer #0 #Clock\*7/);
-  assert.deepEqual(found('by:chat'), ['#chat_in']);
-  assert.deepEqual(found('by:death'), ['#on_death']);
-  assert.deepEqual(found('by:player#1'), ['#on_death']);
-  assert.deepEqual(found('by:start'), ['#boot']);
-  // A 363 jump counts: #chat_in continues in #kick.
-  assert.match(row('by:trigger uid:kick', '#kick'), /by trigger #\d+ #chat_in \(continues in it\)/);
-  assert.ok(found('by:none').includes('#god'), 'nothing in the map starts #god');
-  assert.ok(!found('by:none').includes('#god_all'), '#god continues in #god_all');
-  assert.deepEqual(found('by:#chat_in'), ['#kick']);
-});
-
-test('triggers find by: combines with the other terms', () => {
-  const out = c.run('triggers find by:timer a:door_1');
-  assert.ok(out.some((l) => l.includes('#open_door') && l.includes('action 1')), 'actions inside timer-run triggers');
-  assert.ok(!out.some((l) => l.includes(' trigger ')), 'no trigger rows once actions are asked for');
-  assert.match(errorsOf(c.run('triggers find by:bogus'))[0], /by: expects one of/);
-  assert.match(errorsOf(c.run('triggers find by:chat#2'))[0], /takes no number/);
-  assert.match(c.run('triggers find by:#nothing')[0], /No trigger or action matches/);
-});
-
-test('logic: a tree of what reaches an element and what it acts on', () => {
-  const out = c.run('logic #kick');
-  const i = out.indexOf('Reached from:');
-  assert.match(out[i + 1], /<- #chat_in\s+trigger #\d+\s+action 1: 363 continue in trigger A/);
-  assert.match(out[i + 2], /<- chat message/, 'the chat trigger is followed back to chat');
-  const door = c.run('logic #door_a');
-  assert.ok(door.some((l) => /<- #open_door .*action 2: 0/.test(l)), 'the action on the door');
-  assert.ok(door.some((l) => /<- #sign\s+decor #0\s+attach/.test(l)), 'what is attached to it');
-  assert.ok(c.run('logic #two words').some((l) => /<- #open_door .*action 3: 99 run trigger A/.test(l)), 'a uid with a space');
-  assert.match(errorsOf(c.run('logic #nope'))[0], /nothing in this map is called "#nope"/);
-});
-
-test('logic show draws every link where the camera puts it', async () => {
-  const view = await consoleModule('logic/view.js');
-  const cam = c.G.game;
-  const lineStarts = () => c.log.drawn.filter((d) => d[0] === 'moveTo').map((d) => [d[1], d[2]].join(','));
-  cam.x = 100; cam.y = 50; cam.scaleX = cam.scaleY = 1;
-  c.run('logic show');
-  c.log.drawn.length = 0;
-  const all = view.drawFrame();
-  assert.ok(all.lines > 5, `${all.lines} lines`);
-  // Region #button (10, 20) runs #open_door: world + camera, in game units.
-  assert.ok(lineStarts().includes('110,70'), 'region at world 10,20 is drawn at 110,70');
-  assert.ok(c.log.drawn.some((d) => d[0] === 'setTransform' && d[1] === 2), 'two canvas pixels per game unit');
-  assert.ok(c.log.drawn.some((d) => d[0] === 'fillText' && d[1] === '#button'), 'labelled with its uid');
-
-  cam.scaleX = cam.scaleY = 0.5; // zoom 50
-  c.log.drawn.length = 0;
-  view.drawFrame();
-  assert.ok(lineStarts().includes('105,60'), 'zoom scales the world, not the screen offset');
-
-  c.run('logic show start');
-  const starts = view.drawFrame();
-  assert.ok(starts.lines > 0 && starts.lines < all.lines, 'a kind filter draws fewer');
-  c.run('logic show #door_a');
-  assert.equal(view.drawFrame().lines, 2, 'around one element: its two links');
-
-  cam.x = 1e6; // the camera far away: nothing on screen is drawn
-  assert.equal(view.drawFrame().lines, 0);
-  cam.x = 100; cam.scaleX = cam.scaleY = 1;
-  c.run('logic hide');
-  assert.equal(c.log.frames.length, 0, 'no frame left pending');
-});
-
-
-test('logic filters by element type', async () => {
-  const view = await consoleModule('logic/view.js');
-  assert.match(c.run('logic')[1], /Types: trigger \d+, .*player \d+/, 'lists the map\'s types');
-  const count = (q) => Number(c.run(`logic show ${q}`)[0].match(/^Showing (\d+) link/)[1]);
-  const all = count('');
-  const noPlayers = count('not:player');
-  assert.ok(noPlayers < all, 'not: drops links touching players');
-  assert.equal(count('not:players'), noPlayers, 'plurals work');
-  assert.equal(count('type:region,trigger'), count('type:regions,triggers'));
-  assert.ok(count('type:region,trigger start') <= count('type:region,trigger'), 'combines with a kind');
-  assert.equal(count('#door_a type:decor'), 1, 'around an element, type: picks its neighbours');
-  assert.match(errorsOf(c.run('logic show type:nonsense'))[0], /this map has no "nonsense"\. Types: /);
-  c.run('logic show not:player');
-  c.log.drawn.length = 0;
-  view.drawFrame();
-  assert.ok(!c.log.drawn.some((d) => d[0] === 'fillText' && /^#player/.test(d[1])), 'no player is drawn');
-  c.run('logic hide');
-
-  const tree = c.run('logic #god_all not:player');
-  assert.ok(!tree.some((l) => l.includes('#player')), 'the tree drops player rows');
-  assert.ok(c.run('logic #door_a type:region').some((l) => l.includes('nothing that passes the filters')));
-});
-
-test('logic screen keeps only what the camera shows, as it moves', async () => {
-  const view = await consoleModule('logic/view.js');
-  const cam = c.G.game;
-  const labels = () => { c.log.drawn.length = 0; view.drawFrame(); return c.log.drawn.filter((d) => d[0] === 'fillText').map((d) => d[1]); };
-  const lineStarts = () => c.log.drawn.filter((d) => d[0] === 'moveTo').map((d) => `${d[1]},${d[2]}`);
-  // The view covers world x -100..700, y -50..350: #god_all (40, -300) is off screen,
-  // the players it acts on are on it.
-  cam.x = 100; cam.y = 50; cam.scaleX = cam.scaleY = 1;
-  // #god_all is at world (40, -300): screen (140, -250), above the top edge.
-  c.run('logic show');
-  labels();
-  assert.ok(lineStarts().includes('140,-250'), 'without "screen", a link running off the edge is drawn');
-  c.run('logic show screen');
-  labels();
-  assert.ok(!lineStarts().includes('140,-250'), 'with it, only links with both ends on screen');
-  assert.ok(labels().includes('#button'), 'what is on screen still is');
-  cam.y = 400; // the camera moves up: #god and #god_all come on screen (y 100), #button leaves (y 420)
-  assert.ok(labels().includes('#god_all'), 'it follows the camera');
-  assert.ok(!labels().includes('#button'), 'and drops what left it');
-  cam.y = 50;
-  assert.match(c.run('logic show visible')[0], /both ends on screen .*\d+ links? right now/);
-  c.run('logic hide');
-
-  assert.ok(c.run('logic #god_all screen').some((l) => /-> #player\*0/.test(l)), 'the tree keeps rows on screen');
-  cam.x = 1e6;
-  assert.ok(!c.run('logic #god_all screen').some((l) => l.includes('-> #player')), 'and drops the rest');
-  cam.x = 100;
-});
-
-test('logic labels never overlap: grouped, collapsed, opened by the crosshair', async () => {
-  const { layoutLabels } = await consoleModule('../../../src/console/kernel/ui/labels.ts');
-  const bounds = { w: 800, h: 400 };
-  const hit = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-  const overlapping = (ls) => ls.some((a, i) => ls.some((b, j) => j > i && hit(a, b)));
-  const at = (x, y, ...texts) => texts.map((text) => ({ x, y, text }));
-
-  // Elements at the same spot share one label, one uid per line.
-  let { labels } = layoutLabels(at(100, 100, '#a', '#b', '#c'), { bounds });
-  assert.equal(labels.length, 1);
-  assert.deepEqual(labels[0].lines, ['#a', '#b', '#c']);
-
-  // A big group shows two and "+N more" until the crosshair is on it.
-  const five = at(100, 100, '#a', '#b', '#c', '#d', '#e');
-  assert.deepEqual(layoutLabels(five, { bounds }).labels[0].lines, ['#a', '#b', '+3 more']);
-  ({ labels } = layoutLabels([...five, ...at(300, 300, '#far')], { cursor: { x: 103, y: 98 }, bounds }));
-  assert.deepEqual(labels.at(-1).lines, ['#a', '#b', '#c', '#d', '#e'], 'open, and drawn last (on top)');
-  assert.equal(labels.at(-1).open, true);
-
-  // A crowded screen: no two drawn labels overlap.
-  let seed = 7;
-  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-  const crowd = Array.from({ length: 150 }, (_, i) => ({ x: 300 + rnd() * 200, y: 150 + rnd() * 100, text: `#element*${i}` }));
-  const r = layoutLabels(crowd, { bounds });
-  assert.equal(overlapping(r.labels), false);
-
-  // Far too many for the screen: the extras are hidden, still none overlap, and the one
-  // under the crosshair is always shown.
-  const jam = Array.from({ length: 400 }, (_, i) => ({ x: 380 + (i % 20) * 2, y: 190 + Math.floor(i / 20) * 1, text: `#jam*${i}` }));
-  const j = layoutLabels(jam, { cursor: { x: 420, y: 205 }, bounds });
-  assert.ok(j.hidden > 0, `${j.hidden} hidden`);
-  assert.equal(overlapping(j.labels.filter((l) => !l.open)), false);
-  assert.ok(j.labels.some((l) => l.open), 'the group under the crosshair is drawn');
-});
-
-test('regions run fires a region as if its condition were met', () => {
-  const list = c.run('regions');
-  assert.ok(list.some((l) => /#\d+\s+#button\s+use key\s+-> trigger #\d+ #open_door/.test(l)));
-  assert.ok(list.some((l) => /#clock_switch\s+use key\s+-> timer #1 #timer\*2/.test(l)), 'a timer region names its timer');
-  assert.ok(list.some((l) => /#spawn_spot\s+never/.test(l)));
-
-  // Use key, as you: runs its trigger, and sends what the game sends, with the region.
-  c.log.net.length = 0;
-  const runsBefore = c.log.runs.length;
-  const out = c.run('regions run #button');
-  assert.match(out.at(-1), /^Ran region #0 #button: trigger #\d+ #open_door .*sent to all players/);
-  assert.equal(c.log.runs.length, runsBefore + 1, 'the trigger ran through the game\'s runner');
-  assert.deepEqual(c.log.net, [['EXEC', `n${c.triggers.findIndex((t) => t.uid === '#open_door')}`, 'n0', '']]);
-  assert.equal(c.G[c.N.triggerActivator], -1, 'the activator is put back');
-
-  // The mode is checked as the game would: a red-team use key refuses team 0.
-  assert.match(errorsOf(c.run('regions run #red_use'))[0], /would not fire for #0: it is for team 12; #0 is on team 0\./);
-  c.log.net.length = 0;
-  const forced = c.run('regions run #red_use force');
-  assert.ok(forced.some((l) => l.includes('forced past its condition')));
-  assert.ok(forced.some((l) => l.startsWith('Note: ran in your game only') && l.includes('region\'s own condition')));
-  assert.deepEqual(c.log.net, [], 'forced past the mode: not sent');
-
-  // A use key only fires for yourself; a bot is refused.
-  assert.match(errorsOf(c.run('regions run #button as 2'))[0], /only your own use key fires it/);
-
-  // A timer region starts its timer instead of running a trigger, and is not sent.
-  const timer = c.G[c.N.timers][1];
-  timer[c.N.trigEnabled] = false;
-  c.log.net.length = 0;
-  const t = c.run('regions run #clock_switch');
-  assert.match(t[0], /^Fired region #2 #clock_switch: started timer #1 #timer\*2/);
-  assert.equal(timer[c.N.trigEnabled], true);
-  assert.deepEqual(c.log.net, []);
-  assert.ok(!c.run('triggers find by:region').some((l) => l.includes('#clock_switch')), 'a timer region starts no trigger');
-
-  assert.match(errorsOf(c.run('regions run #spawn_spot'))[0], /runs nothing/);
-  assert.match(errorsOf(c.run('regions run #nope'))[0], /no region "#nope"/);
-});
-
-test('triggers find calls: and maxcalls: compare calls', () => {
-  const found = (q) => c.run(`triggers find ${q}`).slice(1).map((l) => l.trim().split(/\s+/)[1]);
-  const byUid = (uid) => c.triggers.find((t) => t.uid === uid);
-  const boot = byUid('#boot'), init = byUid('#init');
-  boot[c.N.trigCalls] = 1; init[c.N.trigCalls] = 0; // #boot not run yet, #init used up
-  assert.deepEqual(found('maxcalls:1').sort(), ['#boot', '#init'], 'one-shots');
-  assert.deepEqual(found('calls:0'), ['#init'], 'used up');
-  assert.deepEqual(found('maxcalls:1 calls:1'), ['#boot'], 'one-shots not run yet');
-  assert.deepEqual(found('calls:<1'), ['#init']);
-  assert.deepEqual(found('calls:>=1 maxcalls:<=1'), ['#boot']);
-  const unlimited = c.triggers.filter((t) => t[c.N.trigMaxCalls] === -1).length;
-  assert.equal(found('calls:unlimited').length, unlimited);
-  assert.equal(found('calls:>5').length, unlimited, 'unlimited counts as more than any number');
-  assert.equal(found('calls:!=0').length, c.triggers.length - 1);
-  assert.match(c.run('triggers find calls:0')[0], /^1 trigger matches "calls:0"/, 'not "by uid"');
-  assert.deepEqual(found('calls:0 uid:boot'), [], 'combines with the other terms');
-  assert.match(errorsOf(c.run('triggers find calls:lots'))[0], /calls: expects a number or "unlimited"/);
-  boot[c.N.trigCalls] = 1; init[c.N.trigCalls] = 1;
-});
-
-
-test('list shows binds, traces, the logic view and the vars you changed after the keys', () => {
-  // Earlier tests changed these; undoing a change takes it off the list.
-  c.run('unbind --all; trace --off; logic hide; vars del a; vars del q; vars del x; vars set var_mods "CTHC Lenaa"');
-  const quiet = c.run('list');
-  for (const extra of ['binds', 'trace', 'logic', 'vars']) {
-    assert.ok(!quiet.some((l) => l.startsWith(`[${extra}`)), `${extra} only shows when something is set`);
-  }
-  const before = c.run('vars get door_1').find((l) => l.startsWith('door_1 = ')).slice('door_1 = '.length);
-  c.run('bind f tp; trace 1; logic show type:trigger; vars set door_1 7; vars set fresh "hi"; vars set fresh "yo"');
-  const out = c.run('list');
-  const at = (title) => out.findIndex((l) => l.startsWith(`[${title}`));
-  assert.ok(at('player') < at('binds'), 'after the keys');
-  assert.match(out[at('binds') + 1], /^ {2}f\s+tp$/);
-  assert.match(out[at('trace') + 1], /#1 bob\s+\d+px/);
-  assert.match(out[at('logic') + 1], /in the whole map/);
-  assert.equal(out[at('vars')], '[vars you changed: 2]');
-  assert.ok(out.includes(`  ${'door_1'.padEnd(14)} 7  (was ${before})`), out.join('\n'));
-  assert.ok(out.some((l) => /fresh\s+"yo"\s+\(was \(not set\)\)/.test(l)), 'the value before the first change');
-  assert.deepEqual(c.run('list binds'), ['[binds: 1]', `  ${'f'.padEnd(14)} tp`]);
-  // Back to where it started: no longer a change.
-  c.run(`vars set door_1 ${before}; vars del fresh`);
-  assert.deepEqual(c.run('list vars'), ['[vars] nothing']);
-  c.run('unbind --all; trace --off; logic hide');
-});
-
-
-
-
-
-test('a ";" where a key name goes is the ";" key; everywhere else it ends a command', () => {
-  c.run('unbind --all');
-  assert.deepEqual(c.run('bind ; "heal; pos"'), ['semicolon = heal; pos']);
-  assert.deepEqual(c.run('bind shift+; heal'), ['shift+semicolon = heal']);
-  const pressed = c.press('Semicolon');
-  assert.ok(pressed.includes('[1/2] heal') && pressed.includes('[2/2] pos'), pressed.join(' | '));
-  assert.deepEqual(c.run('bind ;'), ['semicolon = heal; pos']);
-  // After the key, ";" ends the command as always.
-  const split = c.run('bind ;; pos');
-  assert.equal(split[0], '[1/2] bind ;');
-  assert.equal(split[2], '[2/2] pos');
-  assert.ok(c.run('bind f heal; pos').includes('[2/2] pos'), 'unquoted, the bind ends at ";"');
-  assert.deepEqual(c.run('unbind ;'), ['Unbound semicolon (was: heal; pos)']);
-  assert.deepEqual(c.run('screenshot_key ;'), ['screenshot_key = semicolon']);
-  assert.deepEqual(c.run('set screenshot_key shift+;'), ['screenshot_key = shift+semicolon']);
-  assert.equal(c.run('set speed 2; speed')[0], '[1/2] set speed 2', 'not a key setting: splits');
-  c.run('unset screenshot_key; unset speed; unbind --all');
-});
-
-
-
-
-test('triggers exec runs a trigger pasted from the map editor\'s text view, once, in your game only', async () => {
-  const { pasteText } = await consoleModule('../../../src/console/kernel/ui/panel.ts');
-  const pasted = [
-    'uid: #trigger*1016',
-    'enabled: true',
-    'maxcalls: -1',
-    '',
-    'next if VarA == ValueB( "var_suddendeath", "1" );',
-    'MovableTo( "#door_a", "#spawn_spot" );',
-    'next if VarA == ValueB( "var_suddendeath", ""1"" );',
-    'TimerDisable( "#timer*2", "0" );',
-    'op562( "a; b", "12" );',
-  ].join('\r\n');
-  // Pasted into the empty input: one line, "triggers exec" in front.
-  const input = { value: '', selectionStart: 0, selectionEnd: 0 };
-  assert.ok(pasteText(pasted, input));
-  assert.equal(input.value, 'triggers exec uid: #trigger*1016 enabled: true maxcalls: -1 next if VarA == ValueB( "var_suddendeath", "1" ); '
-    + 'MovableTo( "#door_a", "#spawn_spot" ); next if VarA == ValueB( "var_suddendeath", ""1"" ); TimerDisable( "#timer*2", "0" ); op562( "a; b", "12" );');
-  assert.equal(input.selectionStart, input.value.length);
-  assert.ok(!pasteText('pos\nheal', { value: '' }), 'commands are left to the browser');
-  assert.ok(!pasteText('MovableTo( "#door_a", "#spawn_spot" );', { value: '' }), 'one line is left to the browser');
-
-  const triggersBefore = c.G[c.N.triggers].length;
-  c.log.ran.length = 0;
-  c.log.net.length = 0;
-  const out = c.run(input.value);
-  assert.deepEqual(errorsOf(out), []);
-  assert.equal(out[0], 'Ran pasted trigger "#trigger*1016" (5 actions)');
-  assert.match(out[1], /^Note: ran in your game only/);
-  assert.equal(c.log.ran.length, 1);
-  const ran = c.log.ran[0];
-  assert.equal(ran.i, triggersBefore, 'its own trigger, past the map\'s');
-  assert.equal(ran.uid, '#trigger*1016');
-  assert.equal(ran.by, c.G[c.N.me], 'you are the activator');
-  assert.deepEqual(ran.types, [123, 0, 123, 26, 562]);
-  // Targets as the map loader stores them: uids are indexes, whole numbers numbers.
-  assert.deepEqual(ran.A, ['var_suddendeath', 0, 'var_suddendeath', 1, 'a; b']);
-  assert.deepEqual(ran.B, [1, 3, '"1"', 0, 12]);
-  assert.equal(c.G[c.N.triggers].length, triggersBefore, 'removed again');
-  assert.deepEqual(c.log.net, [], 'not sent');
-  assert.equal(c.G[c.N.triggerActivator], -1, 'activator put back');
-
-  // The same in the multi-line form the editor shows (pb2dev.run, or a bind).
-  c.log.ran.length = 0;
-  assert.deepEqual(errorsOf(c.run(`triggers exec ${pasted}`)), []);
-  assert.deepEqual(c.log.ran[0].B, [1, 3, '"1"', 0, 12]);
-
-  // --check shows it, does not run it.
-  c.log.ran.length = 0;
-  const shown = c.run('triggers exec --check MovableTo( "#door_a", "#spawn_spot" );');
-  assert.equal(shown[0], 'Pasted trigger script: 1 action, not run (--check)');
-  assert.match(shown[1], /1\. MovableTo \(type 0\)\s+A = 0\s+B = 3\s+\(Movable › Force Movable 'A' move to region 'B'\)/);
-  assert.equal(c.log.ran.length, 0);
-
-  // Refusals, before anything runs.
-  const err = (line) => errorsOf(c.run(line))[0] || '';
-  assert.match(err('triggers exec TimerDisable( "#timer*999", "0" );'), /line 1: this map has no timer #timer\*999/);
-  assert.match(err('triggers exec movableto( "#door_a", "#spawn_spot" );'), /unknown action "movableto"\. Did you mean MovableTo\?/);
-  assert.match(err('triggers exec Nope( "a", "b" );'), /unknown action "Nope"\. "triggers actions <text>" searches/);
-  assert.match(err('triggers exec SetVar( "x", "1" ); heal'), /line 2 "heal": not an action/);
-  assert.match(err('triggers exec colour: red SetVar( "x", "1" );'), /unknown action "colour: red SetVar"/);
-  assert.match(err('triggers exec colour: red'), /line 1 "colour: red": "colour" is not uid, enabled, maxcalls/);
-  assert.match(err('triggers exec #god'), /"triggers run #god" runs that map trigger/);
-  assert.match(err('triggers exec uid: #x'), /no actions in the script/);
-  assert.match(err('triggers exec --bogus SetVar( "x", "1" );'), /unknown option "--bogus"/);
-  assert.match(err('triggers exec'), /usage: triggers exec/);
-  assert.match(err('triggers exec enabled: false SetVar( "x", "1" );'), /not run: it says "enabled: false"\. "triggers exec --force/);
-  assert.equal(c.log.ran.length, 0);
-  assert.deepEqual(errorsOf(c.run('triggers exec --force enabled: false SetVar( "x", "1" );')), []);
-  assert.equal(c.log.ran.length, 1);
-  // A "#" value that is not an object stays text: a colour, a missing trigger name.
-  assert.deepEqual(errorsOf(c.run('triggers exec SetVar( "name_color", "#78dbe2" );')), []);
-  assert.equal(c.log.ran[1].B[0], '#78dbe2');
-
-  // The editor's list, searchable; triggers <#> describes actions with it.
-  const listed = c.run('triggers actions timer');
-  assert.match(listed[0], /^Trigger actions matching "timer": 1\./);
-  assert.match(listed[1], /^\s+26\s+TimerDisable\s+Timer › Deactivate Timer 'A'\s+\[A: timer, B: nochange\]/);
-  assert.match(c.run('triggers actions 562')[1], /562\s+op562\s+Debug/);
-  assert.ok(c.run('triggers #god').some((l) => /type 123\s.*\(Var › Skip next trigger action/.test(l)));
-});
-
-// Every text in a fake DOM tree, depth first.
+const consoleModule = (relative) => import(pathToFileURL(path.join(LEGACY_CONSOLE_DIR, relative)).href);
+const errorsOf = (out) => out.filter((line) => line.startsWith('error: '));
 const textsOf = (node) => [node.text, ...(node.childNodes || []).flatMap((n) => (typeof n === 'string' ? [n] : textsOf(n)))].filter(Boolean);
+
+let game;
+before(async () => { game = await bootConsole({ sayTrigger: '#chat_in' }); });
 
 test('editor: on and off by its key, outlines every object, selects by click and from its lists', async () => {
   const session = await consoleModule('editor/session.js');
   const { drawEditorFrame } = await consoleModule('editor/view.js');
   const { worldOfEvent } = await consoleModule('editor/input.js');
-  const original = c.G[c.N.mapText];
-  const overlay = c.G[c.N.uiOverlay].overlay;
+  const original = game.G[game.N.mapText];
+  const overlay = game.G[game.N.uiOverlay].overlay;
   try {
-    assert.match(c.run('editor')[0], /^Editor on: click an object to select it\. f8 or "editor" turns it off\./);
+    assert.match(game.run('editor')[0], /^Editor on: click an object to select it\. f8 or "editor" turns it off\./);
     assert.ok(session.editorOn());
     const first = drawEditorFrame();
     assert.ok(first.outlines > 5, JSON.stringify(first));
@@ -521,29 +27,29 @@ test('editor: on and off by its key, outlines every object, selects by click and
     const imgs = (node) => [node.src, ...(node.childNodes || []).flatMap((n) => (typeof n === 'string' ? [] : imgs(n)))].filter(Boolean);
     assert.ok(imgs(overlay).includes('/level_editor/icons16/edit.gif') && imgs(overlay).includes('/level_editor/icons16/box.gif'));
     // The map editor's thin scroll bars, from a stylesheet (inline styles cannot do it).
-    const sheet = c.G.document.getElementById('pb2dev-editor-style');
+    const sheet = game.G.document.getElementById('pb2dev-editor-style');
     assert.match(sheet.text, /pb2dev-editor-scroll::-webkit-scrollbar \{ width: 1\.75px;/);
     assert.match(sheet.text, /-webkit-scrollbar-thumb \{ border-radius: 1\.75px; background-color: #515151;/);
     const scrollers = (n) => [n.className, ...(n.childNodes || []).flatMap((k) => (typeof k === 'string' ? [] : scrollers(k)))].filter(Boolean);
     assert.ok(scrollers(overlay).filter((cn) => cn === 'pb2dev-editor-scroll').length >= 3, 'both panels and the object box');
     // The game's CSS hides its overlay container; everything put in it must show itself.
     for (const n of overlay.childNodes) if (n.style) assert.equal(n.style.visibility, 'visible', `hidden: ${textsOf(n).slice(0, 2).join(' ')}`);
-    assert.match(c.press('F8')[0], /^\[key f8\] > editor/);
+    assert.match(game.press('F8')[0], /^\[key f8\] > editor/);
     assert.ok(!session.editorOn(), 'the key turns it off');
     assert.equal(drawEditorFrame(), null);
     assert.ok(!textsOf(overlay).includes('Layers:'), 'panels gone');
-    assert.equal(c.G.document.getElementById('pb2dev-editor-style'), null, 'and the stylesheet');
-    c.press('F8');
+    assert.equal(game.G.document.getElementById('pb2dev-editor-style'), null, 'and the stylesheet');
+    game.press('F8');
     assert.ok(session.editorOn(), 'and on again');
 
     // A new map text (a restart, another map) is read again.
-    c.G[c.N.mapText] = [
+    game.G[game.N.mapText] = [
       '<box x="0" y="0" w="400" h="200" m="0" />',
       '<box x="100" y="50" w="20" h="20" m="0" />',
       '<trigger uid="#t" x="500" y="0" enabled="true" maxcalls="-1" actions_1_type="100" actions_1_targetA="a" actions_1_targetB="1" />',
       '<timer uid="#clock" x="560" y="0" enabled="true" maxcalls="-1" target="#t" delay="30" />',
     ].join('\n');
-    const level = (on) => { c.G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; c.frame(); };
+    const level = (on) => { game.G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; game.frame(); };
     level(false);
     assert.ok(session.editorOn() && !session.editorShown(), 'hidden while no level runs');
     assert.equal(drawEditorFrame(), null);
@@ -551,7 +57,7 @@ test('editor: on and off by its key, outlines every object, selects by click and
     assert.ok(session.editorShown(), 'back with the level');
     const doc = session.editorDoc();
     assert.equal(doc.elements.length, 4);
-    assert.equal(doc.toText(), c.G[c.N.mapText], 'the map text comes back as it was');
+    assert.equal(doc.toText(), game.G[game.N.mapText], 'the map text comes back as it was');
 
     // The smallest under the click first; the same spot again takes the next one.
     const at = { x: 110, y: 60 };
@@ -574,7 +80,7 @@ test('editor: on and off by its key, outlines every object, selects by click and
     assert.ok(texts.includes('1 trigger selected: #t'));
 
     // Esc clears the selection; a hidden layer is neither drawn nor picked.
-    assert.deepEqual(c.press('Escape'), []);
+    assert.deepEqual(game.press('Escape'), []);
     assert.equal(session.selected(), null);
     // Layers, as the map editor's: what is not on an active layer is drawn faint and
     // cannot be selected.
@@ -589,24 +95,24 @@ test('editor: on and off by its key, outlines every object, selects by click and
     assert.equal(doc.ordinal(session.pickAt(at)), 1);
     const { KIND_TAGS } = await consoleModule('editor/kinds.js');
     // The same from the console: a group, kinds, or + and - (the editor's Ctrl and Alt).
-    assert.match(c.run('editor layers entities')[0], /^Layers: player, enemy, vehicle, decoration, gun, barrel, engine mark/);
-    c.run('editor layers wall');
+    assert.match(game.run('editor layers entities')[0], /^Layers: player, enemy, vehicle, decoration, gun, barrel, engine mark/);
+    game.run('editor layers wall');
     assert.deepEqual(session.selectableLayers(), ['box']);
-    c.run('editor layers +trigger');
-    c.run('editor layers -wall');
+    game.run('editor layers +trigger');
+    game.run('editor layers -wall');
     assert.deepEqual(session.selectableLayers(), ['trigger']);
-    assert.match(errorsOf(c.run('editor layers nonsense'))[0], /usage: editor layers/);
-    c.run('editor layers all');
+    assert.match(errorsOf(game.run('editor layers nonsense'))[0], /usage: editor layers/);
+    game.run('editor layers all');
     assert.equal(session.selectableLayers().length, KIND_TAGS.length);
 
     // Off works without a level; on needs one.
     level(false);
-    c.run('editor off');
+    game.run('editor off');
     assert.ok(!session.editorOn());
-    assert.match(errorsOf(c.run('editor'))[0], /start a level first/);
+    assert.match(errorsOf(game.run('editor'))[0], /start a level first/);
   } finally {
-    c.G.stage.currentFrameLabel = 'gaming';
-    c.G[c.N.mapText] = original;
+    game.G.stage.currentFrameLabel = 'gaming';
+    game.G[game.N.mapText] = original;
     session.setEditor(false); session.forgetDocument();
   }
 });
@@ -615,44 +121,44 @@ test('editor: edits go into the running level, in any mode, and again after a re
   const session = await consoleModule('editor/session.js');
   const { mouse, grabOf, dragPlace } = await consoleModule('editor/input.js');
   const { currentTransform, toScreen } = await consoleModule('../../../src/console/kernel/ui/overlay.ts');
-  const original = c.G[c.N.mapText];
-  const quiet = (line) => c.run(line).filter((l) => !l.startsWith('Note:'));
+  const original = game.G[game.N.mapText];
+  const quiet = (line) => game.run(line).filter((l) => !l.startsWith('Note:'));
   // A mouse event at a world point, through the screen the way a real one comes in.
   const at = (p, extra = {}) => { const s = toScreen(currentTransform(), p); return { button: 0, clientX: s.x, clientY: s.y, ...extra }; };
   try {
     // In a match (the fake game is one): the editor does not care which mode it is.
-    c.run('editor on');
+    game.run('editor on');
     const doc = session.editorDoc();
     const region = doc.byUid('#red_use'); // region #1: 400, 0, 20 x 20
-    const live = c.G[c.N.regions][1];
+    const live = game.G[game.N.regions][1];
 
     // Live: the game's region moves at once. The game's map text is never written.
     session.select(region);
     assert.deepEqual(quiet('editor set x 450'), ['#red_use: x = "450", live now']);
     assert.equal(live.x, 450);
-    assert.equal(c.G[c.N.mapText], original);
+    assert.equal(game.G[game.N.mapText], original);
     assert.equal(session.editorDoc(), doc, 'the editor keeps its document');
     quiet('editor set use_on 12');
-    assert.equal(live[c.N.regionUseOn], 10, 'stored as the loader stores it');
+    assert.equal(live[game.N.regionUseOn], 10, 'stored as the loader stores it');
     quiet('editor set use_target #locked');
-    assert.equal(live[c.N.regionTrigger], c.triggers.findIndex((t) => t.uid === '#locked'));
+    assert.equal(live[game.N.regionTrigger], game.triggers.findIndex((t) => t.uid === '#locked'));
 
     // Trigger actions are loaded again from the attributes.
     const trig = doc.byUid('#on_death');
     session.select(trig);
     quiet('editor set actions_1_targetB 5');
-    const t = c.G[c.N.triggers][doc.ordinal(trig)];
-    assert.deepEqual(t[c.N.trigTargetB], [5]);
+    const t = game.G[game.N.triggers][doc.ordinal(trig)];
+    assert.deepEqual(t[game.N.trigTargetB], [5]);
     quiet('editor set enabled false');
-    assert.equal(t[c.N.trigEnabled], false);
+    assert.equal(t[game.N.trigEnabled], false);
 
     // A decoration moves at once, unless a movable carries it.
     const stone = doc.elements.find((e) => e.tag === 'decor' && !e.attrs.uid);
     session.select(stone);
     assert.deepEqual(quiet('editor set x 720'), ['decoration #1: x = "720", live now']);
-    assert.equal(c.G[c.N.decors][1].x, 720);
+    assert.equal(game.G[game.N.decors][1].x, 720);
     quiet('editor set r 45');
-    assert.equal(c.G[c.N.decors][1].rotation, 45);
+    assert.equal(game.G[game.N.decors][1].rotation, 45);
     session.select(doc.byUid('#sign'));
     assert.match(quiet('editor set x 230')[0], /not in the running level: /, 'carried by a movable, and no game loader to build it again here');
 
@@ -661,8 +167,8 @@ test('editor: edits go into the running level, in any mode, and again after a re
     session.select(door);
     assert.match(quiet('editor set w 60')[0], /^#door_a: w = "60", not in the running level: .* \(kept for "editor save"\)/);
     assert.equal(session.pendingCount(), 2);
-    assert.match(errorsOf(c.run('editor set x abc'))[0], /x must be a number/);
-    assert.match(errorsOf(c.run('editor set c "a"b"'))[0], /cannot contain a double quote/);
+    assert.match(errorsOf(game.run('editor set x abc'))[0], /x must be a number/);
+    assert.match(errorsOf(game.run('editor set c "a"b"'))[0], /cannot contain a double quote/);
 
     // Drag: press on the selection, move, let go. Snaps to 10.
     mouse.down(at({ x: 210, y: 50 }));
@@ -696,25 +202,25 @@ test('editor: edits go into the running level, in any mode, and again after a re
     // The level starts again on the same map (dying, a new round): the game builds it
     // from its map text, without the edits, and the editor puts them in again.
     live.x = 400;
-    live[c.N.regionUseOn] = 9;
-    c.G.stage.currentFrameLabel = 'loading'; c.frame();
-    c.G.stage.currentFrameLabel = 'gaming'; c.frame();
+    live[game.N.regionUseOn] = 9;
+    game.G.stage.currentFrameLabel = 'loading'; game.frame();
+    game.G.stage.currentFrameLabel = 'gaming'; game.frame();
     assert.equal(session.editorDoc(), doc, 'same map: same document');
     assert.equal(live.x, 450, 'the edit is back');
-    assert.equal(live[c.N.regionUseOn], 10);
-    assert.equal(c.G[c.N.decors][1].rotation, 45);
-    assert.equal(c.G[c.N.mapText], original);
-    assert.equal(c.run('editor reload')[0].startsWith('error: '), true, 'no reload command');
+    assert.equal(live[game.N.regionUseOn], 10);
+    assert.equal(game.G[game.N.decors][1].rotation, 45);
+    assert.equal(game.G[game.N.mapText], original);
+    assert.equal(game.run('editor reload')[0].startsWith('error: '), true, 'no reload command');
 
     // Save goes to the wrapper (none in tests).
-    c.log.printed.length = 0;
-    c.G.pb2dev.run('editor save my map');
+    game.log.printed.length = 0;
+    game.G.pb2dev.run('editor save my map');
     await new Promise((r) => setTimeout(r, 10));
-    assert.ok(c.log.printed.some((l) => /could not save \(no desktop wrapper in tests\)/.test(l)), c.log.printed.join(' | '));
-    assert.match(errorsOf(c.run('editor save'))[0], /usage: editor save <name>/);
+    assert.ok(game.log.printed.some((l) => /could not save \(no desktop wrapper in tests\)/.test(l)), game.log.printed.join(' | '));
+    assert.match(errorsOf(game.run('editor save'))[0], /usage: editor save <name>/);
   } finally {
     session.setEditor(false); session.forgetDocument();
-    c.G[c.N.mapText] = original;
+    game.G[game.N.mapText] = original;
   }
 });
 
@@ -722,11 +228,11 @@ test('editor tools: place, copy, delete and undo; live edits still reach the rig
   const session = await consoleModule('editor/session.js');
   const { mouse } = await consoleModule('editor/input.js');
   const { currentTransform, toScreen } = await consoleModule('../../../src/console/kernel/ui/overlay.ts');
-  const original = c.G[c.N.mapText];
-  const quiet = (line) => c.run(line).filter((l) => !l.startsWith('Note:'));
+  const original = game.G[game.N.mapText];
+  const quiet = (line) => game.run(line).filter((l) => !l.startsWith('Note:'));
   const at = (p, extra = {}) => { const s = toScreen(currentTransform(), p); return { button: 0, clientX: s.x, clientY: s.y, ...extra }; };
   try {
-    c.run('editor on');
+    game.run('editor on');
     const doc = session.editorDoc();
     const walls = () => doc.byTag('box').length;
     const before = walls();
@@ -734,22 +240,22 @@ test('editor tools: place, copy, delete and undo; live edits still reach the rig
     // Through the page, the way a real click arrives: pointer events on the game canvas,
     // whose own pointerdown listener (the game's graphics library) cancels them, so no
     // mouse event follows. The editor hears them first and keeps them from the game.
-    const canvas = c.G.game_canvas;
+    const canvas = game.G.game_canvas;
     const shown = (p) => { const s = toScreen(currentTransform(), p); return { clientX: s.x, clientY: s.y }; };
     let reachedGame = 0;
     canvas.addEventListener('pointerdown', () => { reachedGame++; });
-    c.G.onpointerdown = () => { reachedGame++; };
-    const down = c.dispatch(canvas, 'pointerdown', shown({ x: 215, y: 50 }));
-    c.dispatch(canvas, 'pointerup', shown({ x: 215, y: 50 }));
+    game.G.onpointerdown = () => { reachedGame++; };
+    const down = game.dispatch(canvas, 'pointerdown', shown({ x: 215, y: 50 }));
+    game.dispatch(canvas, 'pointerup', shown({ x: 215, y: 50 }));
     assert.equal(session.selected(), doc.byUid('#door_a'), 'a real click selects');
     assert.ok(down.defaultPrevented && reachedGame === 0, 'the game never sees the click');
-    delete c.G.onpointerdown;
+    delete game.G.onpointerdown;
     // A press on the editor's own panels is theirs, not a click in the world.
-    const panel = c.G[c.N.uiOverlay].overlay.childNodes.find((n) => n.pb2devUi);
-    c.dispatch(panel, 'pointerdown', shown({ x: 215, y: 50 }));
-    c.dispatch(panel, 'pointerup', shown({ x: 215, y: 50 }));
+    const panel = game.G[game.N.uiOverlay].overlay.childNodes.find((n) => n.pb2devUi);
+    game.dispatch(panel, 'pointerdown', shown({ x: 215, y: 50 }));
+    game.dispatch(panel, 'pointerup', shown({ x: 215, y: 50 }));
     assert.equal(session.selected(), doc.byUid('#door_a'), 'unchanged');
-    assert.match(c.run('editor status').join('\n'), /last press the window saw: .* left alone/);
+    assert.match(game.run('editor status').join('\n'), /last press the window saw: .* left alone/);
     session.select(null);
 
     // Place tool: drag out a wall (snapped), click for a default-sized one.
@@ -766,30 +272,30 @@ test('editor tools: place, copy, delete and undo; live edits still reach the rig
     mouse.up();
     assert.deepEqual([session.selected().attrs.w, session.selected().attrs.h], ['100', '100']);
     assert.match(doc.toText(), /<box x="2000" y="0" w="100" h="100" m="0" \/>/, 'in the map, for "editor save"');
-    assert.deepEqual(c.press('Escape'), []);
+    assert.deepEqual(game.press('Escape'), []);
     assert.equal(session.currentTool(), 'select', 'Esc: back to select');
     // F8 off and on again: the placed walls are still there and can be selected.
-    c.press('F8'); c.press('F8');
+    game.press('F8'); game.press('F8');
     assert.equal(session.editorDoc(), doc, 'the same document');
     assert.equal(walls(), before + 2);
     assert.equal(session.pickAt({ x: 2050, y: 50 })?.attrs.x, '2000');
 
     // Add by command, with a uid numbered like the map editor's; copy gets the next one.
     assert.match(quiet('editor add region 100 200 50 50')[0], /^Added #region\*1 at 100, 200 \(50 x 50\)/);
-    c.press('KeyD', { ctrlKey: true });
+    game.press('KeyD', { ctrlKey: true });
     assert.equal(session.selected().attrs.uid, '#region*2');
     assert.deepEqual([session.selected().attrs.x, session.selected().attrs.y], ['120', '220']);
 
     // Deleting a region does not shift the others in the game: the game still has it.
     session.select(doc.byUid('#button')); // region #0
-    c.press('Delete');
+    game.press('Delete');
     assert.equal(doc.byUid('#button'), null);
     const redUse = doc.byUid('#red_use');
     assert.equal(doc.ordinal(redUse), 0, 'first region of the map now');
     session.select(redUse);
     quiet('editor set y 30');
-    assert.equal(c.G[c.N.regions][1].y, 30, 'still the game\'s region #1');
-    assert.deepEqual([c.G[c.N.regions][0].x, c.G[c.N.regions][0][c.N.regionUseOn]], [1e7, 0], 'the deleted one out of play, the others where they were');
+    assert.equal(game.G[game.N.regions][1].y, 30, 'still the game\'s region #1');
+    assert.deepEqual([game.G[game.N.regions][0].x, game.G[game.N.regions][0][game.N.regionUseOn]], [1e7, 0], 'the deleted one out of play, the others where they were');
     // New elements are not in the game: never live.
     session.select(doc.byUid('#region*1'));
     assert.match(quiet('editor set x 150')[0], /not in the running level: it is not in the running level yet/);
@@ -801,92 +307,38 @@ test('editor tools: place, copy, delete and undo; live edits still reach the rig
     mouse.move(at({ x: 1125, y: 530 }));
     mouse.up();
     assert.equal(wall.attrs.x, '1050');
-    c.press('KeyZ', { ctrlKey: true });
+    game.press('KeyZ', { ctrlKey: true });
     assert.equal(wall.attrs.x, '1000', 'the drag, at once');
-    c.press('KeyY', { ctrlKey: true });
+    game.press('KeyY', { ctrlKey: true });
     assert.equal(wall.attrs.x, '1050');
     quiet('editor undo'); // the drag
     quiet('editor undo'); // x 150 of #region*1
     quiet('editor undo'); // y 30
-    assert.equal(c.G[c.N.regions][1].y, 0, 'undo goes live too');
+    assert.equal(game.G[game.N.regions][1].y, 0, 'undo goes live too');
     quiet('editor undo'); // the delete
     assert.equal(doc.ordinal(doc.byUid('#button')), 0, 'back where it was');
     assert.equal(session.selected(), doc.byUid('#button'));
     while (session.editorDoc().byTag('box').length > before) quiet('editor undo');
     assert.equal(doc.byUid('#region*1'), null);
-    assert.equal(c.run('editor undo')[0], 'Nothing to undo');
+    assert.equal(game.run('editor undo')[0], 'Nothing to undo');
     assert.equal(doc.toText(), original, 'the map as it was');
 
-    assert.match(errorsOf(c.run('editor add nonsense'))[0], /usage: editor add <kind>/);
+    assert.match(errorsOf(game.run('editor add nonsense'))[0], /usage: editor add <kind>/);
     session.select(null);
-    assert.match(errorsOf(c.run('editor delete'))[0], /select an object first/);
+    assert.match(errorsOf(game.run('editor delete'))[0], /select an object first/);
   } finally {
     session.setTool('select');
     session.setEditor(false); session.forgetDocument();
-    c.G[c.N.mapText] = original;
-  }
-});
-
-test('logic: old maps without uids link by number, as the game reads them', async () => {
-  const { buildGraph, findNode } = await consoleModule('logic/graph.js');
-  const old = [
-    '<player x="0" y="0" ondeath="1" />',
-    '<enemy x="50" y="0" ondeath="-1" />',
-    '<door x="100" y="0" w="20" h="20" />',
-    '<region x="0" y="0" w="20" h="20" use_target="0" use_on="1" />',
-    '<region x="40" y="0" w="20" h="20" use_target="0" use_on="1" uses_timer="true" />',
-    '<region x="80" y="0" w="20" h="20" use_target="-1" use_on="0" attach="0" />',
-    '<trigger enabled="true" maxcalls="1" actions_1_type="0" actions_1_targetA="0" actions_1_targetB="2" actions_2_type="26" actions_2_targetA="0" actions_2_targetB="0" actions_3_type="100" actions_3_targetA="0" actions_3_targetB="1" />',
-    '<trigger enabled="true" maxcalls="1" />',
-    '<timer enabled="true" maxcalls="1" target="1" delay="30" />',
-  ].join('\n');
-  const g = buildGraph(old);
-  const links = g.links.map((l) => `${l.from.uid} -> ${l.to.uid} (${l.kind}, ${l.label})`).sort();
-  assert.deepEqual(links, [
-    'player#0 -> trigger#1 (start, ondeath)',
-    'region#0 -> trigger#0 (start, use_target)',
-    'region#1 -> timer#0 (start, use_target)',
-    'region#2 -> door#0 (attach, attach)',
-    'timer#0 -> trigger#1 (start, target)',
-    'trigger#0 -> door#0 (act, action 1: 0)',
-    'trigger#0 -> region#2 (act, action 1: 0)',
-    'trigger#0 -> timer#0 (control, action 2: 26 disable timer A)',
-  ], 'variable names (type 100) are text, not references; -1 is none');
-  assert.equal(findNode(g, 'REGION#1').uid, 'region#1');
-  assert.equal(findNode(g, '1'), g.byIndex.get('trigger')[1], 'a trigger by index');
-  assert.equal(g.byIndex.get('character')[1].tag, 'enemy', 'players and enemies share the characters');
-  // Triggers and timers without a place sit in a row above the map's top left corner.
-  const spot = (n) => [n.x, n.y];
-  assert.deepEqual(spot(g.byIndex.get('trigger')[0]), [0, -60]);
-  assert.deepEqual(spot(g.byIndex.get('trigger')[1]), [40, -60]);
-  assert.deepEqual(spot(g.byIndex.get('timer')[0]), [80, -60]);
-
-  // The editor draws them too.
-  const session = await consoleModule('editor/session.js');
-  const { drawEditorFrame } = await consoleModule('editor/view.js');
-  const original = c.G[c.N.mapText];
-  try {
-    c.run('editor on');
-    c.G[c.N.mapText] = old;
-    c.G.stage.currentFrameLabel = 'menu'; c.frame();
-    c.G.stage.currentFrameLabel = 'gaming'; c.frame();
-    const doc = session.editorDoc();
-    assert.deepEqual(doc.byTag('timer')[0].spot, { x: 80, y: -60 }, 'where "logic show" draws it');
-    session.select(doc.byTag('trigger')[0]);
-    assert.equal(drawEditorFrame().links, 4, 'a region runs it; it moves a door to a region, disables a timer');
-    assert.deepEqual(errorsOf(c.run('editor status')), []);
-  } finally {
-    session.setEditor(false); session.forgetDocument();
-    c.G[c.N.mapText] = original;
+    game.G[game.N.mapText] = original;
   }
 });
 
 test('editor: walls (with trims), backgrounds, water, pushers and movables move in the running level', async () => {
   const session = await consoleModule('editor/session.js');
-  const original = c.G[c.N.mapText];
-  const G = c.G, N = c.N;
-  const quiet = (line) => c.run(line).filter((l) => !l.startsWith('Note:'));
-  const level = (on) => { G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; c.frame(); };
+  const original = game.G[game.N.mapText];
+  const G = game.G, N = game.N;
+  const quiet = (line) => game.run(line).filter((l) => !l.startsWith('Note:'));
+  const level = (on) => { G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; game.frame(); };
   // A level as the game holds it after loading: two walls, a background, water, a
   // pusher and a movable.
   G[N.mapText] = [
@@ -942,7 +394,7 @@ test('editor: walls (with trims), backgrounds, water, pushers and movables move 
   const ops = () => shared.graphics.draw_operations;
   const points = (from, n = 4) => ops().slice(from, from + n).map((op) => op[1].slice(0, 2));
   try {
-    c.run('editor on');
+    game.run('editor on');
     level(false); level(true);
     const doc = session.editorDoc();
 
@@ -1003,7 +455,7 @@ test('editor: walls (with trims), backgrounds, water, pushers and movables move 
     G.graphics_3d.removeChild = function removeChild(child) { this.children.splice(this.children.indexOf(child), 1); };
     G[N.displayInit] = (shown) => { shown.mouseEnabled = false; };
     G[N.wallMaterial] = ['0', '0'];
-    c.run('editor add wall 100 100 50 20');
+    game.run('editor add wall 100 100 50 20');
     const newWall = session.selected();
     assert.equal(newWall.live.index, 2);
     assert.deepEqual([G[N.wallCount], G[N.wallX][2], G[N.wallW][2]], [3, 100, 50]);
@@ -1011,11 +463,11 @@ test('editor: walls (with trims), backgrounds, water, pushers and movables move 
     const newBody = G.graphics_3d.children.at(-1);
     assert.deepEqual([newBody.x, newBody.scaleX, newBody.mouseEnabled], [100, 0.5, false]);
     // Deleted: out of the grid, no size, its body gone.
-    c.press('Delete');
+    game.press('Delete');
     assert.deepEqual(cellsOf(G[N.grid], 2), []);
     assert.equal(G[N.wallW][2], 0);
     assert.ok(!G.graphics_3d.children.includes(newBody));
-    c.run('editor undo'); c.run('editor undo');
+    game.run('editor undo'); game.run('editor undo');
 
     // The level starts again on the same map: the game rebuilds it without the edits,
     // and the editor puts them in again.
@@ -1036,16 +488,15 @@ test('editor: walls (with trims), backgrounds, water, pushers and movables move 
   }
 });
 
-
 test('editor: a trigger\'s actions are added, changed and removed, or edited as the map editor\'s text', async () => {
   const session = await consoleModule('editor/session.js');
   const { actionsOf, actionValues, triggerText, valuesFromText } = await consoleModule('editor/actions.js');
   const { setAttrs, undo } = await consoleModule('editor/edit.js');
-  const original = c.G[c.N.mapText];
-  const level = (on) => { c.G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; c.frame(); };
+  const original = game.G[game.N.mapText];
+  const level = (on) => { game.G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; game.frame(); };
   try {
-    c.run('editor on');
-    c.G[c.N.mapText] = '<trigger uid="#t" x="0" y="0" enabled="true" maxcalls="1" actions_1_type="100" actions_1_targetA="a" actions_1_targetB="1" actions_2_type="-1" actions_2_targetA="" actions_2_targetB="" actions_3_type="26" actions_3_targetA="#clock" actions_3_targetB="0" />';
+    game.run('editor on');
+    game.G[game.N.mapText] = '<trigger uid="#t" x="0" y="0" enabled="true" maxcalls="1" actions_1_type="100" actions_1_targetA="a" actions_1_targetB="1" actions_2_type="-1" actions_2_targetA="" actions_2_targetB="" actions_3_type="26" actions_3_targetA="#clock" actions_3_targetB="0" />';
     level(false); level(true);
     const t = session.editorDoc().byUid('#t');
     // Empty slots (type -1) are not actions.
@@ -1067,7 +518,7 @@ test('editor: a trigger\'s actions are added, changed and removed, or edited as 
     const { setTriggersAsText } = await consoleModule('editor/trigger-panel.js');
     setTriggersAsText(true);
     session.select(null); session.select(t);
-    const texts = textsOf(c.G[c.N.uiOverlay].overlay);
+    const texts = textsOf(game.G[game.N.uiOverlay].overlay);
     assert.ok(texts.includes('Edit triggers as text:') && texts.includes('Apply') && texts.includes('Edit triggers as param list'));
     setTriggersAsText(false);
     // A trigger with no actions at all is fine too.
@@ -1075,26 +526,26 @@ test('editor: a trigger\'s actions are added, changed and removed, or edited as 
     assert.deepEqual(actionsOf(t.attrs), []);
   } finally {
     session.setEditor(false); session.forgetDocument();
-    c.G[c.N.mapText] = original;
+    game.G[game.N.mapText] = original;
   }
 });
 
 test('editor: Params shows every parameter of the kind, with the editor\'s titles, defaults and values', async () => {
   const session = await consoleModule('editor/session.js');
-  const original = c.G[c.N.mapText];
-  const level = (on) => { c.G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; c.frame(); };
+  const original = game.G[game.N.mapText];
+  const level = (on) => { game.G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; game.frame(); };
   try {
-    c.run('editor on');
-    c.G[c.N.mapText] = '<region x="0" y="0" w="10" h="10" use_on="1" />'; // an old map: no uid, no use_target, no attach
+    game.run('editor on');
+    game.G[game.N.mapText] = '<region x="0" y="0" w="10" h="10" use_on="1" />'; // an old map: no uid, no use_target, no attach
     level(false); level(true);
     session.select(session.editorDoc().byTag('region')[0]);
-    const texts = textsOf(c.G[c.N.uiOverlay].overlay);
+    const texts = textsOf(game.G[game.N.uiOverlay].overlay);
     for (const t of ['ID', 'X', 'Activation Trigger', 'Activation on', 'attach', "1 (''USE'' key (with button))", '-1']) {
       assert.ok(texts.includes(t), `${t}: ${texts.slice(-30).join(' | ')}`);
     }
   } finally {
     session.setEditor(false); session.forgetDocument();
-    c.G[c.N.mapText] = original;
+    game.G[game.N.mapText] = original;
   }
 });
 
@@ -1102,7 +553,7 @@ test('editor: an object parameter is picked by clicking the object in the world,
   const session = await consoleModule('editor/session.js');
   const { drawEditorFrame } = await consoleModule('editor/view.js');
   const { currentTransform, toScreen } = await consoleModule('../../../src/console/kernel/ui/overlay.ts');
-  const overlay = c.G[c.N.uiOverlay].overlay;
+  const overlay = game.G[game.N.uiOverlay].overlay;
   // The node whose own text is `text`, and the params row it is in.
   const find = (node, text) => {
     if (node.text === text) return node;
@@ -1111,42 +562,42 @@ test('editor: an object parameter is picked by clicking the object in the world,
   };
   const valueCell = (label) => find(overlay, label).parent.childNodes[1];
   const shown = (p) => { const s = toScreen(currentTransform(), p); return { clientX: s.x, clientY: s.y }; };
-  const click = (p) => { c.dispatch(c.G.game_canvas, 'pointerdown', shown(p)); c.dispatch(c.G.game_canvas, 'pointerup', shown(p)); };
+  const click = (p) => { game.dispatch(game.G.game_canvas, 'pointerdown', shown(p)); game.dispatch(game.G.game_canvas, 'pointerup', shown(p)); };
   try {
-    c.run('editor on');
+    game.run('editor on');
     const doc = session.editorDoc();
     const region = doc.byUid('#red_use');
     session.select(region);
-    c.dispatch(valueCell('Activation Trigger'), 'click', {});
+    game.dispatch(valueCell('Activation Trigger'), 'click', {});
     assert.deepEqual(session.currentPick().kinds, ['trigger']);
     assert.ok(drawEditorFrame().picks > 0, 'every trigger is marked');
     assert.match(textsOf(overlay).join('\n'), /use_target: click a trigger in the world {2}· {2}Esc: cancel/);
     click({ x: 120, y: 0 }); // #locked is at 120, 0
     assert.equal(region.attrs.use_target, '#locked');
-    assert.equal(c.G[c.N.regions][1][c.N.regionTrigger], c.triggers.findIndex((t) => t.uid === '#locked'), 'live');
+    assert.equal(game.G[game.N.regions][1][game.N.regionTrigger], game.triggers.findIndex((t) => t.uid === '#locked'), 'live');
     assert.equal(session.currentPick(), null, 'done');
     assert.equal(session.selected(), region, 'the region stays selected');
     // Esc cancels one.
-    c.dispatch(valueCell('Activation Trigger'), 'click', {});
+    game.dispatch(valueCell('Activation Trigger'), 'click', {});
     assert.ok(session.currentPick());
-    c.press('Escape');
+    game.press('Escape');
     assert.equal(session.currentPick(), null);
     assert.equal(session.selected(), region, 'Esc ends the pick, not the selection');
     // A trigger action's target: B of MovableTo is a region.
     const trigger = doc.byUid('#open_door');
     session.select(trigger);
-    c.dispatch(valueCell('B (region)'), 'click', {});
+    game.dispatch(valueCell('B (region)'), 'click', {});
     assert.deepEqual(session.currentPick().kinds, ['region']);
     click({ x: 50, y: 0 }); // the #open_door trigger is here: not a region
     assert.ok(session.currentPick(), 'only the kinds it takes');
     click({ x: 490, y: 10 }); // #spawn_spot: 480, 0, 20 x 20
     assert.equal(trigger.attrs.actions_2_targetB, '#spawn_spot');
     // A pick with nothing there keeps waiting.
-    c.dispatch(valueCell('A (door)'), 'click', {});
+    game.dispatch(valueCell('A (door)'), 'click', {});
     click({ x: 330, y: 150 }); // on screen, nothing there
     assert.ok(session.currentPick(), 'still waiting');
-    c.press('Escape');
-    c.run('editor undo'); c.run('editor undo');
+    game.press('Escape');
+    game.run('editor undo'); game.run('editor undo');
   } finally {
     session.setEditor(false); session.forgetDocument();
   }
@@ -1155,14 +606,14 @@ test('editor: an object parameter is picked by clicking the object in the world,
 test('editor: the selection\'s connections are dashed lines as in the map editor: green out, white in', async () => {
   const session = await consoleModule('editor/session.js');
   const { drawEditorFrame } = await consoleModule('editor/view.js');
-  const original = c.G[c.N.mapText];
-  const level = (on) => { c.G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; c.frame(); };
+  const original = game.G[game.N.mapText];
+  const level = (on) => { game.G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; game.frame(); };
   // The stroke colour and dash in force at each line drawn.
   const strokes = () => {
     const out = [];
     let color = null;
     let dash = [];
-    for (const d of c.log.drawn) {
+    for (const d of game.log.drawn) {
       if (d[0] === 'set' && d[1] === 'strokeStyle') color = d[2];
       if (d[0] === 'setLineDash') dash = d[1];
       if (d[0] === 'lineTo') out.push({ color, dash: dash.length > 0 });
@@ -1170,29 +621,29 @@ test('editor: the selection\'s connections are dashed lines as in the map editor
     return out;
   };
   try {
-    c.run('editor on');
-    c.G[c.N.mapText] = [
+    game.run('editor on');
+    game.G[game.N.mapText] = [
       '<trigger uid="#t" x="0" y="0" enabled="true" maxcalls="1" actions_1_type="26" actions_1_targetA="#clock" actions_1_targetB="0" />',
       '<timer uid="#clock" x="100" y="0" enabled="true" maxcalls="-1" target="#t" delay="30" />',
     ].join('\n');
     level(false); level(true);
     session.select(session.editorDoc().byUid('#t'));
-    c.log.drawn.length = 0;
+    game.log.drawn.length = 0;
     assert.equal(drawEditorFrame().links, 2, 'it disables the timer; the timer runs it');
     const lines = strokes();
     assert.ok(lines.some((l) => l.color === '#66ff66' && l.dash), 'green, dashed: what it points at');
     assert.ok(lines.some((l) => l.color === '#ffffff' && l.dash), 'white, dashed: what points at it');
-    assert.ok(!c.log.drawn.some((d) => d[0] === 'closePath'), 'no arrowheads');
+    assert.ok(!game.log.drawn.some((d) => d[0] === 'closePath'), 'no arrowheads');
   } finally {
     session.setEditor(false); session.forgetDocument();
-    c.G[c.N.mapText] = original;
+    game.G[game.N.mapText] = original;
   }
 });
 
 test('editor: an edit nothing finer takes rebuilds the object with the game\'s own loader code', async () => {
   const session = await consoleModule('editor/session.js');
   const loader = await consoleModule('editor/loader.js');
-  const G = c.G, N = c.N;
+  const G = game.G, N = game.N;
   // A frame2.js shaped like the game's: tags through its string table, a loop that
   // builds (a branch per kind, a counter each), a loop that resolves uids.
   G.$tagBox = 'box'; G.$tagRegion = 'region'; G.$tagDecor = 'decor';
@@ -1237,14 +688,14 @@ $regionR++;
   assert.ok(loader.loaderReady(), loader.loaderProblem());
   assert.ok(loader.canRebuild('region') && !loader.canRebuild('gun'));
   try {
-    c.run('editor on');
+    game.run('editor on');
     const doc = session.editorDoc();
     const region = doc.byUid('#clock_switch'); // region #2 of 4, a use key
     session.select(region);
-    c.run('editor set use_on 0'); // switch -> none: nothing finer can take it
+    game.run('editor set use_on 0'); // switch -> none: nothing finer can take it
     const before = regions[2];
     // Activation 0 -> 1: the game's region branch draws a USE switch.
-    assert.deepEqual(c.run('editor set use_on 1').filter((l) => !l.startsWith('Note:')), ['#clock_switch: use_on = "1", live now']);
+    assert.deepEqual(game.run('editor set use_on 1').filter((l) => !l.startsWith('Note:')), ['#clock_switch: use_on = "1", live now']);
     assert.notEqual(regions[2], before, 'a new region object from the game\'s code');
     assert.equal(regions[2].mc.kind, 'switch');
     assert.equal(regions[2].x, 440);
@@ -1253,41 +704,41 @@ $regionR++;
     assert.deepEqual([G.a, G.mc], ['the game\'s a', 'the game\'s mc'], 'its scratch globals as they were');
     // And back: the old switch comes off the screen.
     const sw = regions[2].mc;
-    c.run('editor set use_on 0');
+    game.run('editor set use_on 0');
     assert.ok(sw.gone);
     assert.equal(regions[2].mc, undefined);
 
     // Adding one: the game's branch at the end of the regions, its counters moved on.
     const n = regions.length;
-    c.run('editor add region 600 0 40 40');
+    game.run('editor add region 600 0 40 40');
     const added = session.selected();
     assert.equal(added.live.index, n);
     assert.equal(regions.length, n + 1);
     assert.deepEqual([regions[n].x, regions[n].w, G.$regionN, G.$regionR], [600, 40, n + 1, n + 1]);
     assert.equal(session.pendingCount(), 0, 'in the running level');
     // Deleting it: out of play, the others where they were; undo builds it again.
-    c.press('Delete');
+    game.press('Delete');
     assert.deepEqual([regions[n].x, regions.length], [1e7, n + 1]);
-    c.run('editor undo');
+    game.run('editor undo');
     assert.equal(regions[n].x, 600, 'built again in its place');
     assert.equal(regions.length, n + 1);
     // The level starts over on the same map: the game builds its regions from the map
     // (no added one), and the editor adds it again.
     regions.length = n; G.$regionN = n; G.$regionR = n;
-    c.G.stage.currentFrameLabel = 'menu'; c.frame();
-    c.G.stage.currentFrameLabel = 'gaming'; c.frame();
+    game.G.stage.currentFrameLabel = 'menu'; game.frame();
+    game.G.stage.currentFrameLabel = 'gaming'; game.frame();
     assert.deepEqual([regions.length, regions[n].x], [n + 1, 600], 'added again after the restart');
     // A deleted map region is taken out again after a restart too.
     session.select(doc.byUid('#spawn_spot'));
-    c.press('Delete');
+    game.press('Delete');
     regions[3].x = 480; // the game builds the level again from the map
     regions.length = n; G.$regionN = n; G.$regionR = n;
-    c.G.stage.currentFrameLabel = 'menu'; c.frame();
-    c.G.stage.currentFrameLabel = 'gaming'; c.frame();
+    game.G.stage.currentFrameLabel = 'menu'; game.frame();
+    game.G.stage.currentFrameLabel = 'gaming'; game.frame();
     assert.equal(regions[3].x, 1e7, 'still out of play');
     assert.equal(regions[n].x, 600, 'and the added one added again');
-    c.run('editor undo');
-    c.run('editor undo'); // the add
+    game.run('editor undo');
+    game.run('editor undo'); // the add
     assert.equal(regions[n].x, 1e7);
   } finally {
     session.setEditor(false); session.forgetDocument();
@@ -1297,10 +748,10 @@ $regionR++;
 
 test('editor: a map gun moves, changes model, is deleted and comes back in the running level', async () => {
   const session = await consoleModule('editor/session.js');
-  const G = c.G, N = c.N;
+  const G = game.G, N = game.N;
   const original = G[N.mapText];
-  const level = (on) => { G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; c.frame(); };
-  const quiet = (line) => c.run(line).filter((l) => !l.startsWith('Note:'));
+  const level = (on) => { G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; game.frame(); };
+  const quiet = (line) => game.run(line).filter((l) => !l.startsWith('Note:'));
   // A rifle lying on the map (fallen a little since), with its two physics points, and
   // one a character holds.
   const X = G[N.ptX], Y = G[N.ptY], PX = G[N.ptPrevX], PY = G[N.ptPrevY];
@@ -1313,7 +764,7 @@ test('editor: a map gun moves, changes model, is deleted and comes back in the r
   G[N.gunFactory] = (model, params) => { const g = { model, x: params.x, y: params.y, upg: params.upg, picken_by: -1 }; made.push(g); G[N.guns].push(g); return g; };
   try {
     G[N.mapText] = '<gun uid="#rifle" x="100" y="0" model="gun_rifle" command="-1" upg="0" />';
-    c.run('editor on');
+    game.run('editor on');
     level(false); level(true);
     const gun = session.editorDoc().byUid('#rifle');
     session.select(gun);
@@ -1326,9 +777,9 @@ test('editor: a map gun moves, changes model, is deleted and comes back in the r
     assert.deepEqual([made.length, made[0].model, made[0].x], [1, 'gun_sniper', 300]);
     assert.ok(rifle.x >= 1e7 && rifle.visible === false);
     // Deleted, and back with undo where the map puts it.
-    c.press('Delete');
+    game.press('Delete');
     assert.ok(made[0].x >= 1e7);
-    c.run('editor undo');
+    game.run('editor undo');
     assert.deepEqual([made.length, made[1].model, made[1].x], [2, 'gun_sniper', 300]);
   } finally {
     session.setEditor(false); session.forgetDocument();
@@ -1362,10 +813,10 @@ test('editor: a lamp is found by its place, built again in its slot, its light a
   const session = await consoleModule('editor/session.js');
   const loader = await consoleModule('editor/loader.js');
   const vm = await import('node:vm');
-  const G = c.G, N = c.N;
+  const G = game.G, N = game.N;
   const original = G[N.mapText];
-  const level = (on) => { G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; c.frame(); };
-  const quiet = (line) => c.run(line).filter((l) => !l.startsWith('Note:'));
+  const level = (on) => { G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; game.frame(); };
+  const quiet = (line) => game.run(line).filter((l) => !l.startsWith('Note:'));
   // Like the game's: tags and attribute names through its string table, the light loop
   // counting with a script-level "let", the lightmap drawn by a function of its own.
   G.$tagBox = 'box'; G.$tagLamp = 'lamp'; G.$strX = '#x';
@@ -1434,7 +885,7 @@ $drawn.push($shapes[k]);
   assert.ok(loader.loaderReady(), loader.loaderProblem());
   try {
     G[N.mapText] = '<lamp uid="#l1" x="100" y="50" power="0.4" flare="1" />';
-    c.run('editor on');
+    game.run('editor on');
     level(false); level(true);
     const doc = session.editorDoc();
     session.select(doc.byUid('#l1'));
@@ -1457,13 +908,13 @@ $drawn.push($shapes[k]);
     quiet('editor set x 150');
     assert.deepEqual([G.$lampX[1], G.$lampS[1], G.$lampN], [150, -1, 2], 'back in its slot');
     // Added: a new slot at the end, with its light and flare.
-    c.run('editor add lamp 50 60');
+    game.run('editor add lamp 50 60');
     const added = session.selected();
     assert.deepEqual([G.$lampN, G.$lampX[2], G.$lampS[2], G.$shapes[2].x, G.$flares.at(-1).x], [3, 50, 2, 50, 50]);
     assert.equal(session.pendingCount(), 0, 'in the running level');
-    c.press('Delete');
+    game.press('Delete');
     assert.deepEqual([G.$lampS[2], G.$flares.at(-1).visible], [0, false]);
-    c.run('editor undo');
+    game.run('editor undo');
     assert.equal(G.$lampS[2], 2, 'lit again');
     assert.equal(added.live.index, 2);
   } finally {
@@ -1503,10 +954,10 @@ test('editor: movables and water take every parameter in the running level, with
   const session = await consoleModule('editor/session.js');
   const loader = await consoleModule('editor/loader.js');
   const vm = await import('node:vm');
-  const G = c.G, N = c.N;
+  const G = game.G, N = game.N;
   const original = G[N.mapText];
-  const quiet = (line) => c.run(line).filter((l) => !l.startsWith('Note:'));
-  const level = (on) => { G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; c.frame(); };
+  const quiet = (line) => game.run(line).filter((l) => !l.startsWith('Note:'));
+  const level = (on) => { G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; game.frame(); };
   // A frame2.js shaped like the game's: branches that make movables, regions and water,
   // then the later steps over all of them, each loop calling the loader's watchdog (which
   // throws once the level is built).
@@ -1672,7 +1123,7 @@ attachments[$k].child["y"]=${doors}[i]["y"]+attachments[$k].dy;
   const named = (uid) => { const d = G[doors][G[doors].length - 1]; d.uid = uid; };
   try {
     G[N.mapText] = '<box x="0" y="0" w="10" h="10" m="0" />';
-    c.run('editor on');
+    game.run('editor on');
     level(false); level(true);
     // Added: the movable, its texture (tied to it) and its two edges.
     assert.deepEqual(quiet('editor add door 500 0 40 10'), ['Added #door*1 at 500, 0 (40 x 10); in the running level']);
@@ -1682,7 +1133,7 @@ attachments[$k].child["y"]=${doors}[i]["y"]+attachments[$k].dy;
     assert.deepEqual([G[doorCount], G.graphics_3d.children.includes(tex), G.$tieDoors[0], tex.x, tex.scaleX], [1, true, 0, 500, 0.4]);
     assert.equal(G.game.children.length, 2, 'two edges');
     // A region attached to it: tied as the loader ties it.
-    c.run('editor add region 510 -20 20 20');
+    game.run('editor add region 510 -20 20 20');
     const rider = session.selected();
     assert.deepEqual(quiet(`editor set attach ${lift.attrs.uid}`), [`${rider.attrs.uid}: attach = "${lift.attrs.uid}", live now`]);
     assert.equal(G.attachments.length, 1);
@@ -1712,7 +1163,7 @@ attachments[$k].child["y"]=${doors}[i]["y"]+attachments[$k].dy;
     assert.equal(G[doors][0].$startSpeed, 20);
 
     // Water: shown as water, its area widened, as the loader does once the map is read.
-    c.run('editor add water 800 0 100 50');
+    game.run('editor add water 800 0 100 50');
     const pool = session.selected();
     const first = G[waters][0];
     assert.deepEqual([G.graphics_3d_front.children[0], first.frame, G[wx][0], G[ww][0], G[wh][0]], [first, 2, 790, 120, 60]);
@@ -1766,10 +1217,10 @@ test('editor: every parameter the game reads is in the params panel, and every o
 test('editor: a wall\'s grab points go with it, where there is room beside its corners, as the loader gives them', async () => {
   const session = await consoleModule('editor/session.js');
   const loader = await consoleModule('editor/loader.js');
-  const G = c.G, N = c.N;
+  const G = game.G, N = game.N;
   const original = G[N.mapText];
-  const quiet = (line) => c.run(line).filter((l) => !l.startsWith('Note:'));
-  const level = (on) => { G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; c.frame(); };
+  const quiet = (line) => game.run(line).filter((l) => !l.startsWith('Note:'));
+  const level = (on) => { G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; game.frame(); };
   G.$tagBox = 'box';
   // The loader's loop over the walls: a grab point (veh_hh, made a vehicle of model 6) at
   // each top corner the game's line test finds room beside.
@@ -1818,7 +1269,7 @@ $makeVehicle(mc,n,1);
   const at = (h) => (h.io ? [h.x, h.y] : 'out');
   try {
     G[N.mapText] = '<box x="100" y="100" w="200" h="20" m="0" />';
-    c.run('editor on');
+    game.run('editor on');
     level(false); level(true);
     session.select(session.editorDoc().byTag('box')[0]);
     // Moved: the same two go along.
@@ -1834,9 +1285,9 @@ $makeVehicle(mc,n,1);
     assert.equal(made.length, 1);
     assert.deepEqual([made[0].x, made[0].y, made[0].model, made[0].side], [600, 150, 6, -1]);
     // Deleted: both out of play.
-    c.press('Delete');
+    game.press('Delete');
     assert.deepEqual([at(left), at(made[0])], ['out', 'out']);
-    c.run('editor undo');
+    game.run('editor undo');
     // Added: one at each corner with room.
     assert.match(quiet('editor add wall 0 0 100 20')[0], /; in the running level$/);
     assert.deepEqual(made.slice(1).map((h) => [h.x, h.y, h.side]), [[0, 0, 1], [100, 0, -1]]);
@@ -1848,18 +1299,17 @@ $makeVehicle(mc,n,1);
   }
 });
 
-
 test('editor reset: every edit undone in the running level and forgotten, nothing put in again', async () => {
   const session = await consoleModule('editor/session.js');
-  const { G, N } = c;
-  const quiet = (line) => c.run(line).filter((l) => !l.startsWith('Note:'));
-  const level = (on) => { G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; c.frame(); };
+  const { G, N } = game;
+  const quiet = (line) => game.run(line).filter((l) => !l.startsWith('Note:'));
+  const level = (on) => { G.stage.currentFrameLabel = on ? 'gaming' : 'menu'; game.frame(); };
   const regions = G[N.regions];
   const count = G[N.regionCount];
   G[N.regionCount] = regions.length;
   try {
     level(true);
-    c.run('editor on');
+    game.run('editor on');
     const doc = session.editorDoc();
     const red = doc.byUid('#red_use');
     const i = red.live.index;
@@ -1868,14 +1318,14 @@ test('editor reset: every edit undone in the running level and forgotten, nothin
     quiet('editor set y 30');
     quiet('editor set x 77');
     assert.deepEqual([regions[i].y, regions[i].x], [30, 77]);
-    c.run('editor off');
-    assert.deepEqual(c.run('list editor'), ['[editor: 1 changed]',
+    game.run('editor off');
+    assert.deepEqual(game.run('list editor'), ['[editor: 1 changed]',
       '  in the running level; put in again when the level starts over on this map', '  ("editor reset" undoes and forgets them)']);
     assert.match(quiet('editor reset')[0], /^Reset: 2 edits undone in the running level, every edit forgotten/);
     assert.equal(regions[i].y, y0, 'the map\'s again');
-    assert.deepEqual(c.run('list editor'), ['[editor] nothing']);
+    assert.deepEqual(game.run('list editor'), ['[editor] nothing']);
     // On again: the map as the game has it, no history, nothing to put in.
-    c.run('editor on');
+    game.run('editor on');
     assert.notEqual(session.editorDoc(), doc);
     assert.equal(session.editorDoc().byUid('#red_use').attrs.y, String(y0));
     assert.equal(quiet('editor undo')[0], 'Nothing to undo');
@@ -1883,88 +1333,14 @@ test('editor reset: every edit undone in the running level and forgotten, nothin
     // own, so a reset only forgets it.
     session.select(session.editorDoc().byUid('#red_use'));
     quiet('editor set y 40');
-    c.run('editor off');
+    game.run('editor off');
     regions[i].y = y0; // the game builds the level again from the map
     level(false); level(true);
     assert.deepEqual(quiet('editor reset'), ['Reset: every edit forgotten; nothing is put in again when the level starts over']);
-    c.run('editor on');
+    game.run('editor on');
     assert.equal(regions[i].y, y0, 'not put in again');
   } finally {
     session.setEditor(false); session.forgetDocument();
     G[N.regionCount] = count;
   }
 });
-
-
-
-// ---------------------------------------------------------------------------
-// Ranked match protection (src/console/kernel/overrides/server-checks.ts) and "bypass checks"
-// ---------------------------------------------------------------------------
-const REFUSED = /^error: refused in a ranked match: .*"bypass checks" turns this protection off \(dangerous\)\.$/;
-// The error line of a command's output (a client-only note can come first).
-const errorOf = (out) => out.find((l) => l.startsWith('error: ')) || out.join(' | ');
-// The match you are in, as MATCH_JOIN_RESPONSE gives it ("approved" is a number).
-const inMatch = (t, details) => {
-  const net = c.G[c.N.net];
-  net.match_details = details;
-  t.after(() => { delete net.match_details; });
-};
-const RANKED = Object.freeze({ approved: 2, ranked: true, map_id: 'zynther-alaska' });
-
-test('only in an approved, ranked match: raising HP and zooming out are refused; the rest still works', (t) => {
-  const p = c.player;
-  t.after(() => { c.run('reset'); c.run('zoom default'); c.frame(); });
-  c.frame();
-  const own = p.hmax;
-  // Unranked, unapproved, or not in a match: nothing is held back.
-  for (const details of [{ approved: 2, ranked: false }, { approved: 0, ranked: false }, null]) {
-    c.G[c.N.net].match_details = details;
-    assert.ok(c.run('max_hp 500').includes('max_hp = 500'), JSON.stringify(details));
-    c.run('unset max_hp');
-  }
-  inMatch(t, RANKED);
-  for (const line of ['max_hp 500', 'hp +100', 'hp +50%', 'hp_bonus 20', 'hp_bonus_pct 10', 'zoom 50', 'zoom 30 --lock', 'game god', 'game god 1', 'game grow', 'game zoom 25']) {
-    assert.match(errorOf(c.run(line)), REFUSED, line);
-  }
-  assert.match(errorOf(c.run('max_hp 500')), /HealthAltering.*docs\/research\/anticheat\.md §14\.4/);
-  assert.match(errorOf(c.run('zoom 50')), /announces to the other players.*§14\.6/);
-  assert.equal(p.hmax, own, 'nothing changed');
-  // Lowering HP, zooming in, other game commands and other keys are not the server's business.
-  assert.ok(c.run(`max_hp ${own - 30}`).includes(`max_hp = ${own - 30}`));
-  assert.ok(c.run('zoom 150').some((l) => l.startsWith('Zoom 150%')));
-  assert.doesNotMatch(c.run('game grow enemies').join(' '), /refused/);
-  assert.ok(c.run('speed 2').includes('speed = 2'));
-});
-
-test('settings you had are not applied in a ranked match, even with god on, and come back in an unranked one', (t) => {
-  const p = c.player;
-  inMatch(t, { approved: 2, ranked: false });
-  t.after(() => { c.run('reset'); c.run('zoom --unlock'); c.frame(); });
-  c.frame();
-  const own = p.hmax;
-  c.run('max_hp 470; god on; zoom 40 --lock');
-  c.frame();
-  assert.equal(p.hmax, 470);
-  assert.equal(p.hea, 470);
-  assert.equal(c.G[c.N.zoom], 0.4);
-  c.log.printed.length = 0;
-  c.G[c.N.net].match_details = { ...RANKED };
-  c.frame();
-  assert.equal(p.hmax, own, 'max HP back to the game\'s');
-  assert.equal(p.hea, own, 'HP down to it, past god');
-  assert.equal(c.G[c.N.zoom], 1, 'zoom back to 100%');
-  const notes = c.log.printed.join('\n');
-  assert.match(notes, /Ranked match: not applying max_hp: .*HealthAltering.*Your saved values are kept/);
-  assert.match(notes, /Ranked match: not applying your zoom 40%/);
-  c.log.printed.length = 0;
-  c.frame(3);
-  assert.deepEqual(c.log.printed, [], 'said once');
-  p.hea = 1;
-  assert.equal(p.hea, own, 'god itself still works');
-  c.G[c.N.net].match_details = { approved: 2, ranked: false };
-  c.frame();
-  assert.equal(p.hmax, 470, 'unranked again: applied again');
-  assert.equal(c.G[c.N.zoom], 0.4);
-});
-
-

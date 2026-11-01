@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CATALOG } from '#shared/features/catalog.ts';
 import { resolveFlags } from '#kernel/flags/resolve.ts';
-import { bootConsole } from '../../../../test/fake-game.mjs';
+import { bootConsole } from '../../../../test/support/fake-game.mjs';
 
 const injected = resolveFlags({
   catalog: CATALOG, fileOverrides: {}, fileUnknownIds: [], envToggles: [{ id: 'hooks', on: false }], mode: 'local', client: 'official',

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { bootConsole } from '../../../test/fake-game.mjs';
+import { bootConsole } from '../../../test/support/fake-game.mjs';
 
 test('zoom: any amount once, or locked so the map cannot change it', async () => {
   const game = await bootConsole();

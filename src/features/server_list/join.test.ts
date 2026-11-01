@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { bootConsole } from '../../../test/fake-game.mjs';
+import { bootConsole } from '../../../test/support/fake-game.mjs';
 
 test('join mode: the lobby address points at the server, the login is set from the menu on, Tab shows the server', async () => {
   Object.defineProperty(globalThis, 'PB2_JOIN', { value: Object.freeze({ address: '1.2.3.4:2053', nickname: 'Pal', password: 'pw' }) });

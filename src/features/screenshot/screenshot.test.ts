@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { bootConsole } from '../../../test/fake-game.mjs';
+import { bootConsole } from '../../../test/support/fake-game.mjs';
 
 const errorsOf = (out: string[]) => out.filter((line) => line.startsWith('error: '));
 

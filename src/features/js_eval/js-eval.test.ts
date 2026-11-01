@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { bootConsole } from '../../../test/fake-game.mjs';
+import { bootConsole } from '../../../test/support/fake-game.mjs';
 
 test('"js" evaluates in the page and prints the last value; "js help" is the guide', async () => {
   const game = await bootConsole();

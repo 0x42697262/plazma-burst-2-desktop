@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CATALOG } from '#shared/features/catalog.ts';
 import { resolveFlags } from '#kernel/flags/resolve.ts';
-import { bootConsole } from '../../../test/fake-game.mjs';
+import { bootConsole } from '../../../test/support/fake-game.mjs';
 
 test('with the profiles flag off, there is no profile command and no map\'s profile applies', async () => {
   const { states } = resolveFlags({ catalog: CATALOG, fileOverrides: {}, fileUnknownIds: [], envToggles: [{ id: 'profiles', on: false }], mode: 'local', client: 'official' });

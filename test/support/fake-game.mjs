@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const REPO = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+const REPO = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const CONSOLE_ENTRY = path.join(REPO, 'src/console/index.ts');
 export const LEGACY_CONSOLE_DIR = path.join(REPO, 'desktop/dev/console');
 
