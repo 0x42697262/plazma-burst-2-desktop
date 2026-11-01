@@ -34,7 +34,7 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   consoleFeature(FEATURE.consoleCore, { locked: true }),
   consoleFeature(FEATURE.profiles),
   consoleFeature(FEATURE.teleport),
-  consoleFeature(FEATURE.playerInfo),
+  consoleFeature(FEATURE.playerInfo, { capabilities: noNeeds(CAPABILITY.playerInfo) }),
   consoleFeature(FEATURE.health, {
     capabilities: { [CAPABILITY.health.god]: [], [CAPABILITY.health.hp]: [], [CAPABILITY.health.heal]: [], [CAPABILITY.health.revive]: [] },
   }),
