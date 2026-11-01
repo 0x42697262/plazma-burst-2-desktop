@@ -8,9 +8,12 @@ export type DevRoute = Readonly<{
   handle(request: Request, url: URL, context: RequestContext): Promise<Response>;
 }>;
 
+export type Interceptor = (request: Request, url: URL, context: RequestContext) => Promise<Response | null>;
+
 export type WrapperFeature = Readonly<{
   id: FeatureId;
   routes?: readonly DevRoute[];
+  interceptors?: readonly Interceptor[];
 }>;
 
 export type WrapperDeps = Readonly<{
@@ -18,4 +21,7 @@ export type WrapperDeps = Readonly<{
   gameVersion: string;
   isSadburst: boolean;
   repoRoot: string;
+  gameDir: string;
+  devKvFile: string;
+  host: string;
 }>;

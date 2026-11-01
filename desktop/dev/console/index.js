@@ -30,7 +30,6 @@ import { load, reload as reloadStore, settings, binds, profiles, loadProblems, s
 import { currentMapId } from './game/level.js';
 import { applyOverrides, onActiveChange } from './overrides/frame.js';
 import { syncTriggerHooks } from './triggers/log.js';
-import { mapTick } from './maps/cache.js';
 import { editorTick } from './editor/index.js';
 import { run } from './dispatch.js';
 import { SERVER } from './core/server.js';
@@ -42,9 +41,7 @@ import { registerListSection } from '../../../src/console/kernel/list-sections.t
 const KV_FILE = SADBURST ? 'dev-overrides.sadburst.json' : 'dev-overrides.json';
 const BOOT_POLL_MS = 200; // how often to look for the game's stage while it loads
 const STATUS_EVERY_MS = 500;
-const MAP_TICK_MS = 250;
 const FRAME_ERRORS_SHOWN = 5;
-const MAP_ERRORS_SHOWN = 3;
 
 const reportError = (msg) => print(msg, COLOR.error);
 
@@ -52,7 +49,6 @@ function printProblems() {
   for (const p of loadProblems()) print(`${KV_FILE}: ${p}`, COLOR.warn);
 }
 const frameGuard = errorBudget(FRAME_ERRORS_SHOWN, reportError);
-const mapGuard = errorBudget(MAP_ERRORS_SHOWN, reportError);
 
 const features = enabledConsoleFeatures();
 for (const [name, make] of featureListSections(features)) registerListSection(name, make);
@@ -83,7 +79,6 @@ function start(source) {
   print(`Loaded ${plural(n, 'override')}, ${plural(binds.keys().length, 'bind')}${p ? ` and ${plural(p, 'profile')}` : ''} from ${source === 'file' ? `desktop/${KV_FILE}` : 'localStorage'}.`, COLOR.hint);
   printProblems();
   setInterval(updateStatusIfOpen, STATUS_EVERY_MS);
-  setInterval(() => { mapGuard('Map cache', mapTick); }, MAP_TICK_MS);
   for (const tick of featureTicks(features)) {
     const guard = errorBudget(tick.errorsShown, reportError);
     setInterval(() => guard(tick.name, tick.run), tick.everyMs);

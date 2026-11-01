@@ -18,14 +18,8 @@ export type NetLogFiles = {
 
 type Writer = { instance: string; name: string | null; file: string | null; queue: Promise<unknown> };
 
-export class StatusError extends Error {
-  readonly status: number;
-
-  constructor(message: string, status: number) {
-    super(message);
-    this.status = status;
-  }
-}
+export { StatusError } from '#wrapper/http/status-error.ts';
+import { StatusError } from '#wrapper/http/status-error.ts';
 
 const isFileExistsError = (error: unknown): boolean => (error as NodeJS.ErrnoException | null)?.code === EXISTS_ERROR_CODE;
 

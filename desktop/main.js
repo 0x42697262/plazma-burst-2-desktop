@@ -12,7 +12,6 @@ const { createKvFile } = require('./kv-file');
 const { wrapperContext } = require('../src/wrapper/context.ts');
 const { environment: ENVIRONMENT, flags: FLAGS, log } = wrapperContext;
 const hooks = require('./hooks');
-const { makeUnpacker, beautifyMap } = require('./map-text');
 const { REMOTE_PAGE_SCRIPT, REMOTE_WEB_PREFERENCES, isGamePage, lockDownSession, lockDownWindow } = require('./remote/lockdown');
 const { startHost, parseHostArgs } = require('./remote/host');
 const serverConfig = require('./p2p-host/config');
@@ -65,11 +64,13 @@ let hookPlan = null;
 // Dev console (Shift+` key). Feature flag "dev_console" (PB2_DEV=0 turns it off).
 const DEV_ENABLED = FLAGS.dev_console.on;
 // __dev/ routes of migrated features (src/features/*/wrapper.ts), when their flag is on.
-const { createDevRouter } = require('../src/wrapper/http/router.ts');
+const { createDevRouter, createInterceptor } = require('../src/wrapper/http/router.ts');
 const { buildWrapper } = require('../src/wrapper/features.ts');
+const DEV_KV_FILE = path.join(__dirname, SADBURST ? 'dev-overrides.sadburst.json' : 'dev-overrides.json');
+
 const liveWindow = () => (mainWindow && !mainWindow.isDestroyed() ? mainWindow : null);
 const wrapper = buildWrapper(
-  { log, gameVersion: VERSION || '', isSadburst: SADBURST, repoRoot: path.join(__dirname, '..') },
+  { log, gameVersion: VERSION || '', isSadburst: SADBURST, repoRoot: path.join(__dirname, '..'), gameDir: ROOT, devKvFile: DEV_KV_FILE, host: HOST },
   {
     gameSession: {
       startLoggedOut: () => startLoggedOut(),
@@ -83,6 +84,8 @@ const wrapper = buildWrapper(
 const serverList = wrapper.serverList;
 const joinTarget = () => serverList.service.joinTarget();
 const devRouter = createDevRouter(wrapper.features, (id) => FLAGS[id].on);
+const intercept = createInterceptor(wrapper.features, (id) => FLAGS[id].on);
+const mapCache = wrapper.mapCache;
 // Routes and map markers shared with the console (src/shared/contract/).
 const { DEV_DIR, ROUTE_NAME: ROUTE, MAP_MARKER, SAVE_RESULT } = require('../src/shared/contract/keys.ts');
 const DEV_PREFIX = PREFIX + DEV_DIR;
@@ -97,7 +100,6 @@ const DEV_OPCODES = CLIENT.opcodes;
 // folder and browser session): its lobby can run code in its page (RELIABLE_TASK,
 // docs/research/fingerprinting.md §4), and nothing it writes may reach the official client, e.g. a bind
 // running "js ..." in the official game, signed in with your official account.
-const DEV_KV_FILE = path.join(__dirname, SADBURST ? 'dev-overrides.sadburst.json' : 'dev-overrides.json');
 const SADBURST_PARTITION = 'persist:sadburst';
 const gameSession = () => (SADBURST ? session.fromPartition(SADBURST_PARTITION) : session.defaultSession);
 // The console and you both change it; see kv-file.js. Edits reach the page through
@@ -167,83 +169,6 @@ function checkConsoleBundle() {
   if (!fsSync.existsSync(path.join(DEV_CONSOLE_DIR, DEV_CONSOLE_ENTRY))) log.error('Dev console: dist/console/ is missing. Run "npm run build".');
 }
 
-// Local maps: type "local-<name>" as the Map ID in Campaign > Custom Map.
-// Loads desktop/maps/<name>.xml (or .txt / no extension). Plain map XML or the
-// server's compressed "<q." format both work. Re-read on every load.
-const MAPS_DIR = path.join(__dirname, SADBURST ? 'maps.sadburst' : 'maps');
-const LOCAL_MAP_PREFIX = 'local-';
-
-const MAP_EXTS = ['.xml', '.txt', ''];
-
-// Map cache: every map the game downloads (single-player custom maps over HTTP,
-// multiplayer maps from the page through __dev/savemap) is saved to
-// desktop/maps/<map id>.xml as plain, uncompressed XML, one tag per line. Dev console
-// keys (in dev-overrides.json): save_maps (default on) and fast_maps (default off:
-// on = load maps from desktop/maps instead of downloading them again).
-function readDevKv() {
-  try {
-    return JSON.parse(fsSync.readFileSync(DEV_KV_FILE, 'utf8')) || {};
-  } catch {
-    return {};
-  }
-}
-const saveMapsOn = () => readDevKv().save_maps !== false;
-const fastMapsOn = () => readDevKv().fast_maps === true;
-
-// Map ID -> file name. IDs look like "author-name" (spaces allowed); anything that is
-// not safe in a file name becomes %XX.
-const mapFileName = (id) => id.replace(/[^A-Za-z0-9 _.\-]/g, (c) => '%' + c.charCodeAt(0).toString(16).padStart(2, '0')) + '.xml';
-
-// Maps from the site come compressed ("<q."): unpacked with the game's own function, and
-// saved one tag per line (desktop/map-text.js).
-const decompressMap = makeUnpacker(ROOT);
-
-// Returns one of SAVE_RESULT: saved, same or off. Throws on bad input.
-async function saveMap(id, raw) {
-  if (!saveMapsOn()) return SAVE_RESULT.off;
-  id = String(id || '').trim();
-  if (!id || id.toLowerCase().startsWith(LOCAL_MAP_PREFIX)) throw new Error('no map ID');
-  const text = decompressMap(String(raw || '').replace(/^\uFEFF/, '').trim());
-  if (!text.startsWith('<') || text.startsWith(MAP_MARKER.notPublished)) throw new Error('not map XML');
-  const file = path.join(MAPS_DIR, mapFileName(id));
-  const out = beautifyMap(text);
-  try {
-    if ((await fs.readFile(file, 'utf8')) === out) return SAVE_RESULT.same;
-  } catch {}
-  await fs.mkdir(MAPS_DIR, { recursive: true });
-  await fs.writeFile(file, out);
-  log.info(`Saved map ${id} to ${file} (${text.length} chars)`);
-  return SAVE_RESULT.saved;
-}
-
-// A map from the dev console's editor: desktop/maps/<name>.xml, played as local-<name>.
-// An existing file is only replaced when asked. Returns { file, id }; throws with
-// .status 409 when the file exists.
-const EDITED_NAME = /^[A-Za-z0-9 _.-]{1,60}$/;
-async function saveEditedMap(name, text, overwrite) {
-  if (!EDITED_NAME.test(name || '') || name.startsWith('.')) throw Object.assign(new Error('bad map name'), { status: 400 });
-  if (!text.startsWith('<')) throw Object.assign(new Error('not map XML'), { status: 400 });
-  const file = path.join(MAPS_DIR, `${name}.xml`);
-  await fs.mkdir(MAPS_DIR, { recursive: true });
-  try {
-    await fs.writeFile(file, beautifyMap(text), { flag: overwrite ? 'w' : 'wx' });
-  } catch (e) {
-    if (e.code === 'EEXIST') throw Object.assign(new Error(`desktop/maps/${name}.xml exists`), { status: 409 });
-    throw e;
-  }
-  log.info(`Saved edited map to ${file}`);
-  return { file: path.relative(path.join(__dirname, '..'), file), id: LOCAL_MAP_PREFIX + name };
-}
-
-// Saved map for a server map ID, or null.
-async function readSavedMap(id) {
-  try {
-    return await fs.readFile(path.join(MAPS_DIR, mapFileName(String(id || '').trim())), 'utf8');
-  } catch {
-    return null;
-  }
-}
-
 const types = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json',
   '.css': 'text/css', '.png': 'image/png', '.jpg': 'image/jpeg',
@@ -288,69 +213,6 @@ async function applyCredentials() {
   else log.info('No credentials (desktop/credentials.json or PB2_LOGIN/PB2_PASSWORD/PB2_UID): starting logged out.');
 }
 
-async function listLocalMaps() {
-  try {
-    const files = await fs.readdir(MAPS_DIR);
-    return files
-      .filter((f) => MAP_EXTS.includes(path.extname(f).toLowerCase()) && !f.startsWith('.'))
-      .map((f) => LOCAL_MAP_PREFIX + path.basename(f, path.extname(f)));
-  } catch {
-    return [];
-  }
-}
-
-async function findLocalMap(name) {
-  let files;
-  try {
-    files = await fs.readdir(MAPS_DIR);
-  } catch {
-    return null;
-  }
-  const want = name.toLowerCase();
-  for (const ext of MAP_EXTS) {
-    const hit = files.find((f) => f.toLowerCase() === want + ext);
-    if (hit) return path.join(MAPS_DIR, hit);
-  }
-  return null;
-}
-
-// Answers the game's map download (POST /pb2/server.php, rq=cmap) for local-* IDs.
-// Returns null for anything else so the request goes to the real server.
-// Other IDs: served from desktop/maps when fast_maps is on, otherwise downloaded and
-// saved there.
-async function serveLocalMap(request, ctx) {
-  const body = new URLSearchParams(await request.clone().text());
-  if (body.get('rq') !== 'cmap') return null;
-  const id = (body.get('cmap') || '').trim();
-  if (!id.toLowerCase().startsWith(LOCAL_MAP_PREFIX)) return serveServerMap(request, id, ctx);
-  const file = await findLocalMap(id.slice(LOCAL_MAP_PREFIX.length));
-  if (!file) {
-    log.error(`Local map not found: ${id} (looked in ${MAPS_DIR})`);
-    return new Response(`${MAP_MARKER.notPublished} />`, { headers: { 'Content-Type': 'text/plain' } });
-  }
-  log.info(`Serving local map ${id} from ${file}`);
-  const text = (await fs.readFile(file, 'utf8')).replace(/^\uFEFF/, '').trim();
-  return new Response(text, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
-}
-
-async function serveServerMap(request, id, ctx) {
-  if (!id) return null;
-  if (fastMapsOn()) {
-    const saved = await readSavedMap(id);
-    if (saved) {
-      log.info(`Fast load: map ${id} from ${path.join(MAPS_DIR, mapFileName(id))}`);
-      return new Response(saved, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
-    }
-  }
-  const res = await ctx.fetch(request);
-  if (!res.ok) return res;
-  const text = await res.text();
-  saveMap(id, text).catch((e) => {
-    if (!text.startsWith(MAP_MARKER.notPublished)) log.error(`Could not save map ${id}: ${e.message}`);
-  });
-  return new Response(text, { status: res.status, headers: { 'Content-Type': res.headers.get('content-type') || 'text/plain; charset=utf-8' } });
-}
-
 // A file of the console, or null when the path leaves desktop/dev/console.
 async function serveConsoleFile(rel) {
   const file = path.resolve(DEV_CONSOLE_DIR, rel);
@@ -390,33 +252,6 @@ async function serveDev(request, url, ctx) {
       data = 'globalThis.PB2_OPCODES = null;';
     }
     return new Response(data, { headers: { 'Content-Type': types['.js'], 'Cache-Control': 'no-store' } });
-  }
-  if (name === ROUTE.maps) {
-    return new Response(JSON.stringify(await listLocalMaps()), {
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-    });
-  }
-  // Multiplayer map cache, used by the dev console (maps arrive over the game socket).
-  if (name === ROUTE.saveMap && request.method === 'POST') {
-    try {
-      return new Response(await saveMap(url.searchParams.get('id'), await request.text()));
-    } catch (e) {
-      return new Response(e.message, { status: 400 });
-    }
-  }
-  if (name === ROUTE.saveEdited && request.method === 'POST') {
-    try {
-      const saved = await saveEditedMap(url.searchParams.get('name'), await request.text(), url.searchParams.get('overwrite') === '1');
-      return new Response(JSON.stringify(saved), { headers: { 'Content-Type': 'application/json' } });
-    } catch (e) {
-      return new Response(e.message, { status: e.status || 500 });
-    }
-  }
-  if (name === ROUTE.mapFile) {
-    const text = await readSavedMap(url.searchParams.get('id'));
-    return text
-      ? new Response(text, { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } })
-      : new Response('Not found', { status: 404 });
   }
   if (name === ROUTE.kv) {
     if (request.method === 'PUT') {
@@ -694,10 +529,8 @@ async function handleRequest(request, ctx) {
     && !isGamePage(request.url, START_URL)) {
     return new Response('Not available', { status: 403 });
   }
-  if (url.hostname === HOST && url.pathname === '/pb2/server.php' && request.method === 'POST') {
-    const local = await serveLocalMap(request, ctx);
-    if (local) return local;
-  }
+  const intercepted = await intercept(request, url, ctx);
+  if (intercepted) return intercepted;
   if (url.hostname === HOST && url.pathname.startsWith(PREFIX)) {
     if (DEV_ENABLED && url.pathname.startsWith(DEV_PREFIX)) return serveDev(request, url, ctx);
     if (HOOKS_ENABLED && url.pathname.startsWith(HOOKS_PREFIX)) return serveHooks(request, url);
@@ -890,8 +723,8 @@ async function startDedicatedServer() {
     return;
   }
   if (!fsSync.existsSync(DEV_NAMES)) log.warn('Host: desktop/dev/names.js is missing; run "npm run find-names" first.');
-  if (loaded.server.local_map && !(await findLocalMap(loaded.server.local_map))) {
-    log.error(`Host: local_map "${loaded.server.local_map}" is not in ${MAPS_DIR}`);
+  if (loaded.server.local_map && !(await mapCache.findLocalMap(loaded.server.local_map))) {
+    log.error(`Host: local_map "${loaded.server.local_map}" is not in ${mapCache.mapsDir}`);
     app.quit();
     return;
   }
