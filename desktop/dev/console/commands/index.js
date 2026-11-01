@@ -8,7 +8,6 @@ import { logicCommand } from './logic.js';
 import { regionsCommand } from './regions.js';
 import { moreCommand, chainTopic, consoleCommands } from './console.js';
 import { editorCommand } from './editor.js';
-import { hooksCommand } from './hooks.js';
 import { serverCommand, serverShortcuts } from './server.js';
 import { featuresCommand } from '../../../../src/console/kernel/commands/features.ts';
 import { enabledConsoleFeatures, featureCommands } from '../../../../src/console/features.ts';
@@ -19,6 +18,6 @@ register(
   serverCommand, ...serverShortcuts, // the dedicated host only (core/server.js)
   helpCommand, list, set, get, unset, reset,
   triggersCommand, regionsCommand, varsCommand, logicCommand, editorCommand, chainTopic, moreCommand,
-  builtin, hooksCommand, featuresCommand, ...consoleCommands,
+  builtin, featuresCommand, ...consoleCommands,
   ...featureCommands(enabledConsoleFeatures()),
 );

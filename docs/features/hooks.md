@@ -166,7 +166,7 @@ Inside callbacks (in the game), not at the top level of the file:
 
 ## How it works, and why it is safe for the game
 
-1. When the page loads, the wrapper (`desktop/main.js`, through `desktop/hooks.js`) runs
+1. When the page loads, the wrapper (`src/features/hooks/wrapper.ts`) runs
    every hook file once in a dry run. `Interceptor.attach` and `Script.patch` only
    **record** what they target there; your callbacks do not run.
 2. Each hook is checked against the game's scripts: every target must exist exactly once,
@@ -175,7 +175,7 @@ Inside callbacks (in the game), not at the top level of the file:
    function: `if(PB2Hooks.t(id))return PB2Hooks.c(id,this,arguments,fn);`. The files in
    `game/` never change.
 4. Before the game's first script, the page gets the hooks runtime
-   (`desktop/hooks-runtime.js`) and your hook files. There they run again, and now
+   (`src/features/hooks/runtime/runtime.ts`) and your hook files. There they run again, and now
    `attach` registers your callbacks.
 
 **Why not change functions while the game runs, like Frida does?** The game's anti-tamper

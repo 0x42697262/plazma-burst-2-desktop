@@ -86,13 +86,6 @@ const EXTRAS = Object.freeze({
       '  ("editor reset" undoes and forgets them)',
     ]];
   },
-  // The host's hooks are not a remote tester's business (core/remote.js).
-  ...(REMOTE ? {} : {
-    hooks: () => {
-      const loaded = (globalThis.PB2Hooks?.status?.() || []).filter((h) => h.status === 'loaded');
-      return loaded.length && [`hooks: ${loaded.length} loaded`, loaded.map((h) => `  ${h.name}${h.activeNow === false ? '  (paused now: multiplayer)' : ''}`)];
-    },
-  }),
   vars: () => {
     const changed = isActive() ? editedVars() : [];
     return changed.length && [`vars you changed: ${changed.length}`,

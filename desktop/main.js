@@ -11,7 +11,6 @@ const { createKvFile } = require('./kv-file');
 // Settings, feature flags and the log, built once by src/wrapper/context.ts.
 const { wrapperContext } = require('../src/wrapper/context.ts');
 const { environment: ENVIRONMENT, flags: FLAGS, log } = wrapperContext;
-const hooks = require('./hooks');
 const { REMOTE_PAGE_SCRIPT, REMOTE_WEB_PREFERENCES, isGamePage, lockDownSession, lockDownWindow } = require('./remote/lockdown');
 const { startHost, parseHostArgs } = require('./remote/host');
 const serverConfig = require('./p2p-host/config');
@@ -51,15 +50,8 @@ const VERSION = readGameVersion();
 const PREFIX = SADBURST ? CLIENT.prefix : `/h5/versions/${VERSION}/`;
 const START_URL = `https://${HOST}${PREFIX}`;
 
-// Hooks: hooks/*.js change the game's scripts as they are served (guide: docs/features/hooks.md).
-// Feature flag "hooks" (PB2_HOOKS=0 turns it off). The plan is rebuilt on every page load, so editing a hook
-// and reloading (Ctrl+R) is enough.
-// Not for Sad Burst 2: its loader hashes every game script and sends the hash with the
-// login (PB2_CLIENT_BUILD), so a patched script would show the server a changed client.
+// Hooks: src/features/hooks/ (docs/features/hooks.md); feature flag "hooks".
 const HOOKS_ENABLED = FLAGS.hooks.on;
-const HOOKS_DIR = path.join(__dirname, '..', 'hooks');
-const HOOKS_PREFIX = PREFIX + hooks.ROUTE_DIR;
-let hookPlan = null;
 
 // Dev console (Shift+` key). Feature flag "dev_console" (PB2_DEV=0 turns it off).
 const DEV_ENABLED = FLAGS.dev_console.on;
@@ -72,6 +64,7 @@ const liveWindow = () => (mainWindow && !mainWindow.isDestroyed() ? mainWindow :
 const wrapper = buildWrapper(
   { log, gameVersion: VERSION || '', isSadburst: SADBURST, repoRoot: path.join(__dirname, '..'), gameDir: ROOT, devKvFile: DEV_KV_FILE, host: HOST },
   {
+    hooks: { namesFile: CLIENT.names, gamePrefix: PREFIX },
     gameSession: {
       startLoggedOut: () => startLoggedOut(),
       applyCredentials: () => applyCredentials(),
@@ -274,58 +267,13 @@ async function serveDev(request, url, ctx) {
   return new Response('Not found', { status: 404 });
 }
 
-// A new hook plan for this page load; prints what loaded and what did not.
-function buildHookPlan() {
-  const names = hooks.loadNames(DEV_NAMES);
-  try {
-    hookPlan = hooks.build({ gameDir: ROOT, hooksDir: HOOKS_DIR, names });
-  } catch (e) {
-    log.error(`Hooks: not loaded: ${e.message}`);
-    hookPlan = null;
-    return;
-  }
-  hookPlan.names = names;
-  for (const [level, text] of hooks.describe(hookPlan)) log[level](text);
-}
-
-// hooks/... requests: the runtime, one hook file, or send() messages for this terminal.
-async function serveHooks(request, url) {
-  const name = decodeURIComponent(url.pathname.slice(HOOKS_PREFIX.length));
-  const js = (text) => new Response(text, { headers: { 'Content-Type': types['.js'], 'Cache-Control': 'no-store' } });
-  if (!hookPlan) return new Response('No hooks loaded', { status: 404 });
-  if (name === hooks.ROUTES.runtime) return js(hooks.runtimeScript(hookPlan, hookPlan.names));
-  if (name.startsWith(hooks.ROUTES.hook) && name.endsWith('.js')) {
-    const text = hooks.hookScript(hookPlan, name.slice(hooks.ROUTES.hook.length, -'.js'.length));
-    return text ? js(text) : new Response('Not found', { status: 404 });
-  }
-  if (name === hooks.ROUTES.send && request.method === 'POST') {
-    let batch = [];
-    try { batch = JSON.parse(await request.text()); } catch {}
-    for (const { hook, msg } of Array.isArray(batch) ? batch : []) {
-      log.info(`[hook ${hook}] ${typeof msg === 'string' ? msg : JSON.stringify(msg)}`);
-    }
-    return new Response('ok');
-  }
-  return new Response('Not found', { status: 404 });
-}
-
 async function serveLocal(url, ctx) {
   let rel = decodeURIComponent(url.pathname.slice(PREFIX.length));
   if (rel === '' || rel.endsWith('/')) rel += 'index.html';
   if ((DEV_ENABLED || HOOKS_ENABLED || ctx.remote || ctx.server || joinTarget()) && rel === 'index.html') {
     const html = await fs.readFile(path.join(ROOT, 'index.html'), 'utf8');
     let out = html;
-    if (HOOKS_ENABLED) {
-      buildHookPlan();
-      // Before the game's first script, so handlers exist before any game code runs.
-      if (hookPlan) out = hooks.injectTags(out, hookPlan);
-      if (hookPlan && hookPlan.hooks.length && out === html) {
-        // Without the runtime, patched scripts would call a PB2Hooks that does not exist:
-        // serve the original scripts instead.
-        log.error('Hooks: could not inject into index.html (no <script> tag); no hooks this load');
-        hookPlan = null;
-      }
-    }
+    if (HOOKS_ENABLED) out = wrapper.hooks.injectIndex(out);
     if (DEV_ENABLED) {
       // After the game's own scripts; fall back to the end of <body> if the tag changed.
       const before = out;
@@ -369,9 +317,8 @@ async function serveLocal(url, ctx) {
     return new Response(out, { headers: { 'Content-Type': types['.html'] } });
   }
   // A game script some hook changed: served from the plan (the file on disk is untouched).
-  if (hookPlan && hookPlan.files.has(rel)) {
-    return new Response(hookPlan.files.get(rel), { headers: { 'Content-Type': types['.js'], 'Cache-Control': 'no-store' } });
-  }
+  const hooked = HOOKS_ENABLED ? wrapper.hooks.changedScript(rel) : null;
+  if (hooked !== null) return new Response(hooked, { headers: { 'Content-Type': types['.js'], 'Cache-Control': 'no-store' } });
   const file = path.join(ROOT, path.normalize(rel));
   if (!file.startsWith(ROOT + path.sep)) {
     return new Response('Forbidden', { status: 403 });
@@ -533,7 +480,6 @@ async function handleRequest(request, ctx) {
   if (intercepted) return intercepted;
   if (url.hostname === HOST && url.pathname.startsWith(PREFIX)) {
     if (DEV_ENABLED && url.pathname.startsWith(DEV_PREFIX)) return serveDev(request, url, ctx);
-    if (HOOKS_ENABLED && url.pathname.startsWith(HOOKS_PREFIX)) return serveHooks(request, url);
     return serveLocal(url, ctx);
   }
   return ctx.fetch(request);

@@ -16,6 +16,7 @@ import { gunsConsole } from '#features/guns/console.ts';
 import { playerConsole } from '#features/player/console.ts';
 import { scanBypassConsole } from '#features/scan_bypass/console.ts';
 import { mapCacheConsole } from '#features/map_cache/console.ts';
+import { hooksConsole } from '#features/hooks/console.ts';
 
 export const CONSOLE_FEATURES: readonly ConsoleFeature[] = Object.freeze([
   lobbyTaskGuardConsole,
@@ -33,6 +34,7 @@ export const CONSOLE_FEATURES: readonly ConsoleFeature[] = Object.freeze([
   playerConsole,
   scanBypassConsole,
   mapCacheConsole,
+  hooksConsole,
 ]);
 
 export const enabledConsoleFeatures = (features: readonly ConsoleFeature[] = CONSOLE_FEATURES): ConsoleFeature[] => features.filter((feature) => isFeatureOn(feature.id));

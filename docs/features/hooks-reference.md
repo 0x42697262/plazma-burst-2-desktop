@@ -3,8 +3,10 @@
 Every part of the hooks system: what each call does, in what order things happen, and what
 each message means. For a first hook, read [README.md](hooks.md) instead.
 
-Source: `desktop/hooks.js` (loader, runs in the wrapper), `desktop/hooks-runtime.js`
-(runtime, runs in the game page), tests in `test/hooks.test.mjs`.
+Source: `src/features/hooks/`. The loader runs in the wrapper (`services/plan.ts`,
+`domain/patching.ts`, the dry run in `adapters/sandbox.ts`). The runtime runs in the
+game page (`runtime/runtime.ts`, bundled to `dist/hooks/runtime.cjs` by `npm run build`).
+Tests are in `src/features/hooks/hooks.test.mjs`. Feature flag `hooks`.
 
 ## Contents
 
@@ -315,7 +317,7 @@ wrappers use ids from `1000000` up.
 
 | Route | What |
 |---|---|
-| `__hooks/runtime.js` | `desktop/hooks-runtime.js` plus the plan's config (names, target ids, every hook's status) |
+| `__hooks/runtime.js` | the runtime bundle, wrapped so it adds no global but `PB2Hooks`, started with the plan's config (names, target ids, every hook's status) |
 | `__hooks/hook/<name>.js` | The hook file inside `PB2Hooks.define(...)`. Its line 1 is line 2 there; the `sourceURL` is `hooks/<name>.js` |
 | `__hooks/send` | `POST`: a JSON array of `{ hook, msg }` |
 | Changed game scripts | Same URL as the original, served from the plan with `Cache-Control: no-store` |

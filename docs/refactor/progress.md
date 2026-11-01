@@ -95,7 +95,7 @@ Notes from P2 for the feature steps:
 - [x] P3.12 `player` (the per-frame player overrides follow the flag)
 - [x] P3.13 `scan_bypass` (the protection stays in the console; with the flag off it cannot be turned off)
 - [x] P3.14 `map_cache` (wrapper features can intercept requests outside `__dev/` with `interceptors`; `map_cache` no longer needs `dev_console`)
-- [ ] P3.15 `hooks`
+- [x] P3.15 `hooks` (the page runtime is TypeScript, bundled to `dist/hooks/runtime.cjs` and served wrapped, so it adds no global but `PB2Hooks`)
 - [ ] P3.16 `triggers`
 - [ ] P3.17a `map_editor` domain (doc, history, edit)
 - [ ] P3.17b `map_editor` UI (view, panels, dropdown)

@@ -1,15 +1,30 @@
-// desktop/hooks.js + desktop/hooks-runtime.js on a small fake game: "npm test".
-// The plan is built from real files in a temp folder, then the page is played in a vm:
-// the runtime, the hook files and the changed game script run in order, as in index.html.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import vm from 'node:vm';
-import { createRequire } from 'node:module';
+import { before } from 'node:test';
+import { buildPlan } from './services/plan.ts';
+import { hookScript, injectTags, runtimeScript } from './entry/page.ts';
+import { findFunction } from './domain/patching.ts';
+import { trampoline } from './keys.ts';
+import { buildHooksRuntime } from '#tools/build/build.ts';
 
-const hooks = createRequire(import.meta.url)('../desktop/hooks.js');
+let runtimeBundle = '';
+before(async () => {
+  const out = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-hooks-runtime-')), 'runtime.cjs');
+  await buildHooksRuntime(out);
+  runtimeBundle = fs.readFileSync(out, 'utf8');
+});
+const hooks = {
+  build: (options) => buildPlan(options),
+  runtimeScript: (plan, names) => runtimeScript({ ...plan, names }, runtimeBundle),
+  hookScript,
+  injectTags,
+  findFunction,
+  trampoline,
+};
 
 // Obfuscated-looking names, Cyrillic letters included, like the real game.
 const NAMES = { levelStart: '$еАT1ее', runTrigger: '$pАTIТ', mp: '$pMМ1', me: '$НAlНc' };

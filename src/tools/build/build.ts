@@ -5,6 +5,7 @@ import { REPO_ROOT, CONSOLE_BUNDLE_DIR, CONSOLE_BUNDLE_FILE } from '#kernel/conf
 import {
   LAUNCHER_DIST_DIR, LAUNCHER_PRELOAD_SOURCE, LAUNCHER_SCRIPT_SOURCE, LAUNCHER_SOURCE_DIR, LAUNCHER_STATIC_FILES,
 } from '#features/server_list/paths.ts';
+import { RUNTIME_BUNDLE, RUNTIME_SOURCE } from '#features/hooks/paths.ts';
 import { BROWSER_TARGET, CONSOLE_SOURCE_ENTRY, ELECTRON_MODULE, LAUNCHER_PRELOAD_FILE, LAUNCHER_SCRIPT_FILE, NODE_TARGET } from './constants.ts';
 
 export const defaultConsoleOutFile = path.join(CONSOLE_BUNDLE_DIR, CONSOLE_BUNDLE_FILE);
@@ -44,6 +45,21 @@ async function copyLauncherStatic(outDir: string): Promise<void> {
   for (const name of LAUNCHER_STATIC_FILES) await fs.copyFile(path.join(LAUNCHER_SOURCE_DIR, name), path.join(outDir, name));
 }
 
+export const hooksRuntimeOptions = (outfile: string = RUNTIME_BUNDLE): esbuild.BuildOptions => ({
+  ...shared,
+  sourcemap: false,
+  entryPoints: [RUNTIME_SOURCE],
+  outfile,
+  format: 'cjs',
+  platform: 'neutral',
+  target: BROWSER_TARGET,
+});
+
+export async function buildHooksRuntime(outfile: string = RUNTIME_BUNDLE): Promise<string> {
+  await esbuild.build(hooksRuntimeOptions(outfile));
+  return outfile;
+}
+
 export async function buildConsole(outfile: string = defaultConsoleOutFile): Promise<string> {
   await esbuild.build(consoleBuildOptions(outfile));
   return outfile;
@@ -55,11 +71,11 @@ export async function buildLauncher(outDir: string = LAUNCHER_DIST_DIR): Promise
 }
 
 export async function buildAll(): Promise<string[]> {
-  return Promise.all([buildConsole(), buildLauncher()]);
+  return Promise.all([buildConsole(), buildLauncher(), buildHooksRuntime()]);
 }
 
 export async function watchAll(): Promise<esbuild.BuildContext[]> {
-  const contexts = await Promise.all([consoleBuildOptions(), launcherPageOptions(), launcherPreloadOptions()].map((options) => esbuild.context(options)));
+  const contexts = await Promise.all([consoleBuildOptions(), launcherPageOptions(), launcherPreloadOptions(), hooksRuntimeOptions()].map((options) => esbuild.context(options)));
   await copyLauncherStatic(LAUNCHER_DIST_DIR);
   await Promise.all(contexts.map((context) => context.watch()));
   return contexts;
