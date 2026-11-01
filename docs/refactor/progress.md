@@ -84,7 +84,11 @@ Notes from P2 for the feature steps:
 - [x] P3.5 `js_eval`
 - [x] P3.6 `zoom` (features add `list` sections through `listSections`)
 - [x] P3.7 `game_chat`
-- [ ] P3.8 `trace`
+- [x] P3.8 `trace`
+  - Integration tests moved from `test/console.test.mjs` go to the feature folder as
+    `*.test.mjs`, one shared `bootConsole()` per file
+    (`tools`: the scratchpad move script is not kept; the pattern is the header of
+    `src/features/trace/trace.test.mjs`). Converting them to TypeScript is P6.1.
 - [ ] P3.9 `profiles`
 - [ ] P3.10 `binds`
 - [ ] P3.11 `guns`
@@ -111,7 +115,7 @@ Notes from P2 for the feature steps:
 - [ ] P5.2 `tools/*.ts`
 
 ## P6. Finish
-- [ ] P6.1 `allowJs` off; lint everywhere at zero warnings
+- [ ] P6.1 `allowJs` off; lint everywhere at zero warnings; the `src/**/*.test.mjs` integration tests converted to TypeScript
 - [ ] P6.2 Every feature doc, operations doc and `docs/README.md` complete; research docs point at new paths
 - [ ] P6.3 (optional) local data in `data/`
 - [ ] P6.4 (optional) CI workflow

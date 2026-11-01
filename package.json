@@ -19,7 +19,7 @@
     "testers": "node tools/remote-testers.js",
     "check": "tsc --noEmit -p .",
     "lint": "eslint --max-warnings 0 src",
-    "test": "node --test 'test/**/*.test.mjs' 'src/**/*.test.ts'",
+    "test": "node --test 'test/**/*.test.mjs' 'src/**/*.test.ts' 'src/**/*.test.mjs'",
     "verify": "npm run lint && npm run check && npm test && npm run build",
     "smoke": "npm run build && node src/tools/smoke/cli.ts",
     "redact-netlogs": "node src/tools/redact-netlogs/cli.ts"

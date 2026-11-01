@@ -5,10 +5,8 @@ import { COLOR } from '../core/colors.js';
 import { SCHEMA, GROUPS, KEY, resolveKey, parseValue, affectsGame, keyClientOnly, describeKey, showValue } from '../state/schema.js';
 import { settings, binds, activeProfile, currentMap } from '../state/store.js';
 import { showKey } from '../state/keys.js';
-import { isActive, charLabel } from '../game/level.js';
-import { tracedNow, tracingGroup, traceShown, distanceTo } from '../ui/trace.js';
+import { isActive } from '../game/level.js';
 import { logicShown, logicDescription } from '../logic/view.js';
-import { groupOptions } from './trace.js';
 import { editedVars, showVar } from '../triggers/vars.js';
 import { levelWasActive, gameMaxHp } from '../overrides/frame.js';
 import { heldBack, refusal } from '../overrides/server-checks.js';
@@ -83,11 +81,6 @@ const EXTRAS = Object.freeze({
       const now = binds.active(k);
       return `  ${showKey(k).padEnd(KEY_WIDTH)} ${binds.get(k)}${now.profile ? `  [profile ${now.profile} binds it here]` : ''}`;
     })];
-  },
-  trace: () => {
-    if (!traceShown()) return null;
-    const now = isActive() ? tracedNow() : [];
-    return [`trace: ${now.length}${tracingGroup() ? ` (${groupOptions(tracingGroup())})` : ''}`, now.map((i) => `  ${charLabel(i).padEnd(20)} ${distanceTo(i)}px`)];
   },
   logic: () => logicShown() && ['logic: shown', [`  ${logicDescription() || 'on'}`]],
   profile: () => {

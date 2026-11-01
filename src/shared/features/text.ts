@@ -8,7 +8,7 @@ export const FEATURE_DESCRIPTION: Readonly<Record<FeatureId, string>> = Object.f
   [FEATURE.guns]: 'Gun list, give and drop, gun overrides',
   [FEATURE.binds]: 'Key binds and the keyname helper',
   [FEATURE.triggers]: 'Map triggers, regions, variables and the logic view',
-  [FEATURE.trace]: 'Lines to other characters, and the game\'s own trace() output',
+  [FEATURE.trace]: 'Lines from you to other characters, with their distance',
   [FEATURE.mapEditor]: 'The in-game map editor',
   [FEATURE.mapCache]: 'Saving multiplayer maps and serving local maps',
   [FEATURE.gameChat]: 'Game chat commands',

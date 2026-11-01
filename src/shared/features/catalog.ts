@@ -32,7 +32,7 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   consoleFeature(FEATURE.guns),
   consoleFeature(FEATURE.binds),
   consoleFeature(FEATURE.triggers),
-  consoleFeature(FEATURE.trace),
+  consoleFeature(FEATURE.trace, { migrated: true }),
   consoleFeature(FEATURE.mapCache),
   consoleFeature(FEATURE.mapEditor, { requires: [FEATURE.devConsole, FEATURE.mapCache] }),
   consoleFeature(FEATURE.gameChat, { migrated: true }),
