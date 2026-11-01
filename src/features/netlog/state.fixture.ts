@@ -1,4 +1,4 @@
-import { encNum, encSigned } from '../../../test/support/net-protocol.mjs';
+import { encNum, encSigned } from '#console/testing/net-protocol.fixture.ts';
 
 export type PlayerStateOptions = { hp?: number | ''; x?: number; y?: number; aimX?: number; aimY?: number; respawns?: number; gun?: number; clock?: number };
 

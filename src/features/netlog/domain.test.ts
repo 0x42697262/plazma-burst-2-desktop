@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { NET_DIGITS, encNum, encSigned, netMsg } from '../../../test/support/net-protocol.mjs';
+import { NET_DIGITS, encNum, encSigned, netMsg } from '#console/testing/net-protocol.fixture.ts';
 import { describeMessage } from './domain/message.ts';
 import { redactParts } from './domain/redaction.ts';
 import { describeState } from './domain/state.ts';

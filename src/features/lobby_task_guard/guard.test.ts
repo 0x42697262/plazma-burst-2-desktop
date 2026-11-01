@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { bootConsole } from '../../../test/support/fake-game.mjs';
-import { NET_DIGITS, encNum, netMsg, netPacket } from '../../../test/support/net-protocol.mjs';
+import { NET_DIGITS, encNum, netMsg, netPacket } from '#console/testing/net-protocol.fixture.ts';
 import { splitParts, unescField } from '#console/kernel/net/codec.ts';
 
 test('on a private server, a task the lobby sends in its very first packet reaches the game only as code that does nothing', async () => {

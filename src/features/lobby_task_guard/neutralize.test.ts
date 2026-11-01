@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { NET_DIGITS, encNum, netMsg, netPacket } from '../../../test/support/net-protocol.mjs';
+import { NET_DIGITS, encNum, netMsg, netPacket } from '#console/testing/net-protocol.fixture.ts';
 import { splitParts, unescField } from '#console/kernel/net/codec.ts';
 import { neutralizeTasks } from './domain/neutralize.ts';
 

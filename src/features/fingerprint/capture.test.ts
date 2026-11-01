@@ -1,7 +1,7 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { bootConsole } from '../../../test/support/fake-game.mjs';
-import { NET_DIGITS, encNum, netMsg, netPacket, fakeConnection } from '../../../test/support/net-protocol.mjs';
+import { NET_DIGITS, encNum, netMsg, netPacket, fakeConnection } from '#console/testing/net-protocol.fixture.ts';
 
 const FP_SOURCE = `( v )=>{ try { let FP = class FP { static getBrowserFingerprint() {
   FP.hash1 = JSON.stringify({ canvas: 7, width: 1920 }); FP.hash2 = JSON.stringify({ canvas: 7, userAgent: 'UA', languages: ['en'] }); return 12345; } };

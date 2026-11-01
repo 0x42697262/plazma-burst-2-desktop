@@ -12,7 +12,7 @@ import { createProbe } from '#features/server_list/adapters/probe.ts';
 import { checkServer as checkEntry } from '#features/server_list/domain/server.ts';
 import { findNames } from '#tools/find-names/find-names.ts';
 import { makeUnpacker } from '#kernel/maps/map-text.ts';
-import { createClient } from '../../test/support/game-client.cjs';
+import { createClient } from './testing/game-client.fixture.ts';
 
 const REPO = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const probe = createProbe();
