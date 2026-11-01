@@ -13,6 +13,7 @@ import { traceConsole } from '#features/trace/console.ts';
 import { profilesConsole } from '#features/profiles/console.ts';
 import { bindsConsole } from '#features/binds/console.ts';
 import { gunsConsole } from '#features/guns/console.ts';
+import { playerConsole } from '#features/player/console.ts';
 
 export const CONSOLE_FEATURES: readonly ConsoleFeature[] = Object.freeze([
   lobbyTaskGuardConsole,
@@ -27,6 +28,7 @@ export const CONSOLE_FEATURES: readonly ConsoleFeature[] = Object.freeze([
   profilesConsole,
   bindsConsole,
   gunsConsole,
+  playerConsole,
 ]);
 
 export const enabledConsoleFeatures = (features: readonly ConsoleFeature[] = CONSOLE_FEATURES): ConsoleFeature[] => features.filter((feature) => isFeatureOn(feature.id));

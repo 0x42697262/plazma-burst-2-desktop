@@ -92,7 +92,7 @@ Notes from P2 for the feature steps:
 - [x] P3.9 `profiles` (the store ignores profiles while the flag is off)
 - [x] P3.10 `binds` (saved binds do not run while the flag is off; `commandText`/`warnKeyUses` are in the console kernel)
 - [x] P3.11 `guns`
-- [ ] P3.12 `player`
+- [x] P3.12 `player` (the per-frame player overrides follow the flag)
 - [ ] P3.13 `scan_bypass`
 - [ ] P3.14 `map_cache`
 - [ ] P3.15 `hooks`

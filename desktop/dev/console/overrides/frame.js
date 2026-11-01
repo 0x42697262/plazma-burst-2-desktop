@@ -1,6 +1,7 @@
 // Applies your settings to the game every frame. No game function is patched (the
 // game's anti-tamper check compares function source): values are forced from an
 // ENTER_FRAME listener and put back when a setting is removed or the level ends.
+import { isFeatureOn } from '../../../../src/console/flags.ts';
 import { game } from '../game/bindings.js';
 import { F } from '../game/fields.js';
 import { player, isActive } from '../game/level.js';
@@ -228,7 +229,7 @@ export function applyOverrides() {
   const running = game.isRunning();
   const dt = prevDt === null ? game.playerDt() : prevDt;
   prevDt = game.playerDt();
-  applyPlayer(p, running, dt);
+  if (isFeatureOn('player')) applyPlayer(p, running, dt);
   applyGun(p);
   applyBullets();
   applyWorld();

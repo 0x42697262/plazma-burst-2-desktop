@@ -28,7 +28,7 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   define(FEATURE.devConsole, { migrated: true }),
   consoleFeature(FEATURE.consoleCore, { locked: true }),
   consoleFeature(FEATURE.profiles, { migrated: true }),
-  consoleFeature(FEATURE.player),
+  consoleFeature(FEATURE.player, { migrated: true }),
   consoleFeature(FEATURE.guns, { migrated: true }),
   consoleFeature(FEATURE.binds, { migrated: true }),
   consoleFeature(FEATURE.triggers),

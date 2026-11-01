@@ -1,0 +1,15 @@
+export const DEFAULT_MAX_HP = 100;
+export const MIN_PART_HP = 30;
+export const REVIVE_HP_PER_POWER = 10;
+export const PERCENT = 100;
+export const BONUS_PRECISION = 1000;
+export const HEAD_SHARE = 0.4;
+export const FACE_SHARE = 0.6;
+export const LEGS_SHARE = 0.5;
+export const ARMS_SHARE = 0.4;
+export const INDEX_WIDTH = 3;
+export const NICKNAME_WIDTH = 16;
+export const TEAM_WIDTH = 3;
+export const HP_WIDTH = 11;
+export const DISTANCE_WIDTH = 6;
+export const COORDINATE_ARGUMENTS = 2;
