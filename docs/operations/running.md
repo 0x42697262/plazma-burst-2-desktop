@@ -25,7 +25,7 @@ page, the hooks runtime and the remote-play client go to `dist/`.
 | `PB2_VERSION` | from `pb2-version.json` | The version folder used in the URL. |
 | `PB2_LOGIN`, `PB2_PASSWORD`, `PB2_UID` | `desktop/credentials.json` | Login cookies ([login](../features/login.md)). |
 | `--verbose` / `-v`, `--log-level=<level>`, `PB2_LOG_LEVEL` | `info` | Terminal log level: `error`, `warn`, `info` or `debug`. `debug` adds every request, window events, the page's `console.debug` and the game's own `trace()` output. |
-| `--log-format=json` | text | One JSON object per log line. |
+| `--log-format=json`, `PB2_LOG_FORMAT=json` | text | One JSON object per log line. |
 
 Every setting is read once, at start, by `src/kernel/config/`; a value it cannot use
 stops the start with the reason, before any window opens.
