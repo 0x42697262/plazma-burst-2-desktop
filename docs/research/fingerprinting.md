@@ -671,11 +671,12 @@ hostile or compromised lobby server can do.
 2. **Bind passwords to addresses.** *Done (2026-11-02, refactor step P3.2).* Saving a
    server drops its saved password when `address` or `fingerprint` changes, unless the save
    gives a password itself ([server list](../features/server-list.md#passwords-never-move-to-a-new-address-security-fix-2)).
-3. **Refuse tasks from private servers.** `net/tap.js` already sees every packet before
-   the game does. Dropping `RELIABLE_TASK` and `RELIABLE_TASK_ASNYC` on a private-server
-   lobby removes that operator's RCE. A private server built from this repository never
-   sends tasks, so nothing is lost. Doing the same to the official server would be noticed:
-   the reply would be missing.
+3. **Refuse tasks from private servers.** *Done (2026-11-02, refactor step P3.3).* On a
+   private-server lobby, every `RELIABLE_TASK` and `RELIABLE_TASK_ASNYC` reaches the game
+   with its code replaced by `()=>undefined`, before the first packet
+   ([lobby task guard](../features/lobby-task-guard.md)). The fingerprint capture no longer
+   saves anything from a private lobby. Doing the same to the official server would be
+   noticed: the reply would be missing.
 4. **A per-launch secret for `__dev/`** helps only partly: code in the same page can wrap
    `fetch` and read the secret off the console's next request.
 5. **Today's workaround:** start with `PB2_DEV=0` before joining a private server you do

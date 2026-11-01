@@ -16,7 +16,7 @@ export const FEATURE_DESCRIPTION: Readonly<Record<FeatureId, string>> = Object.f
   [FEATURE.screenshot]: 'Screenshots of the game window',
   [FEATURE.netlog]: 'The network recorder and its logs in netlogs/',
   [FEATURE.fingerprint]: 'Keeping and running the main server\'s browser fingerprinter',
-  [FEATURE.privateLobbyTasks]: 'Let a private server\'s lobby run code in the page (RELIABLE_TASK)',
+  [FEATURE.lobbyTaskGuard]: 'Stop a private server\'s lobby from running code in the page (RELIABLE_TASK)',
   [FEATURE.scanBypass]: 'The anti-cheat scan report and the server-side check guard',
   [FEATURE.jsEval]: 'The "js" command: run JavaScript in the page',
   [FEATURE.hooks]: 'hooks/*.js: change the game\'s scripts as they are served',

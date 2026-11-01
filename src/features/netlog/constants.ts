@@ -39,8 +39,6 @@ export const READ_LINES_MAX = 20000;
 export const POST_LINES_MAX = 20000;
 export const LINE_CHARS_MAX = 16 * 1024 * 1024;
 export const INSTANCE_NAME_MAX = 40;
-export const STAMP_FIELD_WIDTH = 2;
-export const MONTH_OFFSET = 1;
 
 export const SHOW_LAST_DEFAULT = 1000;
 export const SHOW_LAST_MAX = 20000;

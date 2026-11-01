@@ -50,3 +50,24 @@ test('two owners share one wrapper; it goes with the last listener and restores 
   tap(null, 'x', 'first', () => undefined);
   tap({ notAFunction: 1 }, 'notAFunction', 'first', () => undefined);
 });
+
+test('a rewriter changes what the method gets; listeners still see the original; the wrapper goes with the last owner', async () => {
+  const { rewriteArguments } = await import('./tap.ts');
+  const { joinParts, escPart } = await import('./codec.ts');
+  class Connection { got: unknown[] = []; receive(text: string) { this.got.push(text); } }
+  const connection = new Connection() as Connection & Record<string, unknown>;
+  const seen: unknown[] = [];
+  tap(connection, 'receive', 'listener', (text) => { seen.push(text); });
+  rewriteArguments(connection, 'receive', 'guard', ([text]) => [String(text).toUpperCase()]);
+  rewriteArguments(connection, 'receive', 'broken', () => { throw new Error('ignored'); });
+  connection.receive('abc');
+  assert.deepEqual(seen, ['abc']);
+  assert.deepEqual(connection.got, ['ABC']);
+  untap(connection, 'receive', 'listener');
+  untap(connection, 'receive', 'broken');
+  assert.ok(Object.hasOwn(connection, 'receive'), 'the guard still rewrites');
+  untap(connection, 'receive', 'guard');
+  assert.ok(!Object.hasOwn(connection, 'receive'));
+  assert.equal(escPart('a\x01b\x02c'), 'a$.1b$.2c');
+  assert.deepEqual(splitParts(joinParts(['x\x02y', 'z'])), ['x\x02y', 'z']);
+});

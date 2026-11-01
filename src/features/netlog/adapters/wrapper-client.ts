@@ -1,6 +1,6 @@
-import { ROUTE } from '#shared/contract/routes.ts';
+import { ROUTE, withQuery } from '#shared/contract/routes.ts';
 import { HTTP_METHOD, NO_STORE_CACHE } from '#shared/contract/keys.ts';
-import { QUERY_START, RUN_QUERY } from '../keys.ts';
+import { RUN_QUERY } from '../keys.ts';
 import type { LineSink } from '../services/recorder.ts';
 
 export type RunEntry = { name: string; size: number; updated: number; active: boolean; mine: boolean; current: boolean };
@@ -32,6 +32,5 @@ export async function listRuns(): Promise<RunEntry[]> {
 }
 
 export async function readRun(name: string, lines: number): Promise<string> {
-  const query = new URLSearchParams({ [RUN_QUERY.run]: name, [RUN_QUERY.lines]: String(lines) });
-  return textOrThrow(await fetch(ROUTE.netRead + QUERY_START + query.toString(), NO_STORE));
+  return textOrThrow(await fetch(withQuery(ROUTE.netRead, { [RUN_QUERY.run]: name, [RUN_QUERY.lines]: String(lines) }), NO_STORE));
 }

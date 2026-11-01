@@ -47,3 +47,4 @@ One line per behavior change: what to do, and the result to expect.
   shows `hooks off env`.
 - P3.1: `npm test` (src/features/netlog/*.test.ts). In the game with `net_log on`, log in and run `netlog show type:authenticate`: the password part reads `‹redacted›`. `PB2_FEATURES=-netlog npm start`: `netlog` is an unknown command, and `__dev/netlog` answers 404.
 - P3.2: `npm start` shows the list (from `dist/launcher/`). Save a server with a password, then change its address with Edit and leave the password empty: the row says "needs a password (Edit)", and the terminal says the password was dropped. `PB2_FEATURES=-server_list npm start` goes straight to the official game.
+- P3.3: join a private server built from `server/`. Nothing changes, because it sends no tasks. A server that sends a `RELIABLE_TASK` gets "It was not run" in the console, and the code never runs. `fingerprint list` still lists the official server's versions.

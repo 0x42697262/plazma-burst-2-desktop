@@ -2,9 +2,13 @@ import type { ConsoleFeature, CommandDefinition, ConsoleTick, FrameHook } from '
 import { isFeatureOn } from './flags.ts';
 import { netlogConsole } from '#features/netlog/console.ts';
 import { serverListConsole } from '#features/server_list/console.ts';
+import { lobbyTaskGuardConsole } from '#features/lobby_task_guard/console.ts';
+import { fingerprintConsole } from '#features/fingerprint/console.ts';
 
 export const CONSOLE_FEATURES: readonly ConsoleFeature[] = Object.freeze([
+  lobbyTaskGuardConsole,
   netlogConsole,
+  fingerprintConsole,
   serverListConsole,
 ]);
 

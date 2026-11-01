@@ -3,13 +3,11 @@ import type { ConsoleFeature } from '#console/feature-types.ts';
 import { print } from '../../../desktop/dev/console/ui/log.js';
 import { COLOR } from '../../../desktop/dev/console/core/colors.js';
 import { JOIN_TICK_MS } from './constants.ts';
-import { PAGE_JOIN_GLOBAL } from './keys.ts';
 import { JOIN_TEXT } from './text.ts';
 import { serversCommand } from './entry/command.ts';
-import { createJoinClient, type JoinTarget } from './services/join-client.ts';
+import { createJoinClient } from './services/join-client.ts';
+import { pageJoinTarget } from './index.ts';
 import { gameLobby } from './adapters/game-lobby.ts';
-
-const pageJoinTarget = (): JoinTarget | null => (Reflect.get(globalThis, PAGE_JOIN_GLOBAL) as JoinTarget | undefined) ?? null;
 
 function startJoin(): void {
   const target = pageJoinTarget();

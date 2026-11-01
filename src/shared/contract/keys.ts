@@ -32,3 +32,4 @@ export const SAVE_RESULT = Object.freeze({
 export const HTTP_METHOD = Object.freeze({ get: 'GET', post: 'POST', put: 'PUT' });
 export const STATUS = Object.freeze({ ok: 200, badRequest: 400, forbidden: 403, notFound: 404, methodNotAllowed: 405, conflict: 409, tooMany: 429, serverError: 500 });
 export const NO_STORE_CACHE = 'no-store';
+export const QUERY_START = '?';

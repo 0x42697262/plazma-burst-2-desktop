@@ -9,7 +9,8 @@ import {
 } from '../keys.ts';
 import { STATE_TEXT } from '../text.ts';
 
-export type StateLayout = Partial<Record<keyof typeof KNOWN_STATE_LAYOUT | 'velScale', number | null>>;
+export type { StateLayout } from '#console/kernel/game/network.ts';
+import type { StateLayout } from '#console/kernel/game/network.ts';
 type Index = number | null | undefined;
 
 const signed = (value: number): string => (value > 0 ? STATE_TEXT.positive(value) : String(value));

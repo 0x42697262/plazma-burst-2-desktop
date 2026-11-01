@@ -12,7 +12,6 @@ const { createKvFile } = require('./kv-file');
 const { wrapperContext } = require('../src/wrapper/context.ts');
 const { environment: ENVIRONMENT, flags: FLAGS, log } = wrapperContext;
 const hooks = require('./hooks');
-const { createFingerprints } = require('./fingerprint');
 const { makeUnpacker, beautifyMap } = require('./map-text');
 const { REMOTE_PAGE_SCRIPT, REMOTE_WEB_PREFERENCES, isGamePage, lockDownSession, lockDownWindow } = require('./remote/lockdown');
 // A tester's screenshot key writes a file here each press: one per this many ms per tester.
@@ -176,34 +175,6 @@ function checkConsoleBundle() {
 const MAPS_DIR = path.join(__dirname, SADBURST ? 'maps.sadburst' : 'maps');
 const SCREENSHOT_DIR = path.join(__dirname, '..', 'screenshots');
 const LOCAL_MAP_PREFIX = 'local-';
-
-const json = (obj, status = 200) => new Response(JSON.stringify(obj), {
-  status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
-});
-
-// The main server's fingerprinter, every version once (desktop/fingerprint.js): the dev
-// console sends each one it sees, and "fingerprint" runs the latest. Your own window's
-// only: a remote play tester's game neither writes nor reads them. Sad Burst 2 has its own
-// folder: "fingerprint" runs the saved code, and Sad Burst's must never run in the official game.
-const FINGERPRINT_DIR = path.join(__dirname, '..', SADBURST ? 'fingerprint.sadburst' : 'fingerprint');
-const fingerprints = createFingerprints({ dir: FINGERPRINT_DIR });
-
-async function serveFingerprint(name, request, url, ctx) {
-  if (name !== ROUTE.fingerprint && name !== ROUTE.fingerprints) return null;
-  if (ctx.remote) return new Response('not available in remote play', { status: 403 });
-  try {
-    if (name === ROUTE.fingerprints) return json(await fingerprints.list());
-    if (request.method === 'POST') {
-      const saved = await fingerprints.save(await request.text(), url.searchParams.get('kind'));
-      if (saved.status !== 'same') log.info(`Fingerprinter ${saved.id} ${saved.status === 'new' ? 'saved' : 'updated'}: fingerprint/${saved.file}`);
-      return json({ ...saved, file: `fingerprint/${saved.file}` });
-    }
-    const latest = await fingerprints.latest();
-    return latest ? json({ ...latest, file: `fingerprint/${latest.file}` }) : new Response('no fingerprinter saved yet', { status: 404 });
-  } catch (e) {
-    return new Response(e.message, { status: 400 });
-  }
-}
 
 const MAP_EXTS = ['.xml', '.txt', ''];
 
@@ -481,8 +452,6 @@ async function serveDev(request, url, ctx) {
       return new Response(e.message, { status: 500 });
     }
   }
-  const fp = await serveFingerprint(name, request, url, ctx);
-  if (fp) return fp;
   if (name === ROUTE.kv) {
     if (request.method === 'PUT') {
       let obj;

@@ -1,15 +1,10 @@
-import { INSTANCE_NAME_MAX, LINE_CHARS_MAX, MONTH_OFFSET, STAMP_FIELD_WIDTH } from '../constants.ts';
+import { INSTANCE_NAME_MAX, LINE_CHARS_MAX } from '../constants.ts';
+export { stampOf } from '#kernel/time/stamp.ts';
 import {
-  INSTANCE, LINE_BREAK_REPLACEMENT, STAMP_PAD, LINE_BREAKS, LOG_FILE_HEADER_MARK, RUN_INSTANCE, RUN_NAME, SAFE_REPLACEMENT,
+  INSTANCE, LINE_BREAK_REPLACEMENT, LINE_BREAKS, LOG_FILE_HEADER_MARK, RUN_INSTANCE, RUN_NAME, SAFE_REPLACEMENT,
   UNSAFE_INSTANCE_CHARACTER,
 } from '../keys.ts';
 import { FILE_TEXT } from '../text.ts';
-
-const pad = (value: number): string => String(value).padStart(STAMP_FIELD_WIDTH, STAMP_PAD);
-
-export const stampOf = (moment: Date): string => FILE_TEXT.stamp(
-  moment.getFullYear(), pad(moment.getMonth() + MONTH_OFFSET), pad(moment.getDate()), pad(moment.getHours()), pad(moment.getMinutes()), pad(moment.getSeconds()),
-);
 
 export const safeInstanceName = (instance: string | null | undefined): string => (instance || INSTANCE.local).replace(UNSAFE_INSTANCE_CHARACTER, SAFE_REPLACEMENT).slice(0, INSTANCE_NAME_MAX) || INSTANCE.local;
 

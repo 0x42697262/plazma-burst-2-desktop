@@ -12,30 +12,12 @@ import { LINE_TEXT } from '../text.ts';
 import { formatLine, sizeText } from '../domain/line.ts';
 import { ackText, lossText, newCounts, pingText, reasonText, repeatText, type Counts } from '../domain/loss.ts';
 import { describeMessage, parsePacket, type DescribedMessage, type Packet } from '../domain/message.ts';
-import { describeState, type StateLayout } from '../domain/state.ts';
+import { describeState } from '../domain/state.ts';
+import type { StateLayout } from '#console/kernel/game/network.ts';
 import type { MethodWrapper } from '../adapters/method-wrap.ts';
+import type { GameConnection, GameNetwork, Peer, Socket } from '#console/kernel/game/network.ts';
 
-export type Socket = {
-  connected?: boolean;
-  flags?: { volatile?: boolean };
-  io?: { engine?: { transport?: { writable?: boolean; name?: string } } };
-  [method: string]: unknown;
-};
-export type Peer = { connected?: boolean; [method: string]: unknown };
-export type GameConnection = { socket?: Socket | null; ping?: unknown; [field: string]: unknown };
-
-export type GameNetwork = {
-  connections(): readonly GameConnection[];
-  lobbyConnection(): GameConnection | null;
-  p2pConnection(): GameConnection | null;
-  peerOf(connection: GameConnection): Peer | null;
-  closeReason(connection: GameConnection): string | null;
-  receiveMethodName(): string;
-  digits(): string;
-  typeName(type: number): string | null;
-  stateLayout(): StateLayout | null;
-  namesVersion(): string;
-};
+export type { GameConnection, GameNetwork };
 
 export type RecorderSettings = { recording(): boolean; everything(): boolean; states(): boolean };
 export type LineSink = { send(body: string): Promise<{ run: string; file: string }>; beacon(body: string): boolean };

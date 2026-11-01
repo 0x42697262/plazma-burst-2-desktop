@@ -126,7 +126,6 @@ export const FILE_TEXT = Object.freeze({
   ]),
   runStarted: (when: string, instance: string, version: string, pid: number) => `# Run started ${when}, instance "${instance}", game ${version || '?'}, process ${pid}`,
   runFileName: (stamp: string, instance: string, attempt: number) => `${stamp}_${instance}${attempt > 1 ? `-${attempt}` : ''}`,
-  stamp: (year: number, month: string, day: string, hours: string, minutes: string, seconds: string) => `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`,
   notAnArray: 'expected an array of lines',
   tooManyLines: (max: number) => `at most ${max} lines at once`,
   badRunName: 'bad run name',

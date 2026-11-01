@@ -21,5 +21,5 @@ test('"features" lists every flag as the wrapper resolved it, and a feature that
   assert.equal(allowedHere({ name: 'x', feature: 'hooks' }), false);
   assert.equal(allowedHere({ name: 'x', feature: 'zoom' }), true);
   assert.equal(allowedHere({ name: 'x' }), true);
-  assert.equal(allowedHere({ name: 'x', feature: 'private_lobby_tasks' }), false, 'off by default');
+  assert.equal(allowedHere({ name: 'x', feature: 'remote_play' }), false, 'not in local mode');
 });

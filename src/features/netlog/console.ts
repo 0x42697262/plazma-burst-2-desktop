@@ -9,7 +9,7 @@ import { SETTING_NAME, type SettingName } from './keys.ts';
 import { TICK_NAME } from './text.ts';
 import { createRecorder } from './services/recorder.ts';
 import { createNetlogCommand } from './entry/command.ts';
-import { gameNetwork } from './adapters/game-network.ts';
+import { gameNetwork } from '#console/kernel/game/network.ts';
 import { methodWrapper } from './adapters/method-wrap.ts';
 import { onPageHide } from './adapters/page.ts';
 import { wrapperLineSink } from './adapters/wrapper-client.ts';

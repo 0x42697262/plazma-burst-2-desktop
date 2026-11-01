@@ -16,7 +16,7 @@ test('with nothing set, every flag is its default or ruled out by the mode, and 
   const { states, problems } = resolve();
   assert.deepEqual(problems, []);
   assert.equal(states.dev_console.on, true);
-  assert.equal(states.private_lobby_tasks.on, false);
+  assert.equal(states.lobby_task_guard.on, true);
   assert.equal(states.remote_play.source, 'constraint');
   assert.deepEqual(explicitlySet(CATALOG, states), {});
   assert.deepEqual(explicitlySet(CATALOG, resolve({ file: { hooks: false }, env: [{ id: 'dev_console', on: false }] }).states), { dev_console: 'off:env', hooks: 'off:file' });

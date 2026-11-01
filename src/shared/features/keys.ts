@@ -14,7 +14,7 @@ export const FEATURE = Object.freeze({
   screenshot: 'screenshot',
   netlog: 'netlog',
   fingerprint: 'fingerprint',
-  privateLobbyTasks: 'private_lobby_tasks',
+  lobbyTaskGuard: 'lobby_task_guard',
   scanBypass: 'scan_bypass',
   jsEval: 'js_eval',
   hooks: 'hooks',

@@ -47,7 +47,7 @@ Notes from P2 for the feature steps:
   - set `migrated: true` in `src/shared/features/catalog.ts`.
 - An old command definition can already be gated with `feature: '<id>'`
   (`allowedHere`, `desktop/dev/console/core/remote.js`).
-- The flag that lets a private lobby run code is named `private_lobby_tasks`.
+- The guard against code from a private lobby is the flag `lobby_task_guard` (on by default; off lets a private lobby run code, as before). It was planned as `private_lobby_tasks` (off by default), renamed so that on means the code runs, like every other flag.
 - An unknown log level now stops the app at start; it used to be a warning.
 
 ## P3. Feature migrations
@@ -71,7 +71,15 @@ Notes from P2 for the feature steps:
     `servers` command, and every operation answered 403.
   - HTTP methods and status codes are in `src/shared/contract/keys.ts`, used by both
     sides.
-- [ ] P3.3 `fingerprint` + `private_lobby_tasks` + `net/tap` + security fix 3 (no RELIABLE_TASK from private lobbies)
+- [x] P3.3 `fingerprint` + `lobby_task_guard` + `net/tap` + security fix 3 (no RELIABLE_TASK from private lobbies)
+  - The guard sits on the connection class's prototype (`connClass`), so it is in place
+    before the first lobby packet. The kernel `tap` gained `rewriteArguments`, and the
+    codec gained `escField`, `escPart` and `joinParts`.
+  - The capture skips private lobbies; `fingerprint/index.json` is versioned.
+  - The game-network adapter moved to `src/console/kernel/game/network.ts`, and the
+    timestamp to `src/kernel/time/stamp.ts`. `withQuery` is in `src/shared/contract/routes.ts`.
+  - `src/features/server_list/index.ts` exposes `pageJoinTarget` and
+    `isJoiningPrivateServer` to other features.
 - [ ] P3.4 `screenshot`
 - [ ] P3.5 `js_eval`
 - [ ] P3.6 `zoom`

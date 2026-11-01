@@ -12,6 +12,10 @@ export const unescField = (text: string): string => text.split(ESCAPED_FIELD_SEP
 export const unescPart = (text: string): string => unescField(text).split(ESCAPED_PART_SEPARATOR).join(PART_SEPARATOR);
 export const splitParts = (data: string): string[] => data.split(PART_SEPARATOR).map(unescPart);
 
+export const escField = (text: string): string => text.split(FIELD_SEPARATOR).join(ESCAPED_FIELD_SEPARATOR);
+export const escPart = (text: string): string => escField(text).split(PART_SEPARATOR).join(ESCAPED_PART_SEPARATOR);
+export const joinParts = (parts: readonly string[]): string => parts.map(escPart).join(PART_SEPARATOR);
+
 export function decodeNumber(text: unknown, digits: string): number | null {
   if (!digits || typeof text !== 'string' || !text) return null;
   const isNegative = text.startsWith(NEGATIVE_SIGN);

@@ -35,7 +35,6 @@ import { mapTick } from './maps/cache.js';
 import { editorTick } from './editor/index.js';
 import { zoomTick } from './commands/zoom.js';
 import { scanReportTick } from './net/scan-report.js';
-import { fingerprintTick } from './net/fingerprint.js';
 import { run } from './dispatch.js';
 import { SERVER } from './core/server.js';
 import { startHost } from './server/host.js';
@@ -48,8 +47,6 @@ const STATUS_EVERY_MS = 500;
 const MAP_TICK_MS = 250;
 const FRAME_ERRORS_SHOWN = 5;
 const MAP_ERRORS_SHOWN = 3;
-const NET_ERRORS_SHOWN = 3;
-const NET_TICK_MS = 50;
 
 const reportError = (msg) => print(msg, COLOR.error);
 
@@ -58,7 +55,6 @@ function printProblems() {
 }
 const frameGuard = errorBudget(FRAME_ERRORS_SHOWN, reportError);
 const mapGuard = errorBudget(MAP_ERRORS_SHOWN, reportError);
-const netGuard = errorBudget(NET_ERRORS_SHOWN, reportError);
 
 const features = enabledConsoleFeatures();
 const featureFrame = featureFrameHooks(features);
@@ -91,8 +87,6 @@ function start(source) {
   printProblems();
   setInterval(updateStatusIfOpen, STATUS_EVERY_MS);
   setInterval(() => { mapGuard('Map cache', mapTick); mapGuard('Profiles', profileTick); }, MAP_TICK_MS);
-  // Not per frame: connections are made and packets arrive in menus too.
-  setInterval(() => { netGuard('Fingerprinter', fingerprintTick); }, NET_TICK_MS);
   for (const tick of featureTicks(features)) {
     const guard = errorBudget(tick.errorsShown, reportError);
     setInterval(() => guard(tick.name, tick.run), tick.everyMs);
