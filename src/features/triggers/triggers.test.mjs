@@ -247,7 +247,7 @@ test('logic: a tree of what reaches an element and what it acts on', () => {
 });
 
 test('logic show draws every link where the camera puts it', async () => {
-  const view = await consoleModule('logic/view.js');
+  const view = await consoleModule('../../../src/features/triggers/logic/view.ts');
   const cam = game.G.game;
   const lineStarts = () => game.log.drawn.filter((d) => d[0] === 'moveTo').map((d) => [d[1], d[2]].join(','));
   cam.x = 100; cam.y = 50; cam.scaleX = cam.scaleY = 1;
@@ -279,7 +279,7 @@ test('logic show draws every link where the camera puts it', async () => {
 });
 
 test('logic filters by element type', async () => {
-  const view = await consoleModule('logic/view.js');
+  const view = await consoleModule('../../../src/features/triggers/logic/view.ts');
   assert.match(game.run('logic')[1], /Types: trigger \d+, .*player \d+/, 'lists the map\'s types');
   const count = (q) => Number(game.run(`logic show ${q}`)[0].match(/^Showing (\d+) link/)[1]);
   const all = count('');
@@ -302,7 +302,7 @@ test('logic filters by element type', async () => {
 });
 
 test('logic screen keeps only what the camera shows, as it moves', async () => {
-  const view = await consoleModule('logic/view.js');
+  const view = await consoleModule('../../../src/features/triggers/logic/view.ts');
   const cam = game.G.game;
   const labels = () => { game.log.drawn.length = 0; view.drawFrame(); return game.log.drawn.filter((d) => d[0] === 'fillText').map((d) => d[1]); };
   const lineStarts = () => game.log.drawn.filter((d) => d[0] === 'moveTo').map((d) => `${d[1]},${d[2]}`);
@@ -366,7 +366,7 @@ test('logic labels never overlap: grouped, collapsed, opened by the crosshair', 
 });
 
 test('logic: old maps without uids link by number, as the game reads them', async () => {
-  const { buildGraph, findNode } = await consoleModule('logic/graph.js');
+  const { buildGraph, findNode } = await consoleModule('../../../src/features/triggers/logic/graph.ts');
   const old = [
     '<player x="0" y="0" ondeath="1" />',
     '<enemy x="50" y="0" ondeath="-1" />',

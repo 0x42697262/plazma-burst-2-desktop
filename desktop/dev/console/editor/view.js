@@ -6,7 +6,7 @@
 import { GAME_WIDTH, GAME_HEIGHT } from '../../../../src/console/kernel/game/bindings.ts';
 import { setLayer, drawOverlay, toScreen, crosshair } from '../../../../src/console/kernel/ui/overlay.ts';
 import { drawLabels } from '../../../../src/console/kernel/ui/labels.ts';
-import { buildGraph, nameless } from '../logic/graph.js';
+import { buildGraph, nameless } from '../../../../src/features/triggers/logic/graph.ts';
 import { kindOf } from './kinds.js';
 import { liveBounds } from './live.js';
 import { editorDoc, selected, visibleElements, placePreview, currentPick, isSelectable } from './session.js';

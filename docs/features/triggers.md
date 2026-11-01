@@ -102,3 +102,22 @@ The map editor needs this feature's model, so it is off as well.
 - Triggers that write a variable and run once or at map start are the map's own
   initialisers: a client that reloads the map runs them again, so it ends up with the
   map's value whatever was synced to it earlier.
+
+### The logic view (`logic/graph.ts`, `logic/view.ts`)
+- The map's logic as a graph: every element that can be referred to is a node at its map
+  position, and every reference is a link. That covers what the runtime keeps (regions,
+  timers, deaths starting triggers) and what it resolves away: a trigger action's target is
+  an index once the map has loaded, without saying whether it is a door, a region or a
+  player, but the map text still names it. It is read once per map.
+- A reference is a uid (`#door*13`) or, in older maps without uids, a number: the index of
+  an element of the kind the attribute or the action's target takes (from the map editor's
+  action list). An element without a uid is named `<tag>#<index>`; real uids start with
+  `#`, so they never clash. A uid used twice names the first, as the game resolves it.
+  "character" targets are the game's characters array: players and enemies together, in
+  map order. A region that uses a timer names the timer, not a trigger.
+- Old maps leave out x and y of triggers, timers and engine marks; like the map editor
+  (lib_classes.js, SourceLost) they are shown in a row above the map's top left corner.
+- Regions move with the doors they are attached to, so the game's own region is read for
+  its place; characters are read where they are; everything else is where the map put it.
+- Link colours: green runs a trigger, yellow enables or disables, blue acts on an element,
+  grey moves with a door, pink is any other reference.

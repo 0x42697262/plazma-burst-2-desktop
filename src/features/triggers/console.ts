@@ -7,7 +7,7 @@ import { varsCommand } from '../../../desktop/dev/console/commands/vars.js';
 import { logicCommand } from '../../../desktop/dev/console/commands/logic.js';
 import { syncTriggerHooks } from './run-log.ts';
 import { editedVars, showVar } from './vars.ts';
-import { logicShown, logicDescription } from '../../../desktop/dev/console/logic/view.js';
+import { logicShown, logicDescription } from './logic/view.ts';
 import { isActive } from '#console/kernel/game/level.ts';
 import { KEY_WIDTH } from './constants.ts';
 import { FRAME_HOOK_NAME, LIST_SECTION } from './keys.ts';

@@ -5,8 +5,8 @@ import { showPaged, takePage } from '../../../../src/console/kernel/ui/pager.ts'
 import { COLOR } from '../../../../src/console/kernel/core/keys.ts';
 import { plural } from '../../../../src/console/kernel/core/words.ts';
 import { requireLevel } from '../../../../src/console/kernel/game/level.ts';
-import { LINK, logicGraph, findNode, placeOf, chatTriggerUid } from '../logic/graph.js';
-import { showLogic, hideLogic, logicShown, isVisible } from '../logic/view.js';
+import { LINK, logicGraph, findNode, placeOf, chatTriggerUid } from '../../../../src/features/triggers/logic/graph.ts';
+import { showLogic, hideLogic, logicShown, isVisible } from '../../../../src/features/triggers/logic/view.ts';
 import { REMOTE } from '../../../../src/console/kernel/core/mode.ts';
 
 const KINDS = Object.values(LINK);

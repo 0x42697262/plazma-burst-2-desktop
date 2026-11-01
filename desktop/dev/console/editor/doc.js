@@ -5,7 +5,7 @@
 // have none, and deleting one does not move the others in the game.
 // Untouched elements keep their exact text; toText() gives the map back.
 import { MAP_MARKER as MAP } from '../../../../src/shared/contract/keys.ts';
-import { unplacedSpots } from '../logic/graph.js';
+import { unplacedSpots } from '../../../../src/features/triggers/logic/graph.ts';
 
 // <tag a="..." b="..." />. Values hold no quotes (the editor escapes them), so ">"
 // inside one is fine.
