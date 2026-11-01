@@ -7,7 +7,7 @@ export const FIELD = '\x01';
 export const PART = '\x02';
 const ESC_FIELD = '$.1';
 const ESC_PART = '$.2';
-export const PART_CHARS_MAX = 2000; // a longer part (a map chunk, a match list) is cut
+export const PART_CHARS_MAX = 2000; // a longer part (a map chunk, a match list) is cut, unless whole
 
 export const unescField = (s) => s.split(ESC_FIELD).join(FIELD);
 export const unescPart = (s) => s.split(ESC_FIELD).join(FIELD).split(ESC_PART).join(PART);
@@ -34,11 +34,12 @@ const isJson = (p) => {
 };
 // A part as it is shown: a bare number for an encoded number (control characters and only
 // digits, or a part that is always a number), JSON as it is, any other text in quotes.
-export function showPart(p, digits, isNumber = false) {
+// whole: never cut at PART_CHARS_MAX (net_log_all).
+export function showPart(p, digits, isNumber = false, whole = false) {
   if (isNumber || CONTROL.test(p)) {
     const n = decodeNumber(p, digits);
     if (n !== null) return String(n);
   }
-  if (p.length > PART_CHARS_MAX) return `${JSON.stringify(p.slice(0, PART_CHARS_MAX))}...(${p.length} chars)`;
+  if (!whole && p.length > PART_CHARS_MAX) return `${JSON.stringify(p.slice(0, PART_CHARS_MAX))}...(${p.length} chars)`;
   return isJson(p) ? p : JSON.stringify(p);
 }

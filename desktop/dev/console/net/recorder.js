@@ -99,14 +99,14 @@ export function parsePacket(text) {
 }
 
 // A reliable message: { name, text }: name is its type without RELIABLE_ ("CHAT"), text is
-// 'CHAT("hello", 7)'.
-export function describeMessage(data, digits, typeName) {
+// 'CHAT("hello", 7)'. whole: no part is cut (showPart).
+export function describeMessage(data, digits, typeName, whole = false) {
   const parts = splitParts(data);
   const type = decodeNumber(parts[0], digits);
   const full = type !== null ? typeName(type) : null;
   const name = full ? full.replace(TYPE_PREFIX, '') : `TYPE_${type !== null ? type : '?'}`;
   const isNumber = NUMBER_PARTS[name] || (() => false);
-  const args = parts.slice(1).map((p, i) => showPart(p, digits, isNumber(i + 1, parts.length))).join(', ');
+  const args = parts.slice(1).map((p, i) => showPart(p, digits, isNumber(i + 1, parts.length), whole)).join(', ');
   return { name, parts, text: `${name}(${args})` };
 }
 
@@ -239,7 +239,7 @@ function onOut(rec, text, dropped, t = now()) {
     const sent = rec.unacked.get(uid);
     if (uid > rec.maxOut) {
       rec.maxOut = uid;
-      const m = describeMessage(data, digits, typeNameNow);
+      const m = describeMessage(data, digits, typeNameNow, allOn());
       rec.unacked.set(uid, { t, tries: 1, name: m.name, stalled: false });
       count(rec, 'relOut');
       emit(rec, 'OUT', 'REL', `#${uid} ${m.text}${answerOf(rec.asked.IN, m, t)}`, t);
@@ -284,7 +284,7 @@ function onIn(rec, text, t = now()) {
       continue;
     }
     count(rec, 'relIn');
-    const m = describeMessage(data, digits, typeNameNow);
+    const m = describeMessage(data, digits, typeNameNow, allOn());
     emit(rec, 'IN', 'REL', `#${uid} ${m.text}${answerOf(rec.asked.OUT, m, t)}`, t);
     remember(rec.asked.IN, uid, m, t);
     const gapAt = rec.missing.get(uid);

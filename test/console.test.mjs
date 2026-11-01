@@ -2626,6 +2626,37 @@ test('the network log decodes a RESPONSE\'s callback ID even when it looks like 
   assert.equal(rec.describeMessage(netMsg(77), NET_DIGITS, names).text, 'TYPE_77()');
 });
 
+test('a part over 2000 characters is cut, except with net_log_all', async () => {
+  const { G, N } = c;
+  const rec = await consoleModule('net/recorder.js');
+  const names = (n) => ({ 4: 'RELIABLE_TASK' })[n];
+  const code = '( v )=>{ return v; }'.padEnd(7370, ' ');
+  assert.equal(rec.describeMessage(netMsg(4, code, 'r'), NET_DIGITS, names).text,
+    `TASK(${JSON.stringify(code.slice(0, 2000))}...(7370 chars), "r")`);
+  assert.equal(rec.describeMessage(netMsg(4, code, 'r'), NET_DIGITS, names, true).text, `TASK(${JSON.stringify(code)}, "r")`);
+  const net = G[N.net];
+  net[N.netDigits] = NET_DIGITS;
+  net[N.netTypeNames] = { 4: 'RELIABLE_TASK' };
+  const conn = fakeConnection(N);
+  conn.socket.connected = true;
+  net.connections = [conn];
+  const t = Date.now() + 350000;
+  try {
+    rec.netTick(t);
+    const since = rec.netlog.lines().length;
+    const rel = () => rec.netlog.lines().slice(since).filter((l) => / REL /.test(l)).at(-1);
+    conn[N.connRecv](netPacket(-1, '', [[0, netMsg(4, code, 'r')]]));
+    assert.match(rel(), /\.\.\.\(7370 chars\), "r"\)$/);
+    c.run('net_log_all on');
+    conn[N.connRecv](netPacket(-1, '', [[1, netMsg(4, code, 'r')]]));
+    assert.ok(rel().endsWith(`#1 TASK(${JSON.stringify(code)}, "r")`), rel().slice(-80));
+  } finally {
+    c.run('unset net_log_all');
+    net.connections = [];
+    rec.netTick(t + 50);
+  }
+});
+
 test('a RESPONSE says which request it answers, and the PKT line adds up to the packet\'s size', async () => {
   const { G, N } = c;
   const rec = await consoleModule('net/recorder.js');

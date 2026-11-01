@@ -19,9 +19,10 @@ const ACTIVE_MS = 15000;
 // many lines.
 const READ_TAIL_BYTES = 4 * 1024 * 1024;
 const READ_LINES_MAX = 20000;
-// What one POST may carry.
+// What one POST may carry. A line is a bound against a runaway page, not a display
+// limit: with net_log_all the recorder cuts nothing, and a whole map is one line.
 const POST_LINES_MAX = 20000;
-const LINE_CHARS_MAX = 64 * 1024;
+const LINE_CHARS_MAX = 16 * 1024 * 1024;
 
 const two = (n) => String(n).padStart(2, '0');
 const stampOf = (d) => `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}_${two(d.getHours())}-${two(d.getMinutes())}-${two(d.getSeconds())}`;
