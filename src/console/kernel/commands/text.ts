@@ -8,3 +8,9 @@ export const TEXT = Object.freeze({
   noArguments: 'usage: features',
   title: 'Feature flags',
 });
+
+export const COMMAND_TEXT = Object.freeze({
+  unknownStart: (first: string, part: string) => `unknown command "${first}"${part !== first ? ` in "${part}"` : ''}. Type "help".`,
+  hotkeyWins: (key: string, what: string, setting: string) => `  ${key} is ${what}, which wins: "${setting} <other key>" or "${setting} off" frees it.`,
+  gameKey: (key: string, base: string, use: string) => `  ${key} is also a game key (${base ? `${base}: ` : ''}${use}). In levels the bind runs instead.`,
+});
