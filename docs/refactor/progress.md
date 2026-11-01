@@ -101,7 +101,7 @@ Notes from P2 for the feature steps:
   `desktop/dev/console/{commands,triggers,logic}`, and its tests stay in
   `test/console.test.mjs`. Both move and become TypeScript in P6.1.
 - [x] P3.17 `map_editor`, gated: `src/features/map_editor/console.ts` registers the old command, frame hook and list section; the editor key follows the flag. The code stays JavaScript in `desktop/dev/console/editor/` until P6.1.
-- [ ] P3.18 `login` + `cert_pinning`
+- [x] P3.18 `login` + `cert_pinning`: `src/features/login/` (credentials file and cookie adapters; flag off starts logged out) and `src/features/cert_pinning/` (the verify procedure). `desktop/login.js` and `test/login.test.mjs` are gone.
 - [ ] P3.19 `remote_play`
 - [ ] P3.20 `p2p_host`
 - [ ] P3.21 `client_sadburst`

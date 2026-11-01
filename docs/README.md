@@ -14,6 +14,25 @@
 ## Features
 - [hooks.md](features/hooks.md): changing the game's scripts as they are served
 - [hooks-reference.md](features/hooks-reference.md): the hooks API
+- [binds.md](features/binds.md): `binds`, key binds and keyname
+- [cert-pinning.md](features/cert-pinning.md): `cert_pinning`
+- [fingerprint.md](features/fingerprint.md): `fingerprint`, keeping and running the main server's fingerprinter
+- [game-chat.md](features/game-chat.md): `game_chat`, the game's own chat commands
+- [guns.md](features/guns.md): `guns`, the gun list, give and drop
+- [js-eval.md](features/js-eval.md): `js_eval`, running JavaScript in the page
+- [lobby-task-guard.md](features/lobby-task-guard.md): `lobby_task_guard`, no code from a private server's lobby
+- [login.md](features/login.md): `login`
+- [map-cache.md](features/map-cache.md): `map_cache`, local maps and the map cache
+- [map-editor.md](features/map-editor.md): `map_editor`, the in-game map editor
+- [netlog.md](features/netlog.md): `netlog`, the network recorder
+- [player.md](features/player.md): `player`, commands and overrides on your character
+- [profiles.md](features/profiles.md): `profiles`, settings for some maps
+- [scan-bypass.md](features/scan-bypass.md): `scan_bypass`, the anti-cheat scan report and turning the protection off
+- [screenshot.md](features/screenshot.md): `screenshot`
+- [server-list.md](features/server-list.md): `server_list`, the server list and private servers
+- [trace.md](features/trace.md): `trace`, lines to other characters
+- [triggers.md](features/triggers.md): `triggers`, map triggers, regions, variables and the logic view
+- [zoom.md](features/zoom.md): `zoom`
 
 ## Operations
 - [private-server.md](operations/private-server.md): running your own server (`npm run server`)

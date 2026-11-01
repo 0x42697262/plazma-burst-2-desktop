@@ -6,7 +6,6 @@ const { app, BrowserWindow, Menu, dialog, protocol, net, session, ipcMain } = re
 const fs = require('fs/promises');
 const fsSync = require('fs');
 const path = require('path');
-const { loadCredentials, applyLogin } = require('./login');
 const { createKvFile } = require('./kv-file');
 // Settings, feature flags and the log, built once by src/wrapper/context.ts.
 const { wrapperContext } = require('../src/wrapper/context.ts');
@@ -58,6 +57,9 @@ const DEV_ENABLED = FLAGS.dev_console.on;
 // __dev/ routes of migrated features (src/features/*/wrapper.ts), when their flag is on.
 const { createDevRouter, createInterceptor } = require('../src/wrapper/http/router.ts');
 const { buildWrapper } = require('../src/wrapper/features.ts');
+const { createLogin } = require('../src/features/login/wrapper.ts');
+const { pinCertificates } = require('../src/features/cert_pinning/wrapper.ts');
+const login = createLogin({ log, desktopDir: __dirname, host: HOST, fromEnvironment: ENVIRONMENT.credentials, isOn: FLAGS.login.on });
 const DEV_KV_FILE = path.join(__dirname, SADBURST ? 'dev-overrides.sadburst.json' : 'dev-overrides.json');
 
 const liveWindow = () => (mainWindow && !mainWindow.isDestroyed() ? mainWindow : null);
@@ -169,42 +171,8 @@ const types = {
   '.map': 'application/json',
 };
 
-// A private server: the site's cookies cleared and none set, so the page never has your login.
-async function startLoggedOut() {
-  const { removed } = await applyLogin(session.defaultSession.cookies, {}, HOST);
-  if (removed.length) log.info(`Cleared saved site cookies: ${removed.join(', ')} (your PB2 account is not used on a private server)`);
-}
-
-// The private server being played on is trusted with exactly its saved certificate, and
-// with nothing else. Every other site, and that address when no private server is
-// chosen, is checked as usual.
-function pinServerCertificates() {
-  const { X509Certificate } = require('crypto');
-  let warned = null;
-  session.defaultSession.setCertificateVerifyProc((request, callback) => {
-    const target = joinTarget();
-    if (!target || request.hostname !== target.host) { callback(-3); return; }
-    let fingerprint = '';
-    try { fingerprint = new X509Certificate(request.certificate.data).fingerprint256; } catch {}
-    if (fingerprint === target.fingerprint) { callback(0); return; }
-    if (warned !== target.id) {
-      warned = target.id;
-      log.error(`Private server: the certificate at ${target.hostPort} is not the saved one (got ${fingerprint || 'none'}); not connecting`);
-    }
-    callback(-2);
-  });
-}
-
-// Login: each time the official server is chosen, the site's cookies are cleared, then
-// the credentials, if any, are set (env vars PB2_LOGIN, PB2_PASSWORD, PB2_UID win over
-// desktop/credentials.json). Without them the game starts logged out. See desktop/login.js.
-async function applyCredentials() {
-  const credentials = loadCredentials(path.join(__dirname, 'credentials.json'), ENVIRONMENT.credentials);
-  const { removed, set } = await applyLogin(session.defaultSession.cookies, credentials, HOST);
-  if (removed.length) log.info(`Cleared saved site cookies: ${removed.join(', ')}`);
-  if (set.length) log.info(`Logged in from credentials: ${set.join(', ')}`);
-  else log.info('No credentials (desktop/credentials.json or PB2_LOGIN/PB2_PASSWORD/PB2_UID): starting logged out.');
-}
+const startLoggedOut = () => login.startLoggedOut(session.defaultSession.cookies);
+const applyCredentials = () => login.applyCredentials(session.defaultSession.cookies);
 
 // A file of the console, or null when the path leaves desktop/dev/console.
 async function serveConsoleFile(rel) {
@@ -404,7 +372,7 @@ app.whenReady().then(async () => {
   if (DEV_ENABLED) { checkNamesFile(); checkConsoleBundle(); }
   // Remote play and the player-hosted host play on the official server; the window picks.
   if (HOST_MODE || SERVER_MODE) await applyCredentials();
-  else pinServerCertificates();
+  else if (FLAGS.cert_pinning.on) pinCertificates(session.defaultSession, joinTarget, log);
 
   if (SADBURST) gameSession().protocol.handle('https', (request) => handleRequestLogged(request, LOCAL_CTX));
   else protocol.handle('https', (request) => handleRequestLogged(request, SERVER_MODE ? SERVER_CTX : LOCAL_CTX));
@@ -537,7 +505,7 @@ async function remoteSession(name) {
     remoteCtx.set(name, ctx);
     ses.protocol.handle('https', (request) => handleRequestLogged(request, ctx));
   }
-  await applyLogin(ses.cookies, loadCredentials(path.join(__dirname, 'credentials.json'), ENVIRONMENT.credentials), HOST);
+  await login.applyQuietly(ses.cookies);
   return { ses, ctx };
 }
 
