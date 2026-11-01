@@ -4,7 +4,7 @@ Feature flag `screenshot` (on by default; all modes). Code: `src/features/screen
 
 - `screenshot` (or the screenshot key, F12 by default, setting `screenshot_key`) asks
   the wrapper for `POST __dev/screenshot`. The wrapper captures its window and writes
-  `screenshots/pb2-<date>_<time>.png`. Several in one second get `-2`, `-3` …; the file
+  `data/screenshots/pb2-<date>_<time>.png`. Several in one second get `-2`, `-3` …; the file
   is created exclusively, so nothing is overwritten.
 - The console hides itself for two frames before the capture, so it is not in the
   picture. `--console` keeps it.

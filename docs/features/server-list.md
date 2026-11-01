@@ -9,7 +9,7 @@ Feature flag `server_list` (on by default; local mode, official client only). Co
 `src/features/server_list/launcher/`, built to `dist/launcher/`. The list holds:
 - the official server;
 - private servers (`npm run server`, [private-server](../operations/private-server.md)),
-  saved in `desktop/servers.json`.
+  saved in `data/servers.json`.
 
 The console's `servers` command does everything the page does.
 
@@ -25,7 +25,7 @@ the window goes straight to the game, there is no Servers menu, and the console 
 
 ## The saved file
 
-`desktop/servers.json`, versioned ([ADR 0004](../adr/0004-versioned-local-files.md)),
+`data/servers.json`, versioned ([ADR 0004](../adr/0004-versioned-local-files.md)),
 written with mode `0600` because it holds passwords:
 
     { "schemaVersion": 1,
@@ -35,7 +35,7 @@ written with mode `0600` because it holds passwords:
 
 - Version 0 (no `schemaVersion`) is the layout from before. It is migrated on first read.
 - A broken entry is left out and reported as a problem; the others still load.
-- `desktop/join.json` (from before the server list) is imported once, when there is no
+- `data/join.json` (from before the server list) is imported once, when there is no
   `servers.json` yet.
 
 ## Certificates

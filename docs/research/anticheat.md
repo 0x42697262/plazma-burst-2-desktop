@@ -1214,7 +1214,7 @@ On arrival, `$ММ.$pOeрМ` / `$ММ.$c0рlc` split the text at `\x02`, undo th
 
 **The packet around the messages** (`connection.js`, `$AОAcc` sends, `$AoH1e` receives): one text per network tick, fields split by `\x01` (escaped `$.1`): `ack`, the newest unreliable state, then `uid`, message, `uid`, message, ... for every reliable message not yet acknowledged. `ack` is the highest uid received in order. Unacknowledged messages are repeated in every packet until their ack arrives: each packet received sets the "sent up to" mark (`$IHОHp`) back to its ack (`connection.js:824`), so the next packet carries every unacknowledged message again. When nothing arrives, the same reset happens 2 s after the last new message (6 s when it was over 1000 characters). So a reliable message normally goes out once per tick for about one round trip; that repeating is not loss. Over a socket the packet goes out with `socket.volatile.emit("m", text)`, which socket.io drops when the socket is busy; peer to peer it goes over an unordered data channel with no retransmits.
 
-The dev console's network log ([README.md §7](../../README.md#7-network-log), `src/features/netlog/`) decodes all of this into `netlogs/`: each reliable message with its type name and decoded numbers, and every resend, dropped packet, gap, late and duplicate message.
+The dev console's network log ([README.md §7](../../README.md#7-network-log), `src/features/netlog/`) decodes all of this into `data/netlogs/`: each reliable message with its type name and decoded numbers, and every resend, dropped packet, gap, late and duplicate message.
 
 ### 13.4 Keep-alive: start, run, end
 
@@ -1328,7 +1328,7 @@ The same `$с0A.$Т0ОcpT` also gets `"HealthAltering"` when a player's HP goes 
 | The game's View logs | No: skipped (`MPLogs.js:232–234`) |
 | DevTools → Network → WS → the game's socket | Yes: the last frame before the reload |
 | The dev console's terminal output (`net/scan-report.js`) | Yes: logged as a warning |
-| The network log (`netlogs/`, `netlog show type:ping`) | Yes: `OUT REL #<uid> PING("undefined", "<code>", "<detail>")`, recorded as it is sent |
+| The network log (`data/netlogs/`, `netlog show type:ping`) | Yes: `OUT REL #<uid> PING("undefined", "<code>", "<detail>")`, recorded as it is sent |
 
 ### 13.6 Traces
 

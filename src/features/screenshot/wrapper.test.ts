@@ -9,11 +9,11 @@ import { saveWindowShot, type CapturableWindow } from './adapters/window-capture
 test('the route: POST only, a remote tester gets one shot every 2 s, a failure is a 500', async () => {
   let time = 10000;
   const broken = { webContents: { capturePage: async () => { throw new Error('capture failed'); } } } as unknown as CapturableWindow;
-  const route = screenshotRoute({ save: async (window) => { if (window === broken) throw new Error('capture failed'); return 'screenshots/pb2-x.png'; }, now: () => time });
+  const route = screenshotRoute({ save: async (window) => { if (window === broken) throw new Error('capture failed'); return 'data/screenshots/pb2-x.png'; }, now: () => time });
   const url = new URL('https://example.test/__dev/screenshot');
   const post = () => new Request(url, { method: 'POST' });
   assert.equal((await route.handle(new Request(url), url, {})).status, 404);
-  assert.deepEqual(await (await route.handle(post(), url, { window: 'local' })).json(), { file: 'screenshots/pb2-x.png' });
+  assert.deepEqual(await (await route.handle(post(), url, { window: 'local' })).json(), { file: 'data/screenshots/pb2-x.png' });
   const tester = { remote: true, window: 'tester' };
   assert.equal((await route.handle(post(), url, tester)).status, 200);
   time += 1000;

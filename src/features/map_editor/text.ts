@@ -29,7 +29,7 @@ export const COMMAND_TEXT = Object.freeze({
   liveNow: 'live now',
   notInLevel: (why: string) => `not in the running level: ${why} (kept for "editor save")`,
   setDone: (name: string, attr: string, value: string, where: string) => `${name}: ${attr} = "${value}", ${where}`,
-  saveUsage: 'usage: editor save <name> [--force]  (desktop/maps/<name>.xml, played as local-<name>)',
+  saveUsage: 'usage: editor save <name> [--force]  (data/maps/<name>.xml, played as local-<name>)',
   saved: (file: string, id: string) => `Saved ${file}: play it as "${id}" in Campaign > Custom Map`,
   error: (message: string) => `error: ${message}`,
   exists: (message: string, name: string) => `${message}; "editor save ${name} --force" replaces it`,
@@ -245,15 +245,15 @@ export const SUBCOMMAND_HELP = (kindWords: string) => ({
   save: {
     name: 'save',
     usage: 'editor save <name> [--force]',
-    desc: 'Save the edited map to desktop/maps/<name>.xml (play it as local-<name>)',
+    desc: 'Save the edited map to data/maps/<name>.xml (play it as local-<name>)',
     help: {
       about: [
-        'Writes the map with every edit to desktop/maps/<name>.xml, one tag per line.',
+        'Writes the map with every edit to data/maps/<name>.xml, one tag per line.',
         'Play it from Campaign > Custom Map as local-<name>, or open it in the map',
         'editor on the website.',
       ],
       args: [['<name>', 'letters, digits, spaces, _ . -'], ['--force', 'replace the file if it exists']],
-      examples: [['editor save my_base', 'desktop/maps/my_base.xml']],
+      examples: [['editor save my_base', 'data/maps/my_base.xml']],
       notes: ['Desktop wrapper only: the wrapper writes the file.'],
       see: ['editor', 'maps'],
     },

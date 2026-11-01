@@ -133,7 +133,7 @@ test('dedicated host: logs in, creates the match as the create screen does, spec
   assert.deepEqual(out.setMap[0], ['<map>\n<player x="1"/>\n</map>', 'arena', '0', '8', 'local-arena']);
   assert.equal(out.setMapAfterTick, 1, 'the held map is not sent again while the match has it');
   assert.equal(out.setMapAgain, 2, 'a map from the lobby server is replaced by the held local map');
-  assert.ok(out.missingLater.some((line: string) => /no map "nothing" in desktop\/maps/.test(line)));
+  assert.ok(out.missingLater.some((line: string) => /no map "nothing" in data\/maps/.test(line)));
 
   assert.ok(out.gone.some((line: string) => /the match is gone/.test(line)));
   assert.ok(out.gone.some((line: string) => /starting again in 5 s/.test(line)));

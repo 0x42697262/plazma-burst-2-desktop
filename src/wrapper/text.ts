@@ -1,5 +1,5 @@
 export const TEXT = Object.freeze({
-  flagsFileUnreadable: (message: string) => `features.json cannot be read: ${message}`,
+  flagsFileUnreadable: (message: string) => `data/features.json cannot be read: ${message}`,
 });
 
 export const APP_TEXT = Object.freeze({

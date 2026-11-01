@@ -1,5 +1,4 @@
 export const TESTERS_FILE_NAME = 'remote-testers.json';
-export const REMOTE_DATA_DIR_NAME = 'remote-data';
 export const TESTER_SETTINGS_FILE_NAME = 'dev-overrides.json';
 export const PARTITION_PREFIX = 'persist:remote-';
 export const SCALE_FACTOR_SWITCH = 'force-device-scale-factor';
@@ -156,7 +155,7 @@ export const BROWSER_EVENT = Object.freeze({
 } as const);
 
 export const REDACTION_PATTERN = Object.freeze({
-  path: /(?:\.{0,2}\/)?\b(?:desktop|docs|hooks|tools|test|game|game\.previous|scripts|screenshots|node_modules|src|dist|__dev|__hooks)\/(?:[^\s"'`)\],;]*[^\s"'`)\],;.:])?/g,
+  path: /(?:\.{0,2}\/)?\b(?:data|desktop|docs|hooks|tools|test|game|game\.previous|scripts|screenshots|node_modules|src|dist|__dev|__hooks)\/(?:[^\s"'`)\],;]*[^\s"'`)\],;.:])?/g,
   file: /\b[\w.*-]+\.(?:md|js|mjs|cjs|json|ts)\b/g,
   escaped: /\$?(?:[0-9A-Za-z_$]|\\u[0-9a-fA-F]{4})*\\u04[0-9a-fA-F]{2}(?:[0-9A-Za-z_$]|\\u[0-9a-fA-F]{4})*/g,
   specialCharacters: /[.*+?^${}()|[\]\\]/g,

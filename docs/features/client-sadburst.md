@@ -25,7 +25,7 @@ same plus the game, names and opcodes files). The gate: `src/wrapper/app.ts`.
 
 ## Kept apart
 - Sad Burst 2 keeps everything apart from the official client: its own settings file
-  (`desktop/dev-overrides.sadburst.json`), names and opcodes files, game folder and
+  (`data/dev-overrides.sadburst.json`), names and opcodes files, game folder and
   browser session (`persist:sadburst`). Its lobby can run code in its page
   (RELIABLE_TASK, [fingerprinting](../research/fingerprinting.md) §4), and nothing it
   writes may reach the official client, e.g. a bind running `js ...` in the official

@@ -42,7 +42,7 @@ test('the fingerprinter is sent to the wrapper once from the lobby connection, w
     if (!url.includes('fingerprint')) return { ok: true, json: async () => ({}) };
     if (options?.method === 'POST') {
       posts.push([url, options.body]);
-      saved = { id: 'a1b2c3d4e5f6', file: 'fingerprint/2026-11-01_05-30-12_a1b2c3d4e5f6.js', kind: 'sync', chars: options.body.length, code: options.body, seen: 1, versions: 1, last: new Date().toISOString() };
+      saved = { id: 'a1b2c3d4e5f6', file: 'data/fingerprint/2026-11-01_05-30-12_a1b2c3d4e5f6.js', kind: 'sync', chars: options.body.length, code: options.body, seen: 1, versions: 1, last: new Date().toISOString() };
       return { ok: true, json: async () => ({ id: saved?.id, file: saved?.file, status: 'new' }) };
     }
     return saved ? { ok: true, status: 200, json: async () => saved } : { ok: false, status: 404, text: async () => 'no fingerprinter saved yet' };
@@ -68,7 +68,7 @@ test('the fingerprinter is sent to the wrapper once from the lobby connection, w
     await settle();
     assert.deepEqual(posts, [['__dev/fingerprint?kind=sync', FP_SOURCE]]);
     assert.equal(conn.got.length, 3, 'the game gets every packet');
-    assert.match(game.log.printed.join('\n'), /new fingerprinter \(version a1b2c3d4e5f6\): saved to fingerprint\//);
+    assert.match(game.log.printed.join('\n'), /new fingerprinter \(version a1b2c3d4e5f6\): saved to data\/fingerprint\//);
 
     game.run('net_log on');
     recorder.tick(time += 50);
@@ -83,7 +83,7 @@ test('the fingerprinter is sent to the wrapper once from the lobby connection, w
     game.run('fingerprint');
     await settle();
     const out = printed();
-    assert.match(out[0] ?? '', /^Fingerprinter a1b2c3d4e5f6 \(fingerprint\/2026-11-01_05-30-12_a1b2c3d4e5f6\.js\): sync, \d+ chars, seen 1 time, last /);
+    assert.match(out[0] ?? '', /^Fingerprinter a1b2c3d4e5f6 \(data\/fingerprint\/2026-11-01_05-30-12_a1b2c3d4e5f6\.js\): sync, \d+ chars, seen 1 time, last /);
     assert.match(out[1] ?? '', /^The game would answer with 1 part \(RESPONSE, callback ID, then these\): one text, 8 values joined by "У" \(U\+0423, this session's separator\):$/);
     assert.match(out[2] ?? '', /^ {2}\[0\] fingerprint, full \(3 values\)$/);
     assert.match(out[3] ?? '', /^ {8}canvas +7$/);

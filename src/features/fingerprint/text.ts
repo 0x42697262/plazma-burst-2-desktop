@@ -40,7 +40,7 @@ export const COMMAND_TEXT = Object.freeze({
   about: [
     'The main server sends the game a browser fingerprinter (JavaScript, RELIABLE_TASK;',
     'docs/research/fingerprinting.md), which the game runs and answers. Every version that arrives is',
-    'saved once in fingerprint/ (not in git); a version seen again is not saved again.',
+    'saved once in data/fingerprint/ (not in git); a version seen again is not saved again.',
     '"fingerprint" runs the latest here, as the game does, and shows the answer: each',
     'value labelled from what it is, the fingerprint\'s JSON one value a line. The',
     'fingerprinter joins its values into one text with a separator the server picks',
@@ -74,14 +74,14 @@ export const COMMAND_TEXT = Object.freeze({
   asyncTimeout: (seconds: number) => `no answer after ${seconds} s`,
   list: Object.freeze({
     usage: 'fingerprint list',
-    description: 'Every fingerprinter version saved in fingerprint/, the latest first',
+    description: 'Every fingerprinter version saved in data/fingerprint/, the latest first',
     about: [
       'A version is the code without its values (strings, numbers): one the server',
       'changed. Its file holds the newest text, with the last session\'s values.',
     ],
     see: ['fingerprint'],
-    none: 'No fingerprinter saved yet in fingerprint/.',
-    title: (count: number) => `Fingerprinter versions in fingerprint/ (${count}), the latest first. "fingerprint" runs the latest.`,
+    none: 'No fingerprinter saved yet in data/fingerprint/.',
+    title: (count: number) => `Fingerprinter versions in data/fingerprint/ (${count}), the latest first. "fingerprint" runs the latest.`,
     latestMark: 'latest',
     notLatestMark: '      ',
     row: (id: string, mark: string, kind: string, chars: string, seen: string, first: string, ago: string, file: string) => `  ${id}  ${mark}  ${kind}  ${chars} chars  seen ${seen}x  first ${first}, last ${ago}  ${file}`,

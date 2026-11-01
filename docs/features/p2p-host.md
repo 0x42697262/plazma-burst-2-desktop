@@ -10,7 +10,7 @@ the `server`, `who`, `kick` and `say` commands are not registered and the host n
 starts.
 
 ## The config file
-- `desktop/p2p-host.json`, or the file given with `--config <file>` / `--config=<file>`.
+- `data/p2p-host.json`, or the file given with `--config <file>` / `--config=<file>`.
   It is written by hand, never by the app, so it carries no version.
 - `match` is the game's own match preset, the JSON its create screen copies with "Copy
   Preset as text" (title, map_id, max_players, password, ...). It is sent to the lobby
@@ -43,7 +43,7 @@ starts.
 - `ice_servers`: "stun:host:port", or `{ urls, username, credential }`; urls start with
   stun:, stuns:, turn: or turns:, and a TURN server needs a username and credential.
 - `allow`: account logins, trimmed, lowercased, without duplicates.
-- `local_map`: a file name in `desktop/maps` without `.xml`; a `local-` prefix and a
+- `local_map`: a file name in `data/maps` without `.xml`; a `local-` prefix and a
   `.xml`/`.txt` extension are dropped. Paths are refused.
 - `region` (at most 40 characters) also becomes the match's `p2p_region`.
 - `fps` 10-120; `restart_after_s` 0 or more (0: never start again by itself).
@@ -53,7 +53,7 @@ starts.
 
 ## The host window
 - The default session, logged in like `npm start`, its own console settings file
-  (`desktop/p2p-host-overrides.json`), and `PB2_SERVER` (the checked `{ match, server }`,
+  (`data/p2p-host-overrides.json`), and `PB2_SERVER` (the checked `{ match, server }`,
   not enumerable) set before any script on its page.
 - The page's console goes to the terminal: the console's own `[pb2dev] ` lines and
   `[chat] ` lines as plain text (HTML tags dropped, entities decoded), errors as errors,
@@ -95,7 +95,7 @@ list, the local map, and starting again when the match is gone.
   30 s. A kick is the match owner's: out of the match, and kept out of it (the match's ban
   list) until `server unbanall`. A player without an auth id has not fully joined yet and
   cannot be kicked.
-- The local map is `desktop/maps/<name>.xml`. The wrapper serves it as map ID
+- The local map is `data/maps/<name>.xml`. The wrapper serves it as map ID
   `local-<name>` at the address where the game downloads maps (`/pb2/server.php`); the
   host downloads it there and sets it as the match's map, which sends it to every player.
   From then on it is put back over any map the lobby server sends (a rotation, `-map`)

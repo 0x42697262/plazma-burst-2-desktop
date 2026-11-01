@@ -43,7 +43,7 @@ network logs with your login credentials, and the saved private servers.
 | `game/scripts/screens/MPLobby.js` | Opening the main-server connection |
 | `game/scripts/frame2.js` | Build tag `$ерОр0`, `CONNECTION_SERVER_ID` |
 | `game/_strings.js` | Global string table used by the obfuscator |
-| `fingerprint/2026-11-01_10-57-35_b8354ed91036.js` | The complete payload, exactly as received |
+| `data/fingerprint/2026-11-01_10-57-35_b8354ed91036.js` | The complete payload, exactly as received |
 | A reply captured on 2026-11-01 (from an earlier session) | The values the payload produced in that session |
 
 The payload was captured by the dev console. `src/features/fingerprint/`
@@ -565,7 +565,7 @@ on its own.
 
 | Component | Value | Notes |
 |---|---|---|
-| `userAgent` | `… plazma-burst-2-desktop/1.0.0 Chrome/156.0.8078.48 Electron/45.0.0 …` | Electron adds the app name and version plus `Electron/x`. This **identifies the desktop wrapper uniquely** among PB2 players. |
+| `userAgent` | `… plazma-burst-2-data/1.0.0 Chrome/156.0.8078.48 Electron/45.0.0 …` | Electron adds the app name and version plus `Electron/x`. This **identifies the desktop wrapper uniquely** among PB2 players. |
 | `platform` | `Linux x86_64` | |
 | `languages` | `["en-US","en","en"]` | The duplicated `en` is a Chromium/Electron quirk. Rare in normal browsers, so it adds distinguishing power. |
 | `deviceMemory` | `32` | Reported in GiB, rounded by the browser. |
@@ -610,8 +610,8 @@ on its own.
   separator (§6.6), so it is generated for each connection. The server can send any code
   to any player at any time; nothing on the client pins what a task may contain.
 - **What leaves a trace on disk.**
-  - `fingerprint/` keeps only tasks whose source contains `getBrowserFingerprint` (§11).
-  - The network log (`netlogs/`, on by default) has a `REL … TASK(…)` line for every task.
+  - `data/fingerprint/` keeps only tasks whose source contains `getBrowserFingerprint` (§11).
+  - The network log (`data/netlogs/`, on by default) has a `REL … TASK(…)` line for every task.
     With `net_log_all` on, the source is written whole; otherwise it is cut at 2,000
     characters.
   - A task that is not the fingerprinter is visible only in the network log.
@@ -643,13 +643,13 @@ Electron or Chromium bug. Inside the page, though, it can reach all of this:
 
 | Surface | What pushed code can do | Severity |
 |---|---|---|
-| **Network logs**: `__dev/netruns`, `__dev/netread` | Read every log in `netlogs/`. Each login is logged as `REL #0 AUTHENTICATE("<login>", "<32-character password field>", …)`: the exact login secret the game sends, for **every account that ever logged in on this machine** while `net_log` was on. On 2026-11-01 the logs held 13 such lines, 10 with a non-empty password field. | **High** |
+| **Network logs**: `__dev/netruns`, `__dev/netread` | Read every log in `data/netlogs/`. Each login is logged as `REL #0 AUTHENTICATE("<login>", "<32-character password field>", …)`: the exact login secret the game sends, for **every account that ever logged in on this machine** while `net_log` was on. On 2026-11-01 the logs held 13 such lines, 10 with a non-empty password field. | **High** |
 | **Saved private servers**: `__dev/servers` | `list` returns names, addresses and nicknames; passwords are hidden (`hasPassword` only). But `save` with an existing `id` and no `password` **keeps the saved password while changing `address` and `fingerprint`**. `play` then logs in there at once. Together: the server's password goes to an address of the attacker's choosing. `check` / `fingerprint` make the main process open a connection to any host:port. | **High** |
-| **Console settings**: `__dev/kv` (PUT) | Rewrite `desktop/dev-overrides.json`: settings, profiles and binds. A bind runs any console command line, `js` included, so the code survives restarts and runs on a keypress later, even when you are on another server. | **High** (persistence) |
+| **Console settings**: `__dev/kv` (PUT) | Rewrite `data/dev-overrides.json`: settings, profiles and binds. A bind runs any console command line, `js` included, so the code survives restarts and runs on a keypress later, even when you are on another server. | **High** (persistence) |
 | **The game itself** | Read and change any game state, send any message as you (chat, votes, kicks, match actions), read `loaderInfo.parameters.l` / `.p` (the login and password field the game logs in with). | High |
 | **The page's storage** | Read and write the origin's cookies (the wrapper's login cookies), `localStorage` and IndexedDB (`localforage`). | Medium |
 | **Fingerprinter store**: `__dev/fingerprint` (POST) | Plant a "version" containing `getBrowserFingerprint`. Your later `fingerprint` command then runs it, on whatever server you are on at that point. | Medium |
-| **Maps**: `__dev/savemap`, `__dev/saveedited` | Write map XML into `desktop/maps/` (file names are sanitised; no path escape). With `fast_maps`, a saved map is loaded instead of the download, so a planted map changes what a match runs for you. | Low–Medium |
+| **Maps**: `__dev/savemap`, `__dev/saveedited` | Write map XML into `data/maps/` (file names are sanitised; no path escape). With `fast_maps`, a saved map is loaded instead of the download, so a planted map changes what a match runs for you. | Low–Medium |
 | **Network log writes**: `__dev/netlog` (POST) | Add forged lines to the log. | Low |
 | **Screenshot**: `__dev/screenshot` | Capture the window. | Low |
 | **Reads**: console source, `names.js`, `opcodes.js`, `__hooks/` | Read the console's code, the decoded game names and your hooks. | Low |
@@ -711,10 +711,10 @@ hostile or compromised lobby server can do.
 - **Capture.** `src/features/fingerprint/` listens on the lobby connection's
   receive method (through `net/tap.js`) and spots a `RELIABLE_TASK` whose source contains
   `getBrowserFingerprint`. It sends that source to the wrapper.
-- **Storage.** `src/features/fingerprint/` stores each version once in `fingerprint/` (not in
+- **Storage.** `src/features/fingerprint/` stores each version once in `data/fingerprint/` (not in
   git). A version is the code with its string and number contents, comments and spacing
   removed, so the per-session literals of §6.6 are not a new version. A known version that
-  arrives with new literals rewrites its file. `fingerprint/index.json` records first and
+  arrives with new literals rewrites its file. `data/fingerprint/index.json` records first and
   last seen, how often, and which version is the latest.
 - **Running it.** The console command `fingerprint` runs the latest version the way the
   game does, `(source)(\`<build tag>\`)`, without sending anything. It splits the
@@ -749,7 +749,7 @@ hostile or compromised lobby server can do.
 | `CONNECTION_SERVER_ID` | `game/scripts/frame2.js:2428` |
 | Build tag `$ерОр0` | `game/scripts/frame2.js:5413` |
 | String table | `game/_strings.js` |
-| Payload, version `b8354ed91036` | `fingerprint/2026-11-01_10-57-35_b8354ed91036.js` (local, not in git) |
+| Payload, version `b8354ed91036` | `data/fingerprint/2026-11-01_10-57-35_b8354ed91036.js` (local, not in git) |
 
 ## Appendix B. Identifier Glossary
 

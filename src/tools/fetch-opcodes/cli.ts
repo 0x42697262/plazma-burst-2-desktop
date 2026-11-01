@@ -6,6 +6,9 @@ import { FAILED_EXIT_CODE, FIRST_USER_ARGUMENT, JSON_INDENT, DATE_LENGTH, OK } f
 import { ARG, CONTENT_TYPE, CONTENT_TYPE_HEADER, FORM_TYPE, LISTS_URL, POST_METHOD, SCRIPT_TYPE, SERVER_LISTS, SOURCE_URL, TEXT_ENCODING, USER_AGENT, USER_AGENT_HEADER, listsRequest } from './keys.ts';
 import { TEXT } from './text.ts';
 import { check, parseCategories, parseMarkPairs, parseParamTable, parseParams, type Table } from './parse.ts';
+import { moveLegacyDataAndTell } from '#kernel/data/move.ts';
+
+moveLegacyDataAndTell(REPO_ROOT);
 
 function render(table: Table, source: string): string {
   const data = { source, fetched: new Date().toISOString().slice(0, DATE_LENGTH), ...table };

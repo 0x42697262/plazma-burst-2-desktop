@@ -25,7 +25,7 @@ Resolved once at boot by the pure `resolve()` in `src/kernel/flags/resolve.ts`. 
 layers win:
 
 1. the catalog default;
-2. `features.json` at the repo root (gitignored, versioned);
+2. `data/features.json` at the repo root (gitignored, versioned);
 3. the environment: `PB2_FEATURES=+id,-id`, plus the legacy aliases `PB2_DEV=0`
    (`-dev_console`) and `PB2_HOOKS=0` (`-hooks`);
 4. hard constraints: `locked`, `requires`, `conflicts`, `availableIn`.
@@ -52,7 +52,7 @@ on.
   exits.
 - The console's `features` (alias `flags`) prints the same list in the game. It is
   hidden in remote play, because it would show the host's setup to a tester.
-- When any flag was set in `features.json` or the environment, the wrapper logs one
+- When any flag was set in `data/features.json` or the environment, the wrapper logs one
   `flags.resolved` line naming those flags, e.g.
   `flags.resolved hooks=off:env`.
 
@@ -63,4 +63,4 @@ Each of these stops the app before a window opens, with one line per problem:
 - turning off a locked feature;
 - changing a flag whose code does not read it yet (`migrated: false`);
 - a malformed `PB2_FEATURES`;
-- an unreadable `features.json`.
+- an unreadable `data/features.json`.

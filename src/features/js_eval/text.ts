@@ -22,7 +22,7 @@ export const TEXT = Object.freeze({
   setMaxHp: 'set your max HP',
   hpExpression: (chars: string, me: string, field: string) => `${chars}[${me}].${field}`,
   setMaxHpExpression: (chars: string, me: string, field: string) => `${chars}[${me}].${field} = 500`,
-  namesFile: (version: string) => `Names for this game version (${version || 'unknown'}) are in desktop/dev/names.js, e.g. PB2_NAMES.chars.`,
+  namesFile: (version: string) => `Names for this game version (${version || 'unknown'}) are in data/names.js, e.g. PB2_NAMES.chars.`,
   nameExamples: [
     ['PB2_NAMES.chars', 'the name itself, as a string'],
     ['eval(PB2_NAMES.chars).length', 'use a name without typing it'],

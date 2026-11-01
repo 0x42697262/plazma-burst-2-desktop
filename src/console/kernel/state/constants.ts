@@ -74,7 +74,7 @@ export const SCHEMA = Object.freeze({
   },
   screenshot_key: {
     type: SETTING_TYPE.key, group: GROUP.console, default: 'f12',
-    desc: 'Key that saves a screenshot to screenshots/, anywhere in the game; off = none',
+    desc: 'Key that saves a screenshot to data/screenshots/, anywhere in the game; off = none',
     about: ['Works in menus, levels and with the console open (the console is left out of',
       'the picture). A function key works while you type; other keys wait until you',
       'are not typing in the chat or the console.'],
@@ -89,25 +89,25 @@ export const SCHEMA = Object.freeze({
   },
   save_maps: {
     type: SETTING_TYPE.bool, group: GROUP.maps, default: true,
-    desc: 'Save every map the game downloads to desktop/maps/<map id>.xml, uncompressed and one tag per line',
-    about: ['Every map the game downloads is written to desktop/maps/<map id>.xml,', 'uncompressed and one XML tag per line.'],
+    desc: 'Save every map the game downloads to data/maps/<map id>.xml, uncompressed and one tag per line',
+    about: ['Every map the game downloads is written to data/maps/<map id>.xml,', 'uncompressed and one XML tag per line.'],
     phrases: [/^save\s+maps?(?=\s|$)/i],
   },
   fast_maps: {
     type: SETTING_TYPE.bool, group: GROUP.maps, default: false,
-    desc: 'Fast load: use the saved map from desktop/maps instead of downloading it again',
-    about: ['Loads the saved copy from desktop/maps instead of downloading the map',
+    desc: 'Fast load: use the saved map from data/maps instead of downloading it again',
+    about: ['Loads the saved copy from data/maps instead of downloading the map',
       'again. Single-player maps are served by the desktop wrapper; multiplayer maps',
       'are handed to the game as it joins a match.'],
     phrases: [/^fast\s+load(\s+maps?)?(?=\s|$)/i],
   },
   net_log: {
     type: SETTING_TYPE.bool, group: GROUP.network, default: true,
-    desc: 'Record the game\'s network messages and packet losses to netlogs/, one readable file per run ' +
+    desc: 'Record the game\'s network messages and packet losses to data/netlogs/, one readable file per run ' +
       '("netlog" shows it)',
     about: ['Every message the game sends and receives on its connections, packet losses',
       '(slow and missing acks, dropped packets, gaps, late messages) and once a second',
-      'the ping and traffic of each connection, as plain text in netlogs/: one file per',
+      'the ping and traffic of each connection, as plain text in data/netlogs/: one file per',
       'run and game window. "netlog" shows it here, "netlog runs" lists other instances.'],
   },
   net_log_state: {

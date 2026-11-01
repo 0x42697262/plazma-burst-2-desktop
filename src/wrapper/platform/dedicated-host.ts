@@ -1,3 +1,4 @@
+import { DATA_FOLDER_NAME } from '#kernel/config/paths.ts';
 import fsSync from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
@@ -9,7 +10,7 @@ import { EXAMPLE_CONFIG_FILE_NAME } from '#features/p2p_host/keys.ts';
 import { HOST_WINDOW, MILLISECONDS_PER_SECOND, QUIT_AFTER_STOP_MS, RELOAD_AFTER_CRASH_MS } from '#features/p2p_host/constants.ts';
 import { HOST_LOG } from '#features/p2p_host/text.ts';
 import type { KvFile } from './kv-file.ts';
-import { CLOSE_EVENT, DESKTOP_FOLDER_NAME, INTERRUPT_SIGNAL, LINE_EVENT, QUIT_WORDS, STOP_SERVER_SCRIPT, WINDOW_EVENT, runConsoleLineScript } from './keys.ts';
+import { CLOSE_EVENT, INTERRUPT_SIGNAL, LINE_EVENT, QUIT_WORDS, STOP_SERVER_SCRIPT, WINDOW_EVENT, runConsoleLineScript } from './keys.ts';
 import { logServerPage } from './page-log.ts';
 
 export type ServerPage = { match: Match; server: ServerSettings };
@@ -47,7 +48,7 @@ async function loadServerPage(deps: DedicatedHostDeps): Promise<{ page: ServerPa
   const file = config ? path.resolve(config) : defaultConfigFile;
   const loaded = loadConfig(file);
   if (loaded.missing) {
-    log.error(HOST_LOG.missingConfig(file, path.join(DESKTOP_FOLDER_NAME, EXAMPLE_CONFIG_FILE_NAME)));
+    log.error(HOST_LOG.missingConfig(file, path.join(DATA_FOLDER_NAME, EXAMPLE_CONFIG_FILE_NAME)));
     return null;
   }
   for (const problem of loaded.problems) log.warn(HOST_LOG.problem(problem));

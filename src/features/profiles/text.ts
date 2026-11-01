@@ -91,7 +91,7 @@ export const TEXT = Object.freeze({
     ['list', 'values from the profile are tagged [profile hardcore, yours: on]'],
   ],
   notes: [
-    'In desktop/dev-overrides.json: "profiles": { "hardcore": { "god": false, "binds":',
+    'In data/dev-overrides.json: "profiles": { "hardcore": { "god": false, "binds":',
     '{ "shift+j": "heal" }, "onload": "heal; pos" } } and "maps": { "<map id>": "hardcore" }.',
     '"onload" may also be a list of commands. Saving the file while the game runs reloads',
     'it, and anything wrong in it (an unknown key, a value out of range) is printed here.',

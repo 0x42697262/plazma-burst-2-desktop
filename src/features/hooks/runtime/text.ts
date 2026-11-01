@@ -1,5 +1,5 @@
 export const RUNTIME_TEXT = Object.freeze({
-  noName: (key: string) => `Game: no name "${key}" in desktop/dev/names.js (run "npm run find-names")`,
+  noName: (key: string) => `Game: no name "${key}" in data/names.js (run "npm run find-names")`,
   reported: (hook: string, where: string, detail: string) => `[hooks] ${hook}: error in ${where}: ${detail}`,
   onEnter: 'onEnter',
   onLeave: 'onLeave',

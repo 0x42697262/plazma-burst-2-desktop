@@ -1,7 +1,8 @@
 import { CATALOG } from '#shared/features/catalog.ts';
 import type { FlagStates } from '#shared/features/types.ts';
 import { parseEnvironment, type Environment } from '#kernel/config/environment.ts';
-import { FEATURES_FILE } from '#kernel/config/paths.ts';
+import { FEATURES_FILE, REPO_ROOT } from '#kernel/config/paths.ts';
+import { moveLegacyData, tellMoveReport } from '#kernel/data/move.ts';
 import { TEXT as CONFIG_TEXT } from '#kernel/config/text.ts';
 import { featuresFileStore, splitKnownFeatures, type FileOverrides } from '#kernel/flags/features-file.ts';
 import { explicitlySet, resolveFlags } from '#kernel/flags/resolve.ts';
@@ -29,6 +30,7 @@ function stopWith(problems: readonly string[]): never {
 }
 
 function buildContext(): WrapperContext {
+  const dataMove = moveLegacyData(REPO_ROOT);
   const { environment, problems: environmentProblems } = parseEnvironment(process.argv, process.env);
   const problems = [...environmentProblems];
   const fileFlags = readFeaturesFile(problems);
@@ -43,6 +45,7 @@ function buildContext(): WrapperContext {
   problems.push(...flagProblems);
   if (problems.length) stopWith(problems);
   const log = createLogger(environment.logLevel, console, environment.logFormat);
+  tellMoveReport(dataMove, log);
   const setFlags = explicitlySet(CATALOG, states);
   if (Object.keys(setFlags).length) log.event(LOG_LEVEL.info, KERNEL_EVENT.flagsResolved, setFlags);
   return Object.freeze({ environment, flags: states, log });

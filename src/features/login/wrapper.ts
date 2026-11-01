@@ -7,10 +7,10 @@ import { mergeCredentials, type Credentials } from './domain/credentials.ts';
 import { readCredentialsFile } from './adapters/credentials-file.ts';
 import { applyLogin, type CookieStore } from './adapters/cookies.ts';
 
-export type LoginDeps = { log: Logger; desktopDir: string; host: string; fromEnvironment: EnvironmentCredentials; isOn: boolean };
+export type LoginDeps = { log: Logger; dataDir: string; host: string; fromEnvironment: EnvironmentCredentials; isOn: boolean };
 
-export function createLogin({ log, desktopDir, host, fromEnvironment, isOn }: LoginDeps) {
-  const file = path.join(desktopDir, CREDENTIALS_FILE_NAME);
+export function createLogin({ log, dataDir, host, fromEnvironment, isOn }: LoginDeps) {
+  const file = path.join(dataDir, CREDENTIALS_FILE_NAME);
 
   const credentials = (): Credentials => (isOn ? mergeCredentials(readCredentialsFile(file, (message) => { log.error(TEXT.unreadable(file, message)); }), fromEnvironment) : {});
 

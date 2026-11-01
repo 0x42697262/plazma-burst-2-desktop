@@ -83,11 +83,11 @@ test('with the login flag off, the saved credentials are not used and the game s
   try {
     const lines: string[] = [];
     const cookies = saved();
-    await createLogin({ log: quietLog(lines), desktopDir: folder, host: HOST, fromEnvironment: { login: 'env_login' }, isOn: false }).applyCredentials(cookies);
+    await createLogin({ log: quietLog(lines), dataDir: folder, host: HOST, fromEnvironment: { login: 'env_login' }, isOn: false }).applyCredentials(cookies);
     assert.deepEqual(cookies.jar().map((cookie) => cookie.name), ['other']);
     assert.match(lines.at(-1) ?? '', /Login is off/);
     const onCookies = saved();
-    await createLogin({ log: quietLog([]), desktopDir: folder, host: HOST, fromEnvironment: {}, isOn: true }).applyCredentials(onCookies);
+    await createLogin({ log: quietLog([]), dataDir: folder, host: HOST, fromEnvironment: {}, isOn: true }).applyCredentials(onCookies);
     assert.deepEqual(onCookies.jar().filter((cookie) => cookie.domain === '.plazmaburst2.com').map((cookie) => cookie.name).sort(), ['login', 'password']);
   } finally {
     fs.rmSync(folder, { recursive: true });

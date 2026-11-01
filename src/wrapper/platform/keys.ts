@@ -69,4 +69,3 @@ export const callConsoleScript = (method: string, argument: unknown): string => 
 export const LINE_EVENT = 'line';
 export const CLOSE_EVENT = 'close';
 export const INTERRUPT_SIGNAL = 'SIGINT';
-export const DESKTOP_FOLDER_NAME = 'desktop';

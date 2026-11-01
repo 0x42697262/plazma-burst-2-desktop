@@ -7,16 +7,17 @@ import readline from 'node:readline';
 import { Server, type Socket } from 'socket.io';
 import { createLogger } from '#kernel/log/logger.ts';
 import { parseLogLevel } from '#kernel/config/log-level.ts';
-import { REPO_ROOT, DESKTOP_DIR } from '#kernel/config/paths.ts';
+import { CLIENT_PATHS, REPO_ROOT, SERVER_DATA_DIR } from '#kernel/config/paths.ts';
+import { NOTHING_MOVED, moveLegacyData, tellMoveReport } from '#kernel/data/move.ts';
 import { makeUnpacker } from '#kernel/maps/map-text.ts';
 import { findNames } from '#tools/find-names/find-names.ts';
 import selfsigned from 'selfsigned';
 import { stringOf } from '#kernel/text/text-of.ts';
 import { BANS_INDENT, CERT_DAYS, CERT_KEY_SIZE, CLOSE_DELAY_MS, KEY_FILE_MODE, MATCH_NUMBER_WIDTH, NICKNAME_WIDTH, NOT_FOUND, OK, ADDRESS_WIDTH, PING_WIDTH } from './constants.ts';
 import {
-  ARG, BANS_FILE, CERT_ALGORITHM, CERT_FILE, CERT_NAME, CONFIG_FILE, CONNECTION_EVENT, DATA_FOLDER, ERROR_EVENT, GAME_DIR_VARIABLE, GAME_FOLDER, GET_METHOD,
+  ARG, BANS_FILE, CERT_ALGORITHM, CERT_FILE, CERT_NAME, CONFIG_FILE, CONNECTION_EVENT, ERROR_EVENT, GAME_DIR_VARIABLE, GAME_FOLDER, GET_METHOD,
   INTERRUPT_SIGNAL, IPV4, JSON_TYPE, KEY_FILE, LINE_EVENT, MAPS_FOLDER, NEEDED_NAMES, NO_STORE, ORIGIN, QUIT_WORDS, SPACE, STATUS_PATH, STRINGS_FILE,
-  TEXT_ENCODING, VERSION_FILE, WORDS, LINE_JOIN, HEADER, SERVER_FOLDER,
+  TEXT_ENCODING, VERSION_FILE, WORDS, LINE_JOIN, HEADER,
 } from './keys.ts';
 import { SERVER_LOG as TEXT } from './text.ts';
 import { loadConfig } from './config.ts';
@@ -28,14 +29,13 @@ type Tls = { cert: string; key: string; fingerprint: string };
 type MatchRow = { map_name: string; game_type: string; players_current: number; players_max: number; spectators_current: number; has_password?: boolean };
 type SelfSigned = { generate(attributes: unknown, options: unknown): { private: string; cert: string } };
 
-const SERVER_DIR = path.join(REPO_ROOT, SERVER_FOLDER);
 const FIRST_USER_ARGUMENT = 2;
 
 function parseArgs(args: readonly string[]): Arguments {
   const parsed: Arguments = {
-    config: path.join(SERVER_DIR, CONFIG_FILE),
+    config: path.join(SERVER_DATA_DIR, CONFIG_FILE),
     game: process.env[GAME_DIR_VARIABLE] || path.join(REPO_ROOT, GAME_FOLDER),
-    data: path.join(SERVER_DIR, DATA_FOLDER),
+    data: SERVER_DATA_DIR,
   };
   for (let index = 0; index < args.length; index++) {
     const arg = args[index];
@@ -98,7 +98,10 @@ function main(): void {
     return;
   }
   const dataDir = args.data;
+  const usesTheDefaultDataFolder = dataDir === SERVER_DATA_DIR;
+  const dataMove = usesTheDefaultDataFolder ? moveLegacyData(REPO_ROOT) : NOTHING_MOVED;
   const log = createLogger(parseLogLevel(process.argv, process.env).level);
+  tellMoveReport(dataMove, log);
   const loaded = loadConfig(args.config);
   if (loaded.missing) log.info(TEXT.noConfig(path.relative(REPO_ROOT, args.config)));
   for (const problem of loaded.problems) log.warn(TEXT.configProblem(problem));
@@ -121,7 +124,7 @@ function main(): void {
     process.exitCode = 1;
     return;
   }
-  const maps = createMaps({ mapsDir: path.join(DESKTOP_DIR, MAPS_FOLDER), cacheDir: path.join(dataDir, MAPS_FOLDER), unpack: makeUnpacker(args.game) });
+  const maps = createMaps({ mapsDir: CLIENT_PATHS.official.mapsDir, cacheDir: path.join(dataDir, MAPS_FOLDER), unpack: makeUnpacker(args.game) });
   const game = new GameServer({ gameDir: args.game, names: found.found, config, log, maps });
   game.onBans = (bans) => { writeBans(dataDir, bans); };
 

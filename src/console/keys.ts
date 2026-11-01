@@ -9,5 +9,5 @@ export const FRAME_GUARD_LABEL = 'Frame';
 export const KEY_DOWN_EVENT = 'keydown';
 export const KEY_UP_EVENT = 'keyup';
 export const SETTINGS_SOURCE_FILE = 'file';
-export const DESKTOP_FOLDER = 'desktop/';
+export const DATA_FOLDER = 'data/';
 export const LOCAL_STORAGE_NAME = 'localStorage';

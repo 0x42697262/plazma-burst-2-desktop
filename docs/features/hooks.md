@@ -79,7 +79,7 @@ original runs and the error goes to the terminal.
 
 | Write | Means |
 |---|---|
-| `Game.levelStart` | The game function with that readable name in `desktop/dev/names.js` |
+| `Game.levelStart` | The game function with that readable name in `data/names.js` |
 | `Game.fn('$ееААT')` | A game function by its obfuscated name (breaks when the game updates) |
 | `Game.method(object, 'name')` | A function on a game object, made while the game runs. Only inside callbacks; see below |
 
@@ -123,7 +123,7 @@ Interceptor.attach(Game.levelStart, {
   doesn't exist yet.
 
 Readable names for the game's functions and values are found by `npm run find-names` and
-listed in `desktop/dev/names.js`. To add one, add a rule to `src/tools/find-names/constants.ts`.
+listed in `data/names.js`. To add one, add a rule to `src/tools/find-names/constants.ts`.
 
 ## Script.patch: change code inside a function
 

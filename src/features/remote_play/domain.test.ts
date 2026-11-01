@@ -16,8 +16,8 @@ const START = 'https://www.plazmaburst2.com/h5/versions/v1/';
 test('redactor: host paths, file names and game names are hidden; game text is not', () => {
   const redact = makeRedactor({ chars: '$0Ме1А', latinOnly: '$pMcpo' });
   const cases: [string, string][] = [
-    ['Overrides are saved to desktop/dev-overrides.json.', `Overrides are saved to ${HIDDEN}.`],
-    ['Saved map dm1 to desktop/maps', `Saved map dm1 to ${HIDDEN}`],
+    ['Overrides are saved to data/dev-overrides.json.', `Overrides are saved to ${HIDDEN}.`],
+    ['Saved map dm1 to data/maps', `Saved map dm1 to ${HIDDEN}`],
     ['see hooks/README.md and ANTICHEAT.md', `see ${HIDDEN} and ${HIDDEN}`],
     ['the why is in docs/research/anticheat.md §6.', `the why is in ${HIDDEN} §6.`],
     ['the game name "x" is not in names.js', `the game name "x" is not in ${HIDDEN}`],

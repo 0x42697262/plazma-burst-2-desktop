@@ -7,6 +7,10 @@ import { TEXT } from './text.ts';
 import { decode, loadStrings } from './find-names.ts';
 import { run } from './run.ts';
 import { loadCode, run as runSadburst } from './sadburst.ts';
+import { moveLegacyDataAndTell } from '#kernel/data/move.ts';
+import { REPO_ROOT } from '#kernel/config/paths.ts';
+
+moveLegacyDataAndTell(REPO_ROOT);
 
 const FIRST_USER_ARGUMENT = 2;
 const PROBLEM_EXIT_CODE = 1;

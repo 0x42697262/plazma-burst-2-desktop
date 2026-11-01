@@ -34,7 +34,7 @@ can play at once (`--max`, default 4).
 | `npm run testers -- remove <name>` | Their link stops working |
 | `npm run testers -- list` | Who has a link |
 
-- Links are stored in `desktop/remote-testers.json` (not in git, readable only by you).
+- Links are stored in `data/remote-testers.json` (not in git, readable only by you).
   The host reads it on every connect, so no restart is needed.
 - The token sits after `#` in the link, so browsers never send it in a URL and tunnels
   don't log it. The page sends it once, over the WebSocket.
@@ -84,7 +84,7 @@ tester's connection falls behind, so the game doesn't lag.
 - **Run code:** the console's `js` command doesn't exist in their game, and there are no DevTools.
 - **See your hooks:** the `hooks` command doesn't exist in their game.
 - **Risk your account:** they play logged in as you, so `bypass checks` (turning off the console's ranked match protection, [docs/research/anticheat.md §14.8](../research/anticheat.md#148-summary-for-players)) doesn't exist in their game.
-- **See other network logs:** their game writes `netlogs/<date>_<time>_tester-<name>.log` on your machine, and their `netlog` shows only that one: no `netlog runs`, no `run:` ([README.md §7](../../README.md#7-network-log)).
+- **See other network logs:** their game writes `data/netlogs/<date>_<time>_tester-<name>.log` on your machine, and their `netlog` shows only that one: no `netlog runs`, no `run:` ([README.md §7](../../README.md#7-network-log)).
 - **Read paths, file names or game internals:** everything the console prints is
   scrubbed of host paths, file names, and the game's obfuscated names (shown as `‹hidden›`).
   Explanations of how the anti-cheat works are left out.
@@ -94,16 +94,16 @@ tester's connection falls behind, so the game doesn't lag.
 - **Touch your clipboard:** paste is blocked, so they can't read it. Copy and cut are blocked
   too, so they can't put text in it for you to paste later.
 - **Disturb others:** each game is its own session (cookies, saves, console settings in
-  `desktop/remote-data/<name>/`). The machine plays no sound from their games.
+  `data/remote-data/<name>/`). The machine plays no sound from their games.
 
 **Can affect your machine, within limits:**
-- Their screenshot key (F12) saves to your `screenshots/`, at most one every 2 seconds per tester.
+- Their screenshot key (F12) saves to your `data/screenshots/`, at most one every 2 seconds per tester.
 - A broken or oversized message only drops that tester's connection, never the host.
 
 **What they share with you:**
-- Your **PB2 login** (`desktop/credentials.json`): online they play as your account.
-- Map files (`desktop/maps/`): maps they save land there.
-- Screenshots they take land in `screenshots/`.
+- Your **PB2 login** (`data/credentials.json`): online they play as your account.
+- Map files (`data/maps/`): maps they save land there.
+- Screenshots they take land in `data/screenshots/`.
 
 ## Sessions
 

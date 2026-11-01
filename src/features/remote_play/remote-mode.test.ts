@@ -11,12 +11,12 @@ const REMOTE_CHILD = `
   globalThis.PB2_REMOTE = true;
   const { bootConsole, CONSOLE_ENTRY } = await import(${JSON.stringify(pathToFileURL(path.join(REPO, 'src/console/testing/fake-game.fixture.ts')).href)});
   const c = await bootConsole();
-  const at = (rel) => new URL(rel, ${JSON.stringify(pathToFileURL(path.join(REPO, 'desktop/dev/console/')).href)}).href;
-  const { attachLog, print } = await import(at('../../../src/console/kernel/ui/log.ts'));
-  const { findRunnable } = await import(at('../../../src/console/kernel/commands/registry.ts'));
+  const at = (rel) => new URL(rel, ${JSON.stringify(pathToFileURL(path.join(REPO, 'src/console/')).href)}).href;
+  const { attachLog, print } = await import(at('kernel/ui/log.ts'));
+  const { findRunnable } = await import(at('kernel/commands/registry.ts'));
   const pane = { childNodes: [], append(n) { this.childNodes.push(n); }, get firstChild() { return this.childNodes[0]; }, scrollTop: 0, scrollHeight: 0 };
   attachLog(pane);
-  print('Overrides are saved to desktop/dev-overrides.json, chars is $0Ме1А');
+  print('Overrides are saved to data/dev-overrides.json, chars is $0Ме1А');
   const shown = pane.childNodes.map((line) => (line.childNodes || []).map((s) => s.text).join(''));
   process.stdout.write(JSON.stringify({
     js: !!findRunnable('js'), hooks: !!findRunnable('hooks'), god: !!findRunnable('god') || !!findRunnable('help'),
@@ -40,9 +40,9 @@ const SWEEP_CHILD = `
   globalThis.PB2_REMOTE = true;
   const { bootConsole } = await import(${JSON.stringify(pathToFileURL(path.join(REPO, 'src/console/testing/fake-game.fixture.ts')).href)});
   const c = await bootConsole();
-  const at = (rel) => new URL(rel, ${JSON.stringify(pathToFileURL(path.join(REPO, 'desktop/dev/console/')).href)}).href;
-  const { attachLog } = await import(at('../../../src/console/kernel/ui/log.ts'));
-  const { helpEntries } = await import(at('../../../src/console/kernel/commands/registry.ts'));
+  const at = (rel) => new URL(rel, ${JSON.stringify(pathToFileURL(path.join(REPO, 'src/console/')).href)}).href;
+  const { attachLog } = await import(at('kernel/ui/log.ts'));
+  const { helpEntries } = await import(at('kernel/commands/registry.ts'));
   const pane = { childNodes: [], append(n) { this.childNodes.push(n); }, get firstChild() { return this.childNodes[0]; }, scrollTop: 0, scrollHeight: 0 };
   attachLog(pane);
   const out = [];

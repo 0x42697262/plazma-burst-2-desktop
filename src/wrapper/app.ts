@@ -3,7 +3,7 @@ import fsSync from 'node:fs';
 import path from 'node:path';
 import { app, BrowserWindow, Menu, dialog, protocol, net, session, ipcMain, type MenuItemConstructorOptions, type Session } from 'electron';
 import { CLIENTS } from '#kernel/config/clients.ts';
-import { CONSOLE_BUNDLE_DIR, CONSOLE_BUNDLE_FILE, DESKTOP_DIR, REPO_ROOT } from '#kernel/config/paths.ts';
+import { CONSOLE_BUNDLE_DIR, CONSOLE_BUNDLE_FILE, DATA_DIR, REPO_ROOT } from '#kernel/config/paths.ts';
 import { CLIENT, MODE, PAGE_FLAGS_GLOBAL } from '#shared/features/keys.ts';
 import { DEV_DIR, ROUTE_NAME } from '#shared/contract/keys.ts';
 import { REMOTE_PAGE_SCRIPT, SCALE_FACTOR_ONE, SCALE_FACTOR_SWITCH } from '#features/remote_play/keys.ts';
@@ -51,15 +51,15 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
   const devPrefix = prefix + DEV_DIR;
   const hooksOn = flags.hooks.on;
   const devConsoleOn = flags.dev_console.on;
-  const devSettingsFile = path.join(DESKTOP_DIR, client.settingsFileName);
-  const serverSettingsFile = path.join(DESKTOP_DIR, SETTINGS_FILE_NAME);
+  const devSettingsFile = path.join(DATA_DIR, client.settingsFileName);
+  const serverSettingsFile = path.join(DATA_DIR, SETTINGS_FILE_NAME);
 
   let mainWindow: BrowserWindow | null = null;
   let serverPage: ServerPage | null = null;
   const liveWindow = (): BrowserWindow | null => (mainWindow && !mainWindow.isDestroyed() ? mainWindow : null);
   const gameSession = (): Session => (client.partition ? session.fromPartition(client.partition) : session.defaultSession);
 
-  const login = createLogin({ log, desktopDir: DESKTOP_DIR, host, fromEnvironment: environment.credentials, isOn: flags.login.on });
+  const login = createLogin({ log, dataDir: DATA_DIR, host, fromEnvironment: environment.credentials, isOn: flags.login.on });
   const startLoggedOut = (): Promise<void> => login.startLoggedOut(session.defaultSession.cookies);
   const applyCredentials = (): Promise<void> => login.applyCredentials(session.defaultSession.cookies);
 
@@ -260,7 +260,7 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
       await startDedicatedServer({
         log,
         args: environment.args,
-        defaultConfigFile: path.join(DESKTOP_DIR, CONFIG_FILE_NAME),
+        defaultConfigFile: path.join(DATA_DIR, CONFIG_FILE_NAME),
         devConsoleOn,
         namesFile: client.names,
         settingsFile: serverSettingsFile,

@@ -1,4 +1,3 @@
-import path from 'node:path';
-import { REPO_ROOT } from '#kernel/config/paths.ts';
+import { CLIENT_PATHS } from '#kernel/config/paths.ts';
 
-export const mapsDir = (isSadburst: boolean): string => path.join(REPO_ROOT, 'desktop', isSadburst ? 'maps.sadburst' : 'maps');
+export const mapsDir = (isSadburst: boolean): string => (isSadburst ? CLIENT_PATHS.sadburst : CLIENT_PATHS.official).mapsDir;

@@ -16,7 +16,7 @@ With the flag off, `npm run host` logs that remote play is off and quits.
   `hello`.
 
 ## Testers file
-- `desktop/remote-testers.json`, versioned (`schemaVersion` 1), written with mode 0600.
+- `data/remote-testers.json`, versioned (`schemaVersion` 1), written with mode 0600.
   A file without a version is read as v0 and written back as v1. A broken file counts
   as no testers.
 - A token is 24 random bytes (192 bits) in base64url. Adding an existing name gives it a
@@ -57,7 +57,7 @@ With the flag off, `npm run host` logs that remote play is off and quits.
 
 ## Lockdown of a tester's window
 - Its own session (`persist:remote-<name>`, so saves and settings survive) and its own
-  console settings in `desktop/remote-data/<name>/`. It is logged in like the local
+  console settings in `data/remote-data/<name>/`. It is logged in like the local
   window.
 - No DevTools (off at creation, closed if opened), no menu, no new windows, no
   `<webview>`, every permission refused, downloads cancelled, muted.
@@ -75,7 +75,7 @@ With the flag off, `npm run host` logs that remote play is off and quits.
 ## The console in remote mode
 - Commands marked `remote: false` (`js`, `hooks`) do not exist.
 - Everything printed passes the redactor (`domain/redactor.ts`): project paths (`src/`,
-  `dist/`, `desktop/`, `docs/`, ...), source and config file names (`.ts`, `.js`, `.json`,
+  `dist/`, `data/`, `docs/`, ...), source and config file names (`.ts`, `.js`, `.json`,
   `.md`, ...), and the game's obfuscated names (with a Cyrillic letter, typed with `\u`
   escapes, or listed in `names.js`) become `‹hidden›`. A path never ends in `.` or `:`, so
   a sentence's full stop stays. Since the move to `src/`, `src/` and `dist/` paths and

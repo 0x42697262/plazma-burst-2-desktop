@@ -10,6 +10,10 @@ import { ARG, INHERIT_OUTPUT, VERSION_ARGUMENT, VERSION_PREFIX } from './keys.ts
 import { TEXT } from './text.ts';
 import { fetchOfficial, latestVersion } from './fetch-game.ts';
 import { fetchSadburst } from './sadburst.ts';
+import { moveLegacyDataAndTell } from '#kernel/data/move.ts';
+import { REPO_ROOT } from '#kernel/config/paths.ts';
+
+moveLegacyDataAndTell(REPO_ROOT);
 
 const PROBLEM_EXIT_CODE = 1;
 

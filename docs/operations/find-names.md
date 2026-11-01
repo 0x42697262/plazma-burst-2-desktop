@@ -1,6 +1,6 @@
 # find-names
 
-`npm run find-names` (`src/tools/find-names/`) finds the obfuscated names the dev console needs in a downloaded game copy and writes them to `desktop/dev/names.js` (`desktop/dev/names.sadburst.js` with `--sadburst`).
+`npm run find-names` (`src/tools/find-names/`) finds the obfuscated names the dev console needs in a downloaded game copy and writes them to `data/names.js` (`data/names.sadburst.js` with `--sadburst`).
 
 The game's identifiers are random look-alike names (e.g. `$0Ме1А`, with Cyrillic letters) that can change with every game version. The code structure around them is assumed to stay the same, so every name is found with a pattern that matches the surrounding code and treats all other obfuscated names as wildcards.
 
@@ -61,7 +61,7 @@ String constants are matched as literals: the game keeps them in `_strings.js` a
 ### The state update (docs/research/anticheat.md §14.2): where each value sits
 
 - `stateHp`: The server reads parts of your state update by these indices (numbers on the network class). The recorder labels STATE lines with them, so a new layout follows by itself.
-### Own lobby server (server/, "npm run server"): the game's server code, run in Node
+### Own lobby server (src/server/, "npm run server"): the game's server code, run in Node
 
 - `setupClass, setupMethod`: Run once at start: builds the digits of encoded numbers (and, with arguments, the device ID the client sends).
 - `webRequests, webRequest, mapUrl, mapKey, mapRequest`: A match loading its map: POST [map ID, "h5", title, ip] joined by "[^c]", answered "map text[^#]name[^#]approved[^#]max players[^#]map ID" or "x[^#]why".
@@ -83,7 +83,7 @@ String constants are matched as literals: the game keeps them in `_strings.js` a
 Sad Burst 2 is a fork of the official client: its obfuscated names are the official ones, but its code is minified (locals renamed, `if` turned into `&&`, `true` into `!0`, constants folded), so most patterns do not match it. A name is found in one of two ways, the first that works:
 
 1. pattern: the pattern matches its code once (after `!0` / `!1` are read as true / false);
-2. same: the name is the one the official client uses for it (found in `game/` now, or in `desktop/dev/names.js`), or the one the file had before, and it appears in the Sad Burst 2 code.
+2. same: the name is the one the official client uses for it (found in `game/` now, or in `data/names.js`), or the one the file had before, and it appears in the Sad Burst 2 code.
 
 So keep the official copy around (`npm run fetch-game`) for the second way. If Sad Burst 2 ever renames its identifiers, the second way finds nothing and says so.
 

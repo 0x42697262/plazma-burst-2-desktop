@@ -9,13 +9,13 @@ default) are read from the console's settings file.
 
 Type `local-<name>` as the Map ID in Campaign > Custom Map. The wrapper answers the
 game's map download (`POST /pb2/server.php`, `rq=cmap`) itself, with
-`desktop/maps/<name>.xml` (or `.txt`, or no extension; case does not matter; a byte
+`data/maps/<name>.xml` (or `.txt`, or no extension; case does not matter; a byte
 order mark is dropped). A missing map is answered `<not_published />`, as the site
-answers an unpublished one. Sad Burst 2 uses `desktop/maps.sadburst/`.
+answers an unpublished one. Sad Burst 2 uses `data/maps.sadburst/`.
 
 ## The cache
 
-Every other map the game downloads is saved to `desktop/maps/<map id>.xml`:
+Every other map the game downloads is saved to `data/maps/<map id>.xml`:
 - uncompressed: the site's `<q.` format is unpacked with the game's own function from
   `scripts/libs/xml.js`, run in a sandbox (`src/kernel/maps/map-text.ts`, shared with the
   server);

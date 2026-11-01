@@ -3,10 +3,10 @@ export const TEXT = Object.freeze({
   tooOften: 'one screenshot every 2 s',
   usage: 'screenshot [--console]',
   usageError: 'usage: screenshot [--console]',
-  description: 'Save the game window as a PNG in screenshots/',
+  description: 'Save the game window as a PNG in data/screenshots/',
   about: [
     'Saves the game window as it looks now, with the "logic" and "trace" lines,',
-    'to screenshots/pb2-<date>_<time>.png in the repository (not in git).',
+    'to data/screenshots/pb2-<date>_<time>.png in the repository (not in git).',
     'The console is hidden for the shot unless you add --console.',
     'F12 takes one anywhere: in menus, in levels, with the console open. Change it',
     'with "screenshot_key".',

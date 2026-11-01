@@ -2,7 +2,7 @@ export const TEXT = Object.freeze({
   usage: 'features',
   description: 'Every feature flag: on or off, and why (read-only)',
   about: [
-    'Feature flags are set before the game starts: features.json at the repository root, or PB2_FEATURES=+id,-id.',
+    'Feature flags are set before the game starts: data/features.json, or PB2_FEATURES=+id,-id.',
     'The page cannot change them. "npm start -- --features" prints the same list in the terminal.',
   ],
   noArguments: 'usage: features',
@@ -62,7 +62,7 @@ export const HELP_TEXT = Object.freeze({
     'Examples: god on | max_hp 500 | speed 1.8 | swords off | penetration 1 | unset speed',
     'Guns: guns | guns rail | give 12 | give gun_railgun 2',
   ]),
-  savedTo: 'Overrides are saved to desktop/dev-overrides.json.',
+  savedTo: 'Overrides are saved to data/dev-overrides.json.',
   moreHelp: '"help <command>" or "help <key>" explains one in full, e.g. "help triggers find".',
   usage: 'help [command | key]',
   description: 'List every command and key, or explain one in full (also "<command> help")',
@@ -132,7 +132,7 @@ export const SETTINGS_TEXT = Object.freeze({
       ['speed default', 'the same as "unset speed"'],
     ] as const),
     notes: Object.freeze([
-      'Overrides are saved to desktop/dev-overrides.json and survive a restart.',
+      'Overrides are saved to data/dev-overrides.json and survive a restart.',
       'Keys outside the console and maps groups only apply while you are in a level.',
     ]),
     see: Object.freeze(['list', 'get', 'unset', 'reset']),

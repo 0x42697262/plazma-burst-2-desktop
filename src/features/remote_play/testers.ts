@@ -1,6 +1,10 @@
 import { TESTERS_FILE } from './paths.ts';
 import { CLI_TEXT } from './text.ts';
 import { runTestersCli } from './entry/testers-cli.ts';
+import { moveLegacyDataAndTell } from '#kernel/data/move.ts';
+import { REPO_ROOT } from '#kernel/config/paths.ts';
+
+moveLegacyDataAndTell(REPO_ROOT);
 
 const FIRST_USER_ARGUMENT = 2;
 

@@ -4,60 +4,33 @@ node_modules/
 /game/
 /game.previous/
 /game.download/
-# Sad Burst 2 ("npm run fetch-game -- --sadburst"), desktop/clients.js.
+# Sad Burst 2 ("npm run fetch-game -- --sadburst").
 /game.sadburst/
 /game.sadburst.previous/
 /game.sadburst.download/
 
-# Generated from the game files with "npm run find-names".
-desktop/dev/names.js
-desktop/dev/names.sadburst.js
+# Local data (docs/operations/running.md, "Local data"): settings, logins, saved maps,
+# servers, testers, network logs, fingerprinters, screenshots, the generated names.js and
+# opcodes.js, feature flags, and the private server's settings, certificate and bans.
+# Only the *.example.json templates are tracked.
+/data/*
+!/data/*.example.json
+!/data/server/
+/data/server/*
+!/data/server/*.example.json
 
-# The map editor's trigger action names, from "npm run fetch-opcodes".
-desktop/dev/opcodes.js
-desktop/dev/opcodes.sadburst.js
-
-# Screenshots taken with the dev console's "screenshot"
+# The folders local data lived in before data/; the app moves what is left there into data/.
+/desktop/
+/server/
+/netlogs/
+/fingerprint/
+/fingerprint.sadburst/
 /screenshots/
-
-# Local settings
-desktop/credentials.json*
-desktop/dev-overrides.json
-desktop/dev-overrides.sadburst.json
-desktop/maps.sadburst/
-desktop/maps/*
+/features.json
 
 # Your hooks (see docs/features/hooks.md). The *.example.js templates are tracked.
 /hooks/*
 !/hooks/*.example.js
 
-# Remote play (src/features/remote_play/): tester links, and each tester's console settings.
-desktop/remote-testers.json
-desktop/remote-data/
-
-# The player-hosted dedicated host (desktop/p2p-host/): its settings (they hold the match password) and its console settings.
-desktop/p2p-host.json
-desktop/server.json
-desktop/p2p-host-overrides.json
-
-# The server list's private servers (desktop/servers.js): addresses, your nicknames, their passwords.
-desktop/servers.json
-desktop/servers.json.tmp
-desktop/join.json
-
-# Your own server (server/): its settings, and its certificate, bans and downloaded maps.
-server/server.json
-server/data/
-
-# Network logs from the dev console's recorder (console key net_log), one file per run and game instance.
-/netlogs/
-
-# The main server's fingerprinter, every version once (desktop/fingerprint.js, console "fingerprint").
-/fingerprint/
-/fingerprint.sadburst/
-
 # Build output ("npm run build").
 /dist/
-
-# Local feature flag overrides (docs/architecture/feature-flags.md).
-/features.json

@@ -12,7 +12,7 @@ Feature flag `login` (on by default; all modes). Code: `src/features/login/`.
   in localStorage and are not touched. The store is flushed at once, not when the session
   closes.
 - Credentials come from `PB2_LOGIN`, `PB2_PASSWORD` and `PB2_UID` (read by
-  `src/kernel/config/`), which win over `desktop/credentials.json`
+  `src/kernel/config/`), which win over `data/credentials.json`
   (`{ "login": "...", "password": "...", "pb2uid": "..." }`). Empty values count as unset.
   A file that is not JSON is reported and counts as none. The app never writes that file.
 - A private server always starts logged out: the site's cookies are cleared and none are

@@ -67,7 +67,7 @@ test('netlog: status, the last lines with filters, other instances and on/off', 
     game.run('netlog runs');
     await settle();
     const list = printed();
-    assert.match(list[0] ?? '', /^Network logs in netlogs\/, newest first \(2\)/);
+    assert.match(list[0] ?? '', /^Network logs in data\/netlogs\/, newest first \(2\)/);
     assert.match(list[1] ?? '', /^ +1 {2}2026-11-01_05-30-12_local +this window +2\.0 KB {2}updated now$/);
     assert.match(list[2] ?? '', /^ +2 {2}2026-11-01_05-31-00_local +other app, running/);
     game.run('netlog show run:2 --loss');

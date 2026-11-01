@@ -10,7 +10,7 @@ kernel (`src/console/kernel/net/`), because the fingerprint capture uses them to
 The game's connections are read in the page, the lines are posted to the wrapper, and
 the wrapper writes them as readable text, one file per run and game instance:
 
-    netlogs/<date>_<time>_<instance>.log
+    data/netlogs/<date>_<time>_<instance>.log
 
 - A **run** is one start of the app.
 - An **instance** is a game window:
@@ -103,7 +103,7 @@ The recorder hides secrets before a line is formed (`domain/redaction.ts`):
   parts are `[type, login, password, version, …]`. In `MPCreateMatch.js` and
   `GameScene.js`, JOIN_MATCH's last part is the match password.
 - Logs written before this change can be cleaned with `npm run redact-netlogs`. It
-  rewrites `netlogs/*.log` in place, reports counts only, and running it twice changes
+  rewrites `data/netlogs/*.log` in place, reports counts only, and running it twice changes
   nothing.
 
 ## Limits

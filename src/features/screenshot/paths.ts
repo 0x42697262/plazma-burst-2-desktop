@@ -1,4 +1,1 @@
-import path from 'node:path';
-import { REPO_ROOT } from '#kernel/config/paths.ts';
-
-export const SCREENSHOT_DIR = path.join(REPO_ROOT, 'screenshots');
+export { SCREENSHOT_DIR } from '#kernel/config/paths.ts';

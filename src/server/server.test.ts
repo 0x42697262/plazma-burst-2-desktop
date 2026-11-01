@@ -46,7 +46,7 @@ test('own server: the game\'s server code logs players in, lists, creates and jo
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-server-'));
   fs.mkdirSync(path.join(dir, 'maps'));
   const cfg = path.join(dir, 'server.json');
-  const map = fs.readdirSync(path.join(REPO, 'desktop', 'maps')).find((file) => file.endsWith('.xml'));
+  const map = fs.readdirSync(path.join(REPO, 'data', 'maps')).find((file) => file.endsWith('.xml'));
   fs.writeFileSync(cfg, JSON.stringify({ port: 0, bind: '127.0.0.1', password: 'pw', welcome: 'hi there', download_maps: false, random_maps: map ? [map.slice(0, -4)] : [] }));
   const srv = spawn(process.execPath, [path.join(REPO, 'src/server/index.ts'), '--config', cfg, '--data', dir], { stdio: ['pipe', 'pipe', 'pipe'] });
   let out = '';

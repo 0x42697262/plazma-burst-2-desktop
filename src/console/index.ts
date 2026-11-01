@@ -17,7 +17,7 @@ import { registerListSection } from './kernel/list-sections.ts';
 import { run } from './kernel/dispatch.ts';
 import { enabledConsoleFeatures, featureFrameHooks, featureTicks, featureListSections } from './features.ts';
 import { BOOT_POLL_MS, FRAME_ERRORS_SHOWN, STATUS_EVERY_MS } from './constants.ts';
-import { DESKTOP_FOLDER, FRAME_GUARD_LABEL, KEY_DOWN_EVENT, KEY_UP_EVENT, LOCAL_STORAGE_NAME, PAGE_API_GLOBAL } from './keys.ts';
+import { DATA_FOLDER, FRAME_GUARD_LABEL, KEY_DOWN_EVENT, KEY_UP_EVENT, LOCAL_STORAGE_NAME, PAGE_API_GLOBAL } from './keys.ts';
 import { TEXT } from './text.ts';
 
 const SETTINGS_FILE = CLIENT_DETAILS[SADBURST ? CLIENT.sadburst : CLIENT.official].settingsFileName;
@@ -42,7 +42,7 @@ function printLoaded(source: LoadSource): void {
   const overrides = plural(Object.keys(settings.snapshot()).length, TEXT.overrideNoun);
   const bindCount = plural(binds.keys().length, TEXT.bindNoun);
   const profileCount = profiles.names().length;
-  const from = source === LOAD_SOURCE.file ? DESKTOP_FOLDER + SETTINGS_FILE : LOCAL_STORAGE_NAME;
+  const from = source === LOAD_SOURCE.file ? DATA_FOLDER + SETTINGS_FILE : LOCAL_STORAGE_NAME;
   print(TEXT.loaded(overrides, bindCount, profileCount ? plural(profileCount, TEXT.profileNoun) : '', from), COLOR.hint);
 }
 

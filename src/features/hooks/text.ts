@@ -2,10 +2,10 @@ const plural = (count: number, word: string, suffix = 's'): string => `${count} 
 
 export const TEXT = Object.freeze({
   plural,
-  missingName: (key: string) => `⟨${key}⟩ is not in desktop/dev/names.js`,
+  missingName: (key: string) => `⟨${key}⟩ is not in data/names.js`,
   pageOnly: (what: string) => `${what} only works inside handlers (in the game), not at the top level of a hook file`,
   badTarget: (api: string) => `${api}: the target must be Game.<name> or Game.fn("<obfuscated name>")`,
-  unknownGameName: (key: string) => `Game.${key}: no such name in desktop/dev/names.js (run "npm run find-names", or add a rule to tools/find-names.js)`,
+  unknownGameName: (key: string) => `Game.${key}: no such name in data/names.js (run "npm run find-names", or add a rule to src/tools/find-names/constants.ts)`,
   pageOnlyName: (key: string) => `Game.${key}()`,
   attachApi: 'Interceptor.attach',
   replaceApi: 'Interceptor.replace',

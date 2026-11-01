@@ -93,7 +93,7 @@ function serviceWith(store: ServersStore) {
   const warnings: string[] = [];
   const service = createServerListService({
     store, probe, session, gameVersion: 'v1', newId, readOldJoin: () => null,
-    info: (message) => events.push(message), warn: (message) => warnings.push(message), later: (action) => action(), relativeServersFile: 'desktop/servers.json',
+    info: (message) => events.push(message), warn: (message) => warnings.push(message), later: (action) => action(), relativeServersFile: 'data/servers.json',
   });
   return { service, events, warnings };
 }

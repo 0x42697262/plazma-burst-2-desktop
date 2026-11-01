@@ -77,7 +77,7 @@ The map editor needs this feature's model, so it is off as well.
   `", "`, B runs from there to the first `" );`. Nothing is escaped, so `""1""` is the
   value `"1"` with its quotes. The editor reads each line as typed; here they are trimmed
   first. A script on one line also works: headers first, each action ending at its `" );`.
-- The names come from `desktop/dev/opcodes.js` (`npm run fetch-opcodes`).
+- The names come from `data/opcodes.js` (`npm run fetch-opcodes`).
 - A `#uid` target the map does not have, in a target kind that names an object, would
   reach the action as text, which most actions read as index 0 (a different object), so
   it is refused.

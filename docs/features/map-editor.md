@@ -36,7 +36,7 @@ Tests: `src/features/map_editor/map-editor.test.ts`.
   - Trigger actions are added, changed and removed, or edited as the map editor's text.
 - Tools: place, copy, delete and undo. The params panel lists every parameter the game
   reads and says how each one reaches a running level.
-- `editor save <name>` writes `desktop/maps/<name>.xml` through the map cache's
+- `editor save <name>` writes `data/maps/<name>.xml` through the map cache's
   `__dev/saveedited`, played as `local-<name>`. `editor reset` undoes and forgets every
   edit.
 - `list editor` shows how many objects were changed, added and deleted.
@@ -170,7 +170,7 @@ session and draw again when it notifies them; the session never draws.
   deleted objects) for `list editor`.
 - Another map means another history; a new document clears it and forgets the guns and
   lamps found.
-- `editor save` writes `desktop/maps/<name>.xml`, played as `local-<name>`.
+- `editor save` writes `data/maps/<name>.xml`, played as `local-<name>`.
 
 ### Reaching the running level (`services/apply.ts`)
 
@@ -376,7 +376,7 @@ session and draw again when it notifies them; the session never draws.
   kind has (its place, its size for a rectangle, and the editor's defaults for it),
   whether the map writes it or not, with the editor's title and description, and the
   values a parameter offers (teams, activation modes, materials, ...). The titles and
-  values come from `desktop/dev/opcodes.js` (`npm run fetch-opcodes`); without them the
+  values come from `data/opcodes.js` (`npm run fetch-opcodes`); without them the
   attribute names are shown.
 - Attributes the game reads (`frame2.js`) that the map editor does not show are listed
   after the editor's, with the value the game takes when the map leaves them out: water

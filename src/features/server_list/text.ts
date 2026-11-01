@@ -1,4 +1,4 @@
-export const OFFICIAL_DESCRIPTION = 'The official servers (USA, Arizona). Your PB2 account from desktop/credentials.json.';
+export const OFFICIAL_DESCRIPTION = 'The official servers (USA, Arizona). Your PB2 account from data/credentials.json.';
 
 export const ENTRY_TEXT = Object.freeze({
   badAddress: (text: string) => `address: "${text}" is not like "203.0.113.5:2053"`,
@@ -23,9 +23,9 @@ export const PROBE_TEXT = Object.freeze({
 export const SERVICE_TEXT = Object.freeze({
   notSaved: 'that server is not saved',
   notSavedShort: 'not saved',
-  serversFileProblem: (problem: string) => `desktop/servers.json: ${problem}`,
-  imported: (file: string) => `Imported desktop/join.json into ${file}; join.json is no longer used`,
-  importFailed: (message: string) => `desktop/join.json not imported: ${message}`,
+  serversFileProblem: (problem: string) => `data/servers.json: ${problem}`,
+  imported: (file: string) => `Imported data/join.json into ${file}; join.json is no longer used`,
+  importFailed: (message: string) => `data/join.json not imported: ${message}`,
   playing: (name: string, hostPort: string, nickname: string) => `Private server: ${name} (${hostPort}) as ${nickname}`,
   titleOfficial: 'Plazma Burst 2',
   titlePrivate: (name: string) => `Plazma Burst 2 (${name})`,
@@ -62,7 +62,7 @@ export const COMMAND_TEXT = Object.freeze({
   describeAs: (description: string, nickname: string, needsPassword: boolean) => `${description ? `${description} · ` : ''}as ${nickname}${needsPassword ? ' · needs a password' : ''}`,
   descriptionLine: (description: string) => `             ${description}`,
   versionMismatch: (there: string, here: string) => `             game ${there} there, ${here} here: the same version is needed`,
-  fileProblem: (problem: string) => `desktop/servers.json: ${problem}`,
+  fileProblem: (problem: string) => `data/servers.json: ${problem}`,
   fetchNeedsAddress: 'fingerprint=fetch needs address=',
   fetchedFingerprint: (fingerprint: string) => `The server shows fingerprint ${fingerprint}. Compare it with the one the host sent you.`,
   errorLine: (message: string) => `error: ${message}`,
@@ -80,7 +80,7 @@ export const COMMAND_TEXT = Object.freeze({
   usage: 'servers [list | connect | add | edit | remove | fingerprint | page]',
   description: 'The server list: official and private servers, with ping; add, edit, remove, connect',
   about: [
-    'The same list "npm start" opens before the game (desktop/servers.json), from here:',
+    'The same list "npm start" opens before the game (data/servers.json), from here:',
     'the official server and your private servers ("npm run server"), each checked for',
     'ping, players and description. A server is named by "official", its number in the',
     'list, or the start of its name or address.',
@@ -99,10 +99,10 @@ export const COMMAND_TEXT = Object.freeze({
   ],
   sub: Object.freeze({
     list: { usage: 'servers [list]', desc: 'The servers: name, address, ping, players, description (checked now)', about: ['Each server is checked now: ping (the time to connect), and a private server\'s', 'name, players, description and game version. A warning when its certificate is', 'not the saved one, or its game version differs from yours.'] },
-    connect: { usage: 'servers connect <official | n | name>', desc: 'Play on that server (the game reloads)', about: ['Leaves what you are playing and loads the game on that server. On a private', 'server the game starts logged out and logs in with the saved nickname and', 'password; on the official one with desktop/credentials.json.'], examples: [['servers connect official', 'PlazmaBurst2.com'], ['servers connect 1', 'the first private server']] },
+    connect: { usage: 'servers connect <official | n | name>', desc: 'Play on that server (the game reloads)', about: ['Leaves what you are playing and loads the game on that server. On a private', 'server the game starts logged out and logs in with the saved nickname and', 'password; on the official one with data/credentials.json.'], examples: [['servers connect official', 'PlazmaBurst2.com'], ['servers connect 1', 'the first private server']] },
     add: { usage: 'servers add address=<a> fingerprint=<fp | fetch> nickname=<you> [password=<p>] [name="<name>"]', desc: 'Save a private server', about: ['address and fingerprint come from the server\'s terminal. fingerprint=fetch asks', 'the server for it; compare it with the one the host sent you. A value with spaces', 'goes in "double quotes". The password is kept out of the history and the log.'], examples: [['servers add address=192.168.1.20:2053 fingerprint=fetch nickname=Pal password=pw name="Paulbase"', 'save one']] },
     edit: { usage: 'servers edit <n | name> key=value …', desc: 'Change a saved server (address, fingerprint, nickname, password, name)', about: ['Only the keys given change. password= with nothing after it removes the password.', 'A new address or fingerprint drops the saved password unless password= is given too.'], examples: [['servers edit 1 nickname=Pal2', 'another nickname'], ['servers edit paul password=newpw', 'by name']] },
-    remove: { usage: 'servers remove <n | name>', desc: 'Forget a saved server', about: ['Takes it out of desktop/servers.json. The official server always stays.'] },
+    remove: { usage: 'servers remove <n | name>', desc: 'Forget a saved server', about: ['Takes it out of data/servers.json. The official server always stays.'] },
     fingerprint: { usage: 'servers fingerprint <address>', desc: 'The certificate fingerprint a server shows (compare it with the host\'s)', about: ['Only the TLS handshake: nothing is sent to the server.'], examples: [['servers fingerprint 192.168.1.20:2053', '']] },
     page: { usage: 'servers page', desc: 'Back to the server list page (leaves the game)', about: ['The page "npm start" opens. There is no shortcut key for it; bind one if you like:', '"bind f9 servers page".'] },
   }),
@@ -127,7 +127,7 @@ export const LAUNCHER_TEXT = Object.freeze({
   asNicknameNeedsPassword: (nickname: string, needsPassword: boolean) => `as ${nickname}${needsPassword ? ' · needs a password (Edit)' : ''}`,
   officialTag: 'official',
   privateTag: 'private',
-  fileProblems: (problems: readonly string[]) => `desktop/servers.json: ${problems.join('; ')}`,
+  fileProblems: (problems: readonly string[]) => `data/servers.json: ${problems.join('; ')}`,
   editTitle: (name: string) => `Edit ${name}`,
   addTitle: 'Add a private server',
   passwordUnchanged: '(unchanged)',

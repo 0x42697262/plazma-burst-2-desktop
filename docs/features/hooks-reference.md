@@ -166,7 +166,7 @@ the context or in the hook.
 
 ### 6.1 `Game.<name>`
 
-A readable name from `desktop/dev/names.js` (made by `npm run find-names`). It survives game
+A readable name from `data/names.js` (made by `npm run find-names`). It survives game
 updates for as long as the `find-names` rule still matches.
 
 ### 6.2 `Game.fn('<obfuscated name>')`
@@ -331,12 +331,12 @@ wrappers use ids from `1000000` up.
 | `Hook <name>: loaded (N functions, N patches, off in multiplayer)` | Fine |
 | `Hook <name>: disabled (module.exports.enabled = false)` | Fine |
 | `Hook <name>: not loaded: <reason>` | Left out; the reason is one of the rows below |
-| `Game.<x>: no such name in desktop/dev/names.js ...` | Typo, or the name is new. Run `npm run find-names`, or add a rule to `src/tools/find-names/constants.ts` |
+| `Game.<x>: no such name in data/names.js ...` | Typo, or the name is new. Run `npm run find-names`, or add a rule to `src/tools/find-names/constants.ts` |
 | `no "function <x>(" in the game's scripts ...` | Wrong or outdated obfuscated name, or not a function declaration (§6.2) |
 | `"function <x>(" is declared N times (...)` | Ambiguous. Use `Script.patch` with surrounding text |
 | `Script.patch(...): found N times, expected M` | `find` doesn't match as often as `count` says. After a game update, fix the text |
 | `Script.patch: "<file>" is not one of the game's scripts ...` | Use the path from `game/index.html` |
-| `⟨x⟩ is not in desktop/dev/names.js` | Unknown name in patch text |
+| `⟨x⟩ is not in data/names.js` | Unknown name in patch text |
 | `Script.patch: find is empty` / `find must be a string or a RegExp` / `replace must be ...` / `count must be ...` | Wrong arguments |
 | `after the hooks loaded before it: ...` | Clash with an earlier hook (§8). Rename files to change the order, or merge the hooks |
 | `Game.read() only works inside handlers ...` (also `write`, `isMP`, `method`) | Called at the top level; move it into a callback |
@@ -355,7 +355,7 @@ wrappers use ids from `1000000` up.
 | `... method "<x>" is not a function on that object (not made yet? ...)` | `Game.method` too early, or the wrong object or name |
 | `... method "<x>" is read-only on that object` | The property can't be assigned. Hook the prototype or the code that creates it |
 | `Game.method: functions on globalThis ...` / `the network class ...` | Refused (§6.3). Use `Game.<name>` |
-| `Game: no name "<x>" in desktop/dev/names.js` | `Game.read` / `write` / `<name>` with an unknown name |
+| `Game: no name "<x>" in data/names.js` | `Game.read` / `write` / `<name>` with an unknown name |
 | `[hooks] <name>: replaces <target>, which <other> had replaced` | Warning: two hooks replace the same function. The later one wins |
 
 ## 15. Limits
@@ -377,6 +377,6 @@ wrappers use ids from `1000000` up.
 |---|---|
 | `PB2_HOOKS=0 npm start` | No hooks: nothing is dry-run, patched or injected |
 | `hooks` (dev console) | Every hook: status, functions, patch count, multiplayer, errors, description |
-| `npm run find-names` | Refreshes `desktop/dev/names.js` after a game update (§6.1) |
+| `npm run find-names` | Refreshes `data/names.js` after a game update (§6.1) |
 | `npm start -- --verbose` | Also logs every request, including `__hooks/...` and the changed scripts |
 | `npm test` | Includes `src/features/hooks/hooks.test.ts` |

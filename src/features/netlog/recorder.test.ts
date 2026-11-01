@@ -29,7 +29,7 @@ function recorderWithClock(start: number): { recorder: Recorder; advance(by: num
       everything: () => settingsOf('net_log_all') === true,
       states: () => settingsOf('net_log_state') === true,
     },
-    sink: { send: async () => ({ run: 'test-run', file: 'netlogs/test-run.log' }), beacon: () => true },
+    sink: { send: async () => ({ run: 'test-run', file: 'data/netlogs/test-run.log' }), beacon: () => true },
     methods: methodWrapper,
     onPageHide: () => undefined,
     warn: () => undefined,

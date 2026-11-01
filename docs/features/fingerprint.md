@@ -13,7 +13,7 @@ Code: `src/features/fingerprint/`. Background:
   its text contains `getBrowserFingerprint`. The game resends a message in every packet
   until its ack arrives, so the same source is posted to the wrapper only once.
 - **Store** (`adapters/store.ts`, wrapper side). Every version is kept once in
-  `fingerprint/` (Sad Burst 2: `fingerprint.sadburst/`, so its code never runs in the
+  `data/fingerprint/` (Sad Burst 2: `data/fingerprint.sadburst/`, so its code never runs in the
   official game):
   - `<date>_<time>_<id>.js`: the source exactly as sent.
   - `index.json` (versioned): every version with first and last seen, how often, sync

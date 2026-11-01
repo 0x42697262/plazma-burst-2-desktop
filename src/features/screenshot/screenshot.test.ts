@@ -9,7 +9,7 @@ test('screenshot hides the console, asks the wrapper, and has a hotkey (F12) you
   const { game: bindings } = await import('#console/kernel/game/bindings.ts') as { game: { overlay(): { childNodes: { style: Record<string, string>; textContent?: string }[] } } };
   const panel = () => bindings.overlay().childNodes.find((node) => node.style.zIndex === '50');
   const calls: [string, string | undefined][] = [];
-  let reply: Record<string, unknown> = { ok: true, json: async () => ({ file: 'screenshots/pb2-x.png' }) };
+  let reply: Record<string, unknown> = { ok: true, json: async () => ({ file: 'data/screenshots/pb2-x.png' }) };
   const realFetch: unknown = game.G.fetch;
   game.G.fetch = async (url: string, options?: { method?: string }) => { calls.push([url, options?.method]); return reply; };
   const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -25,7 +25,7 @@ test('screenshot hides the console, asks the wrapper, and has a hotkey (F12) you
     assert.deepEqual(calls, [['__dev/screenshot', 'POST']]);
     assert.equal(hiddenAtCapture, 'hidden', 'no console in the picture');
     assert.equal(panel()?.style.visibility, 'visible', 'and back after');
-    assert.ok(game.log.printed.includes('Saved screenshots/pb2-x.png'));
+    assert.ok(game.log.printed.includes('Saved data/screenshots/pb2-x.png'));
     assert.ok(bindings.overlay().childNodes.some((node) => node.textContent !== undefined && node.style.right === '10px'), 'a notice in the corner');
 
     await shoot(() => game.run('screenshot --console'));
