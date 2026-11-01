@@ -1898,7 +1898,7 @@ test('editor reset: every edit undone in the running level and forgotten, nothin
 
 
 // ---------------------------------------------------------------------------
-// Ranked match protection (overrides/server-checks.js) and "bypass checks"
+// Ranked match protection (src/console/kernel/overrides/server-checks.ts) and "bypass checks"
 // ---------------------------------------------------------------------------
 const REFUSED = /^error: refused in a ranked match: .*"bypass checks" turns this protection off \(dangerous\)\.$/;
 // The error line of a command's output (a client-only note can come first).

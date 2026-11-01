@@ -4,7 +4,7 @@ Feature flag `scan_bypass` (on by default; local and server modes, not in remote
 Code: `src/features/scan_bypass/`.
 
 The ranked-match protection itself is not part of this feature. It stays in the console
-(`overrides/server-checks.js`, `state/danger.js`) and is always on unless turned off
+(`src/console/kernel/overrides/server-checks.ts`, `src/console/kernel/danger/bypass.ts`) and is always on unless turned off
 here. With this flag off there is no `bypass` command, so the protection cannot be
 turned off at all.
 

@@ -2,7 +2,7 @@
 
 Feature flag `player` (on by default; all modes). Code: `src/features/player/`. The
 per-frame overrides for the player settings (`god`, `max_hp`, `hp_bonus`, `speed`,
-`jump`, `fly` …) are applied by `desktop/dev/console/overrides/frame.js` and follow the
+`jump`, `fly` …) are applied by `src/console/kernel/overrides/frame.ts` and follow the
 same flag.
 
 - `heal` refills your HP to your current max. It refuses while you are down, because

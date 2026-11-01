@@ -1,6 +1,6 @@
 import { game } from '#console/kernel/game/bindings.ts';
 import { requireLevel, isActive } from '#console/kernel/game/level.ts';
-import { zoomHeldBack, refusal, BYPASS_HINT } from '../../../../desktop/dev/console/overrides/server-checks.js';
+import { zoomHeldBack, refusal, BYPASS_HINT } from '#console/kernel/overrides/server-checks.ts';
 
 type CameraBindings = { zoom(): number; setZoom(scale: number): void; inLevelFrame(): boolean };
 const bindings = game as unknown as CameraBindings;
@@ -23,6 +23,6 @@ export const gameCamera: GameCamera = {
   isActive: () => isActive(),
   requireLevel: () => { requireLevel(); },
   heldBack: (percent) => (zoomHeldBack as (percent: number) => string | false)(percent),
-  refusal: (subject, why) => (refusal as (subject: string, why: string) => Error)(subject, why),
+  refusal: (subject, why) => refusal(subject, why),
   bypassHint: BYPASS_HINT,
 };

@@ -1,0 +1,10 @@
+export const STAND_WALK_SIT_FACTOR = 0.75;
+export const STAND_WALK_BASE = 2;
+export const STAND_WALK_SCALE = 3 / 2;
+export const AIR_WALK = 0.4;
+export const AIR_TOP_SPEED = 3;
+export const FLY_DAMPING = 0.8;
+export const NORMAL_ZOOM_PCT = 100;
+export const PERCENT = 100;
+export const MIN_MAX_HP = 1;
+export const NO_WEAPON = 0;

@@ -14,5 +14,5 @@ Feature flag `game_chat` (on by default; all modes). Code: `src/features/game_ch
   lines it produced (popups and the chat panel) are hidden again, and their text is
   printed in the console. The game's echo of the command is left out. "command not
   found" is shown as an error.
-- Ranked-match checks can refuse a command (`overrides/server-checks.js`), and a level
+- Ranked-match checks can refuse a command (`src/console/kernel/overrides/server-checks.ts`), and a level
   must be running.

@@ -3,7 +3,7 @@ import { LEVEL_REQUIRED } from '#console/kernel/game/level.ts';
 import { GAME_FIELDS } from '#console/kernel/game/fields.ts';
 import { KEY } from '#console/kernel/state/schema.ts';
 import { settings } from '#console/kernel/state/store.ts';
-import { gameCommandHeldBack, refusal } from '../../../../desktop/dev/console/overrides/server-checks.js';
+import { gameCommandHeldBack, refusal } from '#console/kernel/overrides/server-checks.ts';
 import { stripHtml } from '#console/kernel/core/words.ts';
 
 export type ChatClip = { y: number; visible: boolean; alpha?: number; timer?: number; htmlText?: string; isRemoved?: boolean; children?: ChatClip[]; [field: string]: unknown };
@@ -34,7 +34,7 @@ export const gameChat = {
   levelRequired: LEVEL_REQUIRED as string,
   builtinOn: () => (settings as { get(key: string): unknown }).get((KEY as { BUILTIN: string }).BUILTIN) === true,
   heldBack: (text: string) => (gameCommandHeldBack as (text: string) => string | false)(text),
-  refusal: (subject: string, why: string) => (refusal as (subject: string, why: string) => Error)(subject, why),
+  refusal: (subject: string, why: string) => refusal(subject, why),
   stripHtml: (text: string) => (stripHtml as (text: string) => string)(text),
 };
 

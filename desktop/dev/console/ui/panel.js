@@ -11,7 +11,7 @@ import { isActive } from '../../../../src/console/kernel/game/level.ts';
 import { eventKeyName, showKey, baseKey, TOGGLE_KEY } from '../../../../src/console/kernel/state/key-names.ts';
 import { binds, history } from '../../../../src/console/kernel/state/store.ts';
 import { hotkeyOf } from '../../../../src/console/kernel/state/hotkeys.ts';
-import { levelWasActive } from '../overrides/frame.js';
+import { levelWasActive } from '../../../../src/console/kernel/overrides/frame.ts';
 import { run, maskLine } from '../dispatch.js';
 import { looksLikeScript } from '../triggers/script.js';
 import { editorKey } from '../editor/index.js';

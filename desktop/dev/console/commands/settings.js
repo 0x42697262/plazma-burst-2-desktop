@@ -6,8 +6,8 @@ import { SCHEMA, GROUPS, KEY, resolveKey, parseValue, affectsGame, keyClientOnly
 import { settings, binds, activeProfile, currentMap } from '../../../../src/console/kernel/state/store.ts';
 import { showKey } from '../../../../src/console/kernel/state/key-names.ts';
 import { isActive } from '../../../../src/console/kernel/game/level.ts';
-import { levelWasActive, gameMaxHp } from '../overrides/frame.js';
-import { heldBack, refusal } from '../overrides/server-checks.js';
+import { levelWasActive, gameMaxHp } from '../../../../src/console/kernel/overrides/frame.ts';
+import { heldBack, refusal } from '../../../../src/console/kernel/overrides/server-checks.ts';
 import { CLIENT_TAG } from './help.js';
 import { REMOTE } from '../../../../src/console/kernel/core/mode.ts';
 import { listSections } from '../../../../src/console/kernel/list-sections.ts';

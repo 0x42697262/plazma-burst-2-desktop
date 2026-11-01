@@ -28,7 +28,7 @@ import { game } from '../../../src/console/kernel/game/bindings.ts';
 import { namesMissing, CLIENT_TITLE, FIND_NAMES, SADBURST } from '../../../src/console/kernel/game/names.ts';
 import { load, reload as reloadStore, settings, binds, profiles, loadProblems, setMapSource } from '../../../src/console/kernel/state/store.ts';
 import { currentMapId } from '../../../src/console/kernel/game/level.ts';
-import { applyOverrides, onActiveChange } from './overrides/frame.js';
+import { applyOverrides, onActiveChange } from '../../../src/console/kernel/overrides/frame.ts';
 import { run } from './dispatch.js';
 import { SERVER } from '../../../src/console/kernel/core/mode.ts';
 import { enabledConsoleFeatures, featureFrameHooks, featureTicks, featureListSections } from '../../../src/console/features.ts';
