@@ -65,7 +65,8 @@ A typed `password=` is kept out of the console's history and log (shown as `â€¢â
 A `data/join.json` from before the list is imported once.
 
 What playing on a private server does:
-- **The game starts logged out.** Your PB2 account (`data/credentials.json`) isn't
+- **The game starts logged out.** Your PB2 account (`data/credentials.json`, or the
+  game's own login, put aside until you play the official server again) isn't
   loaded, so it is never sent anywhere. The nickname and server password are given to
   the game only after start-up, and only the lobby uses them. The list page never gets
   the password back from the app either.

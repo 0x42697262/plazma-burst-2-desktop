@@ -7,3 +7,5 @@ export const UNAVAILABLE = 503;
 export const BAD_REQUEST = 400;
 export const CONFLICT = 409;
 export const OK = 200;
+export const OFFICIAL_LOGIN_FILE_VERSION = 1;
+export const OFFICIAL_LOGIN_FILE_MODE = 0o600;

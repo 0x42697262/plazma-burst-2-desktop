@@ -15,9 +15,10 @@ import { WRAPPER_PARTS } from './features.ts';
 import { buildWrapper } from './build-wrapper.ts';
 import { createDevRouter, createInterceptor } from './http/router.ts';
 import { MAIN_WINDOW, FORBIDDEN, UNAVAILABLE } from './platform/constants.ts';
-import { FOLDER_END, HTML_TYPE, HTTPS_SCHEME, INDEX_FILE, NO_STORE, SCRIPT_TYPE, TEXT_ENCODING, callConsoleScript, moduleScriptTag, scriptTag } from './platform/keys.ts';
+import { FOLDER_END, HTML_TYPE, HTTPS_SCHEME, INDEX_FILE, NO_STORE, OFFICIAL_LOGIN_FILE, SCRIPT_TYPE, TEXT_ENCODING, callConsoleScript, moduleScriptTag, scriptTag } from './platform/keys.ts';
 import { FILES_TEXT, PAGE_TEXT } from './platform/text.ts';
 import { createKvFile } from './platform/kv-file.ts';
+import { createSiteCookies } from './platform/site-cookies.ts';
 import { prepareIndex, pageGlobalScript, type JoinPage } from './platform/index-page.ts';
 import { createGameFiles, readGameVersion, checkSadburstBuild } from './platform/game-files.ts';
 import { createDevFiles, checkNamesFile, checkPageBundle } from './platform/dev-files.ts';
@@ -55,8 +56,20 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
   const gameSession = (): Session => (client.partition ? session.fromPartition(client.partition) : session.defaultSession);
 
   const login = createLogin({ log, dataDir: DATA_DIR, host, fromEnvironment: environment.credentials, isOn: flags.login.on });
-  const startLoggedOut = (): Promise<void> => login.startLoggedOut(session.defaultSession.cookies);
-  const applyCredentials = (): Promise<void> => login.applyCredentials(session.defaultSession.cookies);
+  const siteCookies = createSiteCookies(session.defaultSession.cookies, path.join(DATA_DIR, OFFICIAL_LOGIN_FILE));
+  async function startLoggedOut(): Promise<void> {
+    const hidden = await siteCookies.hideForPrivateServer();
+    if (hidden.length) log.info(TEXT.loginHidden(hidden));
+  }
+  async function applyCredentials(): Promise<void> {
+    if (login.hasCredentials()) {
+      await siteCookies.forget();
+      await login.applyCredentials(session.defaultSession.cookies);
+      return;
+    }
+    const restored = await siteCookies.restoreOfficial();
+    if (restored.length) log.info(TEXT.loginRestored(restored));
+  }
 
   const wrapper = buildWrapper(
     WRAPPER_PARTS,

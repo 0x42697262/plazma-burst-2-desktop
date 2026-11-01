@@ -25,10 +25,7 @@ export function createLogin({ log, dataDir, host, fromEnvironment, isOn }: Login
     await applyLogin(cookies, credentials(), host);
   }
 
-  async function startLoggedOut(cookies: CookieStore): Promise<void> {
-    const { removed } = await applyLogin(cookies, {}, host);
-    if (removed.length) log.info(TEXT.clearedPrivate(removed));
-  }
+  const hasCredentials = (): boolean => Object.keys(credentials()).length > 0;
 
-  return Object.freeze({ applyCredentials, applyQuietly, startLoggedOut });
+  return Object.freeze({ applyCredentials, applyQuietly, hasCredentials });
 }

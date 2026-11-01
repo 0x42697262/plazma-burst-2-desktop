@@ -222,7 +222,7 @@ If names are missing, the dev console still opens and lists them in red. Only co
 | `PB2_LOGIN`, `PB2_PASSWORD`, `PB2_UID` | `data/credentials.json` | Login cookies |
 | `--verbose` / `-v`, `--log-level=<level>`, `PB2_LOG_LEVEL` | `info` | Terminal log level: `error`, `warn`, `info` or `debug`. `--verbose` is `debug`: every request (served locally, by the dev routes or passed to the network, with status and time), window events, the page's `console.debug` and the game's own `trace()` output (silent otherwise). `npm start -- --verbose` or `npm run start:verbose` |
 
-Every start clears the game site's cookies before the game loads, then logs in with the credentials above. Without credentials the game starts logged out, even if an account logged in last time; with them, only that account's cookies are set. Saved games and settings (localStorage) are kept.
+With the credentials above, every official start clears the game site's cookies, then sets only that account's. Without them, the game's own login is kept, and a private server never sees it: it is put aside while you play there and comes back on the official server. Saved games and settings (localStorage) are kept.
 
 ## 7. Network log
 

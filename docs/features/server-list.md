@@ -16,8 +16,9 @@ The console's `servers` command does everything the page does.
 On a private server:
 - the game's lobby connection goes to that server instead, and trusts only its pinned
   certificate;
-- the game starts logged out (the site's cookies are cleared), so the server gets a
-  nickname and its own password, never your PB2 account.
+- the game starts logged out (the site's cookies are put aside until you play the
+  official server again; [login](login.md)), so the server gets a nickname and its own
+  password, never your PB2 account.
 
 With the flag off (and always for Sad Burst 2, which has its own servers and accounts),
 the window goes straight to the game, there is no Servers menu, and the console has no
