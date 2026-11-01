@@ -10,17 +10,15 @@ import { force, restore } from '#console/kernel/overrides/force.ts';
 import { heldBack, guarding } from '#console/kernel/overrides/server-checks.ts';
 import { gameMaxOf, hpBonusAppliedTo, setHpBonusApplied } from '#console/kernel/overrides/max-hp.ts';
 import { TEXT as OVERRIDE_TEXT } from '#console/kernel/overrides/text.ts';
-import { MIN_MAX_HP, PERCENT } from '../constants.ts';
-import { NOTE_SEPARATOR, OVERRIDE_NAME } from '../keys.ts';
-import { installGod, uninstallGodExcept, uninstallAllGod } from '../adapters/god.ts';
+import { MIN_MAX_HP, PERCENT } from '../../constants.ts';
+import { NOTE_SEPARATOR, OVERRIDE_NAME } from '../../keys.ts';
+import { clampToMax, healthOf, isOverRankedLimit, maxHpOf } from '../../services/character.ts';
 
 const lastMaxHp = new WeakMap<object, unknown>();
 let heldNote = '';
 
 const valueOf = (key: string): unknown => settings.get(key);
 const numberOf = (key: string): number => valueOf(key) as number;
-const maxHpOf = (character: Character): number => character[GAME_FIELDS.MAX_HP];
-const healthOf = (character: Character): number => character[GAME_FIELDS.HP];
 
 export function hpBonusFor(base: number): number {
   const flat = (settings.effective(KEY.HP_BONUS) as number | undefined) ?? 0;
@@ -41,14 +39,6 @@ function noteHeld(character: Character): void {
   const note = held.join(NOTE_SEPARATOR);
   if (note && note !== heldNote) print(OVERRIDE_TEXT.notApplying(note), COLOR.warn);
   heldNote = note;
-}
-
-function applyGod(character: Character): void {
-  const isGod = !!valueOf(KEY.GOD);
-  uninstallGodExcept(isGod ? character : null);
-  if (!isGod) return;
-  installGod(character, () => !!valueOf(KEY.GOD));
-  if (character[GAME_FIELDS.DEAD] && healthOf(character) > 0) character[GAME_FIELDS.DEAD] = false;
 }
 
 function applyMaxHp(character: Character): void {
@@ -77,26 +67,13 @@ function applyHpBonus(character: Character): void {
   setHpBonusApplied(character, applied + reallyAdded);
 }
 
-function keepToRankedLimit(character: Character): void {
-  const isOverRankedLimit = guarding() && healthOf(character) > maxHpOf(character);
-  if (!isOverRankedLimit) return;
-  uninstallGodExcept(null);
-  character[GAME_FIELDS.HP] = maxHpOf(character);
-}
-
-function applyGodOverride({ character }: OverrideContext): void {
-  applyGod(character);
-  keepToRankedLimit(character);
-}
-
-function applyHpOverride({ character }: OverrideContext): void {
+function apply({ character }: OverrideContext): void {
   noteHeld(character);
   applyMaxHp(character);
   applyHpBonus(character);
-  keepToRankedLimit(character);
+  if (isOverRankedLimit(character)) clampToMax(character);
 }
 
 const nothingToUndo = (): void => undefined;
 
-export const godOverride: FrameOverride = Object.freeze({ name: OVERRIDE_NAME.god, capability: CAPABILITY.health.god, apply: applyGodOverride, cleanup: uninstallAllGod });
-export const hpOverride: FrameOverride = Object.freeze({ name: OVERRIDE_NAME.hp, capability: CAPABILITY.health.hp, apply: applyHpOverride, cleanup: nothingToUndo });
+export const hpOverride: FrameOverride = Object.freeze({ name: OVERRIDE_NAME.hp, capability: CAPABILITY.health.hp, apply, cleanup: nothingToUndo });

@@ -35,3 +35,8 @@ export const WRAPPER_ENTRY = 'src/wrapper/main.ts';
 export const WRAPPER_BUNDLE_FILE = 'main.cjs';
 export const WRAPPER_TARGET = 'node24';
 export const ROOT_PLUGIN_NAME = 'packaged-root';
+export const CAPABILITY_IMPORT = /^import \{ (\w+) \} from '\.\/capabilities\/(\w+)\/[^']+';$/;
+export const CAPABILITY_LIST_FILE = 'capabilities.ts';
+export const FEATURES_FOLDER: readonly string[] = Object.freeze(['src', 'features']);
+export const featureCapabilityListFilter = (featuresFolder: string): RegExp =>
+  new RegExp(`^${featuresFolder.replace(REGEX_SPECIAL, '\\$&')}[\\\\/](\\w+)[\\\\/]capabilities\\.ts$`);

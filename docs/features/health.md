@@ -1,8 +1,19 @@
 # health: heal, hp, revive, and the HP keys
 
-Feature flag `health` (on by default; all modes). Code: `src/features/health/`. It owns
-the keys `god`, `max_hp`, `hp_bonus` and `hp_bonus_pct`; the per-frame overrides that
-apply them are in `src/console/kernel/overrides/frame.ts`.
+Feature flag `health` (on by default; all modes). Code: `src/features/health/`, one folder
+per capability under `capabilities/`:
+
+| Capability | What |
+|---|---|
+| `health.god` | the `god` key and its override |
+| `health.hp` | the `hp` command, the keys `max_hp`, `hp_bonus`, `hp_bonus_pct`, and their override |
+| `health.heal` | `heal` |
+| `health.revive` | `revive` |
+
+Any of them alone is an app ([editions](../operations/editions.md)): `health.god` builds
+without the code of the others. The `hp` override runs before `god`'s
+(`capabilities.ts` lists them in that order): in a ranked match the max HP goes back to
+the game's first, then god sees HP above it, takes itself off and brings HP down.
 
 - `heal` refills your HP to your current max. It refuses while you are down, because
   the body has to be stood up first.

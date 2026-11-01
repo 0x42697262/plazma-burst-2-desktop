@@ -26,7 +26,7 @@ but `dev`.
 | `name` | The file's name: lower case letters, digits and `-` |
 | `title` | The app's name, shown to players |
 | `appId` | Reverse-domain id; installed editions with different ids keep their settings and logins apart |
-| `features` | Feature ids (`npm start -- --features` lists them), or `"all"` |
+| `features` | Feature ids and capability ids (`npm start -- --features` lists them), or `"all"`. A feature id means all of its capabilities; a capability id (`health.god`) brings its feature with only that capability |
 
 `editions/dev.json` is every feature, which is also what `npm start` runs.
 `editions/player.json` is the player client (official and Sad Burst 2, private servers,
@@ -66,6 +66,9 @@ The build resolves the list with the feature catalog (`src/kernel/editions/resol
   `import { x } from '#features/<id>/…'` lines and list entries of left-out features go.
   A left-out name still used elsewhere in a list stops the build.
 - Feature folders are named by feature id, which is what the plugin matches.
+- A feature split into capabilities lists them in its `capabilities.ts`, one
+  `import { x } from './capabilities/<name>/…'` line and one list entry each; the plugin
+  keeps only the edition's capabilities there the same way.
 - The main process is bundled the same way (`dist/wrapper/main.cjs`). Each feature with
   main-process code exports one part (`netlogWrapper`, `serverListPart`,
   `remotePlayPart`, `p2pHostPart` …), listed once in `src/wrapper/features.ts`; the app
@@ -87,8 +90,8 @@ to Electron's per-user folder for the app, which differs per edition's title.
 ## Tests
 
 `src/tools/build/editions.test.ts` builds every file in `editions/`, plus the smallest
-(page core only) and the largest edition, and checks that no left-out feature's side
-module or `entry/` is in the bundles, and that `console.js` exists only with
-`dev_console`. It also builds each edition's main process and checks that no left-out
+(page core only), the largest edition, and every capability alone, and checks that no
+file of a left-out feature, and no file of a left-out capability's folder, is in the
+page bundles, and that `console.js` exists only with `dev_console`. It also builds each edition's main process and checks that no left-out
 feature is in it, apart from the three above, and that the edition is compiled in. Adding
 an edition file adds it to the test.

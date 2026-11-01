@@ -2,22 +2,23 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type * as esbuild from 'esbuild';
 import type { Edition } from '#shared/editions/types.ts';
+import { capabilityId, type FeatureId } from '#shared/features/keys.ts';
 import { REPO_ROOT } from '#kernel/config/paths.ts';
 import {
-  EDITION_MODULE, EDITION_PLUGIN_NAME, FEATURE_IMPORT, FEATURE_LIST_MODULES, LINE_BREAK, LIST_ENTRY, PACKAGED_ROOT_MODULE, ROOT_MODULE, ROOT_PLUGIN_NAME,
+  CAPABILITY_IMPORT, EDITION_MODULE, EDITION_PLUGIN_NAME, FEATURES_FOLDER, FEATURE_IMPORT, featureCapabilityListFilter, FEATURE_LIST_MODULES, LINE_BREAK, LIST_ENTRY, PACKAGED_ROOT_MODULE, ROOT_MODULE, ROOT_PLUGIN_NAME,
   TYPESCRIPT_LOADER, exactPathFilter, wholeWord,
 } from './constants.ts';
 import { TEXT } from './text.ts';
 
 const exactFile = (relative: string): RegExp => exactPathFilter(path.join(REPO_ROOT, relative));
 
-export function onlyEditionFeatures(source: string, included: readonly string[], file: string): string {
+export function onlyEditionFeatures(source: string, included: readonly string[], file: string, idOf: (match: RegExpExecArray) => string = (match) => match[2] ?? '', pattern: RegExp = FEATURE_IMPORT): string {
   const leftOut = new Set<string>();
   const kept = source.split(LINE_BREAK).filter((line) => {
-    const imported = FEATURE_IMPORT.exec(line);
+    const imported = pattern.exec(line);
     if (!imported) return true;
-    const [, name, featureId] = imported;
-    if (included.includes(featureId ?? '')) return true;
+    const [, name] = imported;
+    if (included.includes(idOf(imported))) return true;
     leftOut.add(name ?? '');
     return false;
   }).filter((line) => !leftOut.has(LIST_ENTRY.exec(line)?.[1] ?? ''));
@@ -32,6 +33,14 @@ export function editionPlugin(edition: Edition): esbuild.Plugin {
     setup(build) {
       build.onLoad({ filter: exactFile(EDITION_MODULE) }, () => ({ contents: TEXT.editionModule(JSON.stringify(edition)), loader: TYPESCRIPT_LOADER }));
       const included = edition.features;
+      const capabilities = edition.capabilities;
+      if (capabilities !== null && capabilities !== undefined) {
+        build.onLoad({ filter: featureCapabilityListFilter(path.join(REPO_ROOT, ...FEATURES_FOLDER)) }, async (args) => {
+          const feature = path.basename(path.dirname(args.path));
+          const source = await fs.readFile(args.path, 'utf8');
+          return { contents: onlyEditionFeatures(source, capabilities, args.path, (match) => capabilityId(feature as FeatureId, match[2] ?? ''), CAPABILITY_IMPORT), loader: TYPESCRIPT_LOADER };
+        });
+      }
       if (included === null) return;
       for (const list of FEATURE_LIST_MODULES) {
         build.onLoad({ filter: exactFile(list) }, async (args) => ({

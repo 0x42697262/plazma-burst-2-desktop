@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import * as esbuild from 'esbuild';
-import { CATALOG } from '#shared/features/catalog.ts';
+import { CAPABILITIES, CATALOG } from '#shared/features/catalog.ts';
 import type { Edition } from '#shared/editions/types.ts';
 import { pageBuildOptions, wrapperBuildOptions } from './build.ts';
 import { editionNames, oneOffEdition, readEdition } from './edition-file.ts';
@@ -48,6 +48,11 @@ async function assertHoldsOnly(edition: Edition) {
   for (const { id } of CATALOG) {
     if (included.includes(id)) continue;
     assert.deepEqual(inputs.filter((input) => input.startsWith(`src/features/${id}/`)), [], `${edition.name}: ${id} is left out, so none of its files is in the page`);
+  }
+  for (const capability of CAPABILITIES) {
+    if (edition.capabilities === null || edition.capabilities.includes(capability.id)) continue;
+    const folder = `src/features/${capability.feature}/capabilities/${capability.id.split('.')[1] ?? ''}/`;
+    assert.deepEqual(inputs.filter((input) => input.startsWith(folder)), [], `${edition.name}: ${capability.id} is left out`);
   }
   const hasConsole = included.includes('dev_console');
   assert.equal(outputs.includes('console.js'), hasConsole, `${edition.name}: console.js only with dev_console`);
@@ -93,5 +98,14 @@ test('an edition file must name itself and list known features', () => {
     assert.deepEqual(readEdition('mine', folder).problems, ['no feature "teleporter" (see "npm start -- --features")']);
   } finally {
     fs.rmSync(folder, { recursive: true, force: true });
+  }
+});
+
+test('every capability builds alone, without the code of its siblings', async () => {
+  for (const capability of CAPABILITIES) {
+    const { edition, problems } = oneOffEdition([capability.id]);
+    assert.deepEqual(problems, [], capability.id);
+    assert.ok(edition.capabilities?.includes(capability.id), capability.id);
+    await assertHoldsOnly({ ...edition, name: capability.id });
   }
 });

@@ -18,6 +18,17 @@ Code: `src/shared/features/`,
 | `locked` | It cannot be turned off (`console_core`) |
 | `description` | One line, shown by the `features` command |
 
+## Capabilities
+
+A feature can declare capabilities (`capabilities` in its catalog entry, ids
+`<feature>.<name>`, [ADR 0006](../adr/0006-capabilities.md)): one per command, subcommand
+or key. A capability is on when its feature is on and nothing turns it off; flags,
+`data/features.json`, `PB2_FEATURES` (`-health.heal`) and editions take capability ids
+too, and `--features` lists each feature's capabilities under it. Commands, subcommands,
+keys and overrides name their capability (`capability`); a command whose own capability is
+off but some subcommand's is on stays, offering only those subcommands. The page gets the
+capability states in `PB2_CAPABILITIES`, read-only like `PB2_FEATURES`.
+
 ## Override order
 
 Resolved once at boot by the pure `resolve()` in `src/kernel/flags/resolve.ts`. Later

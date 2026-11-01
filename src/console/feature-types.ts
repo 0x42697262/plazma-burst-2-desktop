@@ -18,3 +18,12 @@ export type ConsoleFeature = Readonly<{
   listSections?: Readonly<Record<string, ListSection>>;
   start?(): void;
 }>;
+
+export type CapabilityParts = Readonly<{ capability: string; commands?: readonly CommandDefinition[]; overrides?: readonly FrameOverride[] }>;
+
+export const consoleFeatureOf = (id: FeatureId, parts: readonly CapabilityParts[], extra: Omit<ConsoleFeature, 'id' | 'commands' | 'overrides'> = {}): ConsoleFeature => Object.freeze({
+  id,
+  commands: parts.flatMap((part) => (part.commands ?? []).map((command) => ({ capability: part.capability, ...command }))),
+  overrides: parts.flatMap((part) => (part.overrides ?? []).map((override) => ({ capability: part.capability, ...override }))),
+  ...extra,
+});
