@@ -6,8 +6,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const REPO = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
-const at = (rel) => pathToFileURL(path.join(REPO, rel)).href;
-const childOut = (src) => JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', src], { cwd: REPO, encoding: 'utf8' }));
+const at = (relative: string) => pathToFileURL(path.join(REPO, relative)).href;
+const childOut = (src: string): any => JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', src], { cwd: REPO, encoding: 'utf8' }));
 
 test('not on the dedicated host: no "server", "who", "kick" or "say"', () => {
   const out = childOut(`
@@ -101,8 +101,8 @@ const HOST_CHILD = `
 
 test('dedicated host: logs in, creates the match as the create screen does, spectates, keeps the allow list and the local map', () => {
   const out = childOut(HOST_CHILD);
-  assert.equal(out.chatTrace, true);
-  assert.deepEqual(out.steps.find((s) => s[0] === 'goto'), ['goto', 'MPLobby']);
+  assert.equal(out.chatTrace, true, 'set when the host started');
+  assert.deepEqual(out.steps.find((step: any) => step[0] === 'goto'), ['goto', 'MPLobby']);
   assert.equal(out.beforeLogin, 0);
   assert.equal(out.create.type, 'CREATE');
   assert.equal(out.create.channel, 1);
@@ -113,16 +113,15 @@ test('dedicated host: logs in, creates the match as the create screen does, spec
   assert.equal(out.create.settings.p2p_region, 'Asia');
   assert.deepEqual(out.createSettings, out.create.settings);
   assert.equal(out.ask, false);
-  assert.deepEqual(out.steps.find((s) => s[0] === 'enter'), ['enter', '[1,2,"offer"]', 3]);
+  assert.deepEqual(out.steps.find((step: any) => step[0] === 'enter'), ['enter', '[1,2,"offer"]', 3]);
   assert.equal(out.password, 'pw');
 
-  // The "Spectate" button's message, then the stranger kicked by auth id.
-  assert.deepEqual(out.sent[0], ['JOIN', 77, 'REPLY', -100, '', 'pw']);
-  assert.deepEqual(out.sent[1], ['KICK', '3', 'REPLY', '0']);
-  assert.ok(out.steps.some((s) => s[0] === 'say' && s[1] === 'stranger' && /invited players only/.test(s[2])));
-  assert.ok(out.printed.some((l) => /^\+ Pal \(Friend\) joined: slot 2/.test(l)));
-  assert.ok(out.printed.some((l) => /Who \(stranger\) is not on the "allow" list/.test(l)));
-  assert.ok(!out.printed.some((l) => /Host.*joined/.test(l)), 'the host itself is not announced');
+  assert.deepEqual(out.sent[0], ['JOIN', 77, 'REPLY', -100, '', 'pw'], 'the "Spectate" button\'s message');
+  assert.deepEqual(out.sent[1], ['KICK', '3', 'REPLY', '0'], 'the stranger kicked by auth id');
+  assert.ok(out.steps.some((step: any) => step[0] === 'say' && step[1] === 'stranger' && /invited players only/.test(step[2])));
+  assert.ok(out.printed.some((line: string) => /^\+ Pal \(Friend\) joined: slot 2/.test(line)));
+  assert.ok(out.printed.some((line: string) => /Who \(stranger\) is not on the "allow" list/.test(line)));
+  assert.ok(!out.printed.some((line: string) => /Host.*joined/.test(line)), 'the host itself is not announced');
 
   assert.match(out.who.join('\n'), /2 of 8 players/);
   assert.match(out.who.join('\n'), /Host \(host\)\s+\[this host\]/);
@@ -132,12 +131,12 @@ test('dedicated host: logs in, creates the match as the create screen does, spec
 
   assert.equal(out.setMap.length, 1);
   assert.deepEqual(out.setMap[0], ['<map>\n<player x="1"/>\n</map>', 'arena', '0', '8', 'local-arena']);
-  assert.equal(out.setMapAfterTick, 1);
+  assert.equal(out.setMapAfterTick, 1, 'the held map is not sent again while the match has it');
   assert.equal(out.setMapAgain, 2, 'a map from the lobby server is replaced by the held local map');
-  assert.ok(out.missingLater.some((l) => /no map "nothing" in desktop\/maps/.test(l)));
+  assert.ok(out.missingLater.some((line: string) => /no map "nothing" in desktop\/maps/.test(line)));
 
-  assert.ok(out.gone.some((l) => /the match is gone/.test(l)));
-  assert.ok(out.gone.some((l) => /starting again in 5 s/.test(l)));
+  assert.ok(out.gone.some((line: string) => /the match is gone/.test(line)));
+  assert.ok(out.gone.some((line: string) => /starting again in 5 s/.test(line)));
   assert.match(out.status.join('\n'), /waiting to start again/);
   assert.match(out.help.join('\n'), /player-hosted match/);
 });

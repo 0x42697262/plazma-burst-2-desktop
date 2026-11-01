@@ -25,7 +25,7 @@ const REMOTE_CHILD = `
 `;
 
 test('remote mode: "js" and "hooks" do not exist, the anti-cheat note is gone, the pane hides paths and names', () => {
-  const out = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', REMOTE_CHILD], { cwd: REPO, encoding: 'utf8' }));
+  const out: any = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', REMOTE_CHILD], { cwd: REPO, encoding: 'utf8' }));
   assert.equal(out.js, false);
   assert.equal(out.hooks, false);
   assert.equal(out.god, true);
@@ -58,9 +58,9 @@ const SWEEP_CHILD = `
 `;
 
 test('remote mode: no command or help page shows code, paths, file names, game names, the anti-cheat, hooks or eval', () => {
-  const lines = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', SWEEP_CHILD], { cwd: REPO, encoding: 'utf8', maxBuffer: 64e6 }));
+  const lines: [string, string][] = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', SWEEP_CHILD], { cwd: REPO, encoding: 'utf8', maxBuffer: 64e6 }));
   assert.ok(lines.length > 500, `only ${lines.length} lines`);
-  const LEAK = [
+  const LEAK: [RegExp, string][] = [
     [/\$[0-9A-Za-z_\u0400-\u04FF]{3,}/, 'obfuscated-looking name'],
     [/__pb2_|PB2_[A-Z]|pb2dev\./, 'internal global'],
     [/\.(js|mjs|cjs|json|md)\b/, 'file name'],
@@ -70,7 +70,7 @@ test('remote mode: no command or help page shows code, paths, file names, game n
     [/\bhooks?\b/i, 'hooks'],
     [/\beval\b|devtools/i, 'eval or DevTools'],
   ];
-  const hits = [];
-  for (const [cmd, text] of lines) for (const [re, why] of LEAK) if (re.test(text)) hits.push(`${why} [${cmd}] ${text}`);
+  const hits: string[] = [];
+  for (const [cmd, text] of lines) for (const [pattern, why] of LEAK) if (pattern.test(text)) hits.push(`${why} [${cmd}] ${text}`);
   assert.deepEqual(hits, []);
 });
