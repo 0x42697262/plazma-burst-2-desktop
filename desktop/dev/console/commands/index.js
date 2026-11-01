@@ -17,7 +17,6 @@ import { gameCommand } from './game-chat.js';
 import { zoomCommand } from './zoom.js';
 import { mapsCommand } from './maps.js';
 import { editorCommand } from './editor.js';
-import { jsCommand } from './js.js';
 import { hooksCommand } from './hooks.js';
 import { bypassCommand } from './bypass.js';
 import { serverCommand, serverShortcuts } from './server.js';
@@ -31,6 +30,6 @@ register(
   helpCommand, list, set, get, unset, reset, profileCommand,
   ...playerCommands, gunsCommand, tpCommand, posCommand, ...gunCommands, charsCommand, traceCommand,
   ...bindCommands, keynameCommand, triggersCommand, regionsCommand, varsCommand, logicCommand, editorCommand, chainTopic, moreCommand,
-  gameCommand, zoomCommand, builtin, mapsCommand, bypassCommand, jsCommand, hooksCommand, featuresCommand, ...consoleCommands,
+  gameCommand, zoomCommand, builtin, mapsCommand, bypassCommand, hooksCommand, featuresCommand, ...consoleCommands,
   ...featureCommands(enabledConsoleFeatures()),
 );

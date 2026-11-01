@@ -81,7 +81,7 @@ Notes from P2 for the feature steps:
   - `src/features/server_list/index.ts` exposes `pageJoinTarget` and
     `isJoiningPrivateServer` to other features.
 - [x] P3.4 `screenshot`
-- [ ] P3.5 `js_eval`
+- [x] P3.5 `js_eval`
 - [ ] P3.6 `zoom`
 - [ ] P3.7 `game_chat`
 - [ ] P3.8 `trace`

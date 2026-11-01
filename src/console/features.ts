@@ -5,6 +5,7 @@ import { serverListConsole } from '#features/server_list/console.ts';
 import { lobbyTaskGuardConsole } from '#features/lobby_task_guard/console.ts';
 import { fingerprintConsole } from '#features/fingerprint/console.ts';
 import { screenshotConsole } from '#features/screenshot/console.ts';
+import { jsEvalConsole } from '#features/js_eval/console.ts';
 
 export const CONSOLE_FEATURES: readonly ConsoleFeature[] = Object.freeze([
   lobbyTaskGuardConsole,
@@ -12,6 +13,7 @@ export const CONSOLE_FEATURES: readonly ConsoleFeature[] = Object.freeze([
   fingerprintConsole,
   serverListConsole,
   screenshotConsole,
+  jsEvalConsole,
 ]);
 
 export const enabledConsoleFeatures = (features: readonly ConsoleFeature[] = CONSOLE_FEATURES): ConsoleFeature[] => features.filter((feature) => isFeatureOn(feature.id));
