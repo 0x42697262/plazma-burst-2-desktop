@@ -22,6 +22,7 @@ export const PROBE_TEXT = Object.freeze({
 
 export const SERVICE_TEXT = Object.freeze({
   notSaved: 'that server is not saved',
+  unknownClient: (id: string) => `no game client "${id}" in this app`,
   notSavedShort: 'not saved',
   serversFileProblem: (problem: string) => `data/servers.json: ${problem}`,
   imported: (file: string) => `Imported data/join.json into ${file}; join.json is no longer used`,
@@ -134,5 +135,7 @@ export const LAUNCHER_TEXT = Object.freeze({
   fingerprintFetched: 'Got it from the server. Compare it with the fingerprint the host sent you before saving.',
   fingerprintFailed: (message: string) => `Could not get the fingerprint: ${message}`,
   confirmRemove: (name: string) => `Remove ${name} from the list?`,
+  otherClients: 'Also in this app: ',
+  playClient: (title: string) => `Play ${title}`,
   outsideApp: 'This page only works inside the desktop app (npm start).',
 });

@@ -19,6 +19,7 @@ import { FOLDER_END, HTML_TYPE, HTTPS_SCHEME, INDEX_FILE, NO_STORE, OFFICIAL_LOG
 import { FILES_TEXT, PAGE_TEXT } from './platform/text.ts';
 import { createKvFile } from './platform/kv-file.ts';
 import { createSiteCookies } from './platform/site-cookies.ts';
+import { relaunchAs } from './platform/relaunch.ts';
 import { prepareIndex, pageGlobalScript, type JoinPage } from './platform/index-page.ts';
 import { createGameFiles, readGameVersion, checkSadburstBuild } from './platform/game-files.ts';
 import { createDevFiles, checkNamesFile, checkPageBundle } from './platform/dev-files.ts';
@@ -55,6 +56,14 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
   const liveWindow = (): BrowserWindow | null => (mainWindow && !mainWindow.isDestroyed() ? mainWindow : null);
   const gameSession = (): Session => (client.partition ? session.fromPartition(client.partition) : session.defaultSession);
 
+  const otherClients = Object.values(CLIENTS)
+    .filter((other) => other.id !== client.id && (other.id !== CLIENT.sadburst || flags.client_sadburst.on))
+    .map((other) => Object.freeze({ id: other.id, title: other.title }));
+  const switchClient = (id: string): void => {
+    const chosen = Object.values(CLIENTS).find((other) => other.id === id);
+    if (chosen) relaunchAs(chosen.id);
+  };
+
   const login = createLogin({ log, dataDir: DATA_DIR, host, fromEnvironment: environment.credentials, isOn: flags.login.on });
   const siteCookies = createSiteCookies(session.defaultSession.cookies, path.join(DATA_DIR, OFFICIAL_LOGIN_FILE));
   async function startLoggedOut(): Promise<void> {
@@ -82,6 +91,8 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
         loadGame: () => { void liveWindow()?.loadURL(startUrl); },
         showList: () => { if (serverListPart) void liveWindow()?.loadFile(serverListPart.launcherPage); },
         setTitle: (title) => { liveWindow()?.setTitle(title); },
+        otherClients: () => otherClients,
+        switchClient,
       },
     },
   );
@@ -203,8 +214,13 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
     const serversMenu: MenuItemConstructorOptions[] = showsServerList
       ? [{ label: TEXT.serversMenu, submenu: [{ label: TEXT.serverListItem, click: () => { serverList?.service.showList(); } }] }]
       : [];
+    const playsAGame = !isRemoteHost && !isDedicatedHost;
+    const gameMenu: MenuItemConstructorOptions[] = playsAGame && otherClients.length
+      ? [{ label: TEXT.gameMenu, submenu: [client, ...otherClients].map((choice) => ({ label: choice.title, type: 'radio' as const, checked: choice.id === client.id, click: () => { if (choice.id !== client.id) switchClient(choice.id); } })) }]
+      : [];
     Menu.setApplicationMenu(Menu.buildFromTemplate([
       { role: MENU_ROLE.file },
+      ...gameMenu,
       ...serversMenu,
       { role: MENU_ROLE.edit },
       { role: MENU_ROLE.view },

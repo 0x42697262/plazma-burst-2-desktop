@@ -25,3 +25,9 @@ test('each client keeps its own files, settings, session and page', () => {
   assert.equal(official.runFlag, '');
   assert.equal(sadburst.runFlag, ' -- --sadburst');
 });
+
+test('switching clients changes only the client flag, so the app starts again as the other one', async () => {
+  const { argsForClient } = await import('./clients.ts');
+  assert.deepEqual(argsForClient(['.', '--verbose'], 'sadburst'), ['.', '--verbose', '--sadburst']);
+  assert.deepEqual(argsForClient(['.', '--sadburst', '--verbose'], 'official'), ['.', '--verbose']);
+});

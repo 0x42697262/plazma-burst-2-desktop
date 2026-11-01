@@ -6,7 +6,11 @@ import type { ServerStatus } from '../domain/status.ts';
 import type { ServersStore } from '../adapters/servers-file.ts';
 import type { ServerProbe } from '../adapters/probe.ts';
 
+export type ClientChoice = Readonly<{ id: string; title: string }>;
+
 export type GameSession = {
+  otherClients(): readonly ClientChoice[];
+  switchClient(id: string): void;
   startLoggedOut(): Promise<void>;
   applyCredentials(): Promise<void>;
   loadGame(): void;
@@ -40,7 +44,7 @@ export function createServerListService(deps: ServerListDeps) {
   function list() {
     const { servers, last, problems } = store.load();
     for (const problem of problems) deps.warn(SERVICE_TEXT.serversFileProblem(problem));
-    return { official: { ...OFFICIAL_SERVER, description: OFFICIAL_DESCRIPTION }, servers: servers.map(shownServer), last, gameVersion: deps.gameVersion, problems };
+    return { official: { ...OFFICIAL_SERVER, description: OFFICIAL_DESCRIPTION }, servers: servers.map(shownServer), last, gameVersion: deps.gameVersion, problems, otherClients: session.otherClients() };
   }
 
   function save(request: SaveRequest | null | undefined): { errors: string[] } | { server: ShownServer } {
@@ -107,6 +111,13 @@ export function createServerListService(deps: ServerListDeps) {
     session.showList();
   }
 
+  function switchClient(id: unknown): boolean {
+    const choice = session.otherClients().find((client) => client.id === id);
+    if (!choice) throw new Error(SERVICE_TEXT.unknownClient(String(id)));
+    deps.later(() => session.switchClient(choice.id));
+    return true;
+  }
+
   function openList(): boolean {
     deps.later(showList);
     return true;
@@ -129,7 +140,7 @@ export function createServerListService(deps: ServerListDeps) {
   }
 
   return {
-    operations: { list, save, remove, check, fingerprint, play, openList },
+    operations: { list, save, remove, check, fingerprint, play, openList, switchClient },
     showList,
     importOldJoinFile,
     joinTarget: (): ServerEntry | null => joinTarget,

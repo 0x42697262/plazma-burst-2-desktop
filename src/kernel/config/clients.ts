@@ -22,3 +22,6 @@ export const clientFor = (argv: readonly string[] = process.argv, variables: Var
   CLIENTS[clientOf(argv, variables[ENV.npmSadburst])];
 
 export const withoutClientFlag = (args: readonly string[]): string[] => args.filter((arg) => arg !== SADBURST_FLAG);
+
+export const argsForClient = (args: readonly string[], id: ClientId): string[] =>
+  (id === CLIENT.sadburst ? [...withoutClientFlag(args), SADBURST_FLAG] : withoutClientFlag(args));

@@ -20,4 +20,5 @@ export function registerServerListIpc(ipcMain: IpcMainLike, launcherUrl: string,
   handle(IPC_CHANNEL.check, (id) => operations.check(id));
   handle(IPC_CHANNEL.fingerprint, (address) => operations.fingerprint(address));
   handle(IPC_CHANNEL.play, (id) => operations.play(id));
+  handle(IPC_CHANNEL.switchClient, (id) => operations.switchClient(id));
 }

@@ -9,7 +9,8 @@ type Row = Server & { official?: boolean; description?: string };
 type Status = { name?: string; description?: string; version?: string; password?: boolean; players?: number; max_players?: number; matches?: number };
 type Check = { ping: number | null; status?: Status; error?: string; pinned?: boolean };
 type CheckState = Check | typeof CHECKING | undefined;
-type ListData = { official: Official; servers: Server[]; last: string | null; gameVersion: string | null; problems: string[] };
+type ClientChoice = { id: string; title: string };
+type ListData = { official: Official; servers: Server[]; last: string | null; gameVersion: string | null; problems: string[]; otherClients?: ClientChoice[] };
 type SaveResult = { errors?: string[]; server?: Server };
 type Bridge = {
   list(): Promise<ListData>;
@@ -18,6 +19,7 @@ type Bridge = {
   check(id: string): Promise<Check>;
   fingerprint(address: string): Promise<string>;
   play(id: string): Promise<boolean>;
+  switchClient(id: string): Promise<boolean>;
 };
 type Child = Node | string | null | undefined | false | Child[];
 
@@ -126,7 +128,21 @@ async function load(bridge: Bridge): Promise<void> {
   note.hidden = !loaded.problems.length;
   note.textContent = loaded.problems.length ? LAUNCHER_TEXT.fileProblems(loaded.problems) : '';
   draw();
+  drawOtherClients(bridge, loaded.otherClients ?? []);
   for (const row of rows()) void check(bridge, row.id);
+}
+
+function drawOtherClients(bridge: Bridge, clients: readonly ClientChoice[]): void {
+  const box = query<HTMLParagraphElement>(LAUNCHER_ELEMENT.otherClients);
+  box.hidden = !clients.length;
+  box.replaceChildren(LAUNCHER_TEXT.otherClients, ...clients.map((client) => {
+    const button = element('button', {}, LAUNCHER_TEXT.playClient(client.title)) as HTMLButtonElement;
+    button.addEventListener(LAUNCHER_EVENT.click, () => {
+      button.disabled = true;
+      void bridge.switchClient(client.id);
+    });
+    return button;
+  }));
 }
 
 async function play(id: string | null): Promise<void> {

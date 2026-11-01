@@ -6,6 +6,7 @@ export const PASSWORD_FIELD = FIELD.password;
 
 export const LAUNCHER_ELEMENT = Object.freeze({
   rows: '#servers tbody', note: '#note', play: '#play', add: '#add', edit: '#edit', remove: '#remove', refresh: '#refresh',
+  otherClients: '#other-clients',
   form: '#form', formTitle: '#form-title', errors: '#errors', getFingerprint: '#get-fp', fingerprintNote: '#fp-note', save: '#save', cancel: '#cancel',
 });
 

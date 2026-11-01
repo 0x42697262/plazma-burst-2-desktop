@@ -79,6 +79,8 @@ test('servers.json is versioned, written for the owner only, and a broken entry 
 function serviceWith(store: ServersStore) {
   const events: string[] = [];
   const session: GameSession = {
+    otherClients: () => [{ id: 'sadburst', title: 'Sad Burst 2' }],
+    switchClient: (id: string) => { events.push(`switch ${id}`); },
     startLoggedOut: async () => { events.push('logged out'); },
     applyCredentials: async () => { events.push('credentials'); },
     loadGame: () => events.push('game'),
@@ -150,5 +152,16 @@ test('the servers route: only for the local window, POST { op, arg }, known oper
     assert.equal(listed.value.official.id, 'official');
     const failed = await (await route.handle(post('{"op":"play","arg":"nope"}'), url, {})).json() as { ok: boolean; error: string };
     assert.deepEqual(failed, { ok: false, error: 'that server is not saved' });
+  } finally { context.cleanup(); }
+});
+
+test('the list offers the other game clients, and switching asks the session to start as one of them', () => {
+  const context = tempStore();
+  try {
+    const { service, events } = serviceWith(context.store);
+    assert.deepEqual(service.operations.list().otherClients, [{ id: 'sadburst', title: 'Sad Burst 2' }]);
+    assert.equal(service.operations.switchClient('sadburst'), true);
+    assert.ok(events.includes('switch sadburst'));
+    assert.throws(() => service.operations.switchClient('flash'), /no game client "flash" in this app/);
   } finally { context.cleanup(); }
 });

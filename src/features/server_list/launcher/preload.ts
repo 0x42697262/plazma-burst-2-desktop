@@ -9,5 +9,6 @@ if (location.protocol === FILE_PROTOCOL) {
     check: (id: string) => ipcRenderer.invoke(IPC_CHANNEL.check, id),
     fingerprint: (address: string) => ipcRenderer.invoke(IPC_CHANNEL.fingerprint, address),
     play: (id: string) => ipcRenderer.invoke(IPC_CHANNEL.play, id),
+    switchClient: (id: string) => ipcRenderer.invoke(IPC_CHANNEL.switchClient, id),
   });
 }

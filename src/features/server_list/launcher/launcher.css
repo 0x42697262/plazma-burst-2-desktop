@@ -45,3 +45,4 @@ input:focus, button:focus-visible { outline: 1px solid var(--accent); }
 .row input { flex: 1; }
 .row button { margin-top: 4px; white-space: nowrap; }
 .errors { color: var(--bad); font-size: 12px; padding-left: 18px; }
+.other-clients { margin-top: 14px; display: flex; gap: 8px; align-items: center; }
