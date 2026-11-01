@@ -34,3 +34,6 @@ node_modules/
 
 # Build output ("npm run build").
 /dist/
+
+# Packaged apps ("npm run release").
+/release/

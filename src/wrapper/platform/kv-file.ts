@@ -53,6 +53,7 @@ export function createKvFile(file: string, { onChange, onError, watchDelayMs = W
         return false;
       }
       known = JSON.stringify(saved, null, JSON_INDENT) + LINE_END;
+      await fs.mkdir(path.dirname(file), { recursive: true });
       await fs.writeFile(file, known);
       return true;
     },

@@ -1,0 +1,59 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  editions:
+    runs-on: ubuntu-latest
+    outputs:
+      list: ${{ steps.list.outputs.list }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: list
+        run: echo "list=$(node -e "const fs = require('fs'); console.log(JSON.stringify(fs.readdirSync('editions').filter((file) => file.endsWith('.json')).map((file) => file.slice(0, -5)).filter((name) => name !== 'dev')))")" >> "$GITHUB_OUTPUT"
+
+  package:
+    needs: editions
+    strategy:
+      fail-fast: false
+      matrix:
+        edition: ${{ fromJSON(needs.editions.outputs.list) }}
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - if: runner.os == 'Linux'
+        run: npm run verify
+      - run: npm run release -- --edition ${{ matrix.edition }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.edition }}-${{ runner.os }}
+          path: |
+            release/${{ matrix.edition }}/*.AppImage
+            release/${{ matrix.edition }}/*.exe
+          if-no-files-found: error
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - run: gh release create "$GITHUB_REF_NAME" artifacts/* --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes --draft
+        env:
+          GH_TOKEN: ${{ github.token }}

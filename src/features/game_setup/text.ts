@@ -6,6 +6,7 @@ export const TEXT = Object.freeze({
   newVersion: (local: string, latest: string) => `A new game version is out (${latest}; here: ${local}).`,
   findingNames: 'Finding the game\'s names…',
   namesMissing: (missing: readonly string[]) => `Some of the game's names were not found: ${missing.join(', ')}. Joining private servers is refused until they are.`,
+  namesFailed: (message: string) => `The game's names could not be found (${message}). Joining private servers is refused until they are.`,
   windowTitle: (client: string) => `${client}: getting the game`,
   failedTitle: (client: string) => `${client}: the game could not be downloaded`,
 });

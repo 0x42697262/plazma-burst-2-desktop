@@ -22,7 +22,8 @@
     "test": "node --test 'src/**/*.test.ts'",
     "verify": "npm run lint && npm run check && npm test && npm run build",
     "smoke": "npm run build && node src/tools/smoke/cli.ts",
-    "redact-netlogs": "node src/tools/redact-netlogs/cli.ts"
+    "redact-netlogs": "node src/tools/redact-netlogs/cli.ts",
+    "release": "node src/tools/release/cli.ts"
   },
   "type": "commonjs",
   "engines": {
@@ -32,6 +33,7 @@
     "@eslint/js": "10.0.1",
     "@types/node": "26.6.6",
     "electron": "^45.0.0",
+    "electron-builder": "26.18.0",
     "esbuild": "0.28.2",
     "eslint": "10.14.0",
     "typescript": "6.0.3",

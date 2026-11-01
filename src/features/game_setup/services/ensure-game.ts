@@ -49,8 +49,12 @@ export async function ensureGame(deps: GameSetupDeps): Promise<SetupResult> {
   const downloaded = needsDownload && deps.localVersion() !== local;
   if (downloaded || !deps.namesMatchGame()) {
     deps.say(TEXT.findingNames);
-    const { missing } = deps.findNames();
-    if (missing.length) problems.push(TEXT.namesMissing(missing));
+    try {
+      const { missing } = deps.findNames();
+      if (missing.length) problems.push(TEXT.namesMissing(missing));
+    } catch (error) {
+      problems.push(TEXT.namesFailed((error as Error).message));
+    }
   }
   return Object.freeze({ ready: deps.localVersion() !== null, downloaded, problems });
 }

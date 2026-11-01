@@ -18,6 +18,7 @@ export function run(options: RunOptions = {}): FoundNames {
   say(TEXT.found(total - result.missing.length, total, gameDir, version));
   for (const problem of result.problems) console.log(TEXT.problem(problem));
   if (!options.check) {
+    fs.mkdirSync(path.dirname(out), { recursive: true });
     fs.writeFileSync(out, render(result, version));
     say(TEXT.wrote(path.relative(process.cwd(), out) || out));
   }

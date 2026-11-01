@@ -19,6 +19,7 @@ export function start(context: WrapperContext): void {
   app.on(WINDOW_ALL_CLOSED, keepRunningWhileTheGameIsPrepared);
   app.whenReady()
     .then(() => (preparesGame ? gameSetupPart.prepare({ client, gameDir: path.resolve(client.gameDir), checksForUpdates: app.isPackaged, log }) : true))
+    .catch((error: unknown) => { log.error((error as Error).stack ?? String(error)); })
     .then(() => {
       startApp(context);
       app.off(WINDOW_ALL_CLOSED, keepRunningWhileTheGameIsPrepared);

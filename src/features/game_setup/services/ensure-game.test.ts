@@ -59,6 +59,14 @@ test('names that do not match the game are found again; missing ones are a probl
   assert.match(result.problems[0] ?? '', /names were not found: connRecv\. Joining private servers is refused/);
 });
 
+test('names that cannot be written are a problem, not a crash: the game is still ready', async () => {
+  const game = fakeGame({ local: 'v1', namesMatch: false });
+  const failing = { ...game.deps, findNames: () => { throw new Error('ENOENT data/names.js'); } };
+  const result = await ensureGame(failing);
+  assert.equal(result.ready, true);
+  assert.match(result.problems[0] ?? '', /names could not be found \(ENOENT data\/names\.js\)/);
+});
+
 test('a client without a version check (Sad Burst 2) downloads only when it is missing', async () => {
   const here = fakeGame({ local: 'build', latest: null, checksForUpdates: true });
   assert.deepEqual((await ensureGame(here.deps)).downloaded, false);

@@ -151,6 +151,7 @@ export function run(options: SadburstOptions = {}): SadburstNames {
   if (!options.check) {
     const notes = result.absent.map((key) => TEXT.absentNote(key, NOT_IN_CLIENT[key] ?? ''));
     const text = render(result, version).replace(NAMES_FILE_RUN, NAMES_FILE_RUN_SADBURST).replace(NAMES_OBJECT_START, [...notes, NAMES_OBJECT_START].join(LINE_END));
+    fs.mkdirSync(path.dirname(out), { recursive: true });
     fs.writeFileSync(out, text);
     say(TEXT.wrote(path.relative(process.cwd(), out) || out));
   }
