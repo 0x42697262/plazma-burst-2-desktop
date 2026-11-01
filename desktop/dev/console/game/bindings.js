@@ -266,6 +266,8 @@ export const game = {
     return out;
   },
   netTypeName: (type) => { const net = read('net'); const m = net && net[nameOf('netTypeNames')]; return (m && m[type]) || null; },
+  // What the game passes to every task the main server sends (net/fingerprint.js).
+  buildTag: () => read('buildTag'),
 
   // ----- Private server (join/) -----
   // Every lobby address start (the game picks one by CONNECTION_SERVER_ID).

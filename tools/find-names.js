@@ -239,6 +239,11 @@ const RULES = [
   { file: 'flash', keys: ['netTypeNames'],
     what: ['net property: reliable message type number -> name ("RELIABLE_...")'],
     re: String.raw`if\(prop\.substring\(0,[\x60"]RELIABLE_[\x60"]\.length\)===[\x60"]RELIABLE_[\x60"]\)\s*⟨net⟩\.⟨ID⟩\[⟨net⟩\[prop\]\]=prop;` },
+  // The main server's tasks (RELIABLE_TASK, FINGERPRINTING.md): JavaScript the game runs
+  // with eval, called with this build tag; net/fingerprint.js runs the fingerprinter so.
+  { file: 'flash', keys: ['buildTag'],
+    what: ['global: the client build tag the game passes to the main server\'s tasks'],
+    re: String.raw`eval\(\x60⟨_⟩=\(\x60\+⟨_⟩\+\x60\)\(\\\x60\$\{⟨ID⟩\}\\\x60\)\x60\);` },
   { file: 'flash', keys: ['p2pConn'],
     what: ['net property: connection to the player-hosted (P2P) match you joined'],
     re: String.raw`⟨net⟩\.connections\.push\(c\);\s*c\.⟨_⟩\(⟨_⟩\);\s*⟨net⟩\.⟨ID⟩=c;` },

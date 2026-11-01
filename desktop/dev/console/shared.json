@@ -14,6 +14,8 @@
     "netLog": "netlog",
     "netRuns": "netruns",
     "netRead": "netread",
+    "fingerprint": "fingerprint",
+    "fingerprints": "fingerprints",
     "servers": "servers"
   },
   "map": {

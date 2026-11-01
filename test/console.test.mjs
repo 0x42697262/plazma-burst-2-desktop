@@ -2614,6 +2614,101 @@ test('net_log_all (off by default) adds a PKT line per packet and every state up
   }
 });
 
+// A fingerprinter like the main server's (FINGERPRINTING.md), with what it writes in per session.
+const FP_SOURCE = `( v )=>{ let FP = class FP { static getBrowserFingerprint() { return JSON.stringify({ canvas: 7, userAgent: 'UA', languages: ['en'] }); } };
+  return [FP.getBrowserFingerprint(), JSON.stringify({ canvas: 7, width: 1920 }), v, "https://www.plazmaburst2.com", "180.190.136.53", "s27zkf", Intl.DateTimeFormat().resolvedOptions().timeZone]; }`;
+const settle = async () => { for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r)); };
+
+test('the fingerprinter is sent to the wrapper once from the lobby connection, whatever net_log is; "fingerprint" runs the latest', async () => {
+  const { G, N } = c;
+  const rec = await consoleModule('net/recorder.js');
+  const fp = await consoleModule('net/fingerprint.js');
+  const net = G[N.net];
+  net[N.netDigits] = NET_DIGITS;
+  net[N.netTypeNames] = { 5: 'RELIABLE_CHAT', 46: 'RELIABLE_TASK', 47: 'RELIABLE_TASK_ASNYC' };
+  G[N.buildTag] = 'mkpnduz2';
+  const conn = fakeConnection(N);
+  conn.socket.connected = true;
+  const realFetch = G.fetch;
+  const posts = [];
+  let saved = null;
+  G.fetch = async (url, opt) => {
+    if (!url.includes('fingerprint')) return { ok: true, json: async () => ({}) }; // the recorder's lines
+    if (opt && opt.method === 'POST') {
+      posts.push([url, opt.body]);
+      saved = { id: 'a1b2c3d4e5f6', file: 'fingerprint/2026-11-01_05-30-12_a1b2c3d4e5f6.js', kind: 'sync', chars: opt.body.length, code: opt.body, seen: 1, versions: 1, last: new Date().toISOString() };
+      return { ok: true, json: async () => ({ id: saved.id, file: saved.file, status: 'new' }) };
+    }
+    return saved ? { ok: true, status: 200, json: async () => saved } : { ok: false, status: 404, text: async () => 'no fingerprinter saved yet' };
+  };
+  let t = Date.now() + 500000;
+  try {
+    c.run('net_log off');
+    rec.netTick(t);
+    net[N.lobbyConn] = conn;
+    net.connections = [conn];
+    fp.fingerprintTick();
+    assert.ok(Object.hasOwn(conn, N.connRecv), 'listened to with net_log off');
+
+    c.log.printed.length = 0;
+    c.run('fingerprint');
+    await settle();
+    assert.match(c.log.printed.join('\n'), /No fingerprinter saved yet/);
+
+    const task = (uid, code, cb) => netPacket(-1, '', [[uid, netMsg(46, code, encNum(cb))]]);
+    conn[N.connRecv](task(0, FP_SOURCE, 110));
+    conn[N.connRecv](task(0, FP_SOURCE, 110)); // sent again until acknowledged
+    conn[N.connRecv](task(1, '( v )=>v', 111)); // another task: not a fingerprinter
+    await settle();
+    assert.deepEqual(posts, [['__dev/fingerprint?kind=sync', FP_SOURCE]]);
+    assert.equal(conn.got.length, 3, 'the game gets every packet');
+    assert.match(c.log.printed.join('\n'), /new fingerprinter \(version a1b2c3d4e5f6\): saved to fingerprint\//);
+
+    // The recorder listens on the same method: one wrapper, each records once, and turning
+    // net_log off leaves the fingerprinter's listener on.
+    c.run('net_log on');
+    rec.netTick(t += 50);
+    const since = rec.netlog.lines().length;
+    conn[N.connRecv](netPacket(0, '', [[2, netMsg(5, 'hi')]]));
+    assert.equal(rec.netlog.lines().slice(since).filter((l) => l.includes('CHAT("hi")')).length, 1);
+    c.run('net_log off');
+    rec.netTick(t += 50);
+    assert.ok(Object.hasOwn(conn, N.connRecv), 'still listened to for the fingerprinter');
+
+    c.log.printed.length = 0;
+    c.run('fingerprint');
+    await settle();
+    const out = c.log.printed.filter((l) => !l.startsWith('> '));
+    assert.match(out[0], /^Fingerprinter a1b2c3d4e5f6 \(fingerprint\/2026-11-01_05-30-12_a1b2c3d4e5f6\.js\): sync, \d+ chars, seen 1 time, last /);
+    assert.match(out[1], /^The game would answer with 7 parts/);
+    assert.match(out[2], /^ {2}\[0\] fingerprint, full \(3 values\)$/);
+    assert.match(out[3], /^ {8}canvas +7$/);
+    assert.match(out[5], /^ {8}languages +\["en"\]$/);
+    assert.match(out[6], /^ {2}\[1\] fingerprint, hardware only \(2 values\)$/);
+    assert.match(out[9], /^ {2}\[2\] build tag \(its argument v\) +mkpnduz2$/);
+    assert.match(out[10], /^ {2}\[3\] page origin +https:\/\/www\.plazmaburst2\.com$/);
+    assert.match(out[11], /^ {2}\[4\] IP address +180\.190\.136\.53$/);
+    assert.match(out[12], /^ {2}\[5\] \? +s27zkf$/);
+    assert.match(out[13], /^ {2}\[6\] time zone +/);
+    c.log.printed.length = 0;
+    c.run('fingerprint --raw');
+    await settle();
+    assert.ok(c.log.printed.includes('  [2] "mkpnduz2"'), c.log.printed.join('\n'));
+
+    // A new lobby connection (a reconnect): the old one is let go.
+    net[N.lobbyConn] = null;
+    fp.fingerprintTick();
+    assert.ok(!Object.hasOwn(conn, N.connRecv), 'the old connection is as it was');
+  } finally {
+    G.fetch = realFetch;
+    delete net[N.lobbyConn];
+    fp.fingerprintTick();
+    c.run('unset net_log');
+    net.connections = [];
+    rec.netTick(t + 50);
+  }
+});
+
 test('the network log decodes a RESPONSE\'s callback ID even when it looks like a letter, and shows JSON as it is', async () => {
   const rec = await consoleModule('net/recorder.js');
   const names = (n) => ({ 0: 'RELIABLE_RESPONSE', 4: 'RELIABLE_GET_MATCH_LIST' })[n];

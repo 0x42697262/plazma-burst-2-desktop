@@ -51,3 +51,6 @@ server/data/
 
 # Network logs from the dev console's recorder (console key net_log), one file per run and game instance.
 /netlogs/
+
+# The main server's fingerprinter, every version once (desktop/fingerprint.js, console "fingerprint").
+/fingerprint/

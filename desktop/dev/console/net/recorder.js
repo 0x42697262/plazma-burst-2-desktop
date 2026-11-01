@@ -30,8 +30,9 @@
 // Unreliable state updates have no number, so their loss cannot be seen one by one; the
 // STAT line counts them per second.
 //
-// How: the connection's receive method, its socket's emit and its peer's send are wrapped
-// on each connection object, only while net_log is on. Nothing global or on the network
+// How: the connection's receive method (through net/tap.js, shared with the fingerprinter
+// capture), its socket's emit and its peer's send are wrapped on each connection object,
+// only while net_log is on. Nothing global or on the network
 // class is replaced (those are what the anti-tamper scan compares, ANTICHEAT.md §6).
 import { game } from '../game/bindings.js';
 import { KEY } from '../state/schema.js';
@@ -39,10 +40,12 @@ import { settings } from '../state/store.js';
 import { ROUTE } from '../core/shared.js';
 import { FIELD, PART, unescField, splitParts, decodeNumber, showPart } from './codec.js';
 import { describeState } from './state.js';
+import { tap, untap } from './tap.js';
 
 export { decodeNumber, showPart };
 const SOCKET_EVENT = 'm'; // the game's one socket.io event, both ways
 const WRAP = Symbol('pb2dev netlog wrapper');
+const TAP_OWNER = 'netlog';
 
 export const NET_TICK_MS = 50;
 const FLUSH_MS = 500;
@@ -353,9 +356,8 @@ function transportOf(c) {
 // Wraps what is not wrapped yet: the socket or peer can come later than the connection.
 function wrapAll(rec) {
   const c = rec.conn;
-  wrap(c, game.recvMethodName(), (orig) => function (text) {
+  tap(c, game.recvMethodName(), TAP_OWNER, (text) => {
     if (typeof text === 'string') safe(() => onIn(rec, text));
-    return orig.apply(this, arguments);
   });
   const s = socketOf(c);
   if (s && s !== rec.socket) {
@@ -381,7 +383,7 @@ function wrapAll(rec) {
   }
 }
 function unwrapAll(rec) {
-  unwrap(rec.conn, game.recvMethodName());
+  untap(rec.conn, game.recvMethodName(), TAP_OWNER);
   unwrap(rec.socket, 'emit');
   unwrap(rec.peer, 'send');
 }
