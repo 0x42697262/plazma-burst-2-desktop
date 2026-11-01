@@ -4,8 +4,6 @@ import { helpCommand } from './help.js';
 import { settingsCommands } from './settings.js';
 import { playerCommands, tpCommand, posCommand, charsCommand } from './player.js';
 import { gunsCommand, gunCommands } from './guns.js';
-import { bindCommands } from './binds.js';
-import { keynameCommand } from './keyname.js';
 import { triggersCommand } from './triggers.js';
 import { varsCommand } from './vars.js';
 import { logicCommand } from './logic.js';
@@ -25,7 +23,7 @@ register(
   serverCommand, ...serverShortcuts, // the dedicated host only (core/server.js)
   helpCommand, list, set, get, unset, reset,
   ...playerCommands, gunsCommand, tpCommand, posCommand, ...gunCommands, charsCommand,
-  ...bindCommands, keynameCommand, triggersCommand, regionsCommand, varsCommand, logicCommand, editorCommand, chainTopic, moreCommand,
+  triggersCommand, regionsCommand, varsCommand, logicCommand, editorCommand, chainTopic, moreCommand,
   builtin, mapsCommand, bypassCommand, hooksCommand, featuresCommand, ...consoleCommands,
   ...featureCommands(enabledConsoleFeatures()),
 );

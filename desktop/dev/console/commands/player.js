@@ -13,7 +13,7 @@ import { KEY, CLIENT_ONLY_REASON } from '../state/schema.js';
 import { settings, binds } from '../state/store.js';
 import { hpBonusFor, hpBonusAppliedTo } from '../overrides/frame.js';
 import { setKey, unsetKey, runKey } from './settings.js';
-import { bindKey, unbindKey } from './binds.js';
+import { bindKey, unbindKey } from '../../../../src/features/binds/index.ts';
 
 // ----- hp -----
 

@@ -75,13 +75,6 @@ export function runKey(key, args) {
 
 // What else you changed, after the keys: [title, rows] or null when there is nothing.
 const EXTRAS = Object.freeze({
-  binds: () => {
-    const keys = binds.keys();
-    return keys.length && [`binds: ${keys.length}`, keys.map((k) => {
-      const now = binds.active(k);
-      return `  ${showKey(k).padEnd(KEY_WIDTH)} ${binds.get(k)}${now.profile ? `  [profile ${now.profile} binds it here]` : ''}`;
-    })];
-  },
   logic: () => logicShown() && ['logic: shown', [`  ${logicDescription() || 'on'}`]],
   checks: () => checksBypassed() && ['ranked match protection: OFF ("bypass checks")', ['  nothing is held back in ranked matches; "bypass off" turns it back on']],
   editor: () => {

@@ -1,5 +1,6 @@
 // The console window, styled after the game's "View logs" panel (800x400 game units),
 // and the keys it reacts to: Shift+` toggles it, Esc closes it, binds run in levels.
+import { isFeatureOn } from '../../../../src/console/flags.ts';
 import { el } from './dom.js';
 import { THEME, IN_OVERLAY, swallow, markUi } from './theme.js';
 import { print, attachLog, clearLog } from './log.js';
@@ -216,7 +217,7 @@ export function onKeyDownCapture(e) {
     heldBoundKeys.add(e.code);
     return;
   }
-  if (!isOpen && !e.metaKey) {
+  if (!isOpen && !e.metaKey && isFeatureOn('binds')) {
     const k = eventKeyName(e);
     const bound = k && binds.active(k); // this map's profile bind, or yours
     if (bound && !isTextInput(e.target) && !game.chatTyping() && isActive()) {

@@ -118,12 +118,6 @@ test('settings are forced every frame and put back when removed', () => {
   assert.equal(p[c.N.noSwords], false);
 });
 
-test('a bind can only start with something that runs', () => {
-  assert.deepEqual(errorsOf(c.run('bind f tp')), []);
-  assert.deepEqual(errorsOf(c.run('bind f speed 2')), [], 'a key works too');
-  assert.match(errorsOf(c.run('bind f chain'))[0], /unknown command "chain"/, 'a help-only topic does not');
-  c.run('unbind all');
-});
 
 test('typed commands are saved with the settings', async () => {
   const { history } = await consoleModule('state/store.js');
@@ -226,16 +220,6 @@ test('logic show draws every link where the camera puts it', async () => {
   assert.equal(c.log.frames.length, 0, 'no frame left pending');
 });
 
-test('a bind holds a ";" chain, and pressing the key runs all of it', () => {
-  assert.deepEqual(errorsOf(c.run('bind shift+t "revive; god"')), [], 'a one-word first command');
-  const out = c.press('KeyT', { shiftKey: true });
-  assert.equal(out[0], '[bind shift+t] > revive; god');
-  assert.ok(out.includes('[1/2] revive') && out.includes('[2/2] god'), out.join(' | '));
-  assert.match(errorsOf(c.run('bind g "revive; nonsense"'))[0], /unknown command "nonsense"\./, 'every command is checked');
-  assert.match(errorsOf(c.run('bind g "revive; nonsense 5"'))[0], /unknown command "nonsense" in "nonsense 5"/);
-  assert.deepEqual(errorsOf(c.run('bind h fast load maps on')), [], 'a phrase is checked as its key');
-  c.run('unbind all; unset god');
-});
 
 test('logic filters by element type', async () => {
   const view = await consoleModule('logic/view.js');
@@ -433,36 +417,6 @@ test('a ";" where a key name goes is the ";" key; everywhere else it ends a comm
   c.run('unset screenshot_key; unset speed; unbind --all');
 });
 
-test('shifted characters are Shift and their US key; keyname names the key you press', () => {
-  c.run('unbind --all');
-  for (const [typed, name] of [['>', 'shift+period'], ['?', 'shift+slash'], ['<', 'shift+comma'], [':', 'shift+semicolon'],
-    ['!', 'shift+1'], ['{', 'shift+bracketleft'], ['|', 'shift+backslash'], ['_', 'shift+minus'], ['+', 'shift+equal'],
-    ['ctrl+>', 'ctrl+shift+period'], ['shift+>', 'shift+period'], ['ctrl++', 'ctrl+shift+equal']]) {
-    assert.equal(c.run(`bind ${typed} heal`)[0], `${name} = heal`, typed);
-  }
-  assert.match(errorsOf(c.run('bind ~ heal'))[0], /opens the console/, '~ is Shift+`');
-  assert.match(errorsOf(c.run('bind ¤ heal'))[0], /not a key name.*"keyname" shows a key's name/);
-  c.run('unbind --all');
-
-  // keyname: the next key goes to it, not to binds, the screenshot key or the game.
-  c.run('bind shift+period heal');
-  assert.match(c.run('keyname')[0], /^Press a key/);
-  assert.deepEqual(c.press('ShiftLeft', { key: 'Shift', shiftKey: true }), [], 'waits for the whole combination');
-  const out = c.press('Period', { key: '>', shiftKey: true });
-  assert.deepEqual(out, ['shift+period', '  types ">", code Period', '  bound to: heal', '  bind shift+period <command>'], out.join(' | '));
-  assert.ok(c.press('Period', { key: '>', shiftKey: true }).some((l) => /HP = /.test(l)), 'then the bind works again');
-
-  c.run('keyname');
-  const f12 = c.press('F12', { key: 'F12' });
-  assert.deepEqual(f12.slice(0, 3), ['f12', '  key "F12", code F12', '  the screenshot key ("screenshot_key")']);
-  c.run('keyname');
-  assert.ok(c.press('KeyW', { key: 'w' }).includes('  game key: jump'));
-  c.run('keyname');
-  assert.ok(c.press('Backquote', { key: '~', shiftKey: true }).includes('  cannot be bound: shift+` opens the console'));
-  c.run('keyname');
-  assert.deepEqual(c.press('Escape', { key: 'Escape' }), ['keyname: cancelled']);
-  c.run('unbind --all');
-});
 
 
 

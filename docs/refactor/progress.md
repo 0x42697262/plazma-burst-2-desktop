@@ -90,15 +90,7 @@ Notes from P2 for the feature steps:
     (`tools`: the scratchpad move script is not kept; the pattern is the header of
     `src/features/trace/trace.test.mjs`). Converting them to TypeScript is P6.1.
 - [x] P3.9 `profiles` (the store ignores profiles while the flag is off)
-- [ ] P3.10 `binds` (in progress)
-  - Done: `commandText` and `warnKeyUses` ported to `src/console/kernel/commands/command-text.ts` (not wired yet).
-  - Next: switch `src/features/profiles/adapters/store.ts` to the kernel versions; move
-    `bind`/`unbind` (`commands/binds.js`) and `keyname` into `src/features/binds/` with a
-    `binds` list section (remove it from `commands/settings.js`); export `bindKey`/`unbindKey`
-    from `src/features/binds/index.ts` for `commands/player.js` (`tp --on/--off`); in
-    `ui/panel.js` run a bind only while `isFeatureOn('binds')`; move the bind tests
-    (`a bind can only start…`, `a bind holds a ";" chain…`, `shifted characters…`) with the
-    move-script pattern; set `migrated: true`.
+- [x] P3.10 `binds` (saved binds do not run while the flag is off; `commandText`/`warnKeyUses` are in the console kernel)
 - [ ] P3.11 `guns`
 - [ ] P3.12 `player`
 - [ ] P3.13 `scan_bypass`

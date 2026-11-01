@@ -2,7 +2,7 @@ import { SCHEMA, resolveKey, parseValue, affectsGame, showValue } from '../../..
 import { settings, profiles, activeProfile, currentMap } from '../../../../desktop/dev/console/state/store.js';
 import { parseKeyName, showKey } from '../../../../desktop/dev/console/state/keys.js';
 import { isActive } from '../../../../desktop/dev/console/game/level.js';
-import { commandText, warnKeyUses } from '../../../../desktop/dev/console/commands/binds.js';
+import { commandText, warnKeyUses } from '#console/kernel/commands/command-text.ts';
 import { run } from '../../../../desktop/dev/console/dispatch.js';
 
 export type Profile = { values: Record<string, unknown>; binds: Record<string, string>; onload: string };
@@ -30,8 +30,8 @@ export const profileContext = {
   showValue: (key: string, value: unknown): string => (showValue as (key: string, value: unknown) => string)(key, value),
   parseKeyName: (word: string): string => (parseKeyName as (word: string) => string)(word),
   showKey: (key: string): string => (showKey as (key: string) => string)(key),
-  commandText: (words: readonly string[], usage: string): string => (commandText as (words: readonly string[], usage: string) => string)(words, usage),
-  warnKeyUses: (key: string): void => { (warnKeyUses as (key: string) => void)(key); },
+  commandText,
+  warnKeyUses,
   isLevelActive: (): boolean => (isActive)(),
   run: (line: string, source: string): void => { (run as (line: string, source: string) => void)(line, source); },
   gameKeyGroups: (): string[] => [...new Set(Object.entries(SCHEMA as Record<string, { group: string }>).filter(([key]) => (affectsGame as (key: string) => boolean)(key)).map(([, schema]) => schema.group))],
