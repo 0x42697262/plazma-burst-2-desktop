@@ -1,0 +1,11 @@
+export const REGION_UID_WIDTH = 18;
+export const REGION_MODE_WIDTH = 22;
+export const INDEX_WIDTH = 4;
+export const VAR_NAME_WIDTH = 28;
+export const SHOWN = Object.freeze({ syncers: 6, seeders: 4 });
+export const UID_WIDTH = 18;
+export const ACTION_WIDTH = 3;
+export const MODE_WHAT_WIDTH = 8;
+export const VERDICT_WIDTH = 12;
+export const SINGLE_ARGUMENT = 1;
+export const NAME_AND_VALUE = 2;

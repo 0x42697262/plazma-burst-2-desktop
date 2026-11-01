@@ -1,0 +1,186 @@
+import { print } from '#console/kernel/ui/log.ts';
+import { showPaged, takePage } from '#console/kernel/ui/pager.ts';
+import { COLOR } from '#console/kernel/core/keys.ts';
+import { plural } from '#console/kernel/core/words.ts';
+import { game } from '#console/kernel/game/bindings.ts';
+import type { CommandContext, CommandDefinition } from '#console/kernel/commands/registry.ts';
+import { stringOf } from '#kernel/text/text-of.ts';
+import { showTarget } from '../model.ts';
+import {
+  requireVars, showVar, parseVarValue, SYNC_MODES, RECOMMENDED_MODE, VAR_MAX_LEN, fights, modeName,
+  syncMarkOn, mapHasSyncMark, syncActionsFor, seedersFor, modeVerdict, NO, YES, noteVarEdit,
+} from '../vars.ts';
+import { SYNC_MODE_KEYS, type SyncModeKey } from '../keys.ts';
+import { ACTION_WIDTH, INDEX_WIDTH, MODE_WHAT_WIDTH, NAME_AND_VALUE, SHOWN, SINGLE_ARGUMENT, UID_WIDTH, VAR_NAME_WIDTH, VERDICT_WIDTH } from './constants.ts';
+import { HASH, NO_UID, SPACE, VARS_COMMAND, WRITE_VERBS } from './keys.ts';
+import { VARS_TEXT as TEXT } from './text.ts';
+
+type Vars = Record<string, unknown>;
+const isSyncMode = (mode: string): mode is SyncModeKey => (SYNC_MODE_KEYS as readonly string[]).includes(mode);
+
+function listVars(rawArgs: readonly string[]): void {
+  const vars = requireVars();
+  const { args, page } = takePage(rawArgs);
+  const names = Object.keys(vars).sort();
+  const filter = args.join(SPACE).trim();
+  const lowered = filter.toLowerCase();
+  const rows = names.filter((name) => !lowered || name.toLowerCase().includes(lowered)).map((name) => [TEXT.row(name.padEnd(VAR_NAME_WIDTH), showTarget(vars[name]))] as const);
+  showPaged({
+    title: TEXT.title(names.length, filter, rows.length),
+    rows,
+    cmd: TEXT.command(filter),
+    empty: names.length ? TEXT.noMatch(filter) : TEXT.noneYet,
+    hint: TEXT.listHint,
+    page,
+  });
+}
+
+function writeVar(args: readonly string[], { verb }: CommandContext): void {
+  const vars = requireVars();
+  const [name] = args;
+  if (!name) throw new Error(TEXT.writeUsage);
+  const had = Object.hasOwn(vars, name);
+  const before = vars[name];
+  const action = WRITE_VERBS[(verb ?? WRITE_VERBS.set) as keyof typeof WRITE_VERBS];
+  if (action === WRITE_VERBS.get) {
+    if (args.length !== SINGLE_ARGUMENT) throw new Error(TEXT.writeUsage);
+    if (!had) throw new Error(TEXT.noVariable(name));
+    print(TEXT.value(name, showVar(before)));
+    return;
+  }
+  if (action === WRITE_VERBS.del) {
+    if (args.length !== SINGLE_ARGUMENT) throw new Error(TEXT.writeUsage);
+    if (!had) {
+      print(TEXT.notSet(name), COLOR.notice);
+      return;
+    }
+    Reflect.deleteProperty(vars, name);
+    noteVarEdit(vars, name, before);
+    print(TEXT.removed(name, showVar(before)), COLOR.ok);
+    return;
+  }
+  if (args.length < NAME_AND_VALUE) throw new Error(TEXT.writeUsage);
+  const value = parseVarValue(args.slice(1).join(SPACE));
+  vars[name] = value;
+  noteVarEdit(vars, name, before);
+  print(TEXT.changed(name, showVar(value), had ? showVar(before) : null), COLOR.ok);
+  if (!had) print(TEXT.nothingReads, COLOR.hint);
+}
+
+const fightName = (mode: SyncModeKey): string => SYNC_MODES[mode].what;
+const uidText = (uid: string | undefined): string => (uid || NO_UID).padEnd(UID_WIDTH);
+
+function explainMark(): void {
+  const local = syncMarkOn();
+  const inMap = mapHasSyncMark();
+  print(TEXT.markLine(local, inMap), local && inMap !== false ? COLOR.ok : COLOR.warn);
+  if (!local) print(TEXT.noMark, COLOR.warn);
+  else if (inMap === false) print(TEXT.leftoverMark, COLOR.warn);
+  if (!game.isMP()) print(TEXT.singlePlayerNote, COLOR.warn);
+}
+
+function explainSyncers(name: string): boolean {
+  const synced = syncActionsFor(name);
+  const fighting = synced.filter((action) => fights(action.mode));
+  if (!synced.length) {
+    print(TEXT.noSyncers, COLOR.ok);
+    return false;
+  }
+  print(TEXT.syncers(plural(synced.length, TEXT.triggerActionNoun)), COLOR.warn);
+  for (const action of synced.slice(0, SHOWN.syncers)) print(TEXT.syncerRow(String(action.idx).padEnd(INDEX_WIDTH), uidText(action.uid), String(action.action).padEnd(ACTION_WIDTH), modeName(action.mode)));
+  if (synced.length > SHOWN.syncers) print(TEXT.more(synced.length - SHOWN.syncers));
+  const [firstFighting] = fighting;
+  if (firstFighting) print(TEXT.canUndo(fightName(firstFighting.mode), firstFighting.idx), COLOR.warn);
+  return fighting.length > 0;
+}
+
+function explainSeeders(name: string): number {
+  const seeders = seedersFor(name);
+  if (!seeders.length) return 0;
+  print(TEXT.seeders(plural(seeders.length, TEXT.triggerNoun)), COLOR.warn);
+  print(TEXT.seedersOverwrite, COLOR.warn);
+  for (const seeder of seeders.slice(0, SHOWN.seeders)) print(TEXT.seederRow(String(seeder.idx).padEnd(INDEX_WIDTH), uidText(seeder.uid), String(seeder.action).padEnd(ACTION_WIDTH), seeder.atStart));
+  if (seeders.length > SHOWN.seeders) print(TEXT.more(seeders.length - SHOWN.seeders));
+  print(TEXT.holdsFor, COLOR.warn);
+  print(TEXT.testElsewhere, COLOR.warn);
+  return seeders.length;
+}
+
+function explainSync(name: string, vars: Vars): void {
+  const has = Object.hasOwn(vars, name);
+  const value = vars[name];
+  print(TEXT.syncTitle(name), COLOR.title);
+  print(TEXT.valueToSend(has ? showVar(value) : null), has ? undefined : COLOR.notice);
+  explainMark();
+  const syncedCount = syncActionsFor(name).length;
+  const fighting = explainSyncers(name);
+  const seederCount = explainSeeders(name);
+  if (has) {
+    print(TEXT.modesTitle, COLOR.title);
+    for (const mode of SYNC_MODE_KEYS) {
+      const [verdict, why] = modeVerdict(mode, value);
+      print([[TEXT.modeRow(mode, SYNC_MODES[mode].what.padEnd(MODE_WHAT_WIDTH), verdict.padEnd(VERDICT_WIDTH)), verdict === NO ? COLOR.muted : COLOR.bright], [why, COLOR.hint]]);
+    }
+    print(TEXT.recommended(name, RECOMMENDED_MODE, fighting), COLOR.ok);
+    if (seederCount || syncedCount) print(TEXT.oneLine(name, RECOMMENDED_MODE), COLOR.hint);
+  }
+  if (name.includes(HASH) || (has && stringOf(value).includes(HASH))) print(TEXT.hashWarning, COLOR.warn);
+}
+
+function syncVar(args: readonly string[]): void {
+  const vars = requireVars();
+  const usage = TEXT.syncUsage(SYNC_MODE_KEYS);
+  const [name, typedMode] = args;
+  if (!name || args.length > NAME_AND_VALUE) throw new Error(usage);
+  if (typedMode === undefined) {
+    explainSync(name, vars);
+    return;
+  }
+  const mode = typedMode.toLowerCase();
+  if (!isSyncMode(mode)) throw new Error(TEXT.noMode(typedMode, SYNC_MODE_KEYS.map(modeName).join(TEXT.modeSeparator)));
+  if (!Object.hasOwn(vars, name)) throw new Error(TEXT.setFirst(name));
+  const value = vars[name];
+  if (!syncMarkOn()) throw new Error(TEXT.noMarkError);
+  if (!game.isMP()) throw new Error(TEXT.singlePlayerError);
+  if (name.length > VAR_MAX_LEN || stringOf(value).length > VAR_MAX_LEN) throw new Error(TEXT.tooLong(VAR_MAX_LEN));
+  const [verdict, why] = modeVerdict(mode, value);
+  if (verdict === NO) throw new Error(TEXT.cannotDeliver(modeName(mode), showVar(value), why, name, RECOMMENDED_MODE));
+  game.sendVarSync(mode, name, value);
+  print(TEXT.sent(name, showVar(value), modeName(mode), SYNC_MODES[mode].how), COLOR.ok);
+  const fighting = syncActionsFor(name).filter((action) => fights(action.mode));
+  const [firstFighting] = fighting;
+  if (firstFighting) print(TEXT.mayUndo(plural(fighting.length, TEXT.triggerActionNoun), fightName(firstFighting.mode), firstFighting.idx), COLOR.warn);
+  if (verdict !== YES) print(TEXT.conditional(mode, verdict, why), COLOR.hint);
+  const [firstSeeder] = seedersFor(name);
+  if (firstSeeder) print(TEXT.seederNote(firstSeeder.idx, firstSeeder.uid || '', firstSeeder.atStart), COLOR.warn);
+}
+
+const SYNC_HELP_ARGS = [TEXT.sync.nameArgument, ...SYNC_MODE_KEYS.map((mode) => [mode, TEXT.modeHelp(SYNC_MODES[mode].what, SYNC_MODES[mode].how)] as const)];
+
+export const varsCommand: CommandDefinition = {
+  name: VARS_COMMAND.name,
+  aliases: VARS_COMMAND.aliases,
+  usage: TEXT.usage,
+  desc: TEXT.desc,
+  clientOnly: TEXT.clientOnly,
+  help: TEXT.help,
+  run: (args) => { listVars(args); },
+  subcommands: [
+    {
+      name: VARS_COMMAND.set,
+      aliases: VARS_COMMAND.setAliases,
+      usage: TEXT.set.usage,
+      desc: TEXT.set.desc,
+      help: { about: TEXT.set.about, args: TEXT.set.args, examples: TEXT.set.examples, notes: TEXT.set.notes, see: TEXT.set.see },
+      run: (args, context) => { writeVar(args, context); },
+    },
+    {
+      name: VARS_COMMAND.sync,
+      usage: TEXT.sync.usage,
+      desc: TEXT.sync.desc,
+      reportsReach: true,
+      help: { args: SYNC_HELP_ARGS, about: TEXT.sync.about, examples: TEXT.sync.examples, notes: TEXT.sync.notes(VAR_MAX_LEN), see: TEXT.sync.see },
+      run: (args) => { syncVar(args); },
+    },
+  ],
+};
