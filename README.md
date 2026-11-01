@@ -52,17 +52,17 @@ The community client Sad Burst 2 has commands of its own; the ones above never t
 | `desktop/dev-overrides.json` | Dev console settings, binds and profiles (per-map settings, `profile` in the console). Editing it while the game runs reloads it | no |
 | `desktop/kv-file.js` | Shares `dev-overrides.json` between the console and your edits | yes |
 | `hooks/` | Your hooks: Frida-style scripts that change the game's code as it loads. Guide: `docs/features/hooks.md`, reference: `docs/features/hooks-reference.md` | only `README.md`, `REFERENCE.md` and `*.example.js` |
-| `desktop/remote/` | Remote play: testers play a game running on this machine from their browser (`npm run host`). Guide: `docs/operations/remote-play.md` | yes |
+| `src/features/remote_play/` | Remote play: testers play a game running on this machine from their browser (`npm run host`). Guide: `docs/operations/remote-play.md` | yes |
 | `desktop/remote-testers.json`, `desktop/remote-data/` | Remote play: tester links, and each tester's console settings | no |
 | `server/` | Your own lobby server: the game's own server code in Node, TLS on one port, run from the terminal (`npm run server`). Players pick it in the app's server list. Guide: `docs/operations/private-server.md` | yes |
 | `server/server.json`, `server/data/` | Your server: its settings (copy `server/server.example.json`), its certificate, bans and downloaded maps | no |
-| `desktop/launcher/`, `desktop/servers.js` | The server list `npm start` opens: the official server and your private servers, with address, ping, players and description | yes |
+| `src/features/server_list/` | The server list `npm start` opens: the official server and your private servers, with address, ping, players and description | yes |
 | `desktop/servers.json` | Your saved private servers: address, certificate fingerprint, your nickname, the server password (edited from the server list) | no |
-| `desktop/p2p-host/` | Player-hosted dedicated host: a "THIS DEVICE (UDP)" match listed by the official lobby, with no window (`npm run p2p-host`). Guide: `docs/operations/p2p-host.md` | yes |
+| `src/features/p2p_host/` | Player-hosted dedicated host: a "THIS DEVICE (UDP)" match listed by the official lobby, with no window (`npm run p2p-host`). Guide: `docs/operations/p2p-host.md` | yes |
 | `desktop/p2p-host.json`, `desktop/p2p-host-overrides.json` | Player-hosted dedicated host: its settings (copy `desktop/p2p-host.example.json`), and its console settings | no |
-| `desktop/hooks.js`, `desktop/hooks-runtime.js` | The hooks loader (dry run, patches, trampolines) and its in-page runtime | yes |
+| `src/features/hooks/` | The hooks loader (dry run, patches, trampolines) and its in-page runtime | yes |
 | `netlogs/` | Network logs: every message the game sends and receives, and its packet losses, as plain text. One file per run and game instance (console key `net_log`, command `netlog`; see [section 7](#7-network-log)) | no |
-| `desktop/netlog.js`, `desktop/dev/console/net/recorder.js` | The network log: the files (wrapper), and the recorder on the game's connections (console) | yes |
+| `src/features/netlog/` | The network log: the files (wrapper), and the recorder on the game's connections (console) | yes |
 | `screenshots/` | Screenshots from the dev console: F12 (console key `screenshot_key`) or `screenshot` | no |
 | `tools/fetch-game.js` | Downloads the game | yes |
 | `tools/find-names.js` | Generates `desktop/dev/names.js` | yes |
@@ -228,7 +228,7 @@ The dev console records the game's network traffic while it runs: on by default,
 
 ```
 netlogs/<date>_<time>_local.log          this window
-netlogs/<date>_<time>_tester-<name>.log  a remote play tester's game (desktop/remote/)
+netlogs/<date>_<time>_tester-<name>.log  a remote play tester's game (src/features/remote_play/)
 ```
 
 A second copy of the app started in the same second gets `..._local-2.log`. Page reloads append to the same file, after a `PAGE` line.

@@ -103,7 +103,7 @@ Notes from P2 for the feature steps:
 - [x] P3.17 `map_editor`, gated: `src/features/map_editor/console.ts` registers the old command, frame hook and list section; the editor key follows the flag. The code stays JavaScript in `desktop/dev/console/editor/` until P6.1.
 - [x] P3.18 `login` + `cert_pinning`: `src/features/login/` (credentials file and cookie adapters; flag off starts logged out) and `src/features/cert_pinning/` (the verify procedure). `desktop/login.js` and `test/login.test.mjs` are gone.
 - [x] P3.19 `remote_play`: `src/features/remote_play/` (input, lockdown, testers file versioned, WebSocket host, the client in TypeScript built to `dist/remote-client/`, the redactor); `npm run host` quits when the flag is off. The Electron window code stays in `desktop/main.js` until P4.3. `desktop/remote/` and `tools/remote-testers.js` are gone.
-- [ ] P3.20 `p2p_host`
+- [x] P3.20 `p2p_host`: `src/features/p2p_host/` (config checks, config file, page log lines, console side registering `server`/`who`/`kick`/`say` and starting the host); `npm run p2p-host` quits when the flag is off. The page's host driver stays JavaScript in `desktop/dev/console/server/` until P6.1, the Electron window in `desktop/main.js` until P4.3. `desktop/p2p-host/` is gone.
 - [ ] P3.21 `client_sadburst`
 
 ## P4. Console kernel and wrapper platform

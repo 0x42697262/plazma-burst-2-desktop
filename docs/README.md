@@ -25,6 +25,7 @@
 - [map-cache.md](features/map-cache.md): `map_cache`, local maps and the map cache
 - [map-editor.md](features/map-editor.md): `map_editor`, the in-game map editor
 - [netlog.md](features/netlog.md): `netlog`, the network recorder
+- [p2p-host.md](features/p2p-host.md): `p2p_host`, the player-hosted dedicated host
 - [player.md](features/player.md): `player`, commands and overrides on your character
 - [profiles.md](features/profiles.md): `profiles`, settings for some maps
 - [scan-bypass.md](features/scan-bypass.md): `scan_bypass`, the anti-cheat scan report and turning the protection off

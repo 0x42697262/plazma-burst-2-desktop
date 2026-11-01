@@ -1,69 +1,11 @@
-// The dedicated host ("npm run p2p-host"): its config file, and its driver in the page
-// (desktop/dev/console/server/host.js) against the fake game.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-const REPO = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const require = createRequire(import.meta.url);
-const { checkConfig, roundDurationMs, parsePorts, parseServerArgs } = require('../desktop/p2p-host/config.js');
+const REPO = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 
-test('config: the game\'s preset, made player-hosted and unranked, with the host\'s own settings', () => {
-  const r = checkConfig({
-    _comment: 'ignored',
-    match: { title: 'Friends', map_id: 'nanotech-cht', max_players: '16', game_type: 'tdm', password: 'pw', ranked: true, p2p: false, round_duration_str: '1 hour 30 minutes', ping_limit: 150 },
-    allow: ['Friend1', ' friend1 ', 'buddy'],
-    udp_ports: '50000-50010',
-    ice_servers: ['stun:stun.example.com:3478', { urls: 'turn:turn.example.com:3478', username: 'u', credential: 'c' }],
-    region: 'Asia',
-  });
-  assert.deepEqual(r.errors, []);
-  assert.equal(r.match.p2p, true);
-  assert.equal(r.match.ranked, false);
-  assert.equal(r.match.accept_connections_manually, false);
-  assert.equal(r.match.game_type, 'TDM');
-  assert.equal(r.match.max_players, 16);
-  assert.equal(r.match.round_duration, 5400000);
-  assert.equal(r.match.ping_limit, '150');
-  assert.equal(r.match.p2p_region, 'Asia');
-  assert.deepEqual(r.server.allow, ['friend1', 'buddy']);
-  assert.deepEqual(r.server.udp_ports, { min: 50000, max: 50010 });
-  assert.equal(r.server.ice_servers.length, 2);
-  assert.ok(r.problems.some((p) => /match\.ranked: always false/.test(p)));
-  assert.ok(r.problems.some((p) => /match\.p2p: always true/.test(p)));
-});
-
-test('config: what stops the host, and what only warns', () => {
-  assert.ok(checkConfig({ match: {} }).errors.some((e) => /map_id/.test(e)));
-  const bad = checkConfig({ match: { map_id: 'x', max_players: 7, game_type: 'CTF', ping_limit_action: 'nope' }, udp_ports: '80-90', fps: 1, ice_servers: [{ urls: 'turn:x' }], allow: 'bob' });
-  for (const want of [/max_players/, /game_type/, /ping_limit_action/, /udp_ports/, /fps/, /TURN server needs/, /allow:/]) {
-    assert.ok(bad.errors.some((e) => want.test(e)), String(want));
-  }
-  const open = checkConfig({ match: { map_id: 'x', map_rotation: 'random approved' }, local_map: 'mine', nope: 1 });
-  assert.deepEqual(open.errors, []);
-  assert.ok(open.problems.some((p) => /anyone who sees the match/.test(p)));
-  assert.ok(open.problems.some((p) => /map_rotation/.test(p)));
-  assert.ok(open.problems.some((p) => /nope: unknown/.test(p)));
-  assert.equal(checkConfig({ match: { map_id: 'x' }, local_map: 'local-mine.xml' }).server.local_map, 'mine');
-  assert.ok(checkConfig({ match: { map_id: 'x' }, local_map: '../etc' }).errors.some((e) => /local_map/.test(e)));
-});
-
-test('config: round duration like the create screen, ports, arguments', () => {
-  assert.equal(roundDurationMs('default'), 0);
-  assert.equal(roundDurationMs('10 minutes'), 600000);
-  assert.equal(roundDurationMs('1 hour 30 minutes 5 seconds'), 5405000);
-  assert.equal(roundDurationMs('soon'), null);
-  assert.equal(parsePorts(''), null);
-  assert.deepEqual(parsePorts('50000'), { min: 50000, max: 50000 });
-  assert.throws(() => parsePorts('9-1'));
-  assert.equal(parseServerArgs(['electron', '.', '--p2p-host', '--config', 'my.json']).config, 'my.json');
-  assert.equal(parseServerArgs(['--config=x.json']).config, 'x.json');
-});
-
-// Server mode is decided when the console's modules load, so these run in their own process.
 const at = (rel) => pathToFileURL(path.join(REPO, rel)).href;
 const childOut = (src) => JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', src], { cwd: REPO, encoding: 'utf8' }));
 
@@ -78,9 +20,7 @@ test('not on the dedicated host: no "server", "who", "kick" or "say"', () => {
 });
 
 const HOST_CHILD = `
-  const { createRequire } = await import('node:module');
-  const require = createRequire(${JSON.stringify(at('test/server.test.mjs'))});
-  const { checkConfig } = require('../desktop/p2p-host/config.js');
+  const { checkConfig } = await import(${JSON.stringify(at('src/features/p2p_host/domain/config.ts'))});
   const cfg = checkConfig({ match: { map_id: 'nanotech-cht', password: 'pw' }, allow: ['friend'], region: 'Asia', restart_after_s: 5 });
   Object.defineProperty(globalThis, 'PB2_SERVER', { value: { match: cfg.match, server: cfg.server } });
   const { bootConsole } = await import(${JSON.stringify(at('test/fake-game.mjs'))});

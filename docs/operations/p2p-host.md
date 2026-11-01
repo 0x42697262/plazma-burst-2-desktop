@@ -127,3 +127,5 @@ whole lobby server, and every friend running a changed game.
 | Match lives while | the server runs | this host is online and logged in to the lobby server; if the host drops, the match ends and the host starts a new one after `restart_after_s` |
 | Maps | published IDs | published IDs, plus local maps through this host |
 | Match browser listing | yes | yes, as "<region>, player-hosted"; the game shows a notice that your IP address is shared with whoever joins |
+
+How it works, and every check of the config file: [p2p-host](../features/p2p-host.md).

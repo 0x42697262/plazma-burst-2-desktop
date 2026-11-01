@@ -17,7 +17,12 @@ const { REMOTE_DATA_DIR } = require('../src/features/remote_play/paths.ts');
 const { isRefusedPageLoad } = require('../src/features/remote_play/domain/game-page.ts');
 const { lockDownSession, lockDownWindow } = require('../src/features/remote_play/adapters/lockdown.ts');
 const { startRemotePlay } = require('../src/features/remote_play/wrapper.ts');
-const serverConfig = require('./p2p-host/config');
+const { loadConfig: loadServerConfig } = require('../src/features/p2p_host/adapters/config-file.ts');
+const { parseServerArgs } = require('../src/features/p2p_host/domain/config.ts');
+const { pageLine } = require('../src/features/p2p_host/domain/page-log.ts');
+const { CONFIG_FILE_NAME: SERVER_CONFIG_FILE_NAME, EXAMPLE_CONFIG_FILE_NAME: SERVER_EXAMPLE_FILE_NAME, SETTINGS_FILE_NAME: SERVER_SETTINGS_FILE_NAME } = require('../src/features/p2p_host/keys.ts');
+const { RELOAD_AFTER_CRASH_MS, QUIT_AFTER_STOP_MS, MILLISECONDS_PER_SECOND, HOST_WINDOW } = require('../src/features/p2p_host/constants.ts');
+const { HOST_LOG } = require('../src/features/p2p_host/text.ts');
 // Which game: the official client, or Sad Burst 2 with "npm run sadburst" (desktop/clients.js).
 const { CLIENTS } = require('./clients');
 const CLIENT = CLIENTS[ENVIRONMENT.client];
@@ -36,8 +41,8 @@ if (HOST_MODE) app.commandLine.appendSwitch(SCALE_FACTOR_SWITCH, SCALE_FACTOR_ON
 // desktop/p2p-host.json and is driven from this terminal (docs/operations/p2p-host.md).
 // Its console settings are its own file.
 const SERVER_MODE = ENVIRONMENT.mode === 'server';
-const SERVER_CONFIG_FILE = path.join(__dirname, 'p2p-host.json');
-const SERVER_KV_FILE = path.join(__dirname, 'p2p-host-overrides.json');
+const SERVER_CONFIG_FILE = path.join(__dirname, SERVER_CONFIG_FILE_NAME);
+const SERVER_KV_FILE = path.join(__dirname, SERVER_SETTINGS_FILE_NAME);
 
 // The server list: src/features/server_list/ (docs/features/server-list.md).
 const { LAUNCHER_PAGE, LAUNCHER_PRELOAD } = require('../src/features/server_list/wrapper.ts');
@@ -371,6 +376,11 @@ app.whenReady().then(async () => {
     app.quit();
     return;
   }
+  if (SERVER_MODE && !FLAGS.p2p_host.on) {
+    log.error(HOST_LOG.flagOff);
+    app.quit();
+    return;
+  }
   log.info(`${SADBURST ? `${CLIENT.title}: ` : ''}Game ${VERSION} from ${ROOT}`);
   if (SADBURST) {
     if (FLAGS.hooks.source === 'constraint') log.info('Sad Burst 2: hooks are off (its loader sends a hash of the game scripts with the login; docs/features/hooks.md).');
@@ -565,7 +575,7 @@ async function startRemoteHost() {
 }
 
 // ---------------------------------------------------------------------------
-// Player-hosted dedicated host (desktop/p2p-host/)
+// Player-hosted dedicated host (src/features/p2p_host/)
 // ---------------------------------------------------------------------------
 // The host's window: the default session (logged in like "npm start"), its own console
 // settings file, and PB2_SERVER on its page.
@@ -584,85 +594,74 @@ const SERVER_CTX = Object.freeze({
 
 // Its page's console in the terminal: the console's own lines and chat as plain text,
 // errors as errors, the game's other output only with --verbose.
-const CONSOLE_TAG = '[pb2dev] ';
-const CHAT_TAG = '[chat] ';
-const ENTITIES = Object.freeze({ '&lt;': '<', '&gt;': '>', '&amp;': '&', '&quot;': '"', '&#39;': "'", '&nbsp;': ' ' });
-const plainChat = (html) => String(html).replace(/<[^>]*>/g, '').replace(/&(lt|gt|amp|quot|#39|nbsp);/g, (e) => ENTITIES[e]);
 function logServerPage(win) {
   win.webContents.on('console-message', (e) => {
-    const msg = String(e.message);
-    if (msg.startsWith(CONSOLE_TAG)) { log.info(msg.slice(CONSOLE_TAG.length)); return; }
-    if (msg.startsWith(CHAT_TAG)) { log.info(`[chat] ${plainChat(msg.slice(CHAT_TAG.length))}`); return; }
-    const src = e.sourceId ? ` (${e.sourceId.split('/').pop()}:${e.lineNumber})` : '';
-    if (e.level === 'error') log.error(`[page] ${msg}${src}`);
-    else log.debug(`[page:${e.level}] ${msg}${src}`);
+    const line = pageLine({ message: String(e.message), level: e.level, sourceId: e.sourceId, lineNumber: e.lineNumber });
+    log[line.level](line.text);
   });
-  win.webContents.on('did-fail-load', (e, code, desc, url) => log.error(`[host] failed to load ${url}: ${desc} (${code})`));
-  win.on('unresponsive', () => log.warn('[host] the page stopped responding'));
-  win.on('responsive', () => log.info('[host] the page responds again'));
+  win.webContents.on('did-fail-load', (e, code, desc, url) => log.error(HOST_LOG.failedLoad(url, desc, code)));
+  win.on('unresponsive', () => log.warn(HOST_LOG.unresponsive));
+  win.on('responsive', () => log.info(HOST_LOG.responsive));
 }
 
-const RELOAD_AFTER_CRASH_MS = 5000;
-const QUIT_AFTER_STOP_MS = 1500; // time for "-terminate" to reach the lobby server
-
 async function startDedicatedServer() {
-  const { config, problems: argProblems } = serverConfig.parseServerArgs(ENVIRONMENT.args);
-  for (const p of argProblems) log.warn(`Host: ${p}`);
+  const { config, problems: argProblems } = parseServerArgs(ENVIRONMENT.args);
+  for (const p of argProblems) log.warn(HOST_LOG.problem(p));
   const file = config ? path.resolve(config) : SERVER_CONFIG_FILE;
-  const loaded = serverConfig.loadConfig(file);
+  const loaded = loadServerConfig(file);
   if (loaded.missing) {
-    log.error(`Host: no ${file}. Copy desktop/p2p-host.example.json there and set "match.map_id" (guide: docs/operations/p2p-host.md).`);
+    log.error(HOST_LOG.missingConfig(file, path.join('desktop', SERVER_EXAMPLE_FILE_NAME)));
     app.quit();
     return;
   }
-  for (const p of loaded.problems) log.warn(`Host: ${p}`);
+  for (const p of loaded.problems) log.warn(HOST_LOG.problem(p));
   if (loaded.errors.length) {
-    for (const p of loaded.errors) log.error(`Host: ${p}`);
-    log.error(`Host: fix ${file} and start again.`);
+    for (const p of loaded.errors) log.error(HOST_LOG.problem(p));
+    log.error(HOST_LOG.fixConfig(file));
     app.quit();
     return;
   }
   if (!DEV_ENABLED) {
-    log.error('Host: the dedicated host runs in the dev console; start it without PB2_DEV=0.');
+    log.error(HOST_LOG.needsConsole);
     app.quit();
     return;
   }
-  if (!fsSync.existsSync(DEV_NAMES)) log.warn('Host: desktop/dev/names.js is missing; run "npm run find-names" first.');
+  if (!fsSync.existsSync(DEV_NAMES)) log.warn(HOST_LOG.namesMissing);
   if (loaded.server.local_map && !(await mapCache.findLocalMap(loaded.server.local_map))) {
-    log.error(`Host: local_map "${loaded.server.local_map}" is not in ${mapCache.mapsDir}`);
+    log.error(HOST_LOG.localMapMissing(loaded.server.local_map, mapCache.mapsDir));
     app.quit();
     return;
   }
   serverPage = { match: loaded.match, server: loaded.server };
-  log.info(`Host: settings from ${file}`);
+  log.info(HOST_LOG.settingsFrom(file));
 
   const win = mainWindow = new BrowserWindow({
     show: false,
-    width: 800,
-    height: 400,
+    width: HOST_WINDOW.width,
+    height: HOST_WINDOW.height,
     useContentSize: true,
-    title: 'Plazma Burst 2 (dedicated host)',
+    title: HOST_LOG.windowTitle,
     webPreferences: { backgroundThrottling: false, offscreen: true },
   });
   win.webContents.setAudioMuted(true);
   win.webContents.setFrameRate(loaded.server.fps);
   if (loaded.server.udp_ports) {
     win.webContents.setWebRTCUDPPortRange(loaded.server.udp_ports);
-    log.info(`Host: WebRTC uses UDP ports ${loaded.server.udp_ports.min}-${loaded.server.udp_ports.max} (forward them on your router)`);
+    log.info(HOST_LOG.udpPorts(loaded.server.udp_ports.min, loaded.server.udp_ports.max));
   }
   logServerPage(win);
   win.webContents.on('render-process-gone', (e, d) => {
-    log.error(`[host] the page's process is gone: ${d.reason} (exit code ${d.exitCode}); loading the game again in ${RELOAD_AFTER_CRASH_MS / 1000} s`);
+    log.error(HOST_LOG.processGone(d.reason, d.exitCode, RELOAD_AFTER_CRASH_MS / MILLISECONDS_PER_SECOND));
     setTimeout(() => { if (!win.isDestroyed()) win.loadURL(START_URL); }, RELOAD_AFTER_CRASH_MS);
   });
-  try { serverKvFile.watch(); } catch (e) { log.warn(`Not watching ${SERVER_KV_FILE}: ${e.message}`); }
+  try { serverKvFile.watch(); } catch (e) { log.warn(HOST_LOG.notWatching(SERVER_KV_FILE, e.message)); }
 
   // The terminal: every line is a console command; "quit" ends the match and closes.
   let quitting = false;
   const quit = () => {
     if (quitting) { app.exit(0); return; }
     quitting = true;
-    log.info('Host: ending the match and closing (Ctrl+C again to close at once)');
+    log.info(HOST_LOG.quitting);
     win.webContents.executeJavaScript('globalThis.pb2dev && pb2dev.run("server stop")').catch(() => {});
     setTimeout(() => app.quit(), QUIT_AFTER_STOP_MS);
   };
@@ -672,13 +671,13 @@ async function startDedicatedServer() {
     if (!text) return;
     if (/^(quit|exit)$/i.test(text)) { quit(); return; }
     win.webContents.executeJavaScript(`globalThis.pb2dev ? (pb2dev.run(${JSON.stringify(text)}), true) : false`)
-      .then((ok) => { if (!ok) log.warn('Host: the console is not loaded yet; try again in a moment'); })
-      .catch((e) => log.error(`Host: ${e.message}`));
+      .then((ok) => { if (!ok) log.warn(HOST_LOG.consoleNotLoaded); })
+      .catch((e) => log.error(HOST_LOG.problem(e.message)));
   });
-  rl.on('close', () => { if (!quitting) log.info('Host: terminal input closed; the host keeps running (Ctrl+C stops it)'); });
+  rl.on('close', () => { if (!quitting) log.info(HOST_LOG.inputClosed); });
   process.on('SIGINT', quit);
 
-  log.info('Host: starting the game. Type "help server" once it is up, "quit" to close.');
+  log.info(HOST_LOG.starting);
   await win.loadURL(START_URL);
 }
 

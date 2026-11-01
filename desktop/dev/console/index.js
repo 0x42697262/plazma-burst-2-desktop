@@ -31,7 +31,6 @@ import { currentMapId } from './game/level.js';
 import { applyOverrides, onActiveChange } from './overrides/frame.js';
 import { run } from './dispatch.js';
 import { SERVER } from './core/server.js';
-import { startHost } from './server/host.js';
 import { enabledConsoleFeatures, featureFrameHooks, featureTicks, featureListSections } from '../../../src/console/features.ts';
 import { registerListSection } from '../../../src/console/kernel/list-sections.ts';
 
@@ -80,7 +79,6 @@ function start(source) {
     setInterval(() => guard(tick.name, tick.run), tick.everyMs);
   }
   for (const feature of features) if (feature.start) feature.start();
-  if (SERVER) startHost();
 }
 
 async function boot() {

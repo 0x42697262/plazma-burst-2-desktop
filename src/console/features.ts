@@ -19,6 +19,7 @@ import { mapCacheConsole } from '#features/map_cache/console.ts';
 import { hooksConsole } from '#features/hooks/console.ts';
 import { triggersConsole } from '#features/triggers/console.ts';
 import { mapEditorConsole } from '#features/map_editor/console.ts';
+import { p2pHostConsole } from '#features/p2p_host/console.ts';
 
 export const CONSOLE_FEATURES: readonly ConsoleFeature[] = Object.freeze([
   lobbyTaskGuardConsole,
@@ -39,6 +40,7 @@ export const CONSOLE_FEATURES: readonly ConsoleFeature[] = Object.freeze([
   hooksConsole,
   triggersConsole,
   mapEditorConsole,
+  p2pHostConsole,
 ]);
 
 export const enabledConsoleFeatures = (features: readonly ConsoleFeature[] = CONSOLE_FEATURES): ConsoleFeature[] => features.filter((feature) => isFeatureOn(feature.id));

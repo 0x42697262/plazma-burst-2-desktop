@@ -48,7 +48,7 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   define(FEATURE.login, { migrated: true }),
   define(FEATURE.certPinning, { availableIn: LOCAL_ONLY, migrated: true }),
   define(FEATURE.remotePlay, { availableIn: [MODE.remote], unavailableForClients: ONLY_OFFICIAL, migrated: true }),
-  define(FEATURE.p2pHost, { availableIn: [MODE.server], unavailableForClients: ONLY_OFFICIAL }),
+  define(FEATURE.p2pHost, { availableIn: [MODE.server], unavailableForClients: ONLY_OFFICIAL, migrated: true }),
   define(FEATURE.clientSadburst),
 ]);
 
