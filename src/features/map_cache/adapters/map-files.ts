@@ -3,7 +3,7 @@ import fsSync from 'node:fs';
 import path from 'node:path';
 import { MAP_MARKER, SAVE_RESULT } from '#shared/contract/keys.ts';
 import type { SaveResult } from '#shared/contract/routes.ts';
-import { makeUnpacker, beautifyMap } from '../../../../desktop/map-text.js';
+import { makeUnpacker, beautifyMap } from '#kernel/maps/map-text.ts';
 import { BYTE_ORDER_MARK, EXCLUSIVE_FLAG, EXISTS_ERROR_CODE, HIDDEN_PREFIX, MAP_EXTENSIONS, OVERWRITE_FLAG, SETTING, TEXT_ENCODING, XML_START } from '../keys.ts';
 import { TEXT } from '../text.ts';
 import { isEditedName, isLocalMapId, localMapId, mapFileName } from '../domain/map-id.ts';
@@ -17,8 +17,8 @@ const isExistsError = (error: unknown): boolean => (error as NodeJS.ErrnoExcepti
 const cleanText = (text: string): string => text.replace(BYTE_ORDER_MARK, '').trim();
 
 export function createMapFiles({ dir, gameDir, kvFile, repoRoot, info }: MapFilesDeps) {
-  const unpack = (makeUnpacker as (gameDir: string) => (text: string) => string)(gameDir);
-  const beautify = beautifyMap as (text: string) => string;
+  const unpack = makeUnpacker(gameDir);
+  const beautify = beautifyMap;
 
   function setting(name: string): unknown {
     try {

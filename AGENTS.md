@@ -52,4 +52,5 @@ One line per behavior change: what to do, and the result to expect.
 - P3.19: `npm test` (src/features/remote_play). `npm run host`, then `npm run testers -- add me` and open the link: the game streams. `PB2_FEATURES=-remote_play npm run host` logs "Remote play is off" and quits.
 - P3.20: `npm test` (src/features/p2p_host). `npm run p2p-host` with `desktop/p2p-host.json` hosts as before. `PB2_FEATURES=-p2p_host npm run p2p-host` logs that the host is off and quits.
 - P4.3: `npm run smoke` plays the official server and the console answers; `npx electron . --host --port=8799` listens on 127.0.0.1; `npm start -- --features` lists the flags.
+- P5.1: `npm test` (src/server/server.test.mjs starts the real server against the downloaded game and plays a match through it). `npm run server` prints the address, fingerprint and "Type \"help\"".
 - P3.21: `npm test` (src/kernel/config/clients.test.ts). `npm run sadburst` starts Sad Burst 2 as before (its own session and settings file). `PB2_FEATURES=-client_sadburst npm run sadburst` logs "Sad Burst 2 is off" and quits.

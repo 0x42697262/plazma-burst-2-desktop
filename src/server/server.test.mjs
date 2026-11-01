@@ -11,12 +11,12 @@ import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
-const REPO = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+const REPO = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const require = createRequire(import.meta.url);
-const { checkConfig } = require('../server/config.js');
-const { memberShapes } = require('../server/game.js');
-const { createProbe } = await import('../src/features/server_list/adapters/probe.ts');
-const { checkServer: checkEntry } = await import('../src/features/server_list/domain/server.ts');
+const { checkConfig } = require('./config.ts');
+const { memberShapes } = require('./game.ts');
+const { createProbe } = await import('../features/server_list/adapters/probe.ts');
+const { checkServer: checkEntry } = await import('../features/server_list/domain/server.ts');
 const probe = createProbe();
 const checkServer = (entry) => checkEntry(entry, () => 'testserver1');
 const HAS_GAME = fs.existsSync(path.join(REPO, 'game', 'scripts', 'libs', 'flash.js'));
@@ -45,15 +45,15 @@ test('the account module is built from how the game uses it', () => {
 
 test('own server: the game\'s server code logs players in, lists, creates and joins matches, and obeys its terminal', { skip: !HAS_GAME && 'no game files' }, async () => {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'; // the client trusts the test server's self-signed certificate
-  const { findNames } = require('../tools/find-names.js');
-  const { createClient } = require('./game-client.cjs');
+  const { findNames } = require('../../tools/find-names.js');
+  const { createClient } = require('../../test/support/game-client.cjs');
   const N = findNames(path.join(REPO, 'game')).found;
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-server-'));
   fs.mkdirSync(path.join(dir, 'maps'));
   const cfg = path.join(dir, 'server.json');
   const map = fs.readdirSync(path.join(REPO, 'desktop', 'maps')).find((f) => f.endsWith('.xml'));
   fs.writeFileSync(cfg, JSON.stringify({ port: 0, bind: '127.0.0.1', password: 'pw', welcome: 'hi there', download_maps: false, random_maps: map ? [map.slice(0, -4)] : [] }));
-  const srv = spawn(process.execPath, [path.join(REPO, 'server/index.js'), '--config', cfg, '--data', dir], { stdio: ['pipe', 'pipe', 'pipe'] });
+  const srv = spawn(process.execPath, [path.join(REPO, 'src/server/index.ts'), '--config', cfg, '--data', dir], { stdio: ['pipe', 'pipe', 'pipe'] });
   let out = '';
   srv.stdout.on('data', (d) => { out += d; });
   srv.stderr.on('data', (d) => { out += d; });
@@ -119,8 +119,8 @@ test('own server: the game\'s server code logs players in, lists, creates and jo
 });
 
 test('maps: this server\'s first, then the site (unpacked to plain XML and kept), only then missing', { skip: !HAS_GAME && 'no game files' }, async () => {
-  const { createMaps } = require('../server/maps.js');
-  const { makeUnpacker } = require('../desktop/map-text.js');
+  const { createMaps } = require('./maps.ts');
+  const { makeUnpacker } = require('../kernel/maps/map-text.ts');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-maps-'));
   const mapsDir = path.join(dir, 'maps');
   const cacheDir = path.join(dir, 'cache');

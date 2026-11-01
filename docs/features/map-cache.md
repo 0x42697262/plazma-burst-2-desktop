@@ -17,7 +17,7 @@ answers an unpublished one. Sad Burst 2 uses `desktop/maps.sadburst/`.
 
 Every other map the game downloads is saved to `desktop/maps/<map id>.xml`:
 - uncompressed: the site's `<q.` format is unpacked with the game's own function from
-  `scripts/libs/xml.js`, run in a sandbox (`desktop/map-text.js`, shared with the
+  `scripts/libs/xml.js`, run in a sandbox (`src/kernel/maps/map-text.ts`, shared with the
   server);
 - one tag per line, so the files are readable and diff cleanly;
 - the map ID made safe as a file name (anything else becomes `%XX`).

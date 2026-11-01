@@ -114,7 +114,7 @@ Notes from P2 for the feature steps:
 - [x] P4.3 `desktop/main.js` is gone. `src/wrapper/app.ts` is the composition root (start-mode gates, request handling, menu, main window); `src/wrapper/platform/` holds the settings file sync (`kv-file.ts`), index.html preparation (`index-page.ts`, tested), game file serving and Sad Burst's kept files (`game-files.ts`), the `__dev/` files and start checks (`dev-files.ts`), the page log, the remote play windows and the dedicated host window. `desktop/kv-file.js` is gone; `desktop/log.js` and `desktop/map-text.js` stay for `server/` until P5.
 
 ## P5. Server and tools
-- [ ] P5.1 `server/src/`
+- [x] P5.1 The private server is `src/server/` (config, maps, the game server's stand-ins, the entry with TLS, status page and terminal); `npm run server` runs `src/server/index.ts`. Its settings and data stay in `server/` (`server.json`, `data/`). The map text helper is `src/kernel/maps/map-text.ts`, shared with the map cache; `desktop/log.js` and `desktop/map-text.js` are gone. Tests: `src/server/server.test.mjs`.
 - [ ] P5.2 `tools/*.ts`
 
 ## P6. Finish

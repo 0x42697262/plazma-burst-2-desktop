@@ -8,7 +8,7 @@ It's the game's own server. Every copy of the game includes the official lobby s
 code (`scripts/libs/flash.js`, `scripts/connection.js`): logging in, the match list,
 creating and joining matches, rounds, maps, and the match owner's commands. This server
 runs that code in Node. It adds only what the game doesn't include: accounts (nickname
-and server password), a map source, and TLS (see `server/game.js`). The matches
+and server password), a map source, and TLS (see `src/server/game.ts`). The matches
 therefore play by the official rules.
 
 ```

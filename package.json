@@ -12,7 +12,7 @@
     "sadburst": "npm run build && electron . --sadburst",
     "host": "npm run build && electron . --host",
     "p2p-host": "npm run build && electron . --p2p-host",
-    "server": "node server/index.js",
+    "server": "node src/server/index.ts",
     "fetch-game": "node tools/fetch-game.js",
     "find-names": "node tools/find-names.js",
     "fetch-opcodes": "node tools/fetch-opcodes.js",
