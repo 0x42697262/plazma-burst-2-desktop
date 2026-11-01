@@ -4,7 +4,7 @@ import { movePlayerTo } from '#console/kernel/game/teleport.ts';
 import { player, isActive, requireLevel, isDown, charAt, charLabel, be, noCharacter, resolveChar } from '#console/kernel/game/level.ts';
 import { KEY } from '#console/kernel/state/schema.ts';
 import { settings, binds } from '#console/kernel/state/store.ts';
-import { hpBonusFor, hpBonusAppliedTo } from '#console/kernel/overrides/frame.ts';
+import { hpBonusAppliedTo } from '#console/kernel/overrides/max-hp.ts';
 import { setKey, unsetKey, runKey } from '#console/kernel/commands/settings.ts';
 import { takeOptions } from '#console/kernel/core/args.ts';
 import { isNumberText, parseIndex, capitalize } from '#console/kernel/core/words.ts';
@@ -46,7 +46,6 @@ export const level = {
 };
 
 export const hpBonus = {
-  forBase: (base: number): number => hpBonusFor(base),
   appliedTo: (character: Character): number => (hpBonusAppliedTo as (character: Character) => number)(character),
 };
 

@@ -1,4 +1,4 @@
-import { GAME_FIELDS } from '../game/fields.ts';
+import { GAME_FIELDS } from '#console/kernel/game/fields.ts';
 
 const godCharacters = new Set<object>();
 

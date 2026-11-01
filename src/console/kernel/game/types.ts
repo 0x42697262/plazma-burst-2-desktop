@@ -27,3 +27,5 @@ export type DisplayObject = {
 export type Layer = DisplayObject & { numChildren: number; addChildAt(child: DisplayObject, index: number): DisplayObject };
 export type Walls = { x: number[]; y: number[]; w: number[]; h: number[]; count: number };
 export type WallGrid = { cells: number[][][]; cell: number; cols: number; rows: number; minX: number; minY: number };
+
+export type MovingCharacter = Character & { stand?: boolean; sit: number; tox: number; toy: number; curwea: number };

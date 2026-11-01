@@ -15,3 +15,4 @@ export const YOU = 'you';
 export const MATCH_SEPARATOR = ', ';
 export const WORD_SEPARATOR = ' ';
 export const COMMAND = Object.freeze({ guns: 'guns', gunsAliases: ['weapons'], give: 'give', drop: 'drop', dropAliases: ['throw'] });
+export const OVERRIDE_NAME = 'gun overrides';

@@ -6,3 +6,5 @@ export const LEVEL_FAILED = 'failed';
 export const ALL_WORD = 'all';
 export const YOU = 'you';
 export const COMMAND = Object.freeze({ heal: 'heal', hp: 'hp', revive: 'revive', reviveAliases: ['res'] });
+export const NOTE_SEPARATOR = ', ';
+export const OVERRIDE_NAME = 'health overrides';

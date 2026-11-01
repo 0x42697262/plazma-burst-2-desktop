@@ -15,10 +15,10 @@ import { namesMissing, CLIENT_TITLE, FIND_NAMES, SADBURST } from './kernel/game/
 import { currentMapId } from './kernel/game/level.ts';
 import { load, reload as reloadStore, settings, binds, profiles, loadProblems, setMapSource } from './kernel/state/store.ts';
 import { LOAD_SOURCE, type LoadSource } from './kernel/state/keys.ts';
-import { applyOverrides, onActiveChange } from './kernel/overrides/frame.ts';
+import { applyOverrides, onActiveChange, useOverrides } from './kernel/overrides/frame.ts';
 import { registerListSection } from './kernel/list-sections.ts';
 import { run } from './kernel/dispatch.ts';
-import { enabledConsoleFeatures, featureFrameHooks, featureTicks, featureListSections } from './features.ts';
+import { enabledConsoleFeatures, featureFrameHooks, featureOverrides, featureTicks, featureListSections } from './features.ts';
 import { FRAME_ERRORS_SHOWN, STATUS_EVERY_MS } from './constants.ts';
 import { DATA_FOLDER, FRAME_GUARD_LABEL, KEY_DOWN_EVENT, KEY_UP_EVENT, LOCAL_STORAGE_NAME, PAGE_API_GLOBAL } from './keys.ts';
 import { TEXT } from './text.ts';
@@ -40,6 +40,7 @@ const frameGuard = errorBudget(FRAME_ERRORS_SHOWN, reportError);
 const features = enabledConsoleFeatures();
 for (const [name, make] of featureListSections(features)) registerListSection(name, make);
 const featureFrame = featureFrameHooks(features);
+useOverrides(featureOverrides(features));
 
 function onFrame(): void {
   for (const hook of featureFrame) frameGuard(hook.name, hook.run);

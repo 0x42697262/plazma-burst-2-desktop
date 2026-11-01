@@ -7,6 +7,7 @@ import { ALL_WORD, COMMAND, HP_CHANGE, HP_PERCENT_NO_SIGN, YOU } from '../keys.t
 import { CLIENT_ONLY, TEXT } from '../text.ts';
 import { changedMaxHp, nextBonus, parseHpChange, signed } from '../domain/hp.ts';
 import { cancelLevelFailed, reviveCharacter } from '../services/revive.ts';
+import { hpBonusFor } from '../services/overrides.ts';
 
 type Args = readonly string[];
 const hint = (text: string): void => print(text, COLOR.hint);
@@ -29,7 +30,7 @@ function changeHp(raw: string): void {
   const flat = numberSetting(keys.HP_BONUS);
   const percent = numberSetting(keys.HP_BONUS_PCT);
   const bonus = [flat ? signed(flat) : '', percent ? TEXT.percentBonus(signed(percent)) : ''].filter(Boolean).join(TEXT.bonusSeparator) || TEXT.bonusNone;
-  hint(TEXT.maxHpPreview(Math.round(max), Math.round(Math.max(1, base + hpBonus.forBase(base))), Math.round(base), bonus));
+  hint(TEXT.maxHpPreview(Math.round(max), Math.round(Math.max(1, base + hpBonusFor(base))), Math.round(base), bonus));
 }
 
 function reviveAll(): void {

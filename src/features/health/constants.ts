@@ -7,3 +7,4 @@ export const HEAD_SHARE = 0.4;
 export const FACE_SHARE = 0.6;
 export const LEGS_SHARE = 0.5;
 export const ARMS_SHARE = 0.4;
+export const MIN_MAX_HP = 1;

@@ -3,4 +3,3 @@ export const GAME_COMMANDS_HELD: readonly (readonly [RegExp, 'hp' | 'aim'])[] = 
   [/^grow$/i, 'hp'],
   [/^zoom\s+(25|50)$/i, 'aim'],
 ]);
-export const NOTE_SEPARATOR = ', ';
