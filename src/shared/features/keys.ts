@@ -41,5 +41,13 @@ export type ClientId = typeof CLIENT[keyof typeof CLIENT];
 export const FLAG_SOURCE = Object.freeze({ default: 'default', file: 'file', env: 'env', constraint: 'constraint', edition: 'edition' });
 export type FlagSource = typeof FLAG_SOURCE[keyof typeof FLAG_SOURCE];
 
+export const CAPABILITY_SEPARATOR = '.';
+export const capabilityId = (feature: FeatureId, name: string): string => feature + CAPABILITY_SEPARATOR + name;
+
+export const CAPABILITY = Object.freeze({
+  health: Object.freeze({ god: 'health.god', hp: 'health.hp', heal: 'health.heal', revive: 'health.revive' }),
+});
+
+export const PAGE_CAPABILITIES_GLOBAL = 'PB2_CAPABILITIES';
 export const FEATURE_OWNER = '0x42697262';
 export const PAGE_FLAGS_GLOBAL = 'PB2_FEATURES';

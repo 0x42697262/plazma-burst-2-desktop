@@ -1,5 +1,5 @@
 import { stringOf } from '#kernel/text/text-of.ts';
-import { allowedHere, type Availability } from '../core/mode.ts';
+import { allowedHere, capabilityOn, type Availability } from '../core/mode.ts';
 import { REGISTRY_TEXT as TEXT } from './text.ts';
 
 export type HelpPair = readonly [string, string];
@@ -37,13 +37,20 @@ export type HelpEntry = { id: string; def: Command; also: string[] };
 const commands: Command[] = [];
 const byWord = new Map<string, Command>();
 
+const containerOnly = (command: Command) => (): never => {
+  throw new Error(TEXT.onlySubcommands(command.name, command.subcommands.map((subcommand) => subcommand.name)));
+};
+
 const normalize = (definition: CommandDefinition): Command => ({ ...definition, aliases: definition.aliases ?? [], subcommands: [] });
 
 export function register(...definitions: readonly CommandDefinition[]): void {
   for (const definition of definitions) {
     if (!allowedHere(definition)) continue;
     const command = normalize(definition);
-    command.subcommands = (definition.subcommands ?? []).filter(allowedHere).map(normalize);
+    command.subcommands = (definition.subcommands ?? []).filter((subcommand) => allowedHere(subcommand) && capabilityOn(subcommand)).map(normalize);
+    const isOwnRunOn = capabilityOn(definition);
+    if (!isOwnRunOn && !command.subcommands.length) continue;
+    if (!isOwnRunOn) command.run = containerOnly(command);
     const subcommandWords = new Set<string>();
     for (const subcommand of command.subcommands) {
       for (const word of [subcommand.name, ...subcommand.aliases]) {

@@ -7,4 +7,4 @@ export const ALL_WORD = 'all';
 export const YOU = 'you';
 export const COMMAND = Object.freeze({ heal: 'heal', hp: 'hp', revive: 'revive', reviveAliases: ['res'] });
 export const NOTE_SEPARATOR = ', ';
-export const OVERRIDE_NAME = 'health overrides';
+export const OVERRIDE_NAME = Object.freeze({ god: 'god override', hp: 'max HP override' });

@@ -1,15 +1,18 @@
-import { ALL_MODES, CLIENT, FEATURE, FEATURE_OWNER, MODE, type ClientId, type FeatureId, type Mode } from './keys.ts';
+import { ALL_MODES, CAPABILITY, CLIENT, FEATURE, FEATURE_OWNER, MODE, type ClientId, type FeatureId, type Mode } from './keys.ts';
 import { FEATURE_DESCRIPTION } from './text.ts';
-import type { FeatureDefinition } from './types.ts';
+import type { CapabilityDefinition, FeatureDefinition } from './types.ts';
 
-type FeatureSpec = Partial<Omit<FeatureDefinition, 'id' | 'owner' | 'description'>>;
+type FeatureSpec = Partial<Omit<FeatureDefinition, 'id' | 'owner' | 'description' | 'capabilities'>> & { capabilities?: Readonly<Record<string, readonly string[]>> };
 
 const LOCAL_AND_SERVER: readonly Mode[] = Object.freeze([MODE.local, MODE.server]);
 const LOCAL_ONLY: readonly Mode[] = Object.freeze([MODE.local]);
 const ONLY_OFFICIAL: readonly ClientId[] = Object.freeze([CLIENT.sadburst]);
 const NEEDS_CONSOLE: readonly FeatureId[] = Object.freeze([FEATURE.devConsole]);
 
-const define = (id: FeatureId, spec: FeatureSpec = {}): FeatureDefinition => Object.freeze({
+const capabilitiesOf = (feature: FeatureId, needs: Readonly<Record<string, readonly string[]>>): CapabilityDefinition[] =>
+  Object.entries(needs).map(([id, requires]) => Object.freeze({ id, feature, requires: Object.freeze([...requires]) }));
+
+const define = (id: FeatureId, { capabilities = {}, ...spec }: FeatureSpec = {}): FeatureDefinition => Object.freeze({
   id,
   defaultOn: true,
   availableIn: ALL_MODES,
@@ -19,6 +22,7 @@ const define = (id: FeatureId, spec: FeatureSpec = {}): FeatureDefinition => Obj
   owner: FEATURE_OWNER,
   description: FEATURE_DESCRIPTION[id],
   ...spec,
+  capabilities: Object.freeze(capabilitiesOf(id, capabilities)),
 });
 
 const consoleFeature = (id: FeatureId, spec: FeatureSpec = {}): FeatureDefinition => define(id, { requires: NEEDS_CONSOLE, ...spec });
@@ -29,7 +33,9 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   consoleFeature(FEATURE.profiles),
   consoleFeature(FEATURE.teleport),
   consoleFeature(FEATURE.playerInfo),
-  consoleFeature(FEATURE.health),
+  consoleFeature(FEATURE.health, {
+    capabilities: { [CAPABILITY.health.god]: [], [CAPABILITY.health.hp]: [], [CAPABILITY.health.heal]: [], [CAPABILITY.health.revive]: [] },
+  }),
   consoleFeature(FEATURE.movement),
   consoleFeature(FEATURE.guns),
   consoleFeature(FEATURE.binds),
@@ -57,3 +63,7 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
 
 export const CATALOG_BY_ID: ReadonlyMap<FeatureId, FeatureDefinition> = new Map(CATALOG.map((definition) => [definition.id, definition]));
 export const isFeatureId = (value: string): value is FeatureId => CATALOG_BY_ID.has(value as FeatureId);
+
+export const CAPABILITIES: readonly CapabilityDefinition[] = Object.freeze(CATALOG.flatMap((definition) => definition.capabilities));
+export const CAPABILITY_BY_ID: ReadonlyMap<string, CapabilityDefinition> = new Map(CAPABILITIES.map((capability) => [capability.id, capability]));
+export const isCapabilityId = (value: string): boolean => CAPABILITY_BY_ID.has(value);

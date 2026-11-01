@@ -1,18 +1,19 @@
 import { FLAG_SOURCE, type ClientId, type FeatureId, type FlagSource, type Mode } from '#shared/features/keys.ts';
-import type { FeatureDefinition, FeatureToggle, FlagOverrides, FlagState, FlagStates } from '#shared/features/types.ts';
+import type { CapabilityStates, FeatureDefinition, FeatureToggle, FlagOverrides, FlagState, FlagStates } from '#shared/features/types.ts';
 import { TEXT } from './text.ts';
 
 export type ResolveInput = Readonly<{
   catalog: readonly FeatureDefinition[];
   fileOverrides: FlagOverrides;
   fileUnknownIds: readonly string[];
+  fileCapabilityOverrides?: Readonly<Record<string, boolean>>;
   envToggles: readonly FeatureToggle[];
   mode: Mode;
   client: ClientId;
-  edition?: Readonly<{ name: string; features: readonly FeatureId[] | null }>;
+  edition?: Readonly<{ name: string; features: readonly FeatureId[] | null; capabilities?: readonly string[] | null }>;
 }>;
 
-export type ResolveResult = Readonly<{ states: FlagStates; problems: readonly string[] }>;
+export type ResolveResult = Readonly<{ states: FlagStates; capabilities: CapabilityStates; problems: readonly string[] }>;
 
 const stateOf = (on: boolean, source: FlagSource, reason: string | null = null): FlagState => Object.freeze({ on, source, reason });
 
@@ -28,7 +29,9 @@ function constraintReason(definition: FeatureDefinition, mode: Mode, client: Cli
 }
 
 export function resolveFlags(input: ResolveInput): ResolveResult {
-  const { catalog, fileOverrides, fileUnknownIds, envToggles, mode, client, edition } = input;
+  const { catalog, fileOverrides, fileUnknownIds, fileCapabilityOverrides = {}, envToggles, mode, client, edition } = input;
+  const capabilityIds = new Set(catalog.flatMap((definition) => definition.capabilities.map((capability) => capability.id)));
+  const capabilityToggles: FeatureToggle[] = [];
   const byId = new Map(catalog.map((definition) => [definition.id, definition]));
   const isInEdition = (id: FeatureId): boolean => !edition?.features || edition.features.includes(id);
   const initialState = (definition: FeatureDefinition): FlagState => (isInEdition(definition.id)
@@ -54,6 +57,7 @@ export function resolveFlags(input: ResolveInput): ResolveResult {
   for (const toggle of envToggles) {
     const definition = byId.get(toggle.id as FeatureId);
     if (definition) applyOverride(definition, toggle.on, FLAG_SOURCE.env, TEXT.sourceEnv);
+    else if (capabilityIds.has(toggle.id)) capabilityToggles.push(toggle);
     else problems.push(TEXT.unknownFeature(toggle.id, TEXT.sourceEnv));
   }
 
@@ -73,7 +77,59 @@ export function resolveFlags(input: ResolveInput): ResolveResult {
     }
   }
 
-  return Object.freeze({ states: Object.freeze(Object.fromEntries(states)) as FlagStates, problems: Object.freeze(problems) });
+  const featureStates = Object.freeze(Object.fromEntries(states)) as FlagStates;
+  const capabilities = resolveCapabilities({ catalog, featureStates, edition, fileOverrides: fileCapabilityOverrides, envToggles: capabilityToggles, problems });
+  return Object.freeze({ states: featureStates, capabilities, problems: Object.freeze(problems) });
+}
+
+type CapabilityInput = Readonly<{
+  catalog: readonly FeatureDefinition[];
+  featureStates: FlagStates;
+  edition: ResolveInput['edition'];
+  fileOverrides: Readonly<Record<string, boolean>>;
+  envToggles: readonly FeatureToggle[];
+  problems: string[];
+}>;
+
+function resolveCapabilities({ catalog, featureStates, edition, fileOverrides, envToggles, problems }: CapabilityInput): CapabilityStates {
+  const all = catalog.flatMap((definition) => definition.capabilities);
+  const featureOf = new Map(all.map((capability) => [capability.id, capability.feature]));
+  const isInEdition = (id: string): boolean => !edition?.capabilities || edition.capabilities.includes(id);
+  const states = new Map<string, FlagState>();
+  for (const capability of all) {
+    const feature = featureStates[capability.feature];
+    if (!feature.on) states.set(capability.id, stateOf(false, feature.source, feature.reason ?? TEXT.featureOff(capability.feature)));
+    else if (!isInEdition(capability.id)) states.set(capability.id, stateOf(false, FLAG_SOURCE.edition, TEXT.notInEditionReason));
+    else states.set(capability.id, stateOf(true, FLAG_SOURCE.default));
+  }
+  const apply = (id: string, on: boolean, source: FlagSource, where: string): void => {
+    const current = states.get(id);
+    if (!current) {
+      problems.push(TEXT.unknownFeature(id, where));
+      return;
+    }
+    if (current.source === FLAG_SOURCE.edition && on) {
+      problems.push(TEXT.notInEdition(id, where, edition?.name ?? ''));
+      return;
+    }
+    const feature = featureOf.get(id);
+    const isFeatureOff = feature !== undefined && !featureStates[feature].on;
+    if (!isFeatureOff) states.set(id, stateOf(on, source));
+  };
+  for (const [id, on] of Object.entries(fileOverrides)) apply(id, on, FLAG_SOURCE.file, TEXT.sourceFile);
+  for (const toggle of envToggles) apply(toggle.id, toggle.on, FLAG_SOURCE.env, TEXT.sourceEnv);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const capability of all) {
+      if (!states.get(capability.id)?.on) continue;
+      const missing = capability.requires.find((required) => !states.get(required)?.on);
+      if (missing === undefined) continue;
+      states.set(capability.id, stateOf(false, FLAG_SOURCE.constraint, TEXT.needs(missing)));
+      changed = true;
+    }
+  }
+  return Object.freeze(Object.fromEntries(states));
 }
 
 export const isOn = (states: FlagStates, id: FeatureId): boolean => states[id].on;
@@ -86,10 +142,15 @@ export const explicitlySet = (catalog: readonly FeatureDefinition[], states: Fla
     .map((definition) => [definition.id, TEXT.stateWithSource(states[definition.id].on ? TEXT.on : TEXT.off, states[definition.id].source)]),
 );
 
-export const reportLines = (catalog: readonly FeatureDefinition[], states: FlagStates): string[] => [
+export const reportLines = (catalog: readonly FeatureDefinition[], states: FlagStates, capabilities: CapabilityStates = {}): string[] => [
   TEXT.reportHeader,
-  ...catalog.map((definition) => {
+  ...catalog.flatMap((definition) => {
     const state = states[definition.id];
-    return TEXT.reportLine(definition.id, state.on ? TEXT.on : TEXT.off, state.source, state.reason, definition.description);
+    const featureLine = TEXT.reportLine(definition.id, state.on ? TEXT.on : TEXT.off, state.source, state.reason, definition.description);
+    const capabilityLines = definition.capabilities.map((capability) => {
+      const capabilityState = capabilities[capability.id] ?? state;
+      return TEXT.capabilityLine(capability.id, capabilityState.on ? TEXT.on : TEXT.off, capabilityState.source, capabilityState.reason);
+    });
+    return [featureLine, ...capabilityLines];
   }),
 ];

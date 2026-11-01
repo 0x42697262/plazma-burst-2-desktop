@@ -1,6 +1,6 @@
 import type { ConsoleFeature, CommandDefinition, ConsoleTick, FrameHook, FrameOverride } from './feature-types.ts';
 import type { ListSection } from './kernel/list-sections.ts';
-import { isFeatureOn } from './flags.ts';
+import { isCapabilityOn, isFeatureOn } from './flags.ts';
 import { netlogConsole } from '#features/netlog/console.ts';
 import { serverListConsole } from '#features/server_list/console.ts';
 import { fingerprintConsole } from '#features/fingerprint/console.ts';
@@ -50,7 +50,7 @@ export const CONSOLE_FEATURES: readonly ConsoleFeature[] = Object.freeze([
 export const enabledConsoleFeatures = (features: readonly ConsoleFeature[] = CONSOLE_FEATURES): ConsoleFeature[] => features.filter((feature) => isFeatureOn(feature.id));
 
 export const featureCommands = (features: readonly ConsoleFeature[]): CommandDefinition[] => features.flatMap((feature) => feature.commands ?? []);
-export const featureOverrides = (features: readonly ConsoleFeature[]): FrameOverride[] => features.flatMap((feature) => feature.overrides ?? []);
+export const featureOverrides = (features: readonly ConsoleFeature[]): FrameOverride[] => features.flatMap((feature) => feature.overrides ?? []).filter((override) => override.capability === undefined || isCapabilityOn(override.capability));
 export const featureFrameHooks = (features: readonly ConsoleFeature[]): FrameHook[] => features.flatMap((feature) => feature.frame ?? []);
 export const featureTicks = (features: readonly ConsoleFeature[]): ConsoleTick[] => features.flatMap((feature) => feature.ticks ?? []);
 

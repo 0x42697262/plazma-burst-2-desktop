@@ -18,10 +18,10 @@ const editionFileSchema = z.object({
 
 export type BuiltEdition = Readonly<{ edition: Edition; added: readonly string[]; problems: readonly string[] }>;
 
-const withFeatures = (base: Omit<Edition, 'features'>, listed: EditionList): BuiltEdition => {
+const withFeatures = (base: Omit<Edition, 'features' | 'capabilities'>, listed: EditionList): BuiltEdition => {
   const resolved = resolveEdition(CATALOG, listed);
   const features = listed === EVERY_FEATURE ? null : resolved.features;
-  return Object.freeze({ edition: Object.freeze({ ...base, features }), added: resolved.added, problems: resolved.problems });
+  return Object.freeze({ edition: Object.freeze({ ...base, features, capabilities: resolved.capabilities }), added: resolved.added, problems: resolved.problems });
 };
 
 export function readEdition(name: string, folder: string = EDITIONS_DIR): BuiltEdition {

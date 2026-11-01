@@ -1,3 +1,4 @@
+import { CAPABILITY } from '#shared/features/keys.ts';
 import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import {
@@ -88,7 +89,7 @@ function hp(args: Args): void {
 }
 
 export const healthCommands = Object.freeze([
-  { name: COMMAND.heal, usage: TEXT.heal.usage, desc: TEXT.heal.desc, clientOnly: CLIENT_ONLY, help: { about: TEXT.heal.about, see: TEXT.heal.see }, run: heal },
-  { name: COMMAND.hp, usage: TEXT.hp.usage, desc: TEXT.hp.desc, clientOnly: CLIENT_ONLY, help: { about: TEXT.hp.about, examples: TEXT.hp.examples, notes: TEXT.hp.notes, see: TEXT.hp.see }, run: hp },
-  { name: COMMAND.revive, aliases: COMMAND.reviveAliases, usage: TEXT.revive.usage, desc: TEXT.revive.desc, clientOnly: CLIENT_ONLY, help: { about: TEXT.revive.about, args: TEXT.revive.args, examples: TEXT.revive.examples, see: TEXT.revive.see }, run: revive },
+  { name: COMMAND.heal, capability: CAPABILITY.health.heal, usage: TEXT.heal.usage, desc: TEXT.heal.desc, clientOnly: CLIENT_ONLY, help: { about: TEXT.heal.about, see: TEXT.heal.see }, run: heal },
+  { name: COMMAND.hp, capability: CAPABILITY.health.hp, usage: TEXT.hp.usage, desc: TEXT.hp.desc, clientOnly: CLIENT_ONLY, help: { about: TEXT.hp.about, examples: TEXT.hp.examples, notes: TEXT.hp.notes, see: TEXT.hp.see }, run: hp },
+  { name: COMMAND.revive, capability: CAPABILITY.health.revive, aliases: COMMAND.reviveAliases, usage: TEXT.revive.usage, desc: TEXT.revive.desc, clientOnly: CLIENT_ONLY, help: { about: TEXT.revive.about, args: TEXT.revive.args, examples: TEXT.revive.examples, see: TEXT.revive.see }, run: revive },
 ]);

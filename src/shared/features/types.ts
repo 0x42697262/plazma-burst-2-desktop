@@ -1,5 +1,7 @@
 import type { ClientId, FeatureId, FlagSource, Mode } from './keys.ts';
 
+export type CapabilityDefinition = Readonly<{ id: string; feature: FeatureId; requires: readonly string[] }>;
+
 export type FeatureDefinition = Readonly<{
   id: FeatureId;
   defaultOn: boolean;
@@ -7,11 +9,13 @@ export type FeatureDefinition = Readonly<{
   requires: readonly FeatureId[];
   unavailableForClients: readonly ClientId[];
   locked: boolean;
+  capabilities: readonly CapabilityDefinition[];
   owner: string;
   description: string;
 }>;
 
 export type FlagState = Readonly<{ on: boolean; source: FlagSource; reason: string | null }>;
 export type FlagStates = Readonly<Record<FeatureId, FlagState>>;
+export type CapabilityStates = Readonly<Record<string, FlagState>>;
 export type FlagOverrides = Readonly<Partial<Record<FeatureId, boolean>>>;
 export type FeatureToggle = Readonly<{ id: string; on: boolean }>;

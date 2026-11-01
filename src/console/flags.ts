@@ -1,7 +1,7 @@
 import { CATALOG } from '#shared/features/catalog.ts';
 import { EDITION } from '#shared/editions/constants.ts';
-import { CLIENT, MODE, PAGE_FLAGS_GLOBAL, type ClientId, type FeatureId, type Mode } from '#shared/features/keys.ts';
-import type { FlagStates } from '#shared/features/types.ts';
+import { CLIENT, MODE, PAGE_CAPABILITIES_GLOBAL, PAGE_FLAGS_GLOBAL, type ClientId, type FeatureId, type Mode } from '#shared/features/keys.ts';
+import type { CapabilityStates, FlagStates } from '#shared/features/types.ts';
 import { resolveFlags } from '#kernel/flags/resolve.ts';
 import { PAGE_GLOBAL, SADBURST_NAMES_VERSION_PREFIX } from './keys.ts';
 
@@ -21,10 +21,12 @@ function pageClient(): ClientId {
   return isSadburstNames ? CLIENT.sadburst : CLIENT.official;
 }
 
-const defaultsForThisPage = (): FlagStates => resolveFlags({
+const defaultsForThisPage = () => resolveFlags({
   catalog: CATALOG, fileOverrides: {}, fileUnknownIds: [], envToggles: [], mode: pageMode(), client: pageClient(), edition: EDITION,
-}).states;
+});
 
-export const pageFlags = (): FlagStates => (pageGlobal(PAGE_FLAGS_GLOBAL) as FlagStates | undefined) ?? defaultsForThisPage();
+export const pageFlags = (): FlagStates => (pageGlobal(PAGE_FLAGS_GLOBAL) as FlagStates | undefined) ?? defaultsForThisPage().states;
+export const pageCapabilities = (): CapabilityStates => (pageGlobal(PAGE_CAPABILITIES_GLOBAL) as CapabilityStates | undefined) ?? defaultsForThisPage().capabilities;
 
 export const isFeatureOn = (id: FeatureId): boolean => pageFlags()[id].on;
+export const isCapabilityOn = (id: string): boolean => pageCapabilities()[id]?.on ?? false;

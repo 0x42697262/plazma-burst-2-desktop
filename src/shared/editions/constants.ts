@@ -5,4 +5,5 @@ export const EDITION: Edition = Object.freeze({
   title: 'Plazma Burst 2 Desktop',
   appId: 'io.github.plazma-burst-2-desktop.dev',
   features: null,
+  capabilities: null,
 });

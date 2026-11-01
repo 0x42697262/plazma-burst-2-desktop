@@ -1,6 +1,6 @@
 import { CATALOG } from '#shared/features/catalog.ts';
 import { EDITION } from '#shared/editions/constants.ts';
-import type { FlagStates } from '#shared/features/types.ts';
+import type { CapabilityStates, FlagStates } from '#shared/features/types.ts';
 import { parseEnvironment, type Environment } from '#kernel/config/environment.ts';
 import { FEATURES_FILE, USER_ROOT } from '#kernel/config/paths.ts';
 import { moveLegacyData, tellMoveReport } from '#kernel/data/move.ts';
@@ -13,7 +13,7 @@ import { createLogger, type Logger } from '#kernel/log/logger.ts';
 import { FAILED_EXIT_CODE } from './constants.ts';
 import { TEXT } from './text.ts';
 
-export type WrapperContext = Readonly<{ environment: Environment; flags: FlagStates; log: Logger }>;
+export type WrapperContext = Readonly<{ environment: Environment; flags: FlagStates; capabilities: CapabilityStates; log: Logger }>;
 
 
 function readFeaturesFile(problems: string[]): FileOverrides {
@@ -35,10 +35,11 @@ function buildContext(): WrapperContext {
   const { environment, problems: environmentProblems } = parseEnvironment(process.argv, process.env);
   const problems = [...environmentProblems];
   const fileFlags = readFeaturesFile(problems);
-  const { states, problems: flagProblems } = resolveFlags({
+  const { states, capabilities, problems: flagProblems } = resolveFlags({
     catalog: CATALOG,
     fileOverrides: fileFlags.overrides,
     fileUnknownIds: fileFlags.unknownIds,
+    fileCapabilityOverrides: fileFlags.capabilityOverrides,
     envToggles: environment.featureToggles,
     mode: environment.mode,
     client: environment.client,
@@ -50,7 +51,7 @@ function buildContext(): WrapperContext {
   tellMoveReport(dataMove, log);
   const setFlags = explicitlySet(CATALOG, states);
   if (Object.keys(setFlags).length) log.event(LOG_LEVEL.info, KERNEL_EVENT.flagsResolved, setFlags);
-  return Object.freeze({ environment, flags: states, log });
+  return Object.freeze({ environment, flags: states, capabilities, log });
 }
 
 export const wrapperContext: WrapperContext = buildContext();

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { isFeatureId } from '#shared/features/catalog.ts';
+import { isCapabilityId, isFeatureId } from '#shared/features/catalog.ts';
 import type { FlagOverrides } from '#shared/features/types.ts';
 import { createVersionedFile, type VersionedFile } from '#kernel/persist/versioned.ts';
 import { FEATURES_FILE_VERSION } from './constants.ts';
@@ -14,11 +14,12 @@ export const featuresFileStore = (file: string): VersionedFile<FeaturesFile> => 
   migrations: { 0: (data) => ({ features: data.features ?? data }) },
 });
 
-export type FileOverrides = Readonly<{ overrides: FlagOverrides; unknownIds: readonly string[] }>;
+export type FileOverrides = Readonly<{ overrides: FlagOverrides; capabilityOverrides: Readonly<Record<string, boolean>>; unknownIds: readonly string[] }>;
 
 export function splitKnownFeatures(saved: FeaturesFile | null): FileOverrides {
   const entries = Object.entries(saved?.features ?? {});
   const overrides: FlagOverrides = Object.freeze(Object.fromEntries(entries.filter(([id]) => isFeatureId(id))));
-  const unknownIds = entries.filter(([id]) => !isFeatureId(id)).map(([id]) => id);
-  return Object.freeze({ overrides, unknownIds: Object.freeze(unknownIds) });
+  const capabilityOverrides = Object.freeze(Object.fromEntries(entries.filter(([id]) => isCapabilityId(id))));
+  const unknownIds = entries.filter(([id]) => !isFeatureId(id) && !isCapabilityId(id)).map(([id]) => id);
+  return Object.freeze({ overrides, capabilityOverrides, unknownIds: Object.freeze(unknownIds) });
 }

@@ -2,13 +2,13 @@ import { CATALOG } from '#shared/features/catalog.ts';
 import { reportLines } from '#kernel/flags/resolve.ts';
 import { print } from '../ui/log.ts';
 import { COLOR } from '../core/keys.ts';
-import { pageFlags } from '../../flags.ts';
+import { pageCapabilities, pageFlags } from '../../flags.ts';
 import { FEATURES_COMMAND } from './keys.ts';
 import { TEXT } from './text.ts';
 
 function listFeatures(args: readonly string[]): void {
   if (args.length) throw new Error(TEXT.noArguments);
-  const [header = '', ...rows] = reportLines(CATALOG, pageFlags());
+  const [header = '', ...rows] = reportLines(CATALOG, pageFlags(), pageCapabilities());
   print(TEXT.title, COLOR.title);
   print(header, COLOR.hint);
   for (const row of rows) print(row);

@@ -30,7 +30,7 @@ async function main(): Promise<void> {
     return;
   }
   if (chosen) {
-    console.log(TEXT.edition(chosen.edition.name, chosen.edition.features ?? []));
+    console.log(TEXT.edition(chosen.edition.name, chosen.edition.features ?? [], chosen.edition.capabilities));
     for (const reason of chosen.added) console.log(TEXT.added(reason));
   }
   for (const output of await buildAll(chosen?.edition)) console.log(TEXT.built(path.relative(REPO_ROOT, output)));

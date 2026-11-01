@@ -1,7 +1,7 @@
 export const TEXT = Object.freeze({
   watching: 'Watching the console sources; the bundle is rebuilt on every change. Ctrl+C stops.',
   built: (output: string) => `Built ${output}`,
-  edition: (name: string, features: readonly string[]) => `Edition "${name}": ${features.join(', ')}`,
+  edition: (name: string, features: readonly string[], capabilities: readonly string[] | null) => `Edition "${name}": ${features.join(', ')}${capabilities ? `\n  capabilities: ${capabilities.join(', ')}` : ''}`,
   added: (reason: string) => `  added ${reason}`,
   editionProblems: (name: string, problems: readonly string[]) => `Edition "${name}" cannot be built:\n  ${problems.join('\n  ')}`,
   editionUnreadable: (file: string, message: string) => `${file}: ${message}`,

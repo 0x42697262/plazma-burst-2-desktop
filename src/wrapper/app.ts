@@ -4,7 +4,7 @@ import path from 'node:path';
 import { app, BrowserWindow, Menu, dialog, protocol, net, session, ipcMain, type MenuItemConstructorOptions, type Session } from 'electron';
 import { CLIENTS } from '#kernel/config/clients.ts';
 import { CONSOLE_BUNDLE_FILE, DATA_DIR, PAGE_BUNDLE_DIR, PAGE_CORE_FILE, USER_ROOT } from '#kernel/config/paths.ts';
-import { CLIENT, FEATURE, MODE, PAGE_FLAGS_GLOBAL } from '#shared/features/keys.ts';
+import { CLIENT, FEATURE, MODE, PAGE_CAPABILITIES_GLOBAL, PAGE_FLAGS_GLOBAL } from '#shared/features/keys.ts';
 import { DEV_DIR, ROUTE_NAME } from '#shared/contract/keys.ts';
 import { TEXT as SADBURST_TEXT } from '#features/client_sadburst/text.ts';
 import { createLogin } from '#features/login/wrapper.ts';
@@ -31,7 +31,7 @@ import { APP_TEXT as TEXT } from './text.ts';
 
 const ignore = (): void => undefined;
 
-export function startApp({ environment, flags, log }: WrapperContext): void {
+export function startApp({ environment, flags, capabilities, log }: WrapperContext): void {
   const client = CLIENTS[environment.client];
   const isSadburst = client.id === CLIENT.sadburst;
   const isRemoteHost = environment.mode === MODE.remote;
@@ -120,6 +120,7 @@ export function startApp({ environment, flags, log }: WrapperContext): void {
   const serverSettings = serverSettingsFile ? createKvFile(serverSettingsFile, settingsEvents) : null;
 
   const pageCoreScripts = pageGlobalScript(PAGE_FLAGS_GLOBAL, flags)
+    + pageGlobalScript(PAGE_CAPABILITIES_GLOBAL, capabilities)
     + scriptTag(DEV_DIR + ROUTE_NAME.names)
     + moduleScriptTag(DEV_DIR + ROUTE_NAME.page + PAGE_CORE_FILE);
   const consoleScripts = scriptTag(DEV_DIR + ROUTE_NAME.opcodes)

@@ -58,8 +58,10 @@ test('unknown ids and turning off a locked feature are problems', () => {
 });
 
 test('the report lists every feature with its state, source and description', () => {
-  const lines = reportLines(CATALOG, resolve({ env: [{ id: 'hooks', on: false }] }).states);
-  assert.equal(lines.length, CATALOG.length + 1);
+  const resolved = resolveFlags({ catalog: CATALOG, fileOverrides: {}, fileUnknownIds: [], envToggles: [{ id: 'hooks', on: false }, { id: 'health.heal', on: false }], mode: 'local', client: 'official' });
+  const lines = reportLines(CATALOG, resolved.states, resolved.capabilities);
+  assert.equal(lines.length, CATALOG.length + CATALOG.flatMap((definition) => definition.capabilities).length + 1);
+  assert.match(lines.find((line) => line.trim().startsWith('health.heal ')) ?? '', /^ {2}health\.heal\s+off\s+env$/, 'a capability under its feature');
   assert.match(lines.find((line) => line.startsWith('hooks ')) ?? '', /^hooks\s+off\s+env\s+hooks\/\*\.js/);
 });
 
@@ -71,9 +73,9 @@ test('features.json is versioned; ids the catalog does not know are kept apart',
     const store = featuresFileStore(file);
     const read = store.readSync();
     assert.equal(read?.migratedFrom, 0);
-    assert.deepEqual(splitKnownFeatures(read?.value ?? null), { overrides: { hooks: false }, unknownIds: ['warp'] });
+    assert.deepEqual(splitKnownFeatures(read?.value ?? null), { overrides: { hooks: false }, capabilityOverrides: {}, unknownIds: ['warp'] });
     assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).schemaVersion, 1);
-    assert.deepEqual(splitKnownFeatures(null), { overrides: {}, unknownIds: [] });
+    assert.deepEqual(splitKnownFeatures(null), { overrides: {}, capabilityOverrides: {}, unknownIds: [] });
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
@@ -89,4 +91,20 @@ test('a feature left out of the app\'s edition is off, and no file or variable t
   assert.deepEqual(states.dev_console, { on: false, source: 'edition', reason: 'not in this app' });
   assert.equal(states.server_list.on, true);
   assert.equal(states.login.on, false, 'what the edition has can still be turned off');
+});
+
+test('capabilities: on with their feature, off by edition or override, never on without their feature', () => {
+  const resolveWith = (extra: Partial<Parameters<typeof resolveFlags>[0]>) => resolveFlags({ catalog: CATALOG, fileOverrides: {}, fileUnknownIds: [], envToggles: [], mode: 'local', client: 'official', ...extra });
+  assert.deepEqual(resolveWith({}).capabilities['health.god'], { on: true, source: 'default', reason: null });
+  const edition = resolveWith({ edition: { name: 'god-only', features: ['dev_console', 'console_core', 'health'], capabilities: ['health.god'] } });
+  assert.equal(edition.capabilities['health.god']?.on, true);
+  assert.deepEqual(edition.capabilities['health.heal'], { on: false, source: 'edition', reason: 'not in this app' });
+  const toggled = resolveWith({ envToggles: [{ id: 'health.heal', on: false }], fileCapabilityOverrides: { 'health.hp': false } });
+  assert.deepEqual([toggled.capabilities['health.heal']?.on, toggled.capabilities['health.hp']?.on, toggled.capabilities['health.god']?.on], [false, false, true]);
+  const featureOff = resolveWith({ envToggles: [{ id: 'health', on: false }, { id: 'health.god', on: true }] });
+  assert.equal(featureOff.capabilities['health.god']?.on, false, 'a capability needs its feature');
+  assert.deepEqual(resolveWith({ envToggles: [{ id: 'health.fly', on: true }] }).problems, ['PB2_FEATURES: no feature "health.fly" (see "npm start -- --features")']);
+  assert.deepEqual(edition.problems, []);
+  assert.deepEqual(resolveWith({ edition: { name: 'god-only', features: ['dev_console', 'console_core', 'health'], capabilities: ['health.god'] }, envToggles: [{ id: 'health.heal', on: true }] }).problems,
+    ['PB2_FEATURES: "health.heal" is not in this app (edition "god-only")']);
 });

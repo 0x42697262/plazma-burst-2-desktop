@@ -4,7 +4,7 @@ import { wrapperContext } from './context.ts';
 import { start } from './start.ts';
 
 if (wrapperContext.environment.listFeatures) {
-  for (const line of reportLines(CATALOG, wrapperContext.flags)) console.log(line);
+  for (const line of reportLines(CATALOG, wrapperContext.flags, wrapperContext.capabilities)) console.log(line);
   process.exit();
 }
 start(wrapperContext);

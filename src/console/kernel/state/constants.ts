@@ -1,9 +1,10 @@
 import { PAGE_SIZE_DEFAULT, PAGE_SIZE_MAX } from '../core/constants.ts';
-import { FEATURE, type FeatureId } from '#shared/features/keys.ts';
+import { CAPABILITY, FEATURE, type FeatureId } from '#shared/features/keys.ts';
 import { GROUP, SETTING_TYPE, type Group, type SettingType } from './keys.ts';
 
 export type SettingSpec = Readonly<{
   feature: FeatureId;
+  capability?: string;
   type: SettingType;
   group: Group;
   min?: number;
@@ -19,18 +20,18 @@ export const SAVE_DELAY_MS = 150;
 export const HISTORY_MAX = 200;
 
 export const SCHEMA = Object.freeze({
-  god: { feature: FEATURE.health, type: SETTING_TYPE.bool, group: GROUP.player, desc: 'Ignore all damage' },
+  god: { feature: FEATURE.health, capability: CAPABILITY.health.god, type: SETTING_TYPE.bool, group: GROUP.player, desc: 'Ignore all damage' },
   max_hp: {
-    feature: FEATURE.health, type: SETTING_TYPE.number, group: GROUP.player, min: 1, max: 1e9, desc: 'Force max HP (refills HP when changed)',
+    feature: FEATURE.health, capability: CAPABILITY.health.hp, type: SETTING_TYPE.number, group: GROUP.player, min: 1, max: 1e9, desc: 'Force max HP (refills HP when changed)',
     about: ['Refills your HP whenever you change it. "hp 500" sets this key.'], example: '500',
   },
   hp_bonus: {
-    feature: FEATURE.health, type: SETTING_TYPE.number, group: GROUP.player, min: -1e9, max: 1e9,
+    feature: FEATURE.health, capability: CAPABILITY.health.hp, type: SETTING_TYPE.number, group: GROUP.player, min: -1e9, max: 1e9,
     desc: 'Added to max HP once per life/level, never stacks ("hp +100" / "hp -100")',
     about: ['Added once per life and per level, so it never stacks. "hp +100" sets this.'], example: '100',
   },
   hp_bonus_pct: {
-    feature: FEATURE.health, type: SETTING_TYPE.number, group: GROUP.player, min: -100, max: 1e6,
+    feature: FEATURE.health, capability: CAPABILITY.health.hp, type: SETTING_TYPE.number, group: GROUP.player, min: -100, max: 1e6,
     desc: 'Percent of the game\'s max HP added once per life/level ("hp +50%" / "hp -25%")',
     about: ['A percentage of the game\'s own max, added once per life and per level.', '"hp +50%" sets this.'],
     example: '50',

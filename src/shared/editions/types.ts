@@ -5,4 +5,5 @@ export type Edition = Readonly<{
   title: string;
   appId: string;
   features: readonly FeatureId[] | null;
+  capabilities: readonly string[] | null;
 }>;

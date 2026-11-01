@@ -1,11 +1,11 @@
 import { makeRedactor, type Redactor } from '../redaction/redactor.ts';
 import { stringOf } from '#kernel/text/text-of.ts';
 import type { FeatureId } from '#shared/features/keys.ts';
-import { isFeatureOn } from '../../flags.ts';
+import { isCapabilityOn, isFeatureOn } from '../../flags.ts';
 import { PAGE_GLOBAL } from '../../keys.ts';
 
 export type ServerPage = Readonly<{ match: Readonly<Record<string, unknown>>; server: Readonly<Record<string, unknown>> }>;
-export type Availability = Readonly<{ name?: string; remote?: boolean; server?: boolean; feature?: FeatureId }>;
+export type Availability = Readonly<{ name?: string; remote?: boolean; server?: boolean; feature?: FeatureId; capability?: string }>;
 
 const pageGlobal = (name: string): unknown => Reflect.get(globalThis, name);
 
@@ -22,3 +22,5 @@ export const allowedHere = (definition: Availability): boolean => {
   const isFeatureOff = definition.feature !== undefined && !isFeatureOn(definition.feature);
   return !isHiddenFromTesters && !isOnlyForTheHost && !isFeatureOff;
 };
+
+export const capabilityOn = (definition: Availability): boolean => definition.capability === undefined || isCapabilityOn(definition.capability);

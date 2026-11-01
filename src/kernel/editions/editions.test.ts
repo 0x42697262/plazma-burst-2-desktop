@@ -25,3 +25,12 @@ test('a console feature brings the console, the console core and what it needs',
 test('an unknown feature is a problem, so the build stops', () => {
   assert.deepEqual(resolveEdition(CATALOG, ['server_list', 'teleporter']).problems, ['no feature "teleporter" (see "npm start -- --features")']);
 });
+
+test('an edition can pick one capability: its feature comes along, but only that capability of it', () => {
+  const { features, capabilities, problems } = resolveEdition(CATALOG, ['health.god', 'trace']);
+  assert.deepEqual(problems, []);
+  assert.deepEqual(features, ['dev_console', 'console_core', 'health', 'trace']);
+  assert.deepEqual(capabilities, ['health.god']);
+  assert.deepEqual(resolveEdition(CATALOG, ['health']).capabilities, ['health.god', 'health.hp', 'health.heal', 'health.revive'], 'a feature id is all of it');
+  assert.deepEqual(resolveEdition(CATALOG, ['health.fly']).problems, ['no feature "health.fly" (see "npm start -- --features")']);
+});

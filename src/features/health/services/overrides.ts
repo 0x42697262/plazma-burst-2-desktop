@@ -1,4 +1,5 @@
 import type { FrameOverride, OverrideContext } from '#console/feature-types.ts';
+import { CAPABILITY } from '#shared/features/keys.ts';
 import { GAME_FIELDS } from '#console/kernel/game/fields.ts';
 import type { Character } from '#console/kernel/game/types.ts';
 import { KEY } from '#console/kernel/state/schema.ts';
@@ -76,16 +77,26 @@ function applyHpBonus(character: Character): void {
   setHpBonusApplied(character, applied + reallyAdded);
 }
 
-function apply({ character }: OverrideContext): void {
-  noteHeld(character);
-  applyGod(character);
-  applyMaxHp(character);
-  applyHpBonus(character);
+function keepToRankedLimit(character: Character): void {
   const isOverRankedLimit = guarding() && healthOf(character) > maxHpOf(character);
-  if (isOverRankedLimit) {
-    uninstallGodExcept(null);
-    character[GAME_FIELDS.HP] = maxHpOf(character);
-  }
+  if (!isOverRankedLimit) return;
+  uninstallGodExcept(null);
+  character[GAME_FIELDS.HP] = maxHpOf(character);
 }
 
-export const healthOverride: FrameOverride = Object.freeze({ name: OVERRIDE_NAME, apply, cleanup: uninstallAllGod });
+function applyGodOverride({ character }: OverrideContext): void {
+  applyGod(character);
+  keepToRankedLimit(character);
+}
+
+function applyHpOverride({ character }: OverrideContext): void {
+  noteHeld(character);
+  applyMaxHp(character);
+  applyHpBonus(character);
+  keepToRankedLimit(character);
+}
+
+const nothingToUndo = (): void => undefined;
+
+export const godOverride: FrameOverride = Object.freeze({ name: OVERRIDE_NAME.god, capability: CAPABILITY.health.god, apply: applyGodOverride, cleanup: uninstallAllGod });
+export const hpOverride: FrameOverride = Object.freeze({ name: OVERRIDE_NAME.hp, capability: CAPABILITY.health.hp, apply: applyHpOverride, cleanup: nothingToUndo });

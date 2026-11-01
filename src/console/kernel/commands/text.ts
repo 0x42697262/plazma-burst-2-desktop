@@ -12,6 +12,7 @@ export const TEXT = Object.freeze({
 
 export const REGISTRY_TEXT = Object.freeze({
   subcommandTwice: (command: string, word: string) => `subcommand word "${command} ${word}" is defined twice`,
+  onlySubcommands: (command: string, subcommands: readonly string[]) => `this app has only ${subcommands.map((subcommand) => `"${command} ${subcommand}"`).join(', ')}`,
   commandTwice: (word: string) => `command word "${word}" is defined twice`,
   subcommandId: (command: string, subcommand: string) => `${command} ${subcommand}`,
 });

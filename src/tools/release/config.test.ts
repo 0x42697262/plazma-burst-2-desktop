@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { builderConfig, fileNameOf, stagedPackage } from './config.ts';
 
-const player = { name: 'player', title: 'Plazma Burst 2 Client', appId: 'io.github.plazma-burst-2-desktop.player', features: ['server_list'] } as const;
+const player = { name: 'player', title: 'Plazma Burst 2 Client', appId: 'io.github.plazma-burst-2-desktop.player', features: ['server_list'], capabilities: [] } as const;
 
 test('an edition packages under its own id and title, with only the built bundles and no source maps', () => {
   const config = builderConfig({ edition: player, electronVersion: '45.0.0', outDir: '/out', platforms: ['linux', 'windows'] });

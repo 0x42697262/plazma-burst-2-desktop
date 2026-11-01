@@ -8,11 +8,13 @@ export const TEXT = Object.freeze({
   notAvailableInMode: (mode: string) => `not available in ${mode} mode`,
   notForClient: (client: string) => `not available for the ${client} client`,
   needs: (required: string) => `needs ${required}`,
+  featureOff: (feature: string) => `${feature} is off`,
   sourceFile: 'features.json',
   sourceEnv: 'PB2_FEATURES',
   on: 'on',
   off: 'off',
   reportLine: (id: string, state: string, source: string, reason: string | null, description: string) => `${id.padEnd(REPORT_COLUMN.id)}${state.padEnd(REPORT_COLUMN.state)}${source.padEnd(REPORT_COLUMN.source)}${description}${reason ? ` (${reason})` : ''}`,
+  capabilityLine: (id: string, state: string, source: string, reason: string | null) => `  ${id.padEnd(REPORT_COLUMN.capabilityId)}${state.padEnd(REPORT_COLUMN.state)}${source}${reason ? ` (${reason})` : ''}`,
   reportHeader: `${'feature'.padEnd(REPORT_COLUMN.id)}${'state'.padEnd(REPORT_COLUMN.state)}${'source'.padEnd(REPORT_COLUMN.source)}description`,
   stateWithSource: (state: string, source: string) => `${state}:${source}`,
 });

@@ -13,7 +13,7 @@ test('"features" lists every flag as the wrapper resolved it, and a feature that
   const game = await bootConsole();
   const printed = game.run('features');
   assert.equal(printed[0], 'Feature flags');
-  assert.equal(printed.length, CATALOG.length + 2);
+  assert.equal(printed.length, CATALOG.length + CATALOG.flatMap((definition) => definition.capabilities).length + 2, 'a line per feature and per capability');
   assert.match(printed.find((line) => line.startsWith('hooks ')) ?? '', /^hooks\s+off\s+env\s/);
   assert.deepEqual(game.run('flags'), printed);
 
