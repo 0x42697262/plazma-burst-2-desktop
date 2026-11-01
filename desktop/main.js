@@ -14,8 +14,6 @@ const { environment: ENVIRONMENT, flags: FLAGS, log } = wrapperContext;
 const hooks = require('./hooks');
 const { makeUnpacker, beautifyMap } = require('./map-text');
 const { REMOTE_PAGE_SCRIPT, REMOTE_WEB_PREFERENCES, isGamePage, lockDownSession, lockDownWindow } = require('./remote/lockdown');
-// A tester's screenshot key writes a file here each press: one per this many ms per tester.
-const REMOTE_SCREENSHOT_MS = 2000;
 const { startHost, parseHostArgs } = require('./remote/host');
 const serverConfig = require('./p2p-host/config');
 // Which game: the official client, or Sad Burst 2 with "npm run sadburst" (desktop/clients.js).
@@ -173,7 +171,6 @@ function checkConsoleBundle() {
 // Loads desktop/maps/<name>.xml (or .txt / no extension). Plain map XML or the
 // server's compressed "<q." format both work. Re-read on every load.
 const MAPS_DIR = path.join(__dirname, SADBURST ? 'maps.sadburst' : 'maps');
-const SCREENSHOT_DIR = path.join(__dirname, '..', 'screenshots');
 const LOCAL_MAP_PREFIX = 'local-';
 
 const MAP_EXTS = ['.xml', '.txt', ''];
@@ -367,26 +364,6 @@ async function serveConsoleFile(rel) {
 }
 
 // The dev console's files, and its local key-value store (desktop/dev-overrides.json).
-// The window as it looks now, as screenshots/pb2-<date>_<time>.png. Returns the path
-// from the repository root.
-async function saveScreenshot(win) {
-  if (!win) throw new Error('no game window');
-  const png = (await win.webContents.capturePage()).toPNG();
-  await fs.mkdir(SCREENSHOT_DIR, { recursive: true });
-  const d = new Date();
-  const two = (n) => String(n).padStart(2, '0');
-  const stamp = `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}_${two(d.getHours())}-${two(d.getMinutes())}-${two(d.getSeconds())}`;
-  // Several in one second: pb2-<stamp>-2.png and so on.
-  for (let n = 1; ; n++) {
-    const file = path.join(SCREENSHOT_DIR, `pb2-${stamp}${n > 1 ? `-${n}` : ''}.png`);
-    try {
-      await fs.writeFile(file, png, { flag: 'wx' });
-      return path.relative(path.join(__dirname, '..'), file);
-    } catch (e) {
-      if (e.code !== 'EEXIST') throw e;
-    }
-  }
-}
 
 async function serveDev(request, url, ctx) {
   const name = decodeURIComponent(url.pathname.slice(DEV_PREFIX.length));
@@ -440,17 +417,6 @@ async function serveDev(request, url, ctx) {
     return text
       ? new Response(text, { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } })
       : new Response('Not found', { status: 404 });
-  }
-  if (name === ROUTE.screenshot && request.method === 'POST') {
-    if (ctx.remote) {
-      if (Date.now() - (ctx.lastShot || 0) < REMOTE_SCREENSHOT_MS) return new Response('one screenshot every 2 s', { status: 429 });
-      ctx.lastShot = Date.now();
-    }
-    try {
-      return new Response(JSON.stringify({ file: await saveScreenshot(ctx.window) }), { headers: { 'Content-Type': 'application/json' } });
-    } catch (e) {
-      return new Response(e.message, { status: 500 });
-    }
   }
   if (name === ROUTE.kv) {
     if (request.method === 'PUT') {

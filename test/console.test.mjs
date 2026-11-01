@@ -576,59 +576,6 @@ test('trace by name follows the player until they leave; by # follows the slot',
   delete bob.login;
 });
 
-test('screenshot hides the console, asks the wrapper, and has a hotkey (F12) you can change', async () => {
-  const { game } = await consoleModule('game/bindings.js');
-  const panel = () => game.overlay().childNodes.find((n) => n.style.zIndex === '50');
-  const calls = [];
-  let reply = { ok: true, json: async () => ({ file: 'screenshots/pb2-x.png' }) };
-  const realFetch = c.G.fetch;
-  c.G.fetch = async (url, opt) => { calls.push([url, opt && opt.method]); return reply; };
-  const settle = () => new Promise((r) => setTimeout(r, 0));
-  // Frames run when the test says so: the capture waits for two without the console.
-  const shoot = async (start) => {
-    start();
-    for (let n = 0; n < 3; n++) { c.log.frames.splice(0).forEach((f) => f()); await settle(); }
-  };
-  try {
-    c.run('trace --off; logic hide');
-    let hiddenAtCapture;
-    c.G.fetch = async (url, opt) => { hiddenAtCapture = panel().style.visibility; calls.push([url, opt && opt.method]); return reply; };
-    await shoot(() => c.run('screenshot'));
-    assert.deepEqual(calls, [['__dev/screenshot', 'POST']]);
-    assert.equal(hiddenAtCapture, 'hidden', 'no console in the picture');
-    assert.equal(panel().style.visibility, 'visible', 'and back after');
-    assert.ok(c.log.printed.includes('Saved screenshots/pb2-x.png'));
-    assert.ok(game.overlay().childNodes.some((n) => n.textContent !== undefined && n.style.right === '10px'), 'a notice in the corner');
-
-    await shoot(() => c.run('screenshot --console'));
-    assert.equal(hiddenAtCapture, 'visible', '--console keeps it');
-
-    calls.length = 0;
-    await shoot(() => c.press('F12'));
-    assert.equal(calls.length, 1, 'F12 by default, console closed');
-    assert.match(c.run('screenshot_key f2')[0], /^screenshot_key = f2$/);
-    await shoot(() => c.press('F12'));
-    assert.equal(calls.length, 1, 'F12 is free now');
-    await shoot(() => c.press('F2'));
-    assert.equal(calls.length, 2);
-    assert.match(c.run('bind f2 heal').join('\n'), /f2 is the screenshot key, which wins/);
-    c.run('unbind f2');
-    c.run('screenshot_key off');
-    await shoot(() => c.press('F2'));
-    assert.equal(calls.length, 2, 'off: no key');
-    assert.match(errorsOf(c.run('screenshot_key shift+`'))[0], /opens the console/);
-    assert.ok(c.run('list console').some((l) => /screenshot_key\s+off\s+Key that saves a screenshot.*\(default f12\)/.test(l)));
-    c.run('unset screenshot_key');
-
-    reply = { ok: false, text: async () => 'disk full' };
-    await shoot(() => c.run('screenshot'));
-    assert.ok(c.log.printed.includes('error: could not save a screenshot (disk full)'));
-    assert.equal(panel().style.visibility, 'visible', 'back after a failure too');
-    assert.match(errorsOf(c.run('screenshot now'))[0], /usage: screenshot \[--console\]/);
-  } finally {
-    c.G.fetch = realFetch;
-  }
-});
 
 test('a ";" where a key name goes is the ";" key; everywhere else it ends a command', () => {
   c.run('unbind --all');

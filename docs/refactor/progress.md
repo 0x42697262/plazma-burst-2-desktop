@@ -80,7 +80,7 @@ Notes from P2 for the feature steps:
     timestamp to `src/kernel/time/stamp.ts`. `withQuery` is in `src/shared/contract/routes.ts`.
   - `src/features/server_list/index.ts` exposes `pageJoinTarget` and
     `isJoiningPrivateServer` to other features.
-- [ ] P3.4 `screenshot`
+- [x] P3.4 `screenshot`
 - [ ] P3.5 `js_eval`
 - [ ] P3.6 `zoom`
 - [ ] P3.7 `game_chat`
