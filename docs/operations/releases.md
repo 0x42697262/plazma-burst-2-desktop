@@ -10,12 +10,12 @@ From an edition file to a file you hand out:
 1. Pick or write the edition: `editions/<name>.json` ([editions](editions.md#edition-files)).
    `npm start -- --features` lists the feature ids.
 2. Check that it builds: `npm run build -- --edition <name>`. It prints the features,
-   with the ones it added and why, or the problem that stopped it.
+   or what is missing and must be added to the file.
 3. Run `npm run verify`. The edition tests build every file in `editions/`.
 4. Commit the edition file with the code it builds.
 5. Package it: `npm run release -- --edition <name> --linux`. The AppImage is in
    `release/<name>/`, named after the edition's title, for example
-   `release/player/Plazma-Burst-2-Client-1.0.0-linux-x86_64.AppImage`.
+   `release/example/Plazma-Burst-2-Example-1.0.0-linux-x86_64.AppImage`.
 6. Try it as a player would: start that file. The first start downloads the game into
    `~/.config/<title>/game` and opens the server list (with `server_list`).
 7. For Windows, see [Windows](#windows); to publish both, see
@@ -27,8 +27,8 @@ release you publish.
 ## Locally
 
 ```
-npm run release -- --edition player             # for the system it runs on
-npm run release -- --edition player --linux --windows
+npm run release -- --edition <name>             # for the system it runs on
+npm run release -- --edition <name> --linux --windows
 ```
 
 `src/tools/release/cli.ts`:
@@ -45,7 +45,7 @@ npm run release -- --edition player --linux --windows
 ## Windows
 
 ```
-npm run release -- --edition player --windows
+npm run release -- --edition <name> --windows
 ```
 
 This writes the installer and the portable `.exe` to `release/<name>/`. On Windows it

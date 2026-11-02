@@ -12,14 +12,20 @@ the code (only `data/`, `dist/` and `release/` are ignored): commit a new or cha
 edition with the code it builds, and the release workflow builds every committed one
 but `dev`.
 
+An example (not one of the files; any name and list works the same):
+
 ```json
 {
-  "name": "player",
-  "title": "Plazma Burst 2 Client",
-  "appId": "io.github.plazma-burst-2-desktop.player",
-  "features": ["server_list", "lobby_task_guard", "cert_pinning", "client_sadburst", "game_setup"]
+  "name": "example",
+  "title": "Plazma Burst 2 Example",
+  "appId": "io.github.plazma-burst-2-desktop.example",
+  "features": ["server_list", "lobby_task_guard", "cert_pinning", "dev_console", "console_core", "teleport", "binds", "player_info.chars"]
 }
 ```
+
+This app has the server list and the dev console with `tp`, `bind`, `unbind`, `keyname`
+and `chars`, and nothing else: `player_info.chars` picks one command of `player_info`, so
+`pos` is left out.
 
 | Field | What |
 |---|---|
@@ -28,17 +34,13 @@ but `dev`.
 | `appId` | Reverse-domain id; installed editions with different ids keep their settings and logins apart |
 | `features` | Feature ids and capability ids (`npm start -- --features` lists them), or `"all"`. A feature id means all of its capabilities; a capability id (`health.god`) brings its feature with only that capability |
 
-`editions/dev.json` is every feature, which is also what `npm start` runs.
-`editions/player.json` is the player client (official and Sad Burst 2, private servers,
-the game download). `editions/player-tp.json` is that plus `teleport`: the dev console with `tp` and
-nothing else of the player commands or keys. Features are small (one command or a few
-keys each: `teleport`, `player_info`, `health`, `movement`, `guns` …), so an edition
-picks exactly what it offers. `tp --on <key>` needs `binds`, which it leaves out.
+`dev` is the one edition the tooling relies on: every feature, what `npm start` and
+`npm run verify` build.
 
 ## Building one
 
 ```
-npm run build -- --edition player            # an edition file
+npm run build -- --edition <name>            # editions/<name>.json
 npm run build -- --features server_list,zoom  # a one-off list (edition "custom")
 ```
 
@@ -95,7 +97,7 @@ What needs what:
 | `["dev_console", "console_core", "health.god"]` | the `god` key |
 | `["dev_console", "console_core", "triggers.find"]` | `triggers find` |
 | `["dev_console", "console_core", "trace", "binds.bind"]` | `trace`, `bind`, `unbind` |
-| `["server_list", "lobby_task_guard", "cert_pinning", "client_sadburst"]` | the player client |
+| `["server_list", "lobby_task_guard", "cert_pinning", "client_sadburst"]` | a client without the console |
 
 ## How left-out code stays out
 

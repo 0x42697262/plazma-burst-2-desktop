@@ -10,6 +10,8 @@
     "game_setup",
     "dev_console",
     "console_core",
-    "teleport"
+    "teleport",
+    "binds",
+    "player_info.chars"
   ]
 }

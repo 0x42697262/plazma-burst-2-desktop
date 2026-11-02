@@ -11,5 +11,4 @@ Feature flag `teleport` (on by default; all modes). Code: `src/features/teleport
   say they need key binds; `tp` itself works.
 - The move itself is the game's own "move character to region" steps
   (`src/console/kernel/game/teleport.ts`, shared with the map editor).
-- Client-only. It needs no other player feature: an edition can have `tp` alone
-  (`editions/player-tp.json`).
+- Client-only. It needs no other player feature: an edition can have `tp` alone.
