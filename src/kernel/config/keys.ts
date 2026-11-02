@@ -10,6 +10,7 @@ export const ENV = Object.freeze({
   password: 'PB2_PASSWORD',
   uid: 'PB2_UID',
   npmSadburst: 'npm_config_sadburst',
+  appImage: 'APPIMAGE',
 });
 
 export const ARG = Object.freeze({

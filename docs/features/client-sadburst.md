@@ -21,7 +21,9 @@ same plus the game, names and opcodes files). The gate: `src/wrapper/app.ts`.
 - Inside the app: the server list offers "Play Sad Burst 2", and the Game menu (Alt)
   lists both clients. Choosing the other one starts the app again with or without
   `--sadburst` (`src/wrapper/platform/relaunch.ts`, `argsForClient` in
-  `src/kernel/config/clients.ts`), which is how an installed app switches. With
+  `src/kernel/config/clients.ts`), which is how an installed app switches. An AppImage
+  starts again from the file in `APPIMAGE` (`src/wrapper/platform/relaunch-options.ts`):
+  its running binary sits in a mount that closes when the app quits. With
   `client_sadburst` off (or left out of the edition), only the official client is
   offered.
 - The `--` passes the flag to the script: npm 12 refuses
