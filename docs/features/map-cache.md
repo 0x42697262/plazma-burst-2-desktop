@@ -5,6 +5,11 @@ Its wrapper side works without the dev console: with `PB2_DEV=0`, local maps and
 cache still work. The settings `save_maps` (on by default) and `fast_maps` (off by
 default) are read from the console's settings file.
 
+Capabilities: `map_cache.maps` (`maps`), `map_cache.save_maps` (the key, and the
+wrapper saving downloaded maps) and `map_cache.fast_maps` (the key, and serving a saved
+map instead of the download). The wrapper checks the last two itself
+(`adapters/map-files.ts`), so an app without them neither saves nor serves saved maps.
+
 ## Local maps
 
 Type `local-<name>` as the Map ID in Campaign > Custom Map. The wrapper answers the

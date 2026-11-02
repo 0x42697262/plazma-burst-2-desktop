@@ -1,3 +1,4 @@
+import { CAPABILITY } from '#shared/features/keys.ts';
 import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
 import path from 'node:path';
@@ -10,13 +11,13 @@ import { isEditedName, isLocalMapId, localMapId, mapFileName } from '../domain/m
 import { StatusError } from '#wrapper/http/status-error.ts';
 import { STATUS } from '#shared/contract/keys.ts';
 
-export type MapFilesDeps = { dir: string; gameDir: string; kvFile: string; repoRoot: string; info: (message: string) => void };
+export type MapFilesDeps = { dir: string; gameDir: string; kvFile: string; repoRoot: string; info: (message: string) => void; isCapabilityOn?: (id: string) => boolean };
 export type MapFiles = ReturnType<typeof createMapFiles>;
 
 const isExistsError = (error: unknown): boolean => (error as NodeJS.ErrnoException | null)?.code === EXISTS_ERROR_CODE;
 const cleanText = (text: string): string => text.replace(BYTE_ORDER_MARK, '').trim();
 
-export function createMapFiles({ dir, gameDir, kvFile, repoRoot, info }: MapFilesDeps) {
+export function createMapFiles({ dir, gameDir, kvFile, repoRoot, info, isCapabilityOn = () => true }: MapFilesDeps) {
   const unpack = makeUnpacker(gameDir);
   const beautify = beautifyMap;
 
@@ -27,8 +28,8 @@ export function createMapFiles({ dir, gameDir, kvFile, repoRoot, info }: MapFile
       return undefined;
     }
   }
-  const isSaving = (): boolean => setting(SETTING.save) !== false;
-  const isFastLoading = (): boolean => setting(SETTING.fast) === true;
+  const isSaving = (): boolean => isCapabilityOn(CAPABILITY.mapCache.saveMaps) && setting(SETTING.save) !== false;
+  const isFastLoading = (): boolean => isCapabilityOn(CAPABILITY.mapCache.fastMaps) && setting(SETTING.fast) === true;
 
   async function save(rawId: string | null, raw: string | null): Promise<SaveResult> {
     if (!isSaving()) return SAVE_RESULT.off;

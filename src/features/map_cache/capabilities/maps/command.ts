@@ -1,8 +1,8 @@
 import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
-import { COMMAND } from '../keys.ts';
-import { TEXT } from '../text.ts';
-import { localMapIds } from '../adapters/wrapper-client.ts';
+import { COMMAND } from '../../keys.ts';
+import { TEXT } from '../../text.ts';
+import { localMapIds } from '../../adapters/wrapper-client.ts';
 
 function listMaps(): void {
   localMapIds()

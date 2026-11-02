@@ -18,6 +18,7 @@ export type WrapperFeature = Readonly<{
 
 export type WrapperDeps = Readonly<{
   log: Logger;
+  isCapabilityOn(id: string): boolean;
   gameVersion: string;
   isSadburst: boolean;
   repoRoot: string;

@@ -82,7 +82,7 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
 
   const wrapper = buildWrapper(
     WRAPPER_PARTS,
-    { log, gameVersion: version || '', isSadburst, repoRoot: USER_ROOT, gameDir: root, devKvFile: devSettingsFile, host },
+    { log, isCapabilityOn: (id: string) => capabilities[id]?.on ?? false, gameVersion: version || '', isSadburst, repoRoot: USER_ROOT, gameDir: root, devKvFile: devSettingsFile, host },
     {
       hooks: { namesFile: client.names, gamePrefix: prefix },
       gameSession: {

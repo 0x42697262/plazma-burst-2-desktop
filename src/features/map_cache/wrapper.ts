@@ -6,7 +6,7 @@ import { mapDownloadInterceptor, mapRoutes } from './entry/routes.ts';
 import { mapsDir } from './paths.ts';
 
 export function createMapCacheWrapper(deps: WrapperDeps) {
-  const files = createMapFiles({ dir: mapsDir(deps.isSadburst), gameDir: deps.gameDir, kvFile: deps.devKvFile, repoRoot: deps.repoRoot, info: (message) => deps.log.info(message) });
+  const files = createMapFiles({ dir: mapsDir(deps.isSadburst), gameDir: deps.gameDir, kvFile: deps.devKvFile, repoRoot: deps.repoRoot, info: (message) => deps.log.info(message), isCapabilityOn: deps.isCapabilityOn });
   const feature: WrapperFeature = Object.freeze({
     id: FEATURE.mapCache,
     routes: mapRoutes({ files }),

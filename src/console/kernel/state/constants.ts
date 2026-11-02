@@ -91,13 +91,13 @@ export const SCHEMA = Object.freeze({
     example: 'f7',
   },
   save_maps: {
-    feature: FEATURE.mapCache, type: SETTING_TYPE.bool, group: GROUP.maps, default: true,
+    feature: FEATURE.mapCache, capability: CAPABILITY.mapCache.saveMaps, type: SETTING_TYPE.bool, group: GROUP.maps, default: true,
     desc: 'Save every map the game downloads to data/maps/<map id>.xml, uncompressed and one tag per line',
     about: ['Every map the game downloads is written to data/maps/<map id>.xml,', 'uncompressed and one XML tag per line.'],
     phrases: [/^save\s+maps?(?=\s|$)/i],
   },
   fast_maps: {
-    feature: FEATURE.mapCache, type: SETTING_TYPE.bool, group: GROUP.maps, default: false,
+    feature: FEATURE.mapCache, capability: CAPABILITY.mapCache.fastMaps, type: SETTING_TYPE.bool, group: GROUP.maps, default: false,
     desc: 'Fast load: use the saved map from data/maps instead of downloading it again',
     about: ['Loads the saved copy from data/maps instead of downloading the map',
       'again. Single-player maps are served by the desktop wrapper; multiplayer maps',

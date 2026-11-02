@@ -45,6 +45,7 @@ export const CAPABILITY_SEPARATOR = '.';
 export const capabilityId = (feature: FeatureId, name: string): string => feature + CAPABILITY_SEPARATOR + name;
 
 export const CAPABILITY = Object.freeze({
+  mapCache: Object.freeze({ maps: 'map_cache.maps', saveMaps: 'map_cache.save_maps', fastMaps: 'map_cache.fast_maps' }),
   screenshot: Object.freeze({ screenshot: 'screenshot.screenshot', key: 'screenshot.key' }),
   gameChat: Object.freeze({ game: 'game_chat.game', builtin: 'game_chat.builtin' }),
   binds: Object.freeze({ bind: 'binds.bind', keyname: 'binds.keyname' }),
