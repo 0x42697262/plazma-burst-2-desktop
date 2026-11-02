@@ -1,3 +1,4 @@
+import { CAPABILITY } from '#shared/features/keys.ts';
 import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import type { CommandDefinition } from '#console/kernel/commands/registry.ts';
@@ -145,34 +146,35 @@ function runRestart(): void {
 }
 
 const SUBCOMMANDS: readonly CommandDefinition[] = Object.freeze([
-  { name: COMMAND_NAME.status, aliases: COMMAND_ALIASES.status, ...SUBCOMMAND_TEXT.status, run: printStatus },
-  { name: COMMAND_NAME.who, aliases: COMMAND_ALIASES.who, ...SUBCOMMAND_TEXT.who, run: printWho },
-  { name: COMMAND_NAME.kick, ...SUBCOMMAND_TEXT.kick, run: runKick },
-  { name: COMMAND_NAME.tell, aliases: COMMAND_ALIASES.tell, ...SUBCOMMAND_TEXT.tell, rawLine: true, run: runTell },
-  { name: COMMAND_NAME.say, ...SUBCOMMAND_TEXT.say, rawLine: true, run: runSay },
+  { name: COMMAND_NAME.status, capability: CAPABILITY.p2pHost.status, aliases: COMMAND_ALIASES.status, ...SUBCOMMAND_TEXT.status, run: printStatus },
+  { name: COMMAND_NAME.who, capability: CAPABILITY.p2pHost.who, aliases: COMMAND_ALIASES.who, ...SUBCOMMAND_TEXT.who, run: printWho },
+  { name: COMMAND_NAME.kick, capability: CAPABILITY.p2pHost.kick, ...SUBCOMMAND_TEXT.kick, run: runKick },
+  { name: COMMAND_NAME.tell, capability: CAPABILITY.p2pHost.tell, aliases: COMMAND_ALIASES.tell, ...SUBCOMMAND_TEXT.tell, rawLine: true, run: runTell },
+  { name: COMMAND_NAME.say, capability: CAPABILITY.p2pHost.say, ...SUBCOMMAND_TEXT.say, rawLine: true, run: runSay },
   {
-    name: COMMAND_NAME.map,
+    name: COMMAND_NAME.map, capability: CAPABILITY.p2pHost.map,
     usage: SUBCOMMAND_TEXT.map.usage,
     desc: SUBCOMMAND_TEXT.map.desc,
     help: { about: SUBCOMMAND_TEXT.map.about, examples: SUBCOMMAND_TEXT.map.examples, see: SEE_ALSO_MAPS },
     run: changeMap,
   },
-  { name: COMMAND_NAME.pause, ...SUBCOMMAND_TEXT.pause, run: owner(OWNER_COMMAND.pause) },
-  { name: COMMAND_NAME.swap, ...SUBCOMMAND_TEXT.swap, run: owner(OWNER_COMMAND.swap) },
-  { name: COMMAND_NAME.endround, ...SUBCOMMAND_TEXT.endround, run: owner(OWNER_COMMAND.endround) },
-  { name: COMMAND_NAME.unbanall, ...SUBCOMMAND_TEXT.unbanall, run: owner(OWNER_COMMAND.unbanall) },
-  { name: COMMAND_NAME.ping, ...SUBCOMMAND_TEXT.ping, run: runPing },
+  { name: COMMAND_NAME.pause, capability: CAPABILITY.p2pHost.pause, ...SUBCOMMAND_TEXT.pause, run: owner(OWNER_COMMAND.pause) },
+  { name: COMMAND_NAME.swap, capability: CAPABILITY.p2pHost.swap, ...SUBCOMMAND_TEXT.swap, run: owner(OWNER_COMMAND.swap) },
+  { name: COMMAND_NAME.endround, capability: CAPABILITY.p2pHost.endround, ...SUBCOMMAND_TEXT.endround, run: owner(OWNER_COMMAND.endround) },
+  { name: COMMAND_NAME.unbanall, capability: CAPABILITY.p2pHost.unbanall, ...SUBCOMMAND_TEXT.unbanall, run: owner(OWNER_COMMAND.unbanall) },
+  { name: COMMAND_NAME.ping, capability: CAPABILITY.p2pHost.ping, ...SUBCOMMAND_TEXT.ping, run: runPing },
   {
-    name: COMMAND_NAME.pingAction, usage: SUBCOMMAND_TEXT.pingAction.usage(PING_ACTIONS), desc: SUBCOMMAND_TEXT.pingAction.desc, run: runPingAction,
+    name: COMMAND_NAME.pingAction, capability: CAPABILITY.p2pHost.pingAction, usage: SUBCOMMAND_TEXT.pingAction.usage(PING_ACTIONS), desc: SUBCOMMAND_TEXT.pingAction.desc, run: runPingAction,
   },
-  { name: COMMAND_NAME.minReputation, aliases: COMMAND_ALIASES.minReputation, ...SUBCOMMAND_TEXT.minReputation, run: runMinReputation },
-  { name: COMMAND_NAME.stop, ...SUBCOMMAND_TEXT.stop, run: runStop },
-  { name: COMMAND_NAME.start, ...SUBCOMMAND_TEXT.start, run: runStart },
-  { name: COMMAND_NAME.restart, ...SUBCOMMAND_TEXT.restart, run: runRestart },
+  { name: COMMAND_NAME.minReputation, capability: CAPABILITY.p2pHost.minReputation, aliases: COMMAND_ALIASES.minReputation, ...SUBCOMMAND_TEXT.minReputation, run: runMinReputation },
+  { name: COMMAND_NAME.stop, capability: CAPABILITY.p2pHost.stop, ...SUBCOMMAND_TEXT.stop, run: runStop },
+  { name: COMMAND_NAME.start, capability: CAPABILITY.p2pHost.start, ...SUBCOMMAND_TEXT.start, run: runStart },
+  { name: COMMAND_NAME.restart, capability: CAPABILITY.p2pHost.restart, ...SUBCOMMAND_TEXT.restart, run: runRestart },
 ]);
 
 export const serverCommand: CommandDefinition = Object.freeze({
   name: COMMAND_NAME.server,
+  capability: CAPABILITY.p2pHost.status,
   server: true,
   usage: SERVER_COMMAND_TEXT.usage,
   desc: SERVER_COMMAND_TEXT.desc,
@@ -185,7 +187,7 @@ export const serverCommand: CommandDefinition = Object.freeze({
 });
 
 export const serverShortcuts: readonly CommandDefinition[] = Object.freeze([
-  { name: COMMAND_NAME.who, server: true, ...SHORTCUT_TEXT.who, run: printWho },
-  { name: COMMAND_NAME.kick, server: true, ...SHORTCUT_TEXT.kick, run: runKick },
-  { name: COMMAND_NAME.say, server: true, ...SHORTCUT_TEXT.say, rawLine: true, run: runSay },
+  { name: COMMAND_NAME.who, capability: CAPABILITY.p2pHost.who, server: true, ...SHORTCUT_TEXT.who, run: printWho },
+  { name: COMMAND_NAME.kick, capability: CAPABILITY.p2pHost.kick, server: true, ...SHORTCUT_TEXT.kick, run: runKick },
+  { name: COMMAND_NAME.say, capability: CAPABILITY.p2pHost.say, server: true, ...SHORTCUT_TEXT.say, rawLine: true, run: runSay },
 ]);

@@ -5,6 +5,12 @@ Burst 2). Code: `src/features/p2p_host/`: config, page log, the host driver in t
 (`services/host.ts`), its `server` command and shortcuts (`entry/command.ts`) and the
 console side (`console.ts`). How to run it: [p2p-host](../operations/p2p-host.md).
 
+Console capabilities, one per `server` subcommand: `p2p_host.status` (`server`,
+`server status`), `who`, `kick`, `tell`, `say`, `map`, `pause`, `swap`, `endround`,
+`unbanall`, `ping`, `ping_action`, `min_reputation`, `stop`, `start` and `restart` (each
+`p2p_host.<name>`); the shortcuts `who`, `kick` and `say` follow theirs. Hosting itself is
+the feature's own.
+
 With the flag off, `npm run p2p-host` logs that the host is off and quits. In the page,
 the `server`, `who`, `kick` and `say` commands are not registered and the host never
 starts.
