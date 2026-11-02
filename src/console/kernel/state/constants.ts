@@ -14,6 +14,7 @@ export type SettingSpec = Readonly<{
   about?: readonly string[];
   example?: string;
   phrases?: readonly RegExp[];
+  extraValues?: readonly string[];
 }>;
 
 export const SAVE_DELAY_MS = 150;

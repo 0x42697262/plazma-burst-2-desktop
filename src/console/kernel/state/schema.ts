@@ -66,7 +66,9 @@ export function parseValue(key: string, raw: unknown): boolean | number | string
   if (spec.type === SETTING_TYPE.bool) {
     if (TRUE_WORDS.includes(lowered)) return true;
     if (FALSE_WORDS.includes(lowered)) return false;
-    throw new Error(TEXT.expectsOnOff(key));
+    const extraValues = spec.extraValues ?? [];
+    if (extraValues.includes(lowered)) return lowered;
+    throw new Error(TEXT.expectsOnOff(key, extraValues));
   }
   if (spec.type === SETTING_TYPE.key) {
     const meansNoKey = raw === false || FALSE_WORDS.includes(lowered) || lowered === NO_KEY_WORD;

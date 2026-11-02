@@ -41,6 +41,11 @@ export const RULES: readonly Rule[] = Object.freeze([
     re: String.raw`mc\.⟨ID⟩=1\*Math\.min\(\(mc\.⟨_⟩\+1\)\/2,2\)\*mc\.scale;` },
   { file: 'frame2', keys: ['playerDt'], what: ['player time factor for the next tick'],
     re: String.raw`⟨ID⟩=\(⟨_⟩\/\(1000\/⟨_⟩\)\+⟨_⟩\*3\)\/4;\s*⟨_⟩=\(⟨_⟩\/\(1000\/30\)\+` },
+  { file: 'actions', keys: ['moveIntentX', 'moveIntentY'],
+    what: ['character property: horizontal movement intention (-1 left, 0, 1 right)', 'character property: vertical movement intention (-1 up, 0, 1 down)'],
+    re: String.raw`case 247:\s*⟨triggers⟩\[a\]\.⟨trigTargetB⟩\[⟨_⟩\]=⟨_⟩\(⟨triggers⟩\[a\]\.⟨trigTargetB⟩\[⟨_⟩\]\);\s*⟨mapVars⟩\[⟨triggers⟩\[a\]\.⟨trigTargetA⟩\[⟨_⟩\]\]=⟨chars⟩\[⟨triggers⟩\[a\]\.⟨trigTargetB⟩\[⟨_⟩\]\]\.⟨ID⟩;\s*break;\s*case 248:\s*⟨triggers⟩\[a\]\.⟨trigTargetB⟩\[⟨_⟩\]=⟨_⟩\(⟨triggers⟩\[a\]\.⟨trigTargetB⟩\[⟨_⟩\]\);\s*⟨mapVars⟩\[⟨triggers⟩\[a\]\.⟨trigTargetA⟩\[⟨_⟩\]\]=⟨chars⟩\[⟨triggers⟩\[a\]\.⟨trigTargetB⟩\[⟨_⟩\]\]\.⟨ID⟩;` },
+  { file: 'actions', keys: ['stability'], what: ['character property: stability (1 = steady on its feet, lower = knocked off balance)'],
+    re: String.raw`case 374:\s*⟨chars⟩\[⟨_⟩\]\.⟨ID⟩=Number\(⟨_⟩\);` },
   { file: 'actions', keys: ['noSwords'], what: ['character property: swords disabled'],
     re: String.raw`⟨chars⟩\[⟨_⟩\]\.⟨ID⟩=\(⟨_⟩==="true"\);\s*if\(⟨chars⟩\[⟨_⟩\]\.io\)\s*if\(!⟨chars⟩\[⟨_⟩\]\.⟨dead⟩\)\s*⟨refreshChar⟩\(⟨_⟩\);` },
 

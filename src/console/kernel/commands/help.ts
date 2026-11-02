@@ -55,7 +55,7 @@ function printEntry(entry: HelpEntry | undefined): void {
 }
 
 function rangeOf(spec: SettingSpec): string {
-  if (spec.type === BOOL_TYPE) return TEXT.onOff;
+  if (spec.type === BOOL_TYPE) return TEXT.onOff(spec.extraValues ?? []);
   if (spec.type === KEY_TYPE) return TEXT.keyName;
   const kind = spec.type === INT_TYPE ? TEXT.wholeNumber : TEXT.number;
   return kind + (spec.min === undefined ? '' : TEXT.range(spec.min, spec.max));
@@ -78,7 +78,7 @@ function printKeyHelp(key: SettingKey): void {
   if (reason) clientOnlyLine(reason);
   for (const line of spec.about ?? []) print(TEXT.indent(line));
   print(TEXT.examples, COLOR.title);
-  const example = spec.type === BOOL_TYPE ? TEXT.onWord : spec.example || TEXT.valuePlaceholder;
+  const example = spec.example || (spec.type === BOOL_TYPE ? TEXT.onWord : TEXT.valuePlaceholder);
   printPair(TEXT.exampleOf(key, example), TEXT.setIt, EXAMPLE_WIDTH);
   if (spec.type === BOOL_TYPE) printPair(key, TEXT.toggleIt, EXAMPLE_WIDTH);
   printPair(TEXT.unsetExample(key), TEXT.backToDefault, EXAMPLE_WIDTH);

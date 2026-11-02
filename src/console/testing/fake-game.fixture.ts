@@ -144,6 +144,7 @@ export async function bootConsole({ mapFile = DEFAULT_MAP_FILE, sayTrigger, page
       hea: +(attributes.hea ?? 0), hmax: +(attributes.hmax ?? 0), x: +(attributes.x ?? 0), y: +(attributes.y ?? 0), io: true,
       tarx: 400, tary: -300, curwea: -1, stand: true, sit: 0, tox: 0, toy: 0,
       [names.dead]: false, [names.dying]: false, [names.refPoint]: index, [names.walk]: 0, [names.jump]: 1, [names.noSwords]: false,
+      [names.moveIntentX]: 0, [names.moveIntentY]: 0, [names.stability]: 1,
       [names.charIndex]: index, [names.charOnDeath]: loaderTargetFixup(attributes.ondeath), [names.aimAngle]: 0, [names.facing]: 1,
       [names.headHp]: 50, [names.faceHp]: 80, [names.legsHp]: 60, [names.armsHp]: 50,
       [names.headOff]: false, [names.faceGone]: false, [names.legsBroken]: false, [names.armsBroken]: false,

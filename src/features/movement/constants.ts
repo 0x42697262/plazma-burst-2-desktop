@@ -4,3 +4,6 @@ export const STAND_WALK_SCALE = 3 / 2;
 export const AIR_WALK = 0.4;
 export const AIR_TOP_SPEED = 3;
 export const FLY_DAMPING = 0.8;
+export const STEADY_STABILITY = 1;
+export const FULL_LIFT = 1;
+export const FRAMES_PER_TICK_AT_60_FPS = 2;

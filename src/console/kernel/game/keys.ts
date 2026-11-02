@@ -2,7 +2,7 @@ export const CONNECTION_CLASS_NAME = 'connClass';
 
 export const NAME_KEYS = Object.freeze([
   'chars', 'me', 'dead', 'dying', 'updateBody', 'charCount', 'refreshChar', 'healChar', 'headHp', 'faceHp',
-  'legsHp', 'armsHp', 'headOff', 'faceGone', 'legsBroken', 'armsBroken', 'jump', 'walk', 'playerDt', 'noSwords',
+  'legsHp', 'armsHp', 'headOff', 'faceGone', 'legsBroken', 'armsBroken', 'jump', 'walk', 'playerDt', 'noSwords', 'moveIntentX', 'moveIntentY', 'stability',
   'ptCount', 'ptOwner', 'charIndex', 'gunPtBase', 'gunPtRange', 'guns', 'ptX', 'ptY', 'interpolating', 'ptPrevX',
   'ptPrevY', 'clearPtInterp', 'cameraTarget', 'spectating', 'refPoint', 'effect', 'effectTypes', 'effectTeleport',
   'afterMove', 'gunFactory', 'strDecode', 'gunName', 'gunSlot', 'gunFixed', 'gunPellets', 'gunSpread', 'gunBloom',

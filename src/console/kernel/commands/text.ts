@@ -37,7 +37,7 @@ export const HELP_TEXT = Object.freeze({
   examples: 'Examples:',
   related: (topics: readonly string[]) => `Related: ${topics.join('  |  ')}`,
   also: (spellings: readonly string[]) => `  Also: ${spellings.join(', ')}`,
-  onOff: 'on / off',
+  onOff: (extraValues: readonly string[]) => ['on', 'off', ...extraValues].join(' / '),
   keyName: 'a key name (as in "bind"), or off',
   wholeNumber: 'whole number',
   number: 'number',
