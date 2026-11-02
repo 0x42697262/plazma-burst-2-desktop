@@ -44,6 +44,12 @@ written with mode `0600` because it holds passwords:
 - `data/join.json` (from before the server list) is imported once, when there is no
   `servers.json` yet.
 
+An edition can add servers to a new player's list ([editions](../operations/editions.md#defaults)):
+they are written once, when there is no `data/servers.json` yet (`createFirstList`), together
+with an old `data/join.json` if there is one. Such a server has no nickname: the file may
+hold an entry without one, the list and the launcher say "needs a nickname", and `play`
+refuses it until the player sets one with Edit. Saving still needs a nickname.
+
 ## Certificates
 
 - A private server's `fingerprint` is the SHA-256 of its certificate, as the server's

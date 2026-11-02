@@ -11,6 +11,7 @@ export const APP_TEXT = Object.freeze({
   modeOff: (id: string, reason: string | null) => `"${id}" is off${reason ? ` (${reason})` : ''}; not starting it.`,
   sadburstHostModes: 'Sad Burst 2: remote play and the player-hosted host are for the official client only.',
   gameFrom: (prefix: string, version: string, root: string) => `${prefix}Game ${version} from ${root}`,
+  settingsSeeded: (file: string) => `Wrote this app's default settings and binds to ${file}`,
   clientPrefix: (title: string) => `${title}: `,
   sadburstHooksOff: 'Sad Burst 2: hooks are off (its loader sends a hash of the game scripts with the login; docs/features/hooks.md).',
   debugLevel: 'Log level: debug (requests, window events, the game\'s trace() output)',

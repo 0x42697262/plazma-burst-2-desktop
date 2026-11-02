@@ -7,3 +7,6 @@ export type Edition = Readonly<{
   features: readonly FeatureId[] | null;
   capabilities: readonly string[] | null;
 }>;
+
+export type DefaultServer = Readonly<{ name: string; address: string; fingerprint: string }>;
+export type EditionDefaults = Readonly<{ servers: readonly DefaultServer[]; settings: Readonly<Record<string, unknown>> }>;

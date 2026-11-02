@@ -9,7 +9,7 @@ export const LIST_TEXT = Object.freeze({
   addressCell: (address: string) => `  ${address}  `,
   playersCell: (players: string, here: string) => `  ${players}${here}`,
   certificateChanged: 'its certificate is NOT the saved one: someone else may be at this address',
-  describeAs: (description: string, nickname: string, needsPassword: boolean) => `${description ? `${description} · ` : ''}as ${nickname}${needsPassword ? ' · needs a password' : ''}`,
+  describeAs: (description: string, nickname: string, needsPassword: boolean) => `${description ? `${description} · ` : ''}${nickname ? `as ${nickname}` : 'needs a nickname'}${needsPassword ? ' · needs a password' : ''}`,
   descriptionLine: (description: string) => `             ${description}`,
   versionMismatch: (there: string, here: string) => `             game ${there} there, ${here} here: the same version is needed`,
   fileProblem: (problem: string) => `data/servers.json: ${problem}`,

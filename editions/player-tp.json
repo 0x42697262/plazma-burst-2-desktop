@@ -13,5 +13,17 @@
     "teleport",
     "binds",
     "player_info.chars"
-  ]
+  ],
+  "defaults": {
+    "servers": [
+      {
+        "address": "18.231.112.9:2053",
+        "fingerprint": "C9:BD:C1:3C:4B:61:4D:82:D3:79:40:95:29:E5:1A:62:1B:84:80:D6:C8:7D:98:0E:05:D6:E2:EC:D3:E2:99:58"
+      }
+    ],
+    "binds": {
+      "shift+f": "tp",
+      "alt+c": "chars"
+    }
+  }
 }

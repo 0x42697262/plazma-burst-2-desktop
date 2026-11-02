@@ -30,6 +30,8 @@ export const SERVICE_TEXT = Object.freeze({
   playing: (name: string, hostPort: string, nickname: string) => `Private server: ${name} (${hostPort}) as ${nickname}`,
   titleOfficial: 'Plazma Burst 2',
   titlePrivate: (name: string) => `Plazma Burst 2 (${name})`,
+  needsNickname: (name: string) => `${name} needs a nickname: give it one with Edit first`,
+  seeded: (count: number, file: string) => `Added ${count} server${count === 1 ? '' : 's'} from this app's defaults to ${file}`,
   passwordDropped: (name: string) => `Private server ${name}: its address or certificate changed, so its saved password was dropped (enter it again with Edit)`,
 });
 
@@ -73,7 +75,8 @@ export const LAUNCHER_TEXT = Object.freeze({
   certificateChanged: 'Its certificate is not the saved one. Someone else may be at this address; ask the host for the fingerprint again.',
   notReachable: 'not reachable',
   versionMismatch: (there: string, here: string) => `Game ${there} there, ${here} here: the same version is needed ("npm run fetch-game" on both).`,
-  asNicknameNeedsPassword: (nickname: string, needsPassword: boolean) => `as ${nickname}${needsPassword ? ' · needs a password (Edit)' : ''}`,
+  asNicknameNeedsPassword: (nickname: string, needsPassword: boolean) => `${nickname ? `as ${nickname}` : 'needs a nickname (Edit)'}${needsPassword ? ' · needs a password (Edit)' : ''}`,
+  needsNickname: 'needs a nickname (Edit)',
   officialTag: 'official',
   privateTag: 'private',
   fileProblems: (problems: readonly string[]) => `data/servers.json: ${problems.join('; ')}`,

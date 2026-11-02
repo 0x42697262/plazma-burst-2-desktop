@@ -3,7 +3,8 @@ import path from 'node:path';
 import { build as packageApp } from 'electron-builder';
 import { REPO_ROOT, DIST_DIR } from '#kernel/config/paths.ts';
 import { buildAll } from '#tools/build/build.ts';
-import { readEdition } from '#tools/build/edition-file.ts';
+import { readEdition, readyEdition } from '#tools/build/edition-file.ts';
+import { createProbe } from '#features/server_list/adapters/probe.ts';
 import { builderConfig, stagedPackage } from './config.ts';
 import { FAILED_EXIT_CODE, FIRST_USER_ARGUMENT, JSON_INDENT } from './constants.ts';
 import { ARG, DIST_FOLDER, ELECTRON_PACKAGE, LINE_JOIN, NEVER_PUBLISH, PACKAGE_FILE, PLATFORM, RELEASE_FOLDER, SOURCE_MAP_SUFFIX, STAGING_FOLDER, type Platform } from './keys.ts';
@@ -37,13 +38,13 @@ async function main(): Promise<void> {
     return;
   }
   if (!options.edition) throw new Error(TEXT.noEdition);
-  const { edition, problems } = readEdition(options.edition);
+  const { edition, defaults, problems } = await readyEdition(readEdition(options.edition), (host, port) => createProbe().fingerprint(host, port));
   if (problems.length) throw new Error(problems.join(LINE_JOIN));
   if (edition.features === null) console.warn(TEXT.everyFeature);
   console.log(TEXT.building(edition.name, edition.features ?? []));
 
   await fs.rm(DIST_DIR, { recursive: true, force: true });
-  await buildAll(edition);
+  await buildAll(edition, defaults);
 
   const outDir = path.join(REPO_ROOT, RELEASE_FOLDER, edition.name);
   const appDir = path.join(outDir, STAGING_FOLDER);

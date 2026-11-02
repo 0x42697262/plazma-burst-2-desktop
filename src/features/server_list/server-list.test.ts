@@ -7,6 +7,7 @@ import { parseAddress, normalFingerprint } from './domain/address.ts';
 import { checkServer, passwordForSave, passwordSurvivesEdit, type ServerEntry } from './domain/server.ts';
 import { parseStatusResponse } from './domain/status.ts';
 import { createServersStore, type ServersStore } from './adapters/servers-file.ts';
+import type { DefaultServer } from '#shared/editions/types.ts';
 import { createServerListService, type GameSession } from './services/server-list.ts';
 import { serverListRoute } from './entry/route.ts';
 import type { ServerProbe } from './adapters/probe.ts';
@@ -76,7 +77,7 @@ test('servers.json is versioned, written for the owner only, and a broken entry 
   } finally { context.cleanup(); }
 });
 
-function serviceWith(store: ServersStore) {
+function serviceWith(store: ServersStore, defaultServers: readonly DefaultServer[] = []) {
   const events: string[] = [];
   const session: GameSession = {
     otherClients: () => [{ id: 'sadburst', title: 'Sad Burst 2' }],
@@ -94,7 +95,7 @@ function serviceWith(store: ServersStore) {
   };
   const warnings: string[] = [];
   const service = createServerListService({
-    store, probe, session, gameVersion: 'v1', newId, readOldJoin: () => null,
+    store, probe, session, gameVersion: 'v1', newId, readOldJoin: () => null, defaultServers,
     info: (message) => events.push(message), warn: (message) => warnings.push(message), later: (action) => action(), relativeServersFile: 'data/servers.json',
   });
   return { service, events, warnings };
@@ -134,6 +135,25 @@ test('playing a private server logs out, sets the join target and loads the game
     assert.equal(events.at(-1), 'list');
     assert.deepEqual(await service.operations.check('official'), { ping: 12 });
     assert.deepEqual(await service.operations.check(id), { ping: 12, status: { name: 'There', players: 1 } });
+  } finally { context.cleanup(); }
+});
+
+test('the app\'s default servers are written once, when there is no list yet; they need a nickname before playing', async () => {
+  const context = tempStore();
+  try {
+    const defaults = [{ name: 'Pal base', address: '18.231.112.9:2053', fingerprint: FP }];
+    const { service, events } = serviceWith(context.store, defaults);
+    service.createFirstList();
+    const [seeded] = context.store.load().servers;
+    assert.equal(seeded?.address, '18.231.112.9:2053');
+    assert.equal(seeded?.nickname, '');
+    assert.ok(events.includes('Added 1 server from this app\'s defaults to data/servers.json'), events.join('\n'));
+    await assert.rejects(service.operations.play(seeded?.id), /needs a nickname/);
+    service.operations.remove(seeded?.id);
+    service.createFirstList();
+    assert.deepEqual(context.store.load().servers, [], 'a removed default stays removed');
+    const renamed = service.operations.save({ id: seeded?.id, address: '18.231.112.9:2053', fingerprint: FP, nickname: '' });
+    assert.ok('errors' in renamed, 'saving still needs a nickname');
   } finally { context.cleanup(); }
 });
 

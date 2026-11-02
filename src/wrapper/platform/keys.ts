@@ -1,6 +1,7 @@
 export const TEXT_ENCODING = 'utf8';
 export const EMPTY_OBJECT_TEXT = '{}';
 export const LINE_END = '\n';
+export const EXCLUSIVE_CREATE_FLAG = 'wx';
 
 export const MAIN_SCRIPT_TAG = '<script src="scripts/main.js"></script><script>//# sourceURL=scripts/main.js</script>';
 export const FLASH_SCRIPT_TAG = '<script src="scripts/flash.js"></script>';

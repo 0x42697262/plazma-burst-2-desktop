@@ -33,9 +33,46 @@ and `chars`, and nothing else: `player_info.chars` picks one command of `player_
 | `title` | The app's name, shown to players |
 | `appId` | Reverse-domain id; installed editions with different ids keep their settings and logins apart |
 | `features` | Feature ids and capability ids (`npm start -- --features` lists them), or `"all"`. A feature id means all of its capabilities; a capability id (`health.god`) brings its feature with only that capability |
+| `defaults` | Optional: servers, binds and settings a new player starts with (see [Defaults](#defaults)) |
 
 `dev` is the one edition the tooling relies on: every feature, what `npm start` and
 `npm run verify` build.
+
+
+## Defaults
+
+An edition can start a new player with servers in the list, key binds and settings. An
+example (the server, binds and values are made up):
+
+```json
+"defaults": {
+  "servers": [{ "name": "Pal base", "address": "203.0.113.5:2053", "fingerprint": "AA:BB:…" }],
+  "binds": { "shift+f": "tp", "alt+c": "chars" },
+  "settings": { "speed": 1.5 }
+}
+```
+
+- **Written once.** At its first start, when the player has no `data/servers.json`, the
+  app writes the servers there; when there is no settings file, it writes the binds and
+  settings there. From then on they are the player's own: editing or removing one is
+  kept, and nothing comes back. A player who already has the files gets nothing.
+- **Checked by the build** (`src/tools/build/edition-defaults.ts`), with the console's own
+  parsers, and a problem stops it the same way a missing requirement does:
+  - `servers` needs `server_list`; `binds` needs `binds.bind`; `settings` needs
+    `dev_console`;
+  - a bind runs commands the edition has: `"alt+c": "chars"` needs `player_info.chars`,
+    and every part of a `;` chain is checked;
+  - a setting is one of the edition's keys, with a value it accepts (`speed` needs
+    `movement.speed`).
+- **A server carries its certificate fingerprint**, because the app refuses a server whose
+  certificate is not the saved one ([server list](../features/server-list.md)). Write
+  `"fetch"` instead and the build asks the server, prints what it shows and stops: compare
+  it with the fingerprint the host sent you, then write it in. The build never trusts a
+  fetched fingerprint by itself.
+- **A server has no nickname**: each player picks their own. Until they do (Edit), the list
+  says "needs a nickname" and playing it is refused. No password is ever in an edition.
+- The defaults are compiled into the main process only (`src/shared/editions/defaults.ts`,
+  replaced by the build like the edition itself), not into the game page.
 
 ## Building one
 

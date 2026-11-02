@@ -1,14 +1,15 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type * as esbuild from 'esbuild';
-import type { Edition } from '#shared/editions/types.ts';
+import type { Edition, EditionDefaults } from '#shared/editions/types.ts';
 import { CAPABILITIES } from '#shared/features/catalog.ts';
 import { REPO_ROOT } from '#kernel/config/paths.ts';
 import {
-  CAPABILITY_IMPORT, EDITION_MODULE, EDITION_PLUGIN_NAME, FEATURES_FOLDER, FEATURE_IMPORT, featureCapabilityListFilter, FEATURE_LIST_MODULES, LINE_BREAK, LIST_ENTRY, PACKAGED_ROOT_MODULE, ROOT_MODULE, ROOT_PLUGIN_NAME,
+  CAPABILITY_IMPORT, DEFAULTS_MODULE, EDITION_MODULE, EDITION_PLUGIN_NAME, FEATURES_FOLDER, FEATURE_IMPORT, featureCapabilityListFilter, FEATURE_LIST_MODULES, LINE_BREAK, LIST_ENTRY, PACKAGED_ROOT_MODULE, ROOT_MODULE, ROOT_PLUGIN_NAME,
   TYPESCRIPT_LOADER, exactPathFilter, wholeWord,
 } from './constants.ts';
 import { TEXT } from './text.ts';
+import { NO_DEFAULTS } from './edition-defaults.ts';
 
 const exactFile = (relative: string): RegExp => exactPathFilter(path.join(REPO_ROOT, relative));
 
@@ -27,11 +28,12 @@ export function onlyEditionFeatures(source: string, included: readonly string[],
   return result;
 }
 
-export function editionPlugin(edition: Edition): esbuild.Plugin {
+export function editionPlugin(edition: Edition, defaults: EditionDefaults = NO_DEFAULTS): esbuild.Plugin {
   return {
     name: EDITION_PLUGIN_NAME,
     setup(build) {
       build.onLoad({ filter: exactFile(EDITION_MODULE) }, () => ({ contents: TEXT.editionModule(JSON.stringify(edition)), loader: TYPESCRIPT_LOADER }));
+      build.onLoad({ filter: exactFile(DEFAULTS_MODULE) }, () => ({ contents: TEXT.defaultsModule(JSON.stringify(defaults)), loader: TYPESCRIPT_LOADER }));
       const included = edition.features;
       const capabilities = edition.capabilities;
       if (capabilities !== null && capabilities !== undefined) {

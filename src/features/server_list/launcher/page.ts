@@ -72,7 +72,7 @@ function playersCell(row: Row, state: CheckState): string {
 function descriptionCell(row: Row, state: CheckState): Child {
   if (row.official) return row.description ?? '';
   const nickname = row.nickname ?? '';
-  if (!isDone(state)) return nickname ? LAUNCHER_TEXT.asNickname(nickname) : '';
+  if (!isDone(state)) return nickname ? LAUNCHER_TEXT.asNickname(nickname) : LAUNCHER_TEXT.needsNickname;
   if (state.pinned === false) return element('span', { class: LAUNCHER_CLASS.bad }, LAUNCHER_TEXT.certificateChanged);
   if (!state.status) return element('span', { class: LAUNCHER_CLASS.muted }, state.ping === null ? LAUNCHER_TEXT.notReachable : state.error || '');
   const status = state.status;

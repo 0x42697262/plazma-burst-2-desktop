@@ -7,12 +7,13 @@ export type ServerEntry = Address & { id: string; name: string; address: string;
 export type StoredServer = Pick<ServerEntry, 'id' | 'name' | 'address' | 'fingerprint' | 'nickname' | 'password'>;
 export type ShownServer = Pick<ServerEntry, 'id' | 'name' | 'address' | 'fingerprint' | 'nickname'> & { hasPassword: boolean };
 export type CheckedServer = { server: ServerEntry | null; errors: string[] };
+export type CheckOptions = Readonly<{ nicknameOptional?: boolean }>;
 export type SaveRequest = { id?: unknown; name?: unknown; address?: unknown; fingerprint?: unknown; nickname?: unknown; password?: unknown };
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 const textOf = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
-export function checkServer(input: unknown, newId: () => string): CheckedServer {
+export function checkServer(input: unknown, newId: () => string, { nicknameOptional = false }: CheckOptions = {}): CheckedServer {
   if (!isPlainObject(input)) return { server: null, errors: [ENTRY_TEXT.notAnEntry] };
   const errors: string[] = [];
   let address: Address | null = null;
@@ -24,7 +25,8 @@ export function checkServer(input: unknown, newId: () => string): CheckedServer 
   const fingerprint = normalFingerprint(input.fingerprint);
   if (!FINGERPRINT_PATTERN.test(fingerprint)) errors.push(ENTRY_TEXT.badFingerprint);
   const nickname = textOf(input.nickname);
-  if (!NICKNAME_PATTERN.test(nickname)) errors.push(ENTRY_TEXT.badNickname);
+  const isNicknameLeftEmpty = nicknameOptional && nickname === '';
+  if (!isNicknameLeftEmpty && !NICKNAME_PATTERN.test(nickname)) errors.push(ENTRY_TEXT.badNickname);
   if (input.password !== undefined && typeof input.password !== 'string') errors.push(ENTRY_TEXT.badPassword);
   if (errors.length || !address) return { server: null, errors };
   const name = textOf(input.name).slice(0, NAME_MAX);

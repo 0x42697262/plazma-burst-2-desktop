@@ -40,3 +40,7 @@ export const CAPABILITY_LIST_FILE = 'capabilities.ts';
 export const FEATURES_FOLDER: readonly string[] = Object.freeze(['src', 'features']);
 export const featureCapabilityListFilter = (featuresFolder: string): RegExp =>
   new RegExp(`^${featuresFolder.replace(REGEX_SPECIAL, '\\$&')}[\\\\/](\\w+)[\\\\/]capabilities\\.ts$`);
+export const DEFAULTS_MODULE = 'src/shared/editions/defaults.ts';
+export const COMMAND_CHAIN_SEPARATOR = ';';
+export const COMMAND_QUOTE = '"';
+export const COMMAND_WORDS = /\s+/;

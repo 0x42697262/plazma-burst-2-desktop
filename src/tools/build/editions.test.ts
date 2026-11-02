@@ -7,7 +7,7 @@ import * as esbuild from 'esbuild';
 import { CAPABILITIES, CATALOG } from '#shared/features/catalog.ts';
 import type { Edition } from '#shared/editions/types.ts';
 import { pageBuildOptions, wrapperBuildOptions } from './build.ts';
-import { editionNames, oneOffEdition, readEdition } from './edition-file.ts';
+import { editionNames, oneOffEdition, readEdition, readyEdition } from './edition-file.ts';
 import { withRequirements } from '#kernel/editions/resolve.ts';
 import { onlyEditionFeatures } from './edition-plugin.ts';
 
@@ -66,7 +66,7 @@ test('every edition file reads without problems, and its bundles hold only its f
   const names = editionNames();
   assert.ok(names.includes('player') && names.includes('dev'), names.join(', '));
   for (const name of names) {
-    const { edition, problems } = readEdition(name);
+    const { edition, problems } = await readyEdition(readEdition(name), async () => { throw new Error('an edition file holds its fingerprints; "fetch" is for writing one'); });
     assert.deepEqual(problems, [], name);
     await assertHoldsOnly(edition);
   }

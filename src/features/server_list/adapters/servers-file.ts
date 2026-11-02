@@ -36,7 +36,7 @@ export function createServersStore(file: string, newId: () => string, exists: (f
     const servers: ServerEntry[] = [];
     const problems: string[] = [];
     read.value.servers.forEach((entry, index) => {
-      const { server, errors } = checkServer(entry, newId);
+      const { server, errors } = checkServer(entry, newId, { nicknameOptional: true });
       if (server) servers.push(server);
       else problems.push(ENTRY_TEXT.entryProblem(index + 1, errors));
     });

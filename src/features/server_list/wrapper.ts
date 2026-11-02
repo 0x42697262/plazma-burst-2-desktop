@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { FEATURE } from '#shared/features/keys.ts';
+import { EDITION_DEFAULTS } from '#shared/editions/defaults.ts';
 import type { WrapperDeps, WrapperFeature } from '#wrapper/feature-types.ts';
 import { ID_ENCODING } from './keys.ts';
 import { SERVER_ID_BYTES } from './constants.ts';
@@ -27,6 +28,7 @@ export function createServerListWrapper(deps: WrapperDeps, session: GameSession)
     gameVersion: deps.gameVersion || null,
     newId: newServerId,
     readOldJoin: () => readJsonIfThere(OLD_JOIN_FILE),
+    defaultServers: EDITION_DEFAULTS.servers,
     info: (message) => deps.log.info(message),
     warn: (message) => deps.log.warn(message),
     later: (action) => { setTimeout(action, 0); },

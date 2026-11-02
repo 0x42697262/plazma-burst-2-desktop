@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
 import path from 'node:path';
 import { JSON_INDENT, WATCH_DELAY_MS } from './constants.ts';
-import { EMPTY_OBJECT_TEXT, LINE_END, TEXT_ENCODING } from './keys.ts';
+import { EMPTY_OBJECT_TEXT, EXCLUSIVE_CREATE_FLAG, LINE_END, TEXT_ENCODING } from './keys.ts';
 import { TEXT } from './text.ts';
 
 export type KvFileEvents = { onChange: (saved: Record<string, unknown>) => void; onError: (message: string) => void; watchDelayMs?: number };
@@ -12,6 +12,13 @@ export type KvFile = {
   check(): Promise<void>;
   watch(): () => void;
 };
+
+export function seedKvFile(file: string, seed: Readonly<Record<string, unknown>>): boolean {
+  if (!Object.keys(seed).length || fsSync.existsSync(file)) return false;
+  fsSync.mkdirSync(path.dirname(file), { recursive: true });
+  fsSync.writeFileSync(file, JSON.stringify(seed, null, JSON_INDENT) + LINE_END, { flag: EXCLUSIVE_CREATE_FLAG });
+  return true;
+}
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 

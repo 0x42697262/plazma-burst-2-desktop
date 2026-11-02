@@ -17,7 +17,8 @@ import { createDevRouter, createInterceptor } from './http/router.ts';
 import { MAIN_WINDOW, FORBIDDEN, UNAVAILABLE } from './platform/constants.ts';
 import { FOLDER_END, HTML_TYPE, HTTPS_SCHEME, INDEX_FILE, NO_STORE, OFFICIAL_LOGIN_FILE, SCRIPT_TYPE, TEXT_ENCODING, callConsoleScript, moduleScriptTag, scriptTag } from './platform/keys.ts';
 import { FILES_TEXT, PAGE_TEXT } from './platform/text.ts';
-import { createKvFile } from './platform/kv-file.ts';
+import { createKvFile, seedKvFile } from './platform/kv-file.ts';
+import { EDITION_DEFAULTS } from '#shared/editions/defaults.ts';
 import { createSiteCookies } from './platform/site-cookies.ts';
 import { relaunchAs } from './platform/relaunch.ts';
 import { prepareIndex, pageGlobalScript, type JoinPage } from './platform/index-page.ts';
@@ -252,13 +253,14 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
       void window.loadURL(startUrl);
       return;
     }
-    serverList.service.importOldJoinFile();
+    serverList.service.createFirstList();
     serverList.registerIpc(ipcMain);
     serverList.service.showList();
   }
 
   async function onReady(): Promise<void> {
     if (refuseToStart()) return;
+    if (devConsoleOn && seedKvFile(devSettingsFile, EDITION_DEFAULTS.settings)) log.info(TEXT.settingsSeeded(path.relative(USER_ROOT, devSettingsFile)));
     log.info(TEXT.gameFrom(isSadburst ? TEXT.clientPrefix(client.title) : '', version ?? '', root));
     if (isSadburst) {
       if (flags.hooks.source === CONSTRAINT_SOURCE) log.info(TEXT.sadburstHooksOff);

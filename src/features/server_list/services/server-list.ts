@@ -5,6 +5,7 @@ import { parseAddress } from '../domain/address.ts';
 import type { ServerStatus } from '../domain/status.ts';
 import type { ServersStore } from '../adapters/servers-file.ts';
 import type { ServerProbe } from '../adapters/probe.ts';
+import type { DefaultServer } from '#shared/editions/types.ts';
 
 export type ClientChoice = Readonly<{ id: string; title: string }>;
 
@@ -25,6 +26,7 @@ export type ServerListDeps = {
   gameVersion: string | null;
   newId: () => string;
   readOldJoin: () => unknown;
+  defaultServers: readonly DefaultServer[];
   info: (message: string) => void;
   warn: (message: string) => void;
   later: (action: () => void) => void;
@@ -90,6 +92,7 @@ export function createServerListService(deps: ServerListDeps) {
     const isOfficial = id === OFFICIAL_ID;
     const target = isOfficial ? null : servers.find((server) => server.id === id) ?? null;
     if (!isOfficial && !target) throw new Error(SERVICE_TEXT.notSaved);
+    if (target && !target.nickname) throw new Error(SERVICE_TEXT.needsNickname(target.name));
     store.save(servers, typeof id === 'string' ? id : null);
     if (target) {
       await session.startLoggedOut();
@@ -123,26 +126,31 @@ export function createServerListService(deps: ServerListDeps) {
     return true;
   }
 
-  function importOldJoinFile(): void {
-    if (store.exists()) return;
+  function oldJoinServer(): ServerEntry | null {
     let old: unknown;
     try {
       old = deps.readOldJoin();
     } catch (error) {
       deps.warn(SERVICE_TEXT.importFailed((error as Error).message));
-      return;
+      return null;
     }
-    if (old === null) return;
-    const { server } = checkServer(old, deps.newId);
-    if (!server) return;
-    store.save([server], null);
-    deps.info(SERVICE_TEXT.imported(deps.relativeServersFile));
+    return old === null ? null : checkServer(old, deps.newId).server;
+  }
+
+  function createFirstList(): void {
+    if (store.exists()) return;
+    const imported = oldJoinServer();
+    const defaults = deps.defaultServers.map((entry) => checkServer(entry, deps.newId, { nicknameOptional: true }).server).filter((server) => server !== null);
+    if (!imported && !defaults.length) return;
+    store.save([...(imported ? [imported] : []), ...defaults], null);
+    if (imported) deps.info(SERVICE_TEXT.imported(deps.relativeServersFile));
+    if (defaults.length) deps.info(SERVICE_TEXT.seeded(defaults.length, deps.relativeServersFile));
   }
 
   return {
     operations: { list, save, remove, check, fingerprint, play, openList, switchClient },
     showList,
-    importOldJoinFile,
+    createFirstList,
     joinTarget: (): ServerEntry | null => joinTarget,
   };
 }

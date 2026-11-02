@@ -3,7 +3,7 @@ import path from 'node:path';
 import * as esbuild from 'esbuild';
 import { REPO_ROOT, PAGE_BUNDLE_DIR, WRAPPER_BUNDLE_DIR } from '#kernel/config/paths.ts';
 import { EDITION } from '#shared/editions/constants.ts';
-import type { Edition } from '#shared/editions/types.ts';
+import type { Edition, EditionDefaults } from '#shared/editions/types.ts';
 import { FEATURE, type FeatureId } from '#shared/features/keys.ts';
 import { editionPlugin, packagedRootPlugin } from './edition-plugin.ts';
 import {
@@ -107,9 +107,9 @@ export async function buildLauncher(outDir: string = LAUNCHER_DIST_DIR): Promise
   return outDir;
 }
 
-export const wrapperBuildOptions = (outfile: string = path.join(WRAPPER_BUNDLE_DIR, WRAPPER_BUNDLE_FILE), edition: Edition = EDITION): esbuild.BuildOptions => ({
+export const wrapperBuildOptions = (outfile: string = path.join(WRAPPER_BUNDLE_DIR, WRAPPER_BUNDLE_FILE), edition: Edition = EDITION, defaults?: EditionDefaults): esbuild.BuildOptions => ({
   ...shared,
-  plugins: [editionPlugin(edition), packagedRootPlugin()],
+  plugins: [editionPlugin(edition, defaults), packagedRootPlugin()],
   entryPoints: [path.join(REPO_ROOT, WRAPPER_ENTRY)],
   outfile,
   format: 'cjs',
@@ -118,13 +118,13 @@ export const wrapperBuildOptions = (outfile: string = path.join(WRAPPER_BUNDLE_D
   external: [ELECTRON_MODULE],
 });
 
-export async function buildWrapperBundle(outfile: string = path.join(WRAPPER_BUNDLE_DIR, WRAPPER_BUNDLE_FILE), edition: Edition = EDITION): Promise<string> {
-  await esbuild.build(wrapperBuildOptions(outfile, edition));
+export async function buildWrapperBundle(outfile: string = path.join(WRAPPER_BUNDLE_DIR, WRAPPER_BUNDLE_FILE), edition: Edition = EDITION, defaults?: EditionDefaults): Promise<string> {
+  await esbuild.build(wrapperBuildOptions(outfile, edition, defaults));
   return outfile;
 }
 
-export async function buildAll(edition: Edition = EDITION): Promise<string[]> {
-  const builds = [buildPage(PAGE_BUNDLE_DIR, edition), buildWrapperBundle(path.join(WRAPPER_BUNDLE_DIR, WRAPPER_BUNDLE_FILE), edition)];
+export async function buildAll(edition: Edition = EDITION, defaults?: EditionDefaults): Promise<string[]> {
+  const builds = [buildPage(PAGE_BUNDLE_DIR, edition), buildWrapperBundle(path.join(WRAPPER_BUNDLE_DIR, WRAPPER_BUNDLE_FILE), edition, defaults)];
   if (hasFeature(edition, FEATURE.serverList)) builds.push(buildLauncher());
   if (hasFeature(edition, FEATURE.hooks)) builds.push(buildHooksRuntime());
   if (hasFeature(edition, FEATURE.remotePlay)) builds.push(buildRemoteClient());

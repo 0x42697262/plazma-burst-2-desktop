@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { createKvFile } from './kv-file.ts';
+import { createKvFile, seedKvFile } from './kv-file.ts';
 
 function setup(initial?: string) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-kv-'));
@@ -87,5 +87,21 @@ test('the folder watch sees a save, also one that replaces the file', async () =
   } finally {
     stop();
     fixture.cleanup();
+  }
+});
+
+test('the app\'s default settings are written only when there is no settings file yet', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-seed-'));
+  try {
+    const file = path.join(dir, 'data', 'dev-overrides.json');
+    assert.equal(seedKvFile(file, {}), false, 'no defaults, no file');
+    assert.equal(fs.existsSync(file), false);
+    assert.equal(seedKvFile(file, { speed: 2, binds: { 'shift+f': 'tp' } }), true);
+    assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), { speed: 2, binds: { 'shift+f': 'tp' } });
+    fs.writeFileSync(file, '{}');
+    assert.equal(seedKvFile(file, { speed: 3 }), false, 'an existing file is the player\'s');
+    assert.equal(fs.readFileSync(file, 'utf8'), '{}');
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
   }
 });

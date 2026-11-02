@@ -2,7 +2,8 @@ import path from 'node:path';
 import { REPO_ROOT } from '#kernel/config/paths.ts';
 import { buildAll, watchAll } from './build.ts';
 import { EDITION_FLAG, FEATURES_FLAG, FEATURE_LIST_SEPARATOR, FAILED_EXIT_CODE, WATCH_FLAG } from './constants.ts';
-import { oneOffEdition, readEdition, type BuiltEdition } from './edition-file.ts';
+import { oneOffEdition, readEdition, readyEdition, type BuiltEdition } from './edition-file.ts';
+import { createProbe } from '#features/server_list/adapters/probe.ts';
 import { TEXT } from './text.ts';
 
 const valueAfter = (flag: string): string | null => {
@@ -23,7 +24,8 @@ async function main(): Promise<void> {
     console.log(TEXT.watching);
     return;
   }
-  const chosen = chosenEdition();
+  const built = chosenEdition();
+  const chosen = built ? await readyEdition(built, (host, port) => createProbe().fingerprint(host, port)) : null;
   if (chosen?.problems.length) {
     console.error(TEXT.editionProblems(chosen.edition.name, chosen.problems));
     if (chosen.missing.length) console.error(TEXT.addThese(chosen.missing));
@@ -33,7 +35,7 @@ async function main(): Promise<void> {
   if (chosen) {
     console.log(TEXT.edition(chosen.edition.name, chosen.edition.features ?? [], chosen.edition.capabilities));
   }
-  for (const output of await buildAll(chosen?.edition)) console.log(TEXT.built(path.relative(REPO_ROOT, output)));
+  for (const output of await buildAll(chosen?.edition, chosen?.defaults)) console.log(TEXT.built(path.relative(REPO_ROOT, output)));
 }
 
 main().catch((error: unknown) => {
