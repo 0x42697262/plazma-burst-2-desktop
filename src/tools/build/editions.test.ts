@@ -51,7 +51,9 @@ async function assertHoldsOnly(edition: Edition) {
   }
   for (const capability of CAPABILITIES) {
     if (edition.capabilities === null || edition.capabilities.includes(capability.id)) continue;
-    const folder = `src/features/${capability.feature}/capabilities/${capability.id.split('.')[1] ?? ''}/`;
+    const isModuleShared = CAPABILITIES.some((other) => other.feature === capability.feature && other.module === capability.module && edition.capabilities?.includes(other.id));
+    if (isModuleShared) continue;
+    const folder = `src/features/${capability.feature}/capabilities/${capability.module}/`;
     assert.deepEqual(inputs.filter((input) => input.startsWith(folder)), [], `${edition.name}: ${capability.id} is left out`);
   }
   const hasConsole = included.includes('dev_console');

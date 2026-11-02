@@ -8,6 +8,14 @@ Feature flag `triggers` (on by default; all modes). Code: `src/features/triggers
   model, running, the run log, regions, variables and the map-editor script format;
 - `logic/` is the logic graph and its overlay.
 
+Capabilities, one folder per command under `capabilities/` (`triggers`, `regions`, `vars`,
+`logic`; a folder is built in when any of its capabilities is in the edition):
+`triggers.list` (`triggers`), `triggers.history` (with `trigger_history`), `triggers.find`,
+`triggers.run`, `triggers.exec` (with pasting scripts), `triggers.actions`,
+`triggers.regions`, `triggers.regions_run`, `triggers.vars`, `triggers.vars_set`,
+`triggers.vars_sync`, `triggers.logic` (`logic <uid>`), `triggers.logic_show` (`show` and
+`hide`) and `triggers.logic_tree`. The run log and the map model are the feature's own.
+
 Tests: `src/features/triggers/triggers.test.ts`.
 
 - `triggers` lists map triggers, shows one trigger's actions, keeps a history of trigger

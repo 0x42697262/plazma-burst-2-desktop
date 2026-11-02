@@ -1,3 +1,4 @@
+import { CAPABILITY } from '#shared/features/keys.ts';
 import { print } from '#console/kernel/ui/log.ts';
 import { showPaged, takePage } from '#console/kernel/ui/pager.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
@@ -5,15 +6,15 @@ import { plural } from '#console/kernel/core/words.ts';
 import { game } from '#console/kernel/game/bindings.ts';
 import type { CommandContext, CommandDefinition } from '#console/kernel/commands/registry.ts';
 import { stringOf } from '#kernel/text/text-of.ts';
-import { showTarget } from '../model.ts';
+import { showTarget } from '../../model.ts';
 import {
   requireVars, showVar, parseVarValue, SYNC_MODES, RECOMMENDED_MODE, VAR_MAX_LEN, fights, modeName,
   syncMarkOn, mapHasSyncMark, syncActionsFor, seedersFor, modeVerdict, NO, YES, noteVarEdit,
-} from '../vars.ts';
-import { SYNC_MODE_KEYS, type SyncModeKey } from '../keys.ts';
-import { ACTION_WIDTH, INDEX_WIDTH, MODE_WHAT_WIDTH, NAME_AND_VALUE, SHOWN, SINGLE_ARGUMENT, UID_WIDTH, VAR_NAME_WIDTH, VERDICT_WIDTH } from './constants.ts';
-import { HASH, NO_UID, SPACE, VARS_COMMAND, WRITE_VERBS } from './keys.ts';
-import { VARS_TEXT as TEXT } from './text.ts';
+} from '../../vars.ts';
+import { SYNC_MODE_KEYS, type SyncModeKey } from '../../keys.ts';
+import { ACTION_WIDTH, INDEX_WIDTH, MODE_WHAT_WIDTH, NAME_AND_VALUE, SHOWN, SINGLE_ARGUMENT, UID_WIDTH, VAR_NAME_WIDTH, VERDICT_WIDTH } from '../../entry/constants.ts';
+import { HASH, NO_UID, SPACE, VARS_COMMAND, WRITE_VERBS } from '../../entry/keys.ts';
+import { VARS_TEXT as TEXT } from '../../entry/text.ts';
 
 type Vars = Record<string, unknown>;
 const isSyncMode = (mode: string): mode is SyncModeKey => (SYNC_MODE_KEYS as readonly string[]).includes(mode);
@@ -159,6 +160,7 @@ const SYNC_HELP_ARGS = [TEXT.sync.nameArgument, ...SYNC_MODE_KEYS.map((mode) => 
 
 export const varsCommand: CommandDefinition = {
   name: VARS_COMMAND.name,
+  capability: CAPABILITY.triggers.vars,
   aliases: VARS_COMMAND.aliases,
   usage: TEXT.usage,
   desc: TEXT.desc,
@@ -168,6 +170,7 @@ export const varsCommand: CommandDefinition = {
   subcommands: [
     {
       name: VARS_COMMAND.set,
+      capability: CAPABILITY.triggers.varsSet,
       aliases: VARS_COMMAND.setAliases,
       usage: TEXT.set.usage,
       desc: TEXT.set.desc,
@@ -176,6 +179,7 @@ export const varsCommand: CommandDefinition = {
     },
     {
       name: VARS_COMMAND.sync,
+      capability: CAPABILITY.triggers.varsSync,
       usage: TEXT.sync.usage,
       desc: TEXT.sync.desc,
       reportsReach: true,

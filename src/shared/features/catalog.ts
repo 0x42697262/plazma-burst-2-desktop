@@ -1,20 +1,23 @@
-import { ALL_MODES, CAPABILITY, CLIENT, FEATURE, FEATURE_OWNER, MODE, type ClientId, type FeatureId, type Mode } from './keys.ts';
+import { ALL_MODES, CAPABILITY, CAPABILITY_MODULE, CAPABILITY_SEPARATOR, CLIENT, FEATURE, FEATURE_OWNER, MODE, type ClientId, type FeatureId, type Mode } from './keys.ts';
 import { FEATURE_DESCRIPTION } from './text.ts';
 import type { CapabilityDefinition, FeatureDefinition } from './types.ts';
 
-type FeatureSpec = Partial<Omit<FeatureDefinition, 'id' | 'owner' | 'description' | 'capabilities'>> & { capabilities?: Readonly<Record<string, readonly string[]>> };
+type FeatureSpec = Partial<Omit<FeatureDefinition, 'id' | 'owner' | 'description' | 'capabilities'>> & {
+  capabilities?: Readonly<Record<string, readonly string[]>>;
+  modules?: Readonly<Record<string, string>>;
+};
 
 const LOCAL_AND_SERVER: readonly Mode[] = Object.freeze([MODE.local, MODE.server]);
 const LOCAL_ONLY: readonly Mode[] = Object.freeze([MODE.local]);
 const ONLY_OFFICIAL: readonly ClientId[] = Object.freeze([CLIENT.sadburst]);
 const NEEDS_CONSOLE: readonly FeatureId[] = Object.freeze([FEATURE.devConsole]);
 
-const capabilitiesOf = (feature: FeatureId, needs: Readonly<Record<string, readonly string[]>>): CapabilityDefinition[] =>
-  Object.entries(needs).map(([id, requires]) => Object.freeze({ id, feature, requires: Object.freeze([...requires]) }));
+const capabilitiesOf = (feature: FeatureId, needs: Readonly<Record<string, readonly string[]>>, modules: Readonly<Record<string, string>>): CapabilityDefinition[] =>
+  Object.entries(needs).map(([id, requires]) => Object.freeze({ id, feature, module: modules[id] ?? id.slice(feature.length + CAPABILITY_SEPARATOR.length), requires: Object.freeze([...requires]) }));
 
 const noNeeds = (ids: Readonly<Record<string, string>>): Readonly<Record<string, readonly string[]>> => Object.fromEntries(Object.values(ids).map((id) => [id, []]));
 
-const define = (id: FeatureId, { capabilities = {}, ...spec }: FeatureSpec = {}): FeatureDefinition => Object.freeze({
+const define = (id: FeatureId, { capabilities = {}, modules = {}, ...spec }: FeatureSpec = {}): FeatureDefinition => Object.freeze({
   id,
   defaultOn: true,
   availableIn: ALL_MODES,
@@ -24,7 +27,7 @@ const define = (id: FeatureId, { capabilities = {}, ...spec }: FeatureSpec = {})
   owner: FEATURE_OWNER,
   description: FEATURE_DESCRIPTION[id],
   ...spec,
-  capabilities: Object.freeze(capabilitiesOf(id, capabilities)),
+  capabilities: Object.freeze(capabilitiesOf(id, capabilities, modules)),
 });
 
 const consoleFeature = (id: FeatureId, spec: FeatureSpec = {}): FeatureDefinition => define(id, { requires: NEEDS_CONSOLE, ...spec });
@@ -41,7 +44,10 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   consoleFeature(FEATURE.movement, { capabilities: noNeeds(CAPABILITY.movement) }),
   consoleFeature(FEATURE.guns, { capabilities: noNeeds(CAPABILITY.guns) }),
   consoleFeature(FEATURE.binds, { capabilities: noNeeds(CAPABILITY.binds) }),
-  consoleFeature(FEATURE.triggers),
+  consoleFeature(FEATURE.triggers, {
+    capabilities: noNeeds(CAPABILITY.triggers),
+    modules: CAPABILITY_MODULE.triggers,
+  }),
   consoleFeature(FEATURE.trace),
   define(FEATURE.mapCache, { capabilities: noNeeds(CAPABILITY.mapCache) }),
   consoleFeature(FEATURE.mapEditor, { requires: [FEATURE.devConsole, FEATURE.mapCache, FEATURE.triggers] }),

@@ -1,15 +1,16 @@
+import { CAPABILITY } from '#shared/features/keys.ts';
 import { showPaged, takePage, type Row } from '#console/kernel/ui/pager.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { requireLevel } from '#console/kernel/game/level.ts';
 import { GAME_FIELDS } from '#console/kernel/game/fields.ts';
 import type { CommandDefinition } from '#console/kernel/commands/registry.ts';
-import { regionList, triggerList, regionModeName, regionUid, timerUid, findRegion, REGION_MODE } from '../model.ts';
-import { fireRegion } from '../regions.ts';
-import { takeRunOptions } from '../run.ts';
-import { NO_TARGET } from '../keys.ts';
-import { INDEX_WIDTH, REGION_MODE_WIDTH, REGION_UID_WIDTH } from './constants.ts';
-import { NO_UID, REGIONS_COMMAND, SPACE } from './keys.ts';
-import { REGIONS_TEXT as TEXT } from './text.ts';
+import { regionList, triggerList, regionModeName, regionUid, timerUid, findRegion, REGION_MODE } from '../../model.ts';
+import { fireRegion } from '../../regions.ts';
+import { takeRunOptions } from '../../run.ts';
+import { NO_TARGET } from '../../keys.ts';
+import { INDEX_WIDTH, REGION_MODE_WIDTH, REGION_UID_WIDTH } from '../../entry/constants.ts';
+import { NO_UID, REGIONS_COMMAND, SPACE } from '../../entry/keys.ts';
+import { REGIONS_TEXT as TEXT } from '../../entry/text.ts';
 
 type Region = Record<string, unknown> & { x?: number; y?: number };
 
@@ -55,6 +56,7 @@ function runRegion(args: readonly string[]): void {
 
 export const regionsCommand: CommandDefinition = {
   name: REGIONS_COMMAND.name,
+  capability: CAPABILITY.triggers.regions,
   aliases: REGIONS_COMMAND.aliases,
   usage: TEXT.usage,
   desc: TEXT.desc,
@@ -63,6 +65,7 @@ export const regionsCommand: CommandDefinition = {
   subcommands: [
     {
       name: REGIONS_COMMAND.run,
+      capability: CAPABILITY.triggers.regionsRun,
       aliases: REGIONS_COMMAND.runAliases,
       usage: TEXT.run.usage,
       desc: TEXT.run.desc,

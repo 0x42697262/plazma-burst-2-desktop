@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type * as esbuild from 'esbuild';
 import type { Edition } from '#shared/editions/types.ts';
-import { capabilityId, type FeatureId } from '#shared/features/keys.ts';
+import { CAPABILITIES } from '#shared/features/catalog.ts';
 import { REPO_ROOT } from '#kernel/config/paths.ts';
 import {
   CAPABILITY_IMPORT, EDITION_MODULE, EDITION_PLUGIN_NAME, FEATURES_FOLDER, FEATURE_IMPORT, featureCapabilityListFilter, FEATURE_LIST_MODULES, LINE_BREAK, LIST_ENTRY, PACKAGED_ROOT_MODULE, ROOT_MODULE, ROOT_PLUGIN_NAME,
@@ -38,7 +38,8 @@ export function editionPlugin(edition: Edition): esbuild.Plugin {
         build.onLoad({ filter: featureCapabilityListFilter(path.join(REPO_ROOT, ...FEATURES_FOLDER)) }, async (args) => {
           const feature = path.basename(path.dirname(args.path));
           const source = await fs.readFile(args.path, 'utf8');
-          return { contents: onlyEditionFeatures(source, capabilities, args.path, (match) => capabilityId(feature as FeatureId, match[2] ?? ''), CAPABILITY_IMPORT), loader: TYPESCRIPT_LOADER };
+          const keptModules = CAPABILITIES.filter((capability) => capability.feature === feature && capabilities.includes(capability.id)).map((capability) => capability.module);
+          return { contents: onlyEditionFeatures(source, keptModules, args.path, (match) => match[2] ?? '', CAPABILITY_IMPORT), loader: TYPESCRIPT_LOADER };
         });
       }
       if (included === null) return;

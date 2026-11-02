@@ -45,6 +45,7 @@ export const CAPABILITY_SEPARATOR = '.';
 export const capabilityId = (feature: FeatureId, name: string): string => feature + CAPABILITY_SEPARATOR + name;
 
 export const CAPABILITY = Object.freeze({
+  triggers: Object.freeze({ list: 'triggers.list', history: 'triggers.history', find: 'triggers.find', run: 'triggers.run', exec: 'triggers.exec', actions: 'triggers.actions', regions: 'triggers.regions', regionsRun: 'triggers.regions_run', vars: 'triggers.vars', varsSet: 'triggers.vars_set', varsSync: 'triggers.vars_sync', logic: 'triggers.logic', logicShow: 'triggers.logic_show', logicTree: 'triggers.logic_tree' }),
   serverList: Object.freeze({ list: 'server_list.list', connect: 'server_list.connect', add: 'server_list.add', edit: 'server_list.edit', remove: 'server_list.remove', fingerprint: 'server_list.fingerprint', page: 'server_list.page' }),
   profiles: Object.freeze({ status: 'profiles.status', list: 'profiles.list', show: 'profiles.show', use: 'profiles.use', set: 'profiles.set', bind: 'profiles.bind', onload: 'profiles.onload', delete: 'profiles.delete' }),
   netlog: Object.freeze({ status: 'netlog.status', show: 'netlog.show', runs: 'netlog.runs', all: 'netlog.all', record: 'netlog.record', state: 'netlog.state' }),
@@ -60,6 +61,10 @@ export const CAPABILITY = Object.freeze({
   movement: Object.freeze({
     speed: 'movement.speed', jump: 'movement.jump', gravity: 'movement.gravity', fly: 'movement.fly', swords: 'movement.swords', worldGravity: 'movement.world_gravity',
   }),
+});
+
+export const CAPABILITY_MODULE = Object.freeze({
+  triggers: Object.freeze({ [CAPABILITY.triggers.list]: 'triggers', [CAPABILITY.triggers.history]: 'triggers', [CAPABILITY.triggers.find]: 'triggers', [CAPABILITY.triggers.run]: 'triggers', [CAPABILITY.triggers.exec]: 'triggers', [CAPABILITY.triggers.actions]: 'triggers', [CAPABILITY.triggers.regionsRun]: 'regions', [CAPABILITY.triggers.varsSet]: 'vars', [CAPABILITY.triggers.varsSync]: 'vars', [CAPABILITY.triggers.logicShow]: 'logic', [CAPABILITY.triggers.logicTree]: 'logic' }),
 });
 
 export const PAGE_CAPABILITIES_GLOBAL = 'PB2_CAPABILITIES';

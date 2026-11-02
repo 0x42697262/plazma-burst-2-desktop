@@ -1,10 +1,9 @@
 import { FEATURE } from '#shared/features/keys.ts';
-import type { ConsoleFeature } from '#console/feature-types.ts';
+import { consoleFeatureOf } from '#console/feature-types.ts';
 import type { ListSection } from '#console/kernel/list-sections.ts';
-import { triggersCommand } from './entry/triggers-command.ts';
-import { regionsCommand } from './entry/regions-command.ts';
-import { varsCommand } from './entry/vars-command.ts';
-import { logicCommand } from './entry/logic-command.ts';
+import { TRIGGERS_PARTS } from './capabilities.ts';
+import { isCapabilityOn } from '#console/flags.ts';
+import { CAPABILITY } from '#shared/features/keys.ts';
 import { syncTriggerHooks } from './run-log.ts';
 import { editedVars, showVar } from './vars.ts';
 import { logicShown, logicDescription } from './logic/view.ts';
@@ -17,7 +16,6 @@ import { looksLikeScript } from './script.ts';
 import { providePasteClaim } from '#console/kernel/ports/input.ts';
 
 type EditedVar = { name: string; now: unknown; was: unknown };
-type Command = { name: string; [field: string]: unknown };
 
 const shownVar = (value: unknown): string => showVar(value);
 
@@ -28,10 +26,10 @@ const varsSection: ListSection = () => {
   return changed.length > 0 && [TEXT.varsTitle(changed.length), changed.map((edited) => TEXT.varsRow(edited.name.padEnd(KEY_WIDTH), shownVar(edited.now), shownVar(edited.was)))] as const;
 };
 
-export const triggersConsole: ConsoleFeature = Object.freeze({
-  id: FEATURE.triggers,
-  commands: [triggersCommand, regionsCommand, varsCommand, logicCommand] as Command[],
+export const triggersConsole = consoleFeatureOf(FEATURE.triggers, TRIGGERS_PARTS, {
   frame: [{ name: FRAME_HOOK_NAME, run: () => { syncTriggerHooks(); } }],
   listSections: { [LIST_SECTION.logic]: logicSection, [LIST_SECTION.vars]: varsSection },
-  start: () => { providePasteClaim((text) => (looksLikeScript(text) ? EXEC_PREFIX : null)); },
+  start: () => {
+    if (isCapabilityOn(CAPABILITY.triggers.exec)) providePasteClaim((text) => (looksLikeScript(text) ? EXEC_PREFIX : null));
+  },
 });

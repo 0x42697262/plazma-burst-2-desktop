@@ -65,7 +65,7 @@ export const SCHEMA = Object.freeze({
   recoil: { feature: FEATURE.guns, capability: CAPABILITY.guns.gun, type: SETTING_TYPE.number, group: GROUP.gun, min: 0, max: 10, desc: 'Recoil multiplier for held gun' },
   builtin: { feature: FEATURE.gameChat, capability: CAPABILITY.gameChat.builtin, type: SETTING_TYPE.bool, group: GROUP.console, desc: 'game <cmd>: on = silent, works on any map and in multiplayer; off = normal game chat' },
   trigger_history: {
-    feature: FEATURE.triggers, type: SETTING_TYPE.bool, group: GROUP.console, default: true, desc: 'Record trigger runs for "triggers history"',
+    feature: FEATURE.triggers, capability: CAPABILITY.triggers.history, type: SETTING_TYPE.bool, group: GROUP.console, default: true, desc: 'Record trigger runs for "triggers history"',
     about: ['Turns the recording for "triggers history" on and off.'],
   },
   page_size: {

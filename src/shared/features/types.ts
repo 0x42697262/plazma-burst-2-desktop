@@ -1,6 +1,6 @@
 import type { ClientId, FeatureId, FlagSource, Mode } from './keys.ts';
 
-export type CapabilityDefinition = Readonly<{ id: string; feature: FeatureId; requires: readonly string[] }>;
+export type CapabilityDefinition = Readonly<{ id: string; feature: FeatureId; module: string; requires: readonly string[] }>;
 
 export type FeatureDefinition = Readonly<{
   id: FeatureId;

@@ -1,3 +1,4 @@
+import { CAPABILITY } from '#shared/features/keys.ts';
 import { print } from '#console/kernel/ui/log.ts';
 import { showPaged, takePage, type Row } from '#console/kernel/ui/pager.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
@@ -11,20 +12,20 @@ import { KEY } from '#console/kernel/state/schema.ts';
 import { settings } from '#console/kernel/state/store.ts';
 import type { CommandContext, CommandDefinition } from '#console/kernel/commands/registry.ts';
 import { stringOf } from '#kernel/text/text-of.ts';
-import { triggerList, actionsOf, showTarget, callsText, triggerLabel, findTrigger, triggerSources, sourcesOf } from '../model.ts';
-import { triggerRuns, clearTriggerRuns, TRIG_HISTORY_MAX } from '../run-log.ts';
-import { takeRunOptions, runTriggerAs, reportRun, SHOT_POWER, resolveActions, runScript } from '../run.ts';
-import { parseScript, actionInfo, opcodeName, opcodesLoaded, searchActions } from '../script.ts';
-import type { Trigger } from '../types.ts';
+import { triggerList, actionsOf, showTarget, callsText, triggerLabel, findTrigger, triggerSources, sourcesOf } from '../../model.ts';
+import { triggerRuns, clearTriggerRuns, TRIG_HISTORY_MAX } from '../../run-log.ts';
+import { takeRunOptions, runTriggerAs, reportRun, SHOT_POWER, resolveActions, runScript } from '../../run.ts';
+import { parseScript, actionInfo, opcodeName, opcodesLoaded, searchActions } from '../../script.ts';
+import type { Trigger } from '../../types.ts';
 import {
   ACTION_NUMBER_WIDTH, ALIAS_WIDTH, CALLS_WIDTH, FIND_UID_WIDTH, HISTORY_AGO_WIDTH, HISTORY_INDEX_WIDTH, INDEX_WIDTH, ONE_TRIGGER, SOURCES_SHOWN, TRIGGER_UID_WIDTH,
   TYPE_WIDTH, WHO_WIDTH,
-} from './constants.ts';
+} from '../../entry/constants.ts';
 import {
   EXEC_OPTION, EXEC_OPTIONS, FIELD, FILTER_WORD, FIRST_WORD, LEADING_OPTIONS, NO_UID, SINGLE_WORD, SPACE, TRIGGERS_COMMAND, TRIGGER_FIELDS, TRUE_TEXT, YOU,
-} from './keys.ts';
-import { TRIGGERS_HELP as HELP, TRIGGERS_TEXT as TEXT } from './text.ts';
-import { BY_WORD_LIST, actionMatches, bySources, countOf, parseTerms, uidMatches } from './trigger-search.ts';
+} from '../../entry/keys.ts';
+import { TRIGGERS_HELP as HELP, TRIGGERS_TEXT as TEXT } from '../../entry/text.ts';
+import { BY_WORD_LIST, actionMatches, bySources, countOf, parseTerms, uidMatches } from '../../entry/trigger-search.ts';
 
 type Triggers = (Trigger | null | undefined)[];
 
@@ -235,6 +236,7 @@ function listActions(rawArgs: readonly string[]): void {
 
 export const triggersCommand: CommandDefinition = {
   name: TRIGGERS_COMMAND.name,
+  capability: CAPABILITY.triggers.list,
   aliases: TRIGGERS_COMMAND.aliases,
   usage: HELP.usage,
   desc: HELP.desc,
@@ -243,6 +245,7 @@ export const triggersCommand: CommandDefinition = {
   subcommands: [
     {
       name: TRIGGERS_COMMAND.history,
+      capability: CAPABILITY.triggers.history,
       aliases: TRIGGERS_COMMAND.historyAliases,
       usage: HELP.history.usage,
       desc: HELP.history.desc,
@@ -251,6 +254,7 @@ export const triggersCommand: CommandDefinition = {
     },
     {
       name: TRIGGERS_COMMAND.find,
+      capability: CAPABILITY.triggers.find,
       aliases: TRIGGERS_COMMAND.findAliases,
       usage: HELP.find.usage,
       desc: HELP.find.desc,
@@ -259,6 +263,7 @@ export const triggersCommand: CommandDefinition = {
     },
     {
       name: TRIGGERS_COMMAND.run,
+      capability: CAPABILITY.triggers.run,
       aliases: TRIGGERS_COMMAND.runAliases,
       usage: HELP.run.usage,
       desc: HELP.run.desc,
@@ -268,6 +273,7 @@ export const triggersCommand: CommandDefinition = {
     },
     {
       name: TRIGGERS_COMMAND.exec,
+      capability: CAPABILITY.triggers.exec,
       aliases: TRIGGERS_COMMAND.execAliases,
       usage: HELP.exec.usage,
       desc: HELP.exec.desc,
@@ -278,6 +284,7 @@ export const triggersCommand: CommandDefinition = {
     },
     {
       name: TRIGGERS_COMMAND.actions,
+      capability: CAPABILITY.triggers.actions,
       aliases: TRIGGERS_COMMAND.actionsAliases,
       usage: HELP.actions.usage,
       desc: HELP.actions.desc,

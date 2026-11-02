@@ -1,3 +1,4 @@
+import { CAPABILITY } from '#shared/features/keys.ts';
 import { print } from '#console/kernel/ui/log.ts';
 import { showPaged, takePage, type Row } from '#console/kernel/ui/pager.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
@@ -5,14 +6,14 @@ import { plural } from '#console/kernel/core/words.ts';
 import { requireLevel } from '#console/kernel/game/level.ts';
 import { REMOTE } from '#console/kernel/core/mode.ts';
 import type { CommandDefinition } from '#console/kernel/commands/registry.ts';
-import { LINK, logicGraph, findNode, placeOf, chatTriggerUid, type Graph, type GraphNode, type Link } from '../logic/graph.ts';
-import { showLogic, hideLogic, logicShown, isVisible } from '../logic/view.ts';
-import type { LinkKind } from '../logic/keys.ts';
-import { DEPTH_WORDS, LOGIC_DEPTH } from './constants.ts';
+import { LINK, logicGraph, findNode, placeOf, chatTriggerUid, type Graph, type GraphNode, type Link } from '../../logic/graph.ts';
+import { showLogic, hideLogic, logicShown, isVisible } from '../../logic/view.ts';
+import type { LinkKind } from '../../logic/keys.ts';
+import { DEPTH_WORDS, LOGIC_DEPTH } from '../../entry/constants.ts';
 import {
   ACTION_LABEL, DEPTH_WORD, FROM_END, INDENT, LIST_SEPARATOR, LOGIC_COMMAND, NOT_PREFIX, PLURAL_ENDINGS, SCREEN_WORDS, SPACE, TO_END, TYPE_PREFIX,
-} from './keys.ts';
-import { LOGIC_TEXT as TEXT } from './text.ts';
+} from '../../entry/keys.ts';
+import { LOGIC_TEXT as TEXT } from '../../entry/text.ts';
 
 type Filters = { args: string[]; typeOk: (node: GraphNode) => boolean; kindOk: (link: Link) => boolean; screen: boolean; describe: string; filtered: boolean };
 
@@ -196,6 +197,7 @@ function status(): void {
 
 export const logicCommand: CommandDefinition = {
   name: LOGIC_COMMAND.name,
+  capability: CAPABILITY.triggers.logic,
   aliases: LOGIC_COMMAND.aliases,
   usage: TEXT.usage,
   desc: TEXT.desc,
@@ -207,6 +209,7 @@ export const logicCommand: CommandDefinition = {
   subcommands: [
     {
       name: LOGIC_COMMAND.show,
+      capability: CAPABILITY.triggers.logicShow,
       aliases: LOGIC_COMMAND.showAliases,
       usage: TEXT.show.usage,
       desc: TEXT.show.desc,
@@ -218,6 +221,7 @@ export const logicCommand: CommandDefinition = {
     },
     {
       name: LOGIC_COMMAND.hide,
+      capability: CAPABILITY.triggers.logicShow,
       aliases: LOGIC_COMMAND.hideAliases,
       usage: TEXT.hide.usage,
       desc: TEXT.hide.desc,
@@ -229,6 +233,7 @@ export const logicCommand: CommandDefinition = {
     },
     {
       name: LOGIC_COMMAND.tree,
+      capability: CAPABILITY.triggers.logicTree,
       usage: TEXT.tree.usage,
       desc: TEXT.tree.desc,
       help: { about: TEXT.tree.about, args: TEXT.tree.args, examples: TEXT.tree.examples, see: TEXT.tree.see },
