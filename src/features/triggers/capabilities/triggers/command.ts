@@ -8,7 +8,7 @@ import { game } from '#console/kernel/game/bindings.ts';
 import { GAME_FIELDS } from '#console/kernel/game/fields.ts';
 import { ACTION_NAMES } from '#console/kernel/game/actions.ts';
 import { requireLevel, charLabel } from '#console/kernel/game/level.ts';
-import { KEY } from '#console/kernel/state/schema.ts';
+import { SETTING } from '#features/triggers/keys.ts';
 import { settings } from '#console/kernel/state/store.ts';
 import type { CommandContext, CommandDefinition } from '#console/kernel/commands/registry.ts';
 import { stringOf } from '#kernel/text/text-of.ts';
@@ -100,7 +100,7 @@ function showHistory(rawArgs: readonly string[]): void {
     print(TEXT.historyCleared, COLOR.ok);
     return;
   }
-  if (!settings.effective(KEY.TRIGGER_HISTORY)) print(TEXT.historyOff(KEY.TRIGGER_HISTORY), COLOR.notice);
+  if (!settings.effective(SETTING.triggerHistory)) print(TEXT.historyOff(SETTING.triggerHistory), COLOR.notice);
   const showsAll = query === FILTER_WORD.all;
   const byIndex = parseIndex(query) ?? -1;
   const now = performance.now();

@@ -1,6 +1,7 @@
 import { stringOf } from '#kernel/text/text-of.ts';
 import { game } from '../game/bindings.ts';
-import { KEY } from '../state/schema.ts';
+import { specOf } from '../state/schema.ts';
+import { RANKED_HOLD } from '../state/keys.ts';
 import { checksBypassed } from '../danger/bypass.ts';
 import { NORMAL_ZOOM_PCT } from './constants.ts';
 import { GAME_COMMANDS_HELD } from './keys.ts';
@@ -18,10 +19,11 @@ export const guarding = (): boolean => !checksBypassed() && rankedMatch();
 
 export function heldBack(key: string, value: unknown, gameMax?: number | null): string | null {
   if (!guarding()) return null;
+  const hold = specOf(key)?.rankedHold;
   const isPositive = typeof value === 'number' && value > 0;
-  if ((key === KEY.HP_BONUS || key === KEY.HP_BONUS_PCT) && isPositive) return REASON.hp;
+  if (hold === RANKED_HOLD.positive && isPositive) return REASON.hp;
   const isAboveGameMax = gameMax === null || gameMax === undefined || (typeof value === 'number' && value > gameMax);
-  if (key === KEY.MAX_HP && isAboveGameMax) return REASON.hp;
+  if (hold === RANKED_HOLD.aboveGameMax && isAboveGameMax) return REASON.hp;
   return null;
 }
 

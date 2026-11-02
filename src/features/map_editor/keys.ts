@@ -18,3 +18,4 @@ export const LAYER_WORD_SEPARATOR = ',';
 export const SELECT_WORD = 'select';
 export const PLACE_WORD = 'place';
 export const NAME_JOIN = ' ';
+export const SETTING = Object.freeze({ editorKey: 'editor_key' });

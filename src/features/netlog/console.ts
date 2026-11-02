@@ -1,6 +1,8 @@
 import { FEATURE } from '#shared/features/keys.ts';
-import type { ConsoleFeature } from '#console/feature-types.ts';
-import { KEY } from '#console/kernel/state/schema.ts';
+import { consoleFeatureOf } from '#console/feature-types.ts';
+import { NETLOG_PARTS } from './capabilities.ts';
+import { SETTING } from '#features/netlog/keys.ts';
+import { CORE_SETTING } from '#console/kernel/state/keys.ts';
 import { settings } from '#console/kernel/state/store.ts';
 import { REMOTE } from '#console/kernel/core/mode.ts';
 import { runKey } from '#console/kernel/commands/settings.ts';
@@ -15,16 +17,14 @@ import { onPageHide } from './adapters/page.ts';
 import { wrapperLineSink } from './adapters/wrapper-client.ts';
 
 type SettingsStore = { effective(key: string): unknown };
-type SettingKeys = { NET_LOG: string; NET_LOG_STATE: string; NET_LOG_ALL: string; PAGE_SIZE: string };
 
 const store = settings as unknown as SettingsStore;
-const keys = KEY as unknown as SettingKeys;
 const isSet = (key: string): boolean => store.effective(key) === true;
-const KEY_OF_SETTING: Readonly<Record<SettingName, string>> = Object.freeze({ [SETTING_NAME.recording]: keys.NET_LOG, [SETTING_NAME.everything]: keys.NET_LOG_ALL });
+const KEY_OF_SETTING: Readonly<Record<SettingName, string>> = Object.freeze({ [SETTING_NAME.recording]: SETTING.netLog, [SETTING_NAME.everything]: SETTING.netLogAll });
 
 export const recorder = createRecorder({
   network: gameNetwork,
-  settings: { recording: () => isSet(keys.NET_LOG), everything: () => isSet(keys.NET_LOG_ALL), states: () => isSet(keys.NET_LOG_STATE) },
+  settings: { recording: () => isSet(SETTING.netLog), everything: () => isSet(SETTING.netLogAll), states: () => isSet(SETTING.netLogState) },
   sink: wrapperLineSink,
   methods: methodWrapper,
   onPageHide,
@@ -35,14 +35,13 @@ export const recorder = createRecorder({
 const netlogCommand = createNetlogCommand({
   recorder,
   remote: REMOTE,
-  pageSize: () => store.effective(keys.PAGE_SIZE) as number,
-  everythingOn: () => isSet(keys.NET_LOG_ALL),
-  statesOn: () => isSet(keys.NET_LOG_STATE),
+  pageSize: () => store.effective(CORE_SETTING.pageSize) as number,
+  everythingOn: () => isSet(SETTING.netLogAll),
+  statesOn: () => isSet(SETTING.netLogState),
   setKey: (setting, words) => { runKey(KEY_OF_SETTING[setting], words); },
 });
 
-export const netlogConsole: ConsoleFeature = Object.freeze({
-  id: FEATURE.netlog,
+export const netlogConsole = consoleFeatureOf(FEATURE.netlog, NETLOG_PARTS, {
   commands: [netlogCommand],
   ticks: [{ name: TICK_NAME, everyMs: NET_TICK_MS, errorsShown: TICK_ERRORS_SHOWN, run: () => recorder.tick() }],
 });

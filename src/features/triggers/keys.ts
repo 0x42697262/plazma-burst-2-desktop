@@ -51,3 +51,4 @@ export const FIGHTING_MODES: ReadonlySet<string> = new Set(['x', 'n']);
 export const VERDICT = Object.freeze({ no: 'no', yes: 'yes', raiseOnly: 'raise only', lowerOnly: 'lower only', longerOnly: 'longer only' } as const);
 
 export const STACK_FRAME_LIMIT = 1;
+export const SETTING = Object.freeze({ triggerHistory: 'trigger_history' });

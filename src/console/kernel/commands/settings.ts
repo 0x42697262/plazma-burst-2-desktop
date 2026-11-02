@@ -1,6 +1,6 @@
 import { print, type Segment } from '../ui/log.ts';
 import { COLOR } from '../core/keys.ts';
-import { SCHEMA, groupsOn, isKeyOn, resolveKey, parseValue, affectsGame, keyClientOnly, describeKey, showValue, type SettingKey, type SettingSpec } from '../state/schema.ts';
+import { SCHEMA, specOf, groupsOn, isKeyOn, resolveKey, parseValue, affectsGame, keyClientOnly, describeKey, showValue, type SettingKey, type SettingSpec } from '../state/schema.ts';
 import { settings } from '../state/store.ts';
 import { levelWasActive } from '../overrides/frame.ts';
 import { gameMaxHp } from '../overrides/max-hp.ts';
@@ -112,7 +112,7 @@ function listKeys(group?: string): void {
 
 const keySettingArgument = (words: readonly string[]): number | undefined => {
   const key = resolveKey(words[1]);
-  return key && SCHEMA[key].type === KEY_TYPE ? SET_KEY_ARGUMENT : undefined;
+  return key && specOf(key)?.type === KEY_TYPE ? SET_KEY_ARGUMENT : undefined;
 };
 
 export { KEY_SETTING_ARGUMENT };

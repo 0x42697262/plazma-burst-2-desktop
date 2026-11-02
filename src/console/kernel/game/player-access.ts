@@ -2,7 +2,6 @@ import { game } from '#console/kernel/game/bindings.ts';
 import { GAME_FIELDS } from '#console/kernel/game/fields.ts';
 import { movePlayerTo } from '#console/kernel/game/teleport.ts';
 import { player, isActive, requireLevel, isDown, charAt, charLabel, be, noCharacter, resolveChar } from '#console/kernel/game/level.ts';
-import { KEY } from '#console/kernel/state/schema.ts';
 import { settings, binds } from '#console/kernel/state/store.ts';
 import { hpBonusAppliedTo } from '#console/kernel/overrides/max-hp.ts';
 import { setKey, unsetKey, runKey } from '#console/kernel/commands/settings.ts';
@@ -23,13 +22,11 @@ type Fields = {
   HP: string; MAX_HP: string; REF_PT: string;
   HEAD_HP: string; HEAD_OFF: string; FACE_HP: string; FACE_GONE: string; LEGS_HP: string; LEGS_BROKEN: string; ARMS_HP: string; ARMS_BROKEN: string;
 };
-type Keys = { MAX_HP: string; HP_BONUS: string; HP_BONUS_PCT: string };
 type Settings = { has(key: string): boolean; get(key: string): unknown; effective(key: string): unknown };
 type Options = { options: Set<string>; rest: string[]; literal: boolean };
 
 export const playerGame = game as unknown as PlayerBindings;
 export const playerFields = GAME_FIELDS as unknown as Fields;
-export const settingKeys = KEY as unknown as Keys;
 export const playerSettings = settings as unknown as Settings;
 
 export const level = {

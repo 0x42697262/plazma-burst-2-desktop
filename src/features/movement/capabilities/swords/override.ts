@@ -2,14 +2,14 @@ import type { FrameOverride, OverrideContext } from '#console/feature-types.ts';
 import { CAPABILITY } from '#shared/features/keys.ts';
 import { game } from '#console/kernel/game/bindings.ts';
 import { GAME_FIELDS } from '#console/kernel/game/fields.ts';
-import { KEY } from '#console/kernel/state/schema.ts';
+import { SETTING } from '#features/movement/keys.ts';
 import { settings } from '#console/kernel/state/store.ts';
 import { force, restore } from '#console/kernel/overrides/force.ts';
 import { OVERRIDE_NAME } from '../../keys.ts';
 
 function apply({ character }: OverrideContext): void {
-  if (settings.has(KEY.SWORDS)) {
-    const swordsOff = !settings.get(KEY.SWORDS);
+  if (settings.has(SETTING.swords)) {
+    const swordsOff = !settings.get(SETTING.swords);
     if (character[GAME_FIELDS.NO_SWORDS] !== swordsOff) {
       force(character, GAME_FIELDS.NO_SWORDS, swordsOff);
       game.refreshChar(game.me());

@@ -6,7 +6,7 @@ import { bootConsole } from '#console/testing/fake-game.fixture.ts';
 test('in a feature split into capabilities, every command, subcommand and key names one of them', async () => {
   await bootConsole();
   const { CONSOLE_FEATURES } = await import('#console/features.ts');
-  const { SCHEMA } = await import('#console/kernel/state/constants.ts');
+  const { SCHEMA } = await import('#console/kernel/state/schema.ts');
   const missing: string[] = [];
   for (const feature of CONSOLE_FEATURES) {
     const declared = new Set(CATALOG_BY_ID.get(feature.id)?.capabilities.map((capability) => capability.id) ?? []);

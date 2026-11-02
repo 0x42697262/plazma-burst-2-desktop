@@ -7,6 +7,7 @@ import { provideKeyHandler } from '#console/kernel/ports/input.ts';
 import { editSummary } from './services/edit.ts';
 import { EDIT_KINDS, FRAME_HOOK_NAME, LIST_SECTION } from './keys.ts';
 import { TEXT } from './text.ts';
+import { SETTINGS } from './settings/keys.ts';
 
 const editsSection: ListSection = () => {
   const summary = editSummary();
@@ -17,6 +18,7 @@ const editsSection: ListSection = () => {
 
 export const mapEditorConsole: ConsoleFeature = Object.freeze({
   id: FEATURE.mapEditor,
+  settings: SETTINGS,
   commands: [editorCommand],
   frame: [{ name: FRAME_HOOK_NAME, run: () => { editorTick(); } }],
   listSections: { [LIST_SECTION]: editsSection },

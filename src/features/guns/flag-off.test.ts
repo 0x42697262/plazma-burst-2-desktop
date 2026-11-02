@@ -12,7 +12,8 @@ test('with guns off, the gun and bullet keys are not offered, not set and not ap
   (Reflect.get(globalThis, 'pb2dev') as { reload(saved: unknown): void }).reload(saved);
   const help = game.run('help').join('\n');
   assert.doesNotMatch(help, /bullet_damage|fire_rate|Guns:/);
-  assert.match(help, /god, max_hp/, 'the player keys stay');
+  assert.match(help, /\bgod\b/, 'the player keys stay');
+  assert.match(help, /\bmax_hp\b/);
   assert.match(game.run('set bullet_damage 9')[0] ?? '', /bullet_damage/);
   assert.equal(game.run('get bullet_damage').some((line) => /= 9/.test(line)), false, 'not set');
   assert.equal(game.run('list').some((line) => /bullet_damage/.test(line)), false, 'not listed');

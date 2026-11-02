@@ -3,7 +3,7 @@ import { print } from './ui/log.ts';
 import { COLOR } from './core/keys.ts';
 import { plural, isHelpArg } from './core/words.ts';
 import { game } from './game/bindings.ts';
-import { SCHEMA, resolveKey, keyClientOnly, unphrase } from './state/schema.ts';
+import { specOf, resolveKey, keyClientOnly, unphrase } from './state/schema.ts';
 import { findRunnable, findSubcommand, reachOf, type Command, type CommandContext, type Reach } from './commands/registry.ts';
 import { printTopicHelp } from './commands/help.ts';
 import { runKey, KEY_SETTING_ARGUMENT } from './commands/settings.ts';
@@ -20,7 +20,7 @@ function keyArgOf(words: readonly string[]): number | undefined {
   const definition = subcommand && subcommand.keyArg !== undefined ? subcommand : command;
   if (definition) return typeof definition.keyArg === 'function' ? definition.keyArg(words) : definition.keyArg;
   const key = resolveKey(words[0]);
-  return key && SCHEMA[key].type === KEY_TYPE ? KEY_SETTING_ARGUMENT : undefined;
+  return key && specOf(key)?.type === KEY_TYPE ? KEY_SETTING_ARGUMENT : undefined;
 }
 
 function atKeyName(current: string): boolean {

@@ -8,3 +8,4 @@ export const YOU = 'you';
 export const COMMAND = Object.freeze({ heal: 'heal', hp: 'hp', revive: 'revive', reviveAliases: ['res'] });
 export const NOTE_SEPARATOR = ', ';
 export const OVERRIDE_NAME = Object.freeze({ god: 'god override', hp: 'max HP override' });
+export const SETTING = Object.freeze({ god: 'god', maxHp: 'max_hp', hpBonus: 'hp_bonus', hpBonusPct: 'hp_bonus_pct' });

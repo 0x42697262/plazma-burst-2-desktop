@@ -1,29 +1,36 @@
 import { onOff } from '../core/words.ts';
 import { stringOf } from '#kernel/text/text-of.ts';
-import { SCHEMA, aliasesFor, type KeyNames, type SettingKey, type SettingSpec } from './constants.ts';
-import { CONSOLE_GROUPS, FALSE_WORDS, GROUP, NO_KEY_WORD, SETTING_TYPE, TRUE_WORDS, type Group } from './keys.ts';
+import { FEATURE, type FeatureId } from '#shared/features/keys.ts';
+import { CORE_SETTINGS, type SettingSpec } from './constants.ts';
+import { CONSOLE_GROUPS, FALSE_WORDS, GROUP, NO_KEY_WORD, SETTING_TYPE, TRUE_WORDS, type Group, type RankedHold } from './keys.ts';
 import { TEXT } from './text.ts';
 import { parseKeyName, showKey } from './key-names.ts';
 import { isCapabilityOn, isFeatureOn } from '../../flags.ts';
 
-export { SCHEMA, GROUP };
-export type { SettingKey, SettingSpec };
+export { GROUP };
+export type SettingKey = string;
+export type { SettingSpec };
+export type Hotkey = Readonly<{ what: string; command: string }>;
+export type KeySpec = Omit<SettingSpec, 'feature'> & Readonly<{ aliases?: readonly string[]; hotkey?: Hotkey; rankedHold?: RankedHold }>;
+type RegisteredSpec = SettingSpec & Readonly<{ hotkey?: Hotkey; rankedHold?: RankedHold }>;
 
 export const CLIENT_ONLY_REASON = TEXT.clientOnlyReason;
 
-const KEY_NAMES = Object.freeze(Object.fromEntries(Object.keys(SCHEMA).map((key) => [key.toUpperCase(), key])));
+export const SCHEMA: Record<string, RegisteredSpec> = {};
+export const ALIASES: Record<string, string> = {};
 
-export const KEY = new Proxy(KEY_NAMES, {
-  get(names, name) {
-    if (typeof name !== 'string' || !Object.hasOwn(names, name)) throw new Error(TEXT.noSetting(String(name)));
-    return names[name];
-  },
-}) as unknown as KeyNames;
+export function registerSettings(feature: FeatureId, settings: Readonly<Record<string, KeySpec>>): void {
+  for (const [key, { aliases = [], ...spec }] of Object.entries(settings)) {
+    if (Object.hasOwn(SCHEMA, key)) throw new Error(TEXT.settingTwice(key));
+    SCHEMA[key] = Object.freeze({ feature, ...spec });
+    for (const alias of aliases) ALIASES[alias] = key;
+  }
+}
 
-export const ALIASES = aliasesFor(KEY);
+registerSettings(FEATURE.consoleCore, CORE_SETTINGS);
 
-const specOf = (key: string): SettingSpec | undefined => (Object.hasOwn(SCHEMA, key) ? SCHEMA[key as SettingKey] : undefined);
-const requireSpec = (key: string): SettingSpec => {
+export const specOf = (key: string): RegisteredSpec | undefined => (Object.hasOwn(SCHEMA, key) ? SCHEMA[key] : undefined);
+const requireSpec = (key: string): RegisteredSpec => {
   const spec = specOf(key);
   if (!spec) throw new Error(TEXT.noSetting(key));
   return spec;
@@ -34,14 +41,14 @@ export const isKeyOn = (key: string): boolean => {
   return spec !== undefined && isFeatureOn(spec.feature) && (spec.capability === undefined || isCapabilityOn(spec.capability));
 };
 
-export const keysOn = (): SettingKey[] => (Object.keys(SCHEMA) as SettingKey[]).filter(isKeyOn);
+export const keysOn = (): SettingKey[] => (Object.keys(SCHEMA)).filter(isKeyOn);
 
 export const groupsOn = (): Group[] => [...new Set(keysOn().map((key) => requireSpec(key).group))];
 
 export function resolveKey(word: string | null | undefined): SettingKey | null {
   if (!word) return null;
   const lowered = word.toLowerCase();
-  const key = specOf(lowered) ? lowered as SettingKey : ALIASES[lowered] ?? null;
+  const key = specOf(lowered) ? lowered : ALIASES[lowered] ?? null;
   return key !== null && isKeyOn(key) ? key : null;
 }
 

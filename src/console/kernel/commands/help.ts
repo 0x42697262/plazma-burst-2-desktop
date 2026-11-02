@@ -1,6 +1,6 @@
 import { print, type Segment } from '../ui/log.ts';
 import { COLOR } from '../core/keys.ts';
-import { SCHEMA, ALIASES, keysOn, resolveKey, aliasesOf, keyClientOnly, affectsGame, describeKey, showValue, type SettingKey, type SettingSpec } from '../state/schema.ts';
+import { ALIASES, keysOn, specOf, resolveKey, aliasesOf, keyClientOnly, affectsGame, describeKey, showValue, type SettingKey, type SettingSpec } from '../state/schema.ts';
 import { isFeatureOn } from '../../flags.ts';
 import { settings } from '../state/store.ts';
 import { findCommand, findSubcommand, findSubcommandAnywhere, helpEntries, findHelpEntry, type CommandDefinition, type CommandHelp, type HelpEntry } from './registry.ts';
@@ -62,7 +62,8 @@ function rangeOf(spec: SettingSpec): string {
 }
 
 function printKeyHelp(key: SettingKey): void {
-  const spec: SettingSpec = SCHEMA[key];
+  const spec: SettingSpec | undefined = specOf(key);
+  if (!spec) return;
   print(TEXT.keyUsage(key), COLOR.title);
   print(TEXT.indent(describeKey(key)));
   print(TEXT.keyGroup(spec.group, rangeOf(spec), spec.default === undefined ? '' : TEXT.defaultIs(showValue(key, spec.default))), COLOR.hint);

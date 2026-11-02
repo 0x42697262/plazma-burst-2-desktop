@@ -93,3 +93,4 @@ export const ARGUMENT_ESCAPE = '\\';
 export const ARGUMENT_SEPARATOR = ', ';
 export const OPENING_BRACKETS = '[{';
 export const CLOSING_BRACKETS = ']}';
+export const SETTING = Object.freeze({ netLog: 'net_log', netLogState: 'net_log_state', netLogAll: 'net_log_all' });

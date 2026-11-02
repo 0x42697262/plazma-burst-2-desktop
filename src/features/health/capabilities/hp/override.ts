@@ -2,7 +2,7 @@ import type { FrameOverride, OverrideContext } from '#console/feature-types.ts';
 import { CAPABILITY } from '#shared/features/keys.ts';
 import { GAME_FIELDS } from '#console/kernel/game/fields.ts';
 import type { Character } from '#console/kernel/game/types.ts';
-import { KEY } from '#console/kernel/state/schema.ts';
+import { SETTING } from '#features/health/keys.ts';
 import { settings } from '#console/kernel/state/store.ts';
 import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
@@ -21,21 +21,21 @@ const valueOf = (key: string): unknown => settings.get(key);
 const numberOf = (key: string): number => valueOf(key) as number;
 
 export function hpBonusFor(base: number): number {
-  const flat = (settings.effective(KEY.HP_BONUS) as number | undefined) ?? 0;
-  const percent = (settings.effective(KEY.HP_BONUS_PCT) as number | undefined) ?? 0;
-  const flatBonus = heldBack(KEY.HP_BONUS, flat) ? 0 : flat;
-  const percentBonus = heldBack(KEY.HP_BONUS_PCT, percent) ? 0 : Math.round(base * percent / PERCENT);
+  const flat = (settings.effective(SETTING.hpBonus) as number | undefined) ?? 0;
+  const percent = (settings.effective(SETTING.hpBonusPct) as number | undefined) ?? 0;
+  const flatBonus = heldBack(SETTING.hpBonus, flat) ? 0 : flat;
+  const percentBonus = heldBack(SETTING.hpBonusPct, percent) ? 0 : Math.round(base * percent / PERCENT);
   return flatBonus + percentBonus;
 }
 
-const maxHpOn = (character: Character): boolean => settings.has(KEY.MAX_HP) && !heldBack(KEY.MAX_HP, valueOf(KEY.MAX_HP), gameMaxOf(character));
+const maxHpOn = (character: Character): boolean => settings.has(SETTING.maxHp) && !heldBack(SETTING.maxHp, valueOf(SETTING.maxHp), gameMaxOf(character));
 
 function noteHeld(character: Character): void {
   if (!guarding()) {
     heldNote = '';
     return;
   }
-  const held = [KEY.MAX_HP, KEY.HP_BONUS, KEY.HP_BONUS_PCT].filter((key) => settings.has(key) && heldBack(key, valueOf(key), gameMaxOf(character)));
+  const held = [SETTING.maxHp, SETTING.hpBonus, SETTING.hpBonusPct].filter((key) => settings.has(key) && heldBack(key, valueOf(key), gameMaxOf(character)));
   const note = held.join(NOTE_SEPARATOR);
   if (note && note !== heldNote) print(OVERRIDE_TEXT.notApplying(note), COLOR.warn);
   heldNote = note;
@@ -43,10 +43,10 @@ function noteHeld(character: Character): void {
 
 function applyMaxHp(character: Character): void {
   if (maxHpOn(character)) {
-    force(character, GAME_FIELDS.MAX_HP, valueOf(KEY.MAX_HP));
-    if (lastMaxHp.get(character) !== valueOf(KEY.MAX_HP)) {
-      character[GAME_FIELDS.HP] = numberOf(KEY.MAX_HP);
-      lastMaxHp.set(character, valueOf(KEY.MAX_HP));
+    force(character, GAME_FIELDS.MAX_HP, valueOf(SETTING.maxHp));
+    if (lastMaxHp.get(character) !== valueOf(SETTING.maxHp)) {
+      character[GAME_FIELDS.HP] = numberOf(SETTING.maxHp);
+      lastMaxHp.set(character, valueOf(SETTING.maxHp));
     }
   } else if (restore(character, GAME_FIELDS.MAX_HP)) {
     lastMaxHp.delete(character);

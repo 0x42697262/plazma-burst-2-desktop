@@ -64,3 +64,6 @@ export const PUT_METHOD = 'PUT';
 export const TRAILING_BIND_WORD = /bind $/;
 export const SCREENSHOT_COMMAND = 'screenshot';
 export const EDITOR_COMMAND = 'editor';
+export const RANKED_HOLD = Object.freeze({ aboveGameMax: 'aboveGameMax', positive: 'positive' });
+export type RankedHold = typeof RANKED_HOLD[keyof typeof RANKED_HOLD];
+export const CORE_SETTING = Object.freeze({ pageSize: 'page_size' });

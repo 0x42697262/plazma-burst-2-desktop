@@ -1,7 +1,7 @@
 import { game } from '#console/kernel/game/bindings.ts';
 import { LEVEL_REQUIRED } from '#console/kernel/game/level.ts';
 import { GAME_FIELDS } from '#console/kernel/game/fields.ts';
-import { KEY } from '#console/kernel/state/schema.ts';
+import { SETTING } from '#features/game_chat/keys.ts';
 import { settings } from '#console/kernel/state/store.ts';
 import { gameCommandHeldBack, refusal } from '#console/kernel/overrides/server-checks.ts';
 import { stripHtml } from '#console/kernel/core/words.ts';
@@ -32,7 +32,7 @@ export const gameChat = {
   inLevelFrame: () => bindings.inLevelFrame(),
   chatTextField: (GAME_FIELDS as { CHAT_TEXT: string }).CHAT_TEXT,
   levelRequired: LEVEL_REQUIRED as string,
-  builtinOn: () => (settings as { get(key: string): unknown }).get((KEY as { BUILTIN: string }).BUILTIN) === true,
+  builtinOn: () => (settings as { get(key: string): unknown }).get(SETTING.builtin) === true,
   heldBack: (text: string) => (gameCommandHeldBack as (text: string) => string | false)(text),
   refusal: (subject: string, why: string) => refusal(subject, why),
   stripHtml: (text: string) => (stripHtml as (text: string) => string)(text),

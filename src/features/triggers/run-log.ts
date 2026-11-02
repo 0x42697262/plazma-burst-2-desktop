@@ -1,7 +1,7 @@
 import { game } from '#console/kernel/game/bindings.ts';
 import { GAME_FIELDS } from '#console/kernel/game/fields.ts';
 import { isActive } from '#console/kernel/game/level.ts';
-import { KEY } from '#console/kernel/state/schema.ts';
+import { SETTING } from '#features/triggers/keys.ts';
 import { settings } from '#console/kernel/state/store.ts';
 import { FULL_CHECK_EVERY, REFUSED_MERGE_WINDOW, TRIG_HISTORY_MAX } from './constants.ts';
 import { STACK_FRAME_LIMIT, UNLIMITED } from './keys.ts';
@@ -97,7 +97,7 @@ export function syncTriggerHooks(): void {
   levelRunning = active;
   const list = game.triggers() as unknown[];
   const count = game.triggerCount();
-  const isRecording = !!settings.effective(KEY.TRIGGER_HISTORY) && active && Array.isArray(list) && typeof count === 'number';
+  const isRecording = !!settings.effective(SETTING.triggerHistory) && active && Array.isArray(list) && typeof count === 'number';
   if (!isRecording) {
     unhookAll();
     return;

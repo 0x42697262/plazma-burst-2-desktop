@@ -1,7 +1,7 @@
 import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { showKey } from '#console/kernel/state/key-names.ts';
-import { KEY } from '#console/kernel/state/schema.ts';
+import { SETTING } from '#features/map_editor/keys.ts';
 import { settings } from '#console/kernel/state/store.ts';
 import { takeOptions } from '#console/kernel/core/args.ts';
 import { player } from '#console/kernel/game/level.ts';
@@ -39,7 +39,7 @@ function editor(args: string[]): void {
     print(TEXT.already(want), COLOR.notice);
     return;
   }
-  const key = settings.effective(KEY.EDITOR_KEY);
+  const key = settings.effective(SETTING.editorKey);
   const again = key ? TEXT.keyOrCommand(showKey(stringOf(key))) : TEXT.commandOnly;
   print(want ? TEXT.on(again) : TEXT.off, COLOR.ok);
 }

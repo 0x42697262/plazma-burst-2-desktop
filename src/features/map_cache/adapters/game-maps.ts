@@ -1,6 +1,6 @@
 import { game, NET } from '#console/kernel/game/bindings.ts';
 import { isActive } from '#console/kernel/game/level.ts';
-import { KEY } from '#console/kernel/state/schema.ts';
+import { SETTING } from '#features/map_cache/keys.ts';
 import { settings } from '#console/kernel/state/store.ts';
 
 type MapBindings = {
@@ -9,7 +9,6 @@ type MapBindings = {
 };
 
 const bindings = game as unknown as MapBindings;
-const keys = KEY as unknown as { SAVE_MAPS: string; FAST_MAPS: string };
 const store = settings as unknown as { effective(key: string): unknown };
 const messageNames = NET as unknown as Record<string, string>;
 
@@ -23,8 +22,8 @@ export const gameMaps = {
   clearMapChunks: (): void => bindings.clearMapChunks(),
   setMapText: (text: string): void => bindings.setMapText(text),
   isLevelActive: (): boolean => isActive(),
-  isSaving: (): boolean => Boolean(store.effective(keys.SAVE_MAPS)),
-  isFastLoading: (): boolean => store.effective(keys.FAST_MAPS) === true,
+  isSaving: (): boolean => Boolean(store.effective(SETTING.save)),
+  isFastLoading: (): boolean => store.effective(SETTING.fast) === true,
 };
 
 export type GameMaps = typeof gameMaps;

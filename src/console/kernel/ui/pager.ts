@@ -1,6 +1,6 @@
 import { COLOR } from '../core/keys.ts';
 import { pluralSuffix } from '../core/words.ts';
-import { KEY } from '../state/schema.ts';
+import { CORE_SETTING } from '../state/keys.ts';
 import { settings } from '../state/store.ts';
 import { PAGE_WORD_COUNT } from './constants.ts';
 import { DIGITS_ONLY, PAGE_WORDS } from './keys.ts';
@@ -36,7 +36,7 @@ function printPage(list: PagedList): void {
 }
 
 export function showPaged({ title, rows, cmd, hint = '', empty = '', color = COLOR.title, page = 1 }: PagedRequest): void {
-  const size = settings.effective(KEY.PAGE_SIZE) as number;
+  const size = settings.effective(CORE_SETTING.pageSize) as number;
   const pages = Math.max(1, Math.ceil(rows.length / size));
   if (!Number.isInteger(page) || page < 1) throw new Error(TEXT.pagesStartAtOne);
   if (page > pages) throw new Error(TEXT.noPage(page, pages, pluralSuffix(pages), size));

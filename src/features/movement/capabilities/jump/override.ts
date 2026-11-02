@@ -1,13 +1,13 @@
 import type { FrameOverride, OverrideContext } from '#console/feature-types.ts';
 import { CAPABILITY } from '#shared/features/keys.ts';
 import { GAME_FIELDS } from '#console/kernel/game/fields.ts';
-import { KEY } from '#console/kernel/state/schema.ts';
+import { SETTING } from '#features/movement/keys.ts';
 import { settings } from '#console/kernel/state/store.ts';
 import { force, restore } from '#console/kernel/overrides/force.ts';
 import { OVERRIDE_NAME } from '../../keys.ts';
 
 function apply({ character }: OverrideContext): void {
-  if (settings.has(KEY.JUMP)) force(character, GAME_FIELDS.JUMP, settings.get(KEY.JUMP));
+  if (settings.has(SETTING.jump)) force(character, GAME_FIELDS.JUMP, settings.get(SETTING.jump));
   else restore(character, GAME_FIELDS.JUMP);
 }
 

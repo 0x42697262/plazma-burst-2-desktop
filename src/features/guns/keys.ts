@@ -16,3 +16,4 @@ export const MATCH_SEPARATOR = ', ';
 export const WORD_SEPARATOR = ' ';
 export const COMMAND = Object.freeze({ guns: 'guns', gunsAliases: ['weapons'], give: 'give', drop: 'drop', dropAliases: ['throw'] });
 export const OVERRIDE_NAME = Object.freeze({ gun: 'held gun override', bullets: 'bullet override' });
+export const SETTING = Object.freeze({ bulletDamage: 'bullet_damage', bulletSpeed: 'bullet_speed', bulletLife: 'bullet_life', penetration: 'penetration', fireRate: 'fire_rate', pellets: 'pellets', spread: 'spread', recoil: 'recoil' });

@@ -1,4 +1,5 @@
 export const TEXT = Object.freeze({
+  settingTwice: (key: string) => `the setting "${key}" is defined twice`,
   unknownModifier: (modifier: string) => `unknown modifier "${modifier}" (use ctrl+, alt+, shift+)`,
   notAKey: (raw: string) => `"${raw}" is not a key name. Examples: f, 5, f2, space, numpad1, shift+t. "keyname" shows a key's name`,
   modifierAlone: 'a modifier alone cannot be bound; use e.g. shift+f',

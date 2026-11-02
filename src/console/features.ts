@@ -1,3 +1,4 @@
+import { registerSettings } from './kernel/state/schema.ts';
 import type { ConsoleFeature, CommandDefinition, ConsoleTick, FrameHook, FrameOverride } from './feature-types.ts';
 import type { ListSection } from './kernel/list-sections.ts';
 import { isCapabilityOn, isFeatureOn } from './flags.ts';
@@ -46,6 +47,8 @@ export const CONSOLE_FEATURES: readonly ConsoleFeature[] = Object.freeze([
   mapEditorConsole,
   p2pHostConsole,
 ]);
+
+for (const feature of CONSOLE_FEATURES) if (feature.settings) registerSettings(feature.id, feature.settings);
 
 export const enabledConsoleFeatures = (features: readonly ConsoleFeature[] = CONSOLE_FEATURES): ConsoleFeature[] => features.filter((feature) => isFeatureOn(feature.id));
 

@@ -1,6 +1,6 @@
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { showKey, eventKeyName, type KeyEvent } from '#console/kernel/state/key-names.ts';
-import { KEY } from '#console/kernel/state/schema.ts';
+import { SETTING } from '#features/map_editor/keys.ts';
 import { settings } from '#console/kernel/state/store.ts';
 import { stringOf } from '#kernel/text/text-of.ts';
 import {
@@ -19,7 +19,7 @@ export { editorOn, editorTick };
 onChange((what) => {
   if (what !== NOTICE.shown) return;
   const on = editorShown();
-  const key = settings.effective(KEY.EDITOR_KEY);
+  const key = settings.effective(SETTING.editorKey);
   showEditorView(on);
   showPanels(on, key ? showKey(stringOf(key)) : '');
   captureMouse(on, (error) => { say(PANELS_TEXT.error(error.message), COLOR.error); });

@@ -1,13 +1,8 @@
-import { EDITOR_COMMAND, SCREENSHOT_COMMAND } from './keys.ts';
-import { TEXT } from './text.ts';
-import { KEY } from './schema.ts';
+import { SCHEMA, type Hotkey } from './schema.ts';
 import { settings } from './store.ts';
 
-export type Hotkey = Readonly<{ key: string; what: string; command: string }>;
+export type BoundHotkey = Hotkey & Readonly<{ key: string }>;
 
-export const HOTKEYS: readonly Hotkey[] = Object.freeze([
-  { key: KEY.SCREENSHOT_KEY, what: TEXT.screenshotKey, command: SCREENSHOT_COMMAND },
-  { key: KEY.EDITOR_KEY, what: TEXT.editorKey, command: EDITOR_COMMAND },
-]);
+export const hotkeys = (): BoundHotkey[] => Object.entries(SCHEMA).flatMap(([key, spec]) => (spec.hotkey ? [{ key, ...spec.hotkey }] : []));
 
-export const hotkeyOf = (name: string): Hotkey | undefined => HOTKEYS.find((hotkey) => settings.effective(hotkey.key) === name);
+export const hotkeyOf = (name: string): BoundHotkey | undefined => hotkeys().find((hotkey) => settings.effective(hotkey.key) === name);

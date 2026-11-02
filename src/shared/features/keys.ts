@@ -65,7 +65,7 @@ export const CAPABILITY = Object.freeze({
 });
 
 export const CAPABILITY_MODULE = Object.freeze({
-  triggers: Object.freeze({ [CAPABILITY.triggers.list]: 'triggers', [CAPABILITY.triggers.history]: 'triggers', [CAPABILITY.triggers.find]: 'triggers', [CAPABILITY.triggers.run]: 'triggers', [CAPABILITY.triggers.exec]: 'triggers', [CAPABILITY.triggers.actions]: 'triggers', [CAPABILITY.triggers.regionsRun]: 'regions', [CAPABILITY.triggers.varsSet]: 'vars', [CAPABILITY.triggers.varsSync]: 'vars', [CAPABILITY.triggers.logicShow]: 'logic', [CAPABILITY.triggers.logicTree]: 'logic' }),
+  triggers: Object.freeze({ [CAPABILITY.triggers.list]: 'triggers', [CAPABILITY.triggers.find]: 'triggers', [CAPABILITY.triggers.run]: 'triggers', [CAPABILITY.triggers.exec]: 'triggers', [CAPABILITY.triggers.actions]: 'triggers', [CAPABILITY.triggers.regionsRun]: 'regions', [CAPABILITY.triggers.varsSet]: 'vars', [CAPABILITY.triggers.varsSync]: 'vars', [CAPABILITY.triggers.logicShow]: 'logic', [CAPABILITY.triggers.logicTree]: 'logic' }),
 });
 
 export const PAGE_CAPABILITIES_GLOBAL = 'PB2_CAPABILITIES';

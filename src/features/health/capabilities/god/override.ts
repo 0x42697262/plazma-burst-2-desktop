@@ -2,13 +2,13 @@ import type { FrameOverride, OverrideContext } from '#console/feature-types.ts';
 import { CAPABILITY } from '#shared/features/keys.ts';
 import { GAME_FIELDS } from '#console/kernel/game/fields.ts';
 import type { Character } from '#console/kernel/game/types.ts';
-import { KEY } from '#console/kernel/state/schema.ts';
+import { SETTING } from '#features/health/keys.ts';
 import { settings } from '#console/kernel/state/store.ts';
 import { OVERRIDE_NAME } from '../../keys.ts';
 import { clampToMax, healthOf, isOverRankedLimit } from '../../services/character.ts';
 import { installGod, uninstallGodExcept, uninstallAllGod } from './god.ts';
 
-const isGodOn = (): boolean => !!settings.get(KEY.GOD);
+const isGodOn = (): boolean => !!settings.get(SETTING.god);
 
 function applyGod(character: Character): void {
   uninstallGodExcept(isGodOn() ? character : null);
