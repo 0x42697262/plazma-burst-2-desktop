@@ -4,6 +4,11 @@ Feature flag `guns` (on by default; all modes). Code: `src/features/guns/`. The 
 settings (`fire_rate`, `pellets`, `spread` …) are console keys and stay with the
 per-frame overrides.
 
+Capabilities, one folder each under `capabilities/`: `guns.list` (`guns`), `guns.give`,
+`guns.drop`, `guns.gun` (the keys `fire_rate`, `pellets`, `spread`, `recoil` and the held
+gun's override) and `guns.bullets` (`bullet_damage`, `bullet_speed`, `bullet_life`,
+`penetration` and the bullet override).
+
 - `guns [filter]` lists every gun the game can build, read from its own gun factory, in
   three groups: standard (`gun_…`), custom (community guns) and items (`item_…`). A
   grenade item's class is `item_grenade_<name>`, whatever its model is called; that is

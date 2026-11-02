@@ -39,7 +39,7 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
     capabilities: { [CAPABILITY.health.god]: [], [CAPABILITY.health.hp]: [], [CAPABILITY.health.heal]: [], [CAPABILITY.health.revive]: [] },
   }),
   consoleFeature(FEATURE.movement, { capabilities: noNeeds(CAPABILITY.movement) }),
-  consoleFeature(FEATURE.guns),
+  consoleFeature(FEATURE.guns, { capabilities: noNeeds(CAPABILITY.guns) }),
   consoleFeature(FEATURE.binds),
   consoleFeature(FEATURE.triggers),
   consoleFeature(FEATURE.trace),

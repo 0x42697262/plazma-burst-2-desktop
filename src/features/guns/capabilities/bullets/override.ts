@@ -1,44 +1,18 @@
-import type { FrameOverride, OverrideContext } from '#console/feature-types.ts';
+import type { FrameOverride } from '#console/feature-types.ts';
 import { game } from '#console/kernel/game/bindings.ts';
 import { GAME_FIELDS } from '#console/kernel/game/fields.ts';
 import { KEY } from '#console/kernel/state/schema.ts';
 import { settings } from '#console/kernel/state/store.ts';
-import { force, original, restore, restoreObj } from '#console/kernel/overrides/force.ts';
-import { NO_WEAPON } from '../constants.ts';
-import { OVERRIDE_NAME } from '../keys.ts';
+import { OVERRIDE_NAME } from '../../keys.ts';
+import { CAPABILITY } from '#shared/features/keys.ts';
 
 type Bullet = Record<string, unknown> & { spx: number; spy: number };
 
 const seenBullets = new WeakSet<object>();
-const forcedGuns = new Set<object>();
 
 const isSet = (key: string): boolean => settings.has(key);
 const valueOf = (key: string): unknown => settings.get(key);
 const numberOf = (key: string): number => valueOf(key) as number;
-
-function forceMultiplied(target: Record<string, unknown>, field: string, key: string): void {
-  if (isSet(key)) force(target, field, (original(target, field) as number) * numberOf(key));
-  else restore(target, field);
-}
-
-function applyGun({ character }: OverrideContext): void {
-  const guns = game.guns();
-  const held = character.curwea >= NO_WEAPON && guns ? guns[character.curwea] ?? null : null;
-  for (const gun of [...forcedGuns]) {
-    if (gun !== held) {
-      restoreObj(gun);
-      forcedGuns.delete(gun);
-    }
-  }
-  if (!held || typeof held !== 'object') return;
-  forcedGuns.add(held);
-  forceMultiplied(held, GAME_FIELDS.G_RATE, KEY.FIRE_RATE);
-  if (isSet(KEY.PELLETS)) force(held, GAME_FIELDS.G_PELLETS, valueOf(KEY.PELLETS));
-  else restore(held, GAME_FIELDS.G_PELLETS);
-  forceMultiplied(held, GAME_FIELDS.G_SPREAD, KEY.SPREAD);
-  if (isSet(KEY.SPREAD) && valueOf(KEY.SPREAD) === 0) held[GAME_FIELDS.G_BLOOM] = 0;
-  forceMultiplied(held, GAME_FIELDS.G_RECOIL, KEY.RECOIL);
-}
 
 function keepPenetration(bullet: Bullet, keep: number): void {
   let damage = bullet[GAME_FIELDS.B_DMG];
@@ -53,7 +27,7 @@ function keepPenetration(bullet: Bullet, keep: number): void {
   });
 }
 
-function applyBullets(): void {
+function apply(): void {
   const bullets = game.bullets() as (Bullet | null | undefined)[] | null;
   const me = game.me();
   if (!bullets) return;
@@ -71,9 +45,6 @@ function applyBullets(): void {
   }
 }
 
-function apply(context: OverrideContext): void {
-  applyGun(context);
-  applyBullets();
-}
+const nothingToUndo = (): void => undefined;
 
-export const gunsOverride: FrameOverride = Object.freeze({ name: OVERRIDE_NAME, apply, cleanup: () => { forcedGuns.clear(); } });
+export const bulletsOverride: FrameOverride = Object.freeze({ name: OVERRIDE_NAME.bullets, capability: CAPABILITY.guns.bullets, apply, cleanup: nothingToUndo });

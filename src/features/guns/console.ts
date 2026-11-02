@@ -1,6 +1,5 @@
 import { FEATURE } from '#shared/features/keys.ts';
-import type { ConsoleFeature } from '#console/feature-types.ts';
-import { gunCommands, gunsCommand } from './entry/commands.ts';
-import { gunsOverride } from './services/overrides.ts';
+import { consoleFeatureOf } from '#console/feature-types.ts';
+import { GUNS_PARTS } from './capabilities.ts';
 
-export const gunsConsole: ConsoleFeature = Object.freeze({ id: FEATURE.guns, commands: [gunsCommand, ...gunCommands], overrides: [gunsOverride] });
+export const gunsConsole = consoleFeatureOf(FEATURE.guns, GUNS_PARTS);
