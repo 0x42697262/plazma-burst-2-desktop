@@ -45,6 +45,7 @@ export const CAPABILITY_SEPARATOR = '.';
 export const capabilityId = (feature: FeatureId, name: string): string => feature + CAPABILITY_SEPARATOR + name;
 
 export const CAPABILITY = Object.freeze({
+  profiles: Object.freeze({ status: 'profiles.status', list: 'profiles.list', show: 'profiles.show', use: 'profiles.use', set: 'profiles.set', bind: 'profiles.bind', onload: 'profiles.onload', delete: 'profiles.delete' }),
   netlog: Object.freeze({ status: 'netlog.status', show: 'netlog.show', runs: 'netlog.runs', all: 'netlog.all', record: 'netlog.record', state: 'netlog.state' }),
   scanBypass: Object.freeze({ status: 'scan_bypass.status', checks: 'scan_bypass.checks' }),
   fingerprint: Object.freeze({ run: 'fingerprint.run', list: 'fingerprint.list' }),

@@ -32,7 +32,7 @@ const consoleFeature = (id: FeatureId, spec: FeatureSpec = {}): FeatureDefinitio
 export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   define(FEATURE.devConsole),
   consoleFeature(FEATURE.consoleCore, { locked: true }),
-  consoleFeature(FEATURE.profiles),
+  consoleFeature(FEATURE.profiles, { capabilities: { [CAPABILITY.profiles.status]: [], [CAPABILITY.profiles.list]: [], [CAPABILITY.profiles.show]: [], [CAPABILITY.profiles.use]: [], [CAPABILITY.profiles.set]: [], [CAPABILITY.profiles.onload]: [], [CAPABILITY.profiles.delete]: [], [CAPABILITY.profiles.bind]: [CAPABILITY.binds.bind] } }),
   consoleFeature(FEATURE.teleport),
   consoleFeature(FEATURE.playerInfo, { capabilities: noNeeds(CAPABILITY.playerInfo) }),
   consoleFeature(FEATURE.health, {

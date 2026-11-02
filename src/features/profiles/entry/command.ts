@@ -1,3 +1,4 @@
+import { CAPABILITY } from '#shared/features/keys.ts';
 import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { BIND_KEY_WIDTH, BIND_MIN_ARGUMENTS, KEY_WIDTH, NAME_WIDTH, SET_ARGUMENTS, UNSET_ARGUMENTS, USE_MAX_ARGUMENTS, VALUE_WIDTH } from '../constants.ts';
@@ -188,20 +189,21 @@ const { sub } = TEXT;
 
 export const profileCommand = Object.freeze({
   name: COMMAND.name,
+  capability: CAPABILITY.profiles.status,
   aliases: COMMAND.aliases,
   usage: TEXT.usage,
   desc: TEXT.description,
   help: { about: TEXT.about(context.gameKeyGroups()), args: TEXT.args, examples: TEXT.examples, notes: TEXT.notes, see: TEXT.see },
   run: status,
   subcommands: [
-    { name: COMMAND.list, aliases: COMMAND.listAliases, usage: sub.list.usage, desc: sub.list.desc, help: { see: sub.list.see }, run: list },
-    { name: COMMAND.show, usage: sub.show.usage, desc: sub.show.desc, help: { see: sub.show.see }, run: show },
-    { name: COMMAND.use, usage: sub.use.usage, desc: sub.use.desc, help: { about: sub.use.about, see: sub.use.see }, run: use },
-    { name: COMMAND.set, usage: sub.set.usage, desc: sub.set.desc, help: { see: sub.set.see }, run: setValue },
-    { name: COMMAND.unset, aliases: COMMAND.unsetAliases, usage: sub.unset.usage, desc: sub.unset.desc, help: { see: sub.unset.see }, run: unsetValue },
-    { name: COMMAND.bind, usage: sub.bind.usage, desc: sub.bind.desc, keyArg: BIND_KEY_ARGUMENT, help: { about: sub.bind.about, see: sub.bind.see }, run: bind },
-    { name: COMMAND.unbind, usage: sub.unbind.usage, desc: sub.unbind.desc, keyArg: BIND_KEY_ARGUMENT, help: { see: sub.unbind.see }, run: unbind },
-    { name: COMMAND.onload, aliases: COMMAND.onloadAliases, usage: sub.onload.usage, desc: sub.onload.desc, help: { about: sub.onload.about, see: sub.onload.see }, run: onload },
-    { name: COMMAND.delete, aliases: COMMAND.deleteAliases, usage: sub.delete.usage, desc: sub.delete.desc, help: { see: sub.delete.see }, run: remove },
+    { name: COMMAND.list, capability: CAPABILITY.profiles.list, aliases: COMMAND.listAliases, usage: sub.list.usage, desc: sub.list.desc, help: { see: sub.list.see }, run: list },
+    { name: COMMAND.show, capability: CAPABILITY.profiles.show, usage: sub.show.usage, desc: sub.show.desc, help: { see: sub.show.see }, run: show },
+    { name: COMMAND.use, capability: CAPABILITY.profiles.use, usage: sub.use.usage, desc: sub.use.desc, help: { about: sub.use.about, see: sub.use.see }, run: use },
+    { name: COMMAND.set, capability: CAPABILITY.profiles.set, usage: sub.set.usage, desc: sub.set.desc, help: { see: sub.set.see }, run: setValue },
+    { name: COMMAND.unset, capability: CAPABILITY.profiles.set, aliases: COMMAND.unsetAliases, usage: sub.unset.usage, desc: sub.unset.desc, help: { see: sub.unset.see }, run: unsetValue },
+    { name: COMMAND.bind, capability: CAPABILITY.profiles.bind, usage: sub.bind.usage, desc: sub.bind.desc, keyArg: BIND_KEY_ARGUMENT, help: { about: sub.bind.about, see: sub.bind.see }, run: bind },
+    { name: COMMAND.unbind, capability: CAPABILITY.profiles.bind, usage: sub.unbind.usage, desc: sub.unbind.desc, keyArg: BIND_KEY_ARGUMENT, help: { see: sub.unbind.see }, run: unbind },
+    { name: COMMAND.onload, capability: CAPABILITY.profiles.onload, aliases: COMMAND.onloadAliases, usage: sub.onload.usage, desc: sub.onload.desc, help: { about: sub.onload.about, see: sub.onload.see }, run: onload },
+    { name: COMMAND.delete, capability: CAPABILITY.profiles.delete, aliases: COMMAND.deleteAliases, usage: sub.delete.usage, desc: sub.delete.desc, help: { see: sub.delete.see }, run: remove },
   ],
 });

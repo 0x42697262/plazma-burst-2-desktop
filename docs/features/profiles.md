@@ -4,6 +4,11 @@ Feature flag `profiles` (on by default; all modes). Code: `src/features/profiles
 profile data itself is kept by the console's store (`src/console/kernel/state/store.ts`,
 the `profiles` and `maps` parts of `dev-overrides.json`).
 
+Capabilities: `profiles.status` (`profile`), `profiles.list`, `profiles.show`,
+`profiles.use`, `profiles.set` (`set`, `unset`), `profiles.bind` (`bind`, `unbind`; needs
+`binds.bind`), `profiles.onload` and `profiles.delete`. Using the active profile on each
+map is the feature's own.
+
 - **What a profile holds.** A profile is a set of game keys (`god`, `speed` …; never
   console keys, which are the same on every map), key binds, and `onload` commands. A
   map uses one profile, and on that map its values and binds win over yours. Several
