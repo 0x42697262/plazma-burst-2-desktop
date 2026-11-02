@@ -47,6 +47,21 @@ only what the edition needs: the page core always, the dev console only with
 `dev_console`, the server list page only with `server_list`, the hooks runtime only with
 `hooks`, the remote-play client only with `remote_play`.
 
+## Which edition is in `dist/`
+
+Every build writes to the same `dist/`, so the last build wins. `npm start`,
+`npm run sadburst`, `npm run smoke` and `npm run verify` all build `dev` first, so they
+replace an edition built before them. To see which one is there:
+
+```
+grep -o '"name": "[a-z-]*"' dist/wrapper/main.cjs
+```
+
+`npm run build -- --edition` replaces only the folders that edition builds: a folder it
+leaves out (`dist/console/`, `dist/hooks/` …) can still be there from an earlier build.
+`npm run release` empties `dist/` first. To package an edition for players, see
+[releases](releases.md).
+
 ## What the build adds or refuses
 
 The build resolves the list with the feature catalog (`src/kernel/editions/resolve.ts`):

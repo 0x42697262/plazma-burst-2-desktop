@@ -30,6 +30,9 @@ npm start            # builds the page scripts (dist/page/), then starts the gam
 
 Working on the code: `npm run verify` runs lint, the type check, the tests and the build; see [AGENTS.md](AGENTS.md).
 
+Building an app for players (an edition with only some features) and packaging it for
+Linux and Windows: [docs/operations/releases.md](docs/operations/releases.md#step-by-step).
+
 In the game, press Shift+`` ` `` (`~`) for the dev console and type `help`.
 
 To run a server of your own for friends, without the official site: `npm run server`, and
