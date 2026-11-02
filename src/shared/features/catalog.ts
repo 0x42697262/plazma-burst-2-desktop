@@ -48,7 +48,7 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   consoleFeature(FEATURE.gameChat, { capabilities: noNeeds(CAPABILITY.gameChat) }),
   consoleFeature(FEATURE.zoom),
   consoleFeature(FEATURE.screenshot, { capabilities: { [CAPABILITY.screenshot.screenshot]: [], [CAPABILITY.screenshot.key]: [CAPABILITY.screenshot.screenshot] } }),
-  consoleFeature(FEATURE.netlog),
+  consoleFeature(FEATURE.netlog, { capabilities: { [CAPABILITY.netlog.status]: [], [CAPABILITY.netlog.show]: [], [CAPABILITY.netlog.runs]: [], [CAPABILITY.netlog.record]: [], [CAPABILITY.netlog.all]: [CAPABILITY.netlog.record], [CAPABILITY.netlog.state]: [CAPABILITY.netlog.record] } }),
   consoleFeature(FEATURE.fingerprint, { availableIn: LOCAL_AND_SERVER, capabilities: noNeeds(CAPABILITY.fingerprint) }),
   define(FEATURE.lobbyTaskGuard, { availableIn: LOCAL_ONLY }),
   consoleFeature(FEATURE.scanBypass, { availableIn: LOCAL_AND_SERVER, capabilities: noNeeds(CAPABILITY.scanBypass) }),

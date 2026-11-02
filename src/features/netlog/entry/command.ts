@@ -1,3 +1,4 @@
+import { CAPABILITY } from '#shared/features/keys.ts';
 import { print } from '#console/kernel/ui/log.ts';
 import { showPaged, takePage } from '#console/kernel/ui/pager.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
@@ -149,6 +150,7 @@ export function createNetlogCommand(deps: NetlogCommandDeps) {
 
   return Object.freeze({
     name: COMMAND.name,
+    capability: CAPABILITY.netlog.status,
     aliases: COMMAND.aliases,
     usage: COMMAND_TEXT.usage,
     desc: COMMAND_TEXT.description,
@@ -157,6 +159,7 @@ export function createNetlogCommand(deps: NetlogCommandDeps) {
     subcommands: [
       {
         name: COMMAND.show,
+        capability: CAPABILITY.netlog.show,
         aliases: COMMAND.showAliases,
         usage: COMMAND_TEXT.show.usage,
         desc: COMMAND_TEXT.show.description,
@@ -165,6 +168,7 @@ export function createNetlogCommand(deps: NetlogCommandDeps) {
       },
       {
         name: COMMAND.runs,
+        capability: CAPABILITY.netlog.runs,
         aliases: COMMAND.runsAliases,
         remote: false,
         usage: COMMAND_TEXT.runs.usage,
@@ -174,6 +178,7 @@ export function createNetlogCommand(deps: NetlogCommandDeps) {
       },
       {
         name: COMMAND.all,
+        capability: CAPABILITY.netlog.all,
         aliases: COMMAND.allAliases,
         usage: COMMAND_TEXT.all.usage,
         desc: COMMAND_TEXT.all.description,
@@ -182,6 +187,7 @@ export function createNetlogCommand(deps: NetlogCommandDeps) {
       },
       {
         name: COMMAND.on,
+        capability: CAPABILITY.netlog.record,
         usage: COMMAND_TEXT.on.usage,
         desc: COMMAND_TEXT.on.description,
         help: { about: COMMAND_TEXT.on.about, see: COMMAND_TEXT.on.see },
@@ -189,6 +195,7 @@ export function createNetlogCommand(deps: NetlogCommandDeps) {
       },
       {
         name: COMMAND.off,
+        capability: CAPABILITY.netlog.record,
         usage: COMMAND_TEXT.off.usage,
         desc: COMMAND_TEXT.off.description,
         help: { about: COMMAND_TEXT.off.about, see: COMMAND_TEXT.off.see },

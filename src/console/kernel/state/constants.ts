@@ -105,7 +105,7 @@ export const SCHEMA = Object.freeze({
     phrases: [/^fast\s+load(\s+maps?)?(?=\s|$)/i],
   },
   net_log: {
-    feature: FEATURE.netlog, type: SETTING_TYPE.bool, group: GROUP.network, default: true,
+    feature: FEATURE.netlog, capability: CAPABILITY.netlog.record, type: SETTING_TYPE.bool, group: GROUP.network, default: true,
     desc: 'Record the game\'s network messages and packet losses to data/netlogs/, one readable file per run ' +
       '("netlog" shows it)',
     about: ['Every message the game sends and receives on its connections, packet losses',
@@ -114,13 +114,13 @@ export const SCHEMA = Object.freeze({
       'run and game window. "netlog" shows it here, "netlog runs" lists other instances.'],
   },
   net_log_state: {
-    feature: FEATURE.netlog, type: SETTING_TYPE.bool, group: GROUP.network, default: false,
+    feature: FEATURE.netlog, capability: CAPABILITY.netlog.state, type: SETTING_TYPE.bool, group: GROUP.network, default: false,
     desc: 'Also record every unreliable state update (player state, 60 to 250 a second: large files)',
     about: ['State updates are sent every 16 ms over a socket and every 4 ms peer to peer.',
       'Off, they are only counted (STAT lines); on, each one is written too.'],
   },
   net_log_all: {
-    feature: FEATURE.netlog, type: SETTING_TYPE.bool, group: GROUP.network, default: false,
+    feature: FEATURE.netlog, capability: CAPABILITY.netlog.all, type: SETTING_TYPE.bool, group: GROUP.network, default: false,
     desc: 'Log everything: every packet (PKT: size, ack, what it carries) and every state update, decoded (very large files)',
     about: ['Adds a PKT line for every packet sent and received, also the ones that only',
       'carry an acknowledgement, and turns on net_log_state: every unreliable state',

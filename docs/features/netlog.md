@@ -5,6 +5,11 @@ Recording itself also follows the console setting `net_log`, which is on by defa
 Code: `src/features/netlog/`. The protocol codec and the method tap live in the console
 kernel (`src/console/kernel/net/`), because the fingerprint capture uses them too.
 
+Capabilities: `netlog.status` (`netlog`), `netlog.show`, `netlog.runs`, `netlog.record`
+(recording itself, the `net_log` key, `netlog on` and `off`), and on top of recording
+`netlog.all` (`netlog all`, `net_log_all`) and `netlog.state` (`net_log_state`). Without
+`netlog.record` nothing is recorded; `show` and `runs` still read earlier logs.
+
 ## What it does
 
 The game's connections are read in the page, the lines are posted to the wrapper, and
