@@ -1,6 +1,6 @@
 # 0006. Capabilities: one flag per command, inside feature folders
 
-Date: 2026-11-02. Status: accepted.
+Date: 2026-11-02. Status: accepted, done.
 
 ## Context
 Editions ([ADR 0005](0005-editions-and-page-core.md)) pick features, and a feature is a
@@ -49,7 +49,25 @@ overrides of health, movement and guns (`src/console/kernel/overrides/frame.ts`)
 ## Consequences
 - The catalog grows from about 30 features to about 80 capabilities; `--features` lists
   them by feature.
-- A test builds every capability alone as an edition, boots it, and checks that only it
-  is there. New coupling fails that test.
+- A test builds every capability alone as an edition and checks that no file of a
+  left-out feature or of a left-out capability's folder is in it. New coupling fails that
+  test.
 - Order of work: the console core cleanup; the capability model in the catalog,
   resolver and editions; then features one by one, each with its capabilities and tests.
+
+## Outcome
+- Split into capabilities: `health`, `movement`, `guns`, `player_info`, `binds`,
+  `game_chat`, `screenshot`, `map_cache`, `fingerprint`, `scan_bypass`, `netlog`,
+  `profiles`, `server_list` (the `servers` command), `triggers` and `p2p_host`. Features
+  with one command (`teleport`, `zoom`, `trace`, `js_eval`, `hooks`) and the map editor are
+  one capability: the feature itself.
+- **Code** is left out per capability where a capability has its own folder: health,
+  movement, guns, player_info, binds, game_chat, screenshot, map_cache, and one folder per
+  command in triggers. Subcommands that share their command's module (the `triggers`,
+  `regions`, `vars`, `logic`, `profile`, `servers`, `netlog`, `fingerprint`, `bypass` and
+  `server` subcommands) are left out by **registration**: they do not exist in the app,
+  but their code ships with the command.
+- A container's usage line names only the subcommands it has; the longer help text of a
+  command can still mention a subcommand the app does not have.
+- `src/console/kernel/commands/capability-audit.test.ts` fails when a command,
+  subcommand, override or key of a split feature names no capability.

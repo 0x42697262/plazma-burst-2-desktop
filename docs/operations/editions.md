@@ -58,6 +58,19 @@ The build resolves the list with the feature catalog (`src/kernel/editions/resol
   always protected from their code and their certificates;
 - an unknown id stops the build.
 
+## Capabilities you can pick
+
+`npm start -- --features` lists every feature and, under it, its capabilities
+([ADR 0006](../adr/0006-capabilities.md) has the outcome). Examples:
+
+| `"features"` | The app has |
+|---|---|
+| `["teleport"]` | `tp` |
+| `["health.god"]` | the `god` key |
+| `["triggers.find"]` | `triggers find` |
+| `["trace", "binds.bind"]` | `trace`, `bind`, `unbind` |
+| `["server_list", "client_sadburst"]` | the player client |
+
 ## How left-out code stays out
 
 - The build's esbuild plugin (`src/tools/build/edition-plugin.ts`) compiles the edition
