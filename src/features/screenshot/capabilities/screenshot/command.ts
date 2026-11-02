@@ -7,9 +7,9 @@ import { COLOR } from '#console/kernel/core/keys.ts';
 import { takeOptions } from '#console/kernel/core/args.ts';
 import { ROUTE } from '#shared/contract/routes.ts';
 import { HTTP_METHOD } from '#shared/contract/keys.ts';
-import { NOTICE_MS, NOTICE_STYLE, SETTLE_FRAMES } from '../constants.ts';
-import { COMMAND, NOTICE_TAG } from '../keys.ts';
-import { TEXT } from '../text.ts';
+import { NOTICE_MS, NOTICE_STYLE, SETTLE_FRAMES } from '../../constants.ts';
+import { COMMAND, NOTICE_TAG } from '../../keys.ts';
+import { TEXT } from '../../text.ts';
 
 type Overlay = { append(node: unknown): void };
 type Removable = { remove(): void };

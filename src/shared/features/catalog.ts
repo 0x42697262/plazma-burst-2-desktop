@@ -47,7 +47,7 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   consoleFeature(FEATURE.mapEditor, { requires: [FEATURE.devConsole, FEATURE.mapCache, FEATURE.triggers] }),
   consoleFeature(FEATURE.gameChat, { capabilities: noNeeds(CAPABILITY.gameChat) }),
   consoleFeature(FEATURE.zoom),
-  consoleFeature(FEATURE.screenshot),
+  consoleFeature(FEATURE.screenshot, { capabilities: { [CAPABILITY.screenshot.screenshot]: [], [CAPABILITY.screenshot.key]: [CAPABILITY.screenshot.screenshot] } }),
   consoleFeature(FEATURE.netlog),
   consoleFeature(FEATURE.fingerprint, { availableIn: LOCAL_AND_SERVER }),
   define(FEATURE.lobbyTaskGuard, { availableIn: LOCAL_ONLY }),

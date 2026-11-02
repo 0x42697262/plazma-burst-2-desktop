@@ -56,7 +56,7 @@ test('own server: the game\'s server code logs players in, lists, creates and jo
   const until = async (condition: () => unknown, ms = 8000) => { for (let waited = 0; waited < ms; waited += 50) { if (condition()) return true; await wait(50); } return false; };
   const clients: any[] = [];
   try {
-    assert.ok(await until(() => /" on 127\.0\.0\.1:\d+/.test(out)), out);
+    assert.ok(await until(() => /" on 127\.0\.0\.1:\d+/.test(out) && /fingerprint: [0-9A-F:]{95}/.test(out)), out);
     const url = `https://127.0.0.1:${out.match(/" on 127\.0\.0\.1:(\d+)/)?.[1]}`;
     const port = Number(out.match(/" on 127\.0\.0\.1:(\d+)/)?.[1]);
     const fingerprint = out.match(/fingerprint: ([0-9A-F:]{95})/)?.[1];

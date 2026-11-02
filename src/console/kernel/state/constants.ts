@@ -76,7 +76,7 @@ export const SCHEMA = Object.freeze({
     example: '50',
   },
   screenshot_key: {
-    feature: FEATURE.screenshot, type: SETTING_TYPE.key, group: GROUP.console, default: 'f12',
+    feature: FEATURE.screenshot, capability: CAPABILITY.screenshot.key, type: SETTING_TYPE.key, group: GROUP.console, default: 'f12',
     desc: 'Key that saves a screenshot to data/screenshots/, anywhere in the game; off = none',
     about: ['Works in menus, levels and with the console open (the console is left out of',
       'the picture). A function key works while you type; other keys wait until you',
