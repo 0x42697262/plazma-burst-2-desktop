@@ -12,7 +12,7 @@ export const HASH_ENCODING = 'hex';
 export const TEXT_ENCODING = 'utf8';
 export const STATUS = Object.freeze({ new: 'new', updated: 'updated', same: 'same' });
 export type SaveStatus = typeof STATUS[keyof typeof STATUS];
-export const COMMAND = Object.freeze({ name: 'fingerprint', aliases: ['fp'], list: 'list', listAliases: ['versions', 'ls'], raw: 'raw' });
+export const COMMAND = Object.freeze({ name: 'fingerprint', aliases: ['fp'], raw: 'raw' });
 
 export const LINE_COMMENT = '//';
 export const BLOCK_COMMENT_START = '/*';

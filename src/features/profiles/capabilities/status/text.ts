@@ -1,0 +1,26 @@
+export const STATUS_TEXT = Object.freeze({
+  noMapLoaded: 'No map loaded yet. Profiles apply on the maps that use them.',
+  mapWithout: (id: string) => `Map ${id}: no profile, your settings apply.`,
+  mapUses: (id: string, name: string) => `Map ${id} uses profile "${name}", which wins over your settings and binds here:`,
+  usage: 'profile',
+  description: 'Settings, binds and start-up commands for some maps: a profile used by a map wins over yours there',
+  about: (groups: readonly string[]) => [
+    'A profile holds settings (god, speed... the names "list" shows), key binds, and',
+    'commands to run as a level starts. A map uses one profile, and on that',
+    'map its settings and binds win over yours; whatever it does not set is yours as',
+    'usual. Several maps can use the same profile, so one change applies to all.',
+    'A map is the match\'s map in multiplayer, otherwise the map loaded last: a',
+    'campaign level ("c31a") or the custom map ID you typed.',
+    `Profile settings are game keys only (${groups.join(', ')}), not console keys.`,
+  ],
+  args: [['(nothing)', 'this map: its profile and what it sets']],
+  examples: [['list', 'values from the profile are tagged [profile hardcore, yours: on]']],
+  notes: [
+    'In data/dev-overrides.json: "profiles": { "hardcore": { "god": false, "binds":',
+    '{ "shift+j": "heal" }, "onload": "heal; pos" } } and "maps": { "<map id>": "hardcore" }.',
+    '"onload" may also be a list of commands. Saving the file while the game runs reloads',
+    'it, and anything wrong in it (an unknown key, a value out of range) is printed here.',
+    'Onload runs each time a level starts: joining a match, or restarting a level.',
+  ],
+  see: ['list', 'set'],
+});

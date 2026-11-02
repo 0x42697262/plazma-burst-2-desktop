@@ -2,7 +2,7 @@ import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { MODEL_WIDTH, NUMBER_WIDTH, SLOT_WIDTH } from '../../constants.ts';
 import { COMMAND, GUN_KINDS, INDEX_PREFIX } from '../../keys.ts';
-import { TEXT } from '../../text.ts';
+import { TEXT } from './text.ts';
 import { filterGuns, slotText } from '../../domain/catalog.ts';
 import { gunList } from '../../services/armory.ts';
 

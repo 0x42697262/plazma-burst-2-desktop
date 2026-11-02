@@ -1,6 +1,6 @@
 import { game, NET } from '#console/kernel/game/bindings.ts';
-import { UNLOCK_PHRASE, checksBypassed, askToBypass, protectAgain } from '#console/kernel/danger/bypass.ts';
 import { REASON, rankedMatch } from '#console/kernel/overrides/server-checks.ts';
+import { protectionOff } from '#console/kernel/ports/protection.ts';
 
 export type LoggedMessage = { type: unknown; parts?: unknown[] };
 type ScanBindings = { netLog(): LoggedMessage[]; messageType(name: string): unknown; lockedArrayName(index: number): string | null; lockedArrayCount(): unknown };
@@ -14,10 +14,7 @@ export const gameScan = {
 };
 
 export const protection = {
-  unlockPhrase: UNLOCK_PHRASE as string,
-  isBypassed: (): boolean => checksBypassed(),
-  ask: (): void => { askToBypass(); },
-  protectAgain: (): void => { protectAgain(); },
+  isOff: (): boolean => protectionOff(),
   isRankedMatch: (): boolean => rankedMatch(),
   reasons: REASON as { hp: string; aim: string },
 };

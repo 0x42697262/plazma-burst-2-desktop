@@ -1,0 +1,33 @@
+export const TEXT = Object.freeze({
+  keynameUsage: 'usage: keyname   (then press a key)',
+  keynamePrompt: 'Press a key (with Ctrl, Alt or Shift if you like); Esc cancels.',
+  keynameCanceled: 'keyname: canceled',
+  typesCharacter: (character: string) => `types "${character}"`,
+  keyNamed: (key: string) => `key "${key}"`,
+  typedLine: (typed: string, code: string) => `  ${typed}, code ${code || '(none)'}`,
+  cannotBind: (message: string) => `  cannot be bound: ${message}`,
+  useLine: (use: string) => `  ${use}`,
+  bindHint: (key: string) => `  bind ${key} <command>`,
+  togglesConsole: 'opens and closes the console',
+  hotkeyUse: (what: string, setting: string) => `${what} ("${setting}")`,
+  profileBound: (name: string, command: string) => `bound to (profile ${name}, this map): ${command}`,
+  yoursBound: (overridden: boolean, command: string) => `bound to${overridden ? ' (yours, other maps)' : ''}: ${command}`,
+  gameKey: (base: string, use: string) => `game key${base ? ` (${base})` : ''}: ${use}`,
+  keyname: Object.freeze({
+    usage: 'keyname',
+    desc: 'Press a key and see its name for "bind", what it types, and what it does now',
+    about: [
+      'Like xev / wev: the next key you press is not typed or sent to the game. The',
+      'console shows its name as "bind" and "screenshot_key" take it, the character',
+      'it types, and what it does now (a bind, the screenshot key, a game key).',
+      'Names are the physical key, the same on every layout: Shift+. on a US keyboard',
+      'is "shift+period", typed as ">".',
+    ],
+    examples: [['keyname', 'then press Shift+/  ->  shift+slash, types "?"']],
+    notes: [
+      'In "bind" you can also type the character itself: ";", ".", and shifted ones like',
+      '">" or "?" (read as Shift and the key under it in the US layout).',
+    ],
+    see: ['bind', 'screenshot_key'],
+  }),
+});

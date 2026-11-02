@@ -1,6 +1,6 @@
 import { ARMS_SHARE, DEFAULT_MAX_HP, FACE_SHARE, HEAD_SHARE, LEGS_SHARE, MIN_PART_HP, REVIVE_HP_PER_POWER } from '../../constants.ts';
 import { LEVEL_FAILED } from '../../keys.ts';
-import { TEXT } from '../../text.ts';
+import { TEXT } from './text.ts';
 import { level, playerFields as fields, playerGame as game, type Character } from '#console/kernel/game/player-access.ts';
 
 type BodyPart = readonly [hpField: string, brokenField: string, share: number];

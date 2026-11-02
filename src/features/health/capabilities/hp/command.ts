@@ -4,7 +4,7 @@ import { COLOR } from '#console/kernel/core/keys.ts';
 import { hpBonus, keySetting, level, playerFields as fields, playerSettings as settings } from '#console/kernel/game/player-access.ts';
 import { SETTING } from '../../keys.ts';
 import { COMMAND, HP_CHANGE, HP_PERCENT_NO_SIGN } from '../../keys.ts';
-import { CLIENT_ONLY, TEXT } from '../../text.ts';
+import { CLIENT_ONLY, TEXT } from './text.ts';
 import { changedMaxHp, nextBonus, parseHpChange, signed } from '../../domain/hp.ts';
 import { hpBonusFor } from './override.ts';
 

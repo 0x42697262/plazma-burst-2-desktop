@@ -57,18 +57,7 @@ export const READ_FLAG = 'r';
 export const TEXT_ENCODING = 'utf8';
 export const DATE_LOCALE = 'en-US';
 
-export const COMMAND = Object.freeze({
-  name: 'netlog',
-  aliases: ['net', 'packets'],
-  show: 'show',
-  showAliases: ['tail', 'log', 'filter'],
-  runs: 'runs',
-  runsAliases: ['list', 'instances', 'files'],
-  all: 'all',
-  allAliases: ['everything'],
-  on: 'on',
-  off: 'off',
-});
+export const COMMAND = Object.freeze({ name: 'netlog', aliases: ['net', 'packets'] });
 export const FILTER_OPTION = Object.freeze({ in: 'in', out: 'out' });
 export const KIND_OPTIONS: Readonly<Record<string, string>> = Object.freeze({
   loss: LINE_KIND.loss, stat: LINE_KIND.stat, stats: LINE_KIND.stat, rel: LINE_KIND.rel, state: LINE_KIND.state, conn: LINE_KIND.conn, pkt: LINE_KIND.packet, packet: LINE_KIND.packet,
@@ -83,8 +72,6 @@ export const ON_WORD = 'on';
 export const OFF_WORD = 'off';
 export const TYPE_PREFIX_AT_START = new RegExp(`^${TYPE_PREFIX}`);
 export const LOSS_ORDER = Object.freeze(['slow', 'stalled', 'dropped', 'gaps', 'late'] as const);
-export const SETTING_NAME = Object.freeze({ recording: 'recording', everything: 'everything' });
-export type SettingName = typeof SETTING_NAME[keyof typeof SETTING_NAME];
 export const HIDDEN_FILE_PREFIX = '.';
 export const LOGGED_MESSAGE = /^(.* REL +#\d+ )([A-Z][A-Z0-9_]*)\((.*)\)$/;
 export const ANSWER_SUFFIX = '  <- answers #';

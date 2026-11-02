@@ -27,7 +27,7 @@ export function createZoom({ camera, say, warn }: ZoomDeps) {
     if (mine !== null && why) {
       if (camera.zoom() === mine / PERCENT) camera.setZoom(DEFAULT_PERCENT / PERCENT);
       if (locked === null) setOnce = null;
-      if (!isHeldNoted) warn(TEXT.heldBack(mine, why, camera.bypassHint));
+      if (!isHeldNoted) warn(TEXT.heldBack(mine, why, camera.bypassHint()));
       isHeldNoted = true;
       return;
     }

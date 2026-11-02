@@ -3,7 +3,7 @@ import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { level, playerFields as fields, playerGame as game, words } from '#console/kernel/game/player-access.ts';
 import { ALL_WORD, COMMAND, YOU } from '../../keys.ts';
-import { CLIENT_ONLY, TEXT } from '../../text.ts';
+import { CLIENT_ONLY, TEXT } from './text.ts';
 import { cancelLevelFailed, reviveCharacter } from './revive.ts';
 
 type Args = readonly string[];

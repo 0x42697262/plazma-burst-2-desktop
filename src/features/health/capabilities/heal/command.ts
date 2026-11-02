@@ -3,7 +3,7 @@ import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { level, playerFields as fields } from '#console/kernel/game/player-access.ts';
 import { COMMAND } from '../../keys.ts';
-import { CLIENT_ONLY, TEXT } from '../../text.ts';
+import { CLIENT_ONLY, TEXT } from './text.ts';
 
 function heal(): void {
   const character = level.player();

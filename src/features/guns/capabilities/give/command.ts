@@ -2,9 +2,10 @@ import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { MAX_UPGRADE } from '../../constants.ts';
 import { COMMAND, NUMBER_WORD, TARGET_WORD, WORD_SEPARATOR } from '../../keys.ts';
-import { TEXT } from '../../text.ts';
+import { TEXT } from './text.ts';
 import { resolveGun } from '../../domain/catalog.ts';
-import { giveGun, gunList } from '../../services/armory.ts';
+import { giveGun } from './give.ts';
+import { gunList } from '../../services/armory.ts';
 import { characters } from '../../adapters/game-guns.ts';
 
 type Args = readonly string[];

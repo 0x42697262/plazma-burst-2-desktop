@@ -24,8 +24,8 @@ overrides of health, movement and guns (`src/console/kernel/overrides/frame.ts`)
   list, the same way it leaves out features today.
 - **Editions and flags take capability ids or feature ids.** A feature id means all of
   its capabilities. Capabilities declare what they need (`triggers.run` needs the trigger
-  model, `teleport.tp --on` needs `binds.bind`); the resolver adds those, as it adds a
-  feature's `requires` today.
+  model, `teleport.tp --on` needs `binds.bind`). The edition must list them: the build
+  adds nothing and stops, naming what to add ([editions](../operations/editions.md)).
 - **A command with subcommands is a container.** It exists when any of its subcommands
   does, and offers only those. Its own run (`triggers` alone lists triggers) is a
   capability too.
@@ -61,13 +61,21 @@ overrides of health, movement and guns (`src/console/kernel/overrides/frame.ts`)
   `profiles`, `server_list` (the `servers` command), `triggers` and `p2p_host`. Features
   with one command (`teleport`, `zoom`, `trace`, `js_eval`, `hooks`) and the map editor are
   one capability: the feature itself.
-- **Code** is left out per capability where a capability has its own folder: health,
-  movement, guns, player_info, binds, game_chat, screenshot, map_cache, and one folder per
-  command in triggers. Subcommands that share their command's module (the `triggers`,
-  `regions`, `vars`, `logic`, `profile`, `servers`, `netlog`, `fingerprint`, `bypass` and
-  `server` subcommands) are left out by **registration**: they do not exist in the app,
-  but their code ships with the command.
-- A container's usage line names only the subcommands it has; the longer help text of a
-  command can still mention a subcommand the app does not have.
+- **Code and text** are left out per capability: every capability of a split feature
+  has its folder (`capabilities/<name>/`) with its command, texts and keys, and nothing
+  else imports it. A command with subcommands is a **shell** (a name and aliases in the
+  feature's `console.ts`); its own run and each subcommand come from the parts of the
+  capabilities present (`parent`, `ownRun` in `src/console/feature-types.ts`). Helpers
+  several capabilities use stay in the feature (`services/`, the model), with only the
+  texts they need.
+- Where one capability's output named another (a status line, a hint), the other adds
+  its part when it starts (netlog's status lines, the logic tree port, the protection
+  switch of `scan_bypass.checks`), or the hint was dropped. Help `see` lists keep short
+  names and are filtered to what exists when shown.
+- The usage line of a shell is built from the parts present (`shellUsage` in
+  `src/console/kernel/commands/text.ts`), so it names only the subcommands the app has.
+- `src/tools/build/leaks.test.ts` builds every capability alone, with the console, and
+  fails when the bundle holds the usage or description of a command, subcommand or key
+  of any other capability.
 - `src/console/kernel/commands/capability-audit.test.ts` fails when a command,
   subcommand, override or key of a split feature names no capability.

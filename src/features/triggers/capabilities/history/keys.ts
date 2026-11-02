@@ -8,3 +8,5 @@ export const SETTINGS: Readonly<Record<string, KeySpec>> = Object.freeze({
     about: ['Turns the recording for "triggers history" on and off.'],
   },
 });
+
+export const COMMAND = Object.freeze({ name: 'history', aliases: Object.freeze(['hist', 'log']) });

@@ -52,15 +52,7 @@ export const NUMBER_WORD = /^\d+$/;
 export const OFFICIAL_NUMBER = '0';
 export const skipWords = (count: number): RegExp => new RegExp(`^(?:\\S+\\s*){${count}}`);
 
-export const COMMAND = Object.freeze({
-  name: 'servers', aliases: ['server-list'],
-  list: 'list', listAliases: ['ls', 'refresh'],
-  connect: 'connect', connectAliases: ['join', 'play'],
-  add: 'add', edit: 'edit',
-  remove: 'remove', removeAliases: ['rm', 'delete'],
-  fingerprint: 'fingerprint', fingerprintAliases: ['fp'],
-  page: 'page', pageAliases: ['menu', 'back'],
-});
+export const COMMAND = Object.freeze({ name: 'servers', aliases: ['server-list'] });
 
 export const JOIN_STARTUP_FRAMES: readonly (string | null | undefined)[] = Object.freeze(['startup', 'loading', 'name_prompt', 'ads', 'null', undefined, null]);
 export const OFFICIAL_LOCATION = 'USA, Arizona';

@@ -76,7 +76,7 @@ export const DRIVER_TEXT = Object.freeze({
   kickReply: 'kick reply',
   tick: 'tick',
   startingAgain: (seconds: number) => `Host: starting again in ${seconds} s ("server stop" to stay stopped)`,
-  stopped: 'Host: stopped. "server start" starts it again.',
+  stopped: 'Host: stopped.',
   defaultTitle: (name: string) => `Game by ${name}`,
   defaultTitleName: 'host',
   guest: 'Host: logged in as a guest. Changing the map, kicking and the other match owner commands need an account (data/credentials.json).',
@@ -117,19 +117,11 @@ export const DRIVER_TEXT = Object.freeze({
   welcome: 'Dedicated host. Type "help server" for its commands; every console command works too.',
 });
 
-export const OWNER_LINE = Object.freeze({
-  map: (id: string) => `-map ${id}`,
-  ping: (ms: number) => `-ping ${ms}`,
-  pingAction: (action: string) => `-ping_action ${action}`,
-  minReputation: (reputation: number) => `-min_reputation ${reputation}`,
-});
-
-const pingActionsUsage = (actions: readonly string[]) => `server ping_action <${actions.join(' | ')}>`;
 
 export const COMMAND_TEXT = Object.freeze({
-  whichPlayer: 'which player? A slot number, nickname or login ("who" lists them)',
+  whichPlayer: 'which player? A slot number, nickname or login',
   couldBe: (word: string, names: readonly string[]) => `"${word}" could be ${names.join(', ')}`,
-  noPlayer: (word: string) => `no player "${word}" in the match ("who" lists them)`,
+  noPlayer: (word: string) => `no player "${word}" in the match`,
   noMatch: (phase: string) => `No match (${phase})`,
   whoHead: (players: number, maxPlayers: unknown, spectating: number) => `${players} of ${stringOf(maxPlayers)} players, ${spectating} spectating`,
   thisHost: '  [this host]',
@@ -137,87 +129,6 @@ export const COMMAND_TEXT = Object.freeze({
   pingMs: (ping: number) => `${ping} ms`,
   spectator: 'spectator',
   row: (cells: readonly string[]) => `  ${cells.join('  ')}`,
-  statusHead: (phase: string, seconds: number, restartIn: number | null) =>
-    `Host: ${phase} for ${seconds} s${restartIn !== null ? `, starting again in ${restartIn} s` : ''}`,
-  statusLast: (last: string) => `  last: ${last}`,
-  statusMatch: (title: string, gameType: string, maxPlayers: number, hasPassword: boolean) =>
-    `  match:    "${title || '(Game by <you>)'}", ${gameType}, ${maxPlayers} players, password ${hasPassword ? 'set' : 'none'}`,
-  statusMapLive: (name: unknown, id: unknown, localMap: string) =>
-    `  map:      ${stringOf(name || '?')} (${stringOf(id || '?')})${localMap ? `, local map ${localMap} held` : ''}`,
-  statusMapPlanned: (id: string, localMap: string) => `  map:      ${id}${localMap ? `, then local map ${localMap}` : ''}`,
-  statusRegion: (region: string) => `  region:   ${region || '(this computer\'s time zone)'}`,
-  statusAllow: (allow: readonly string[]) => `  allow:    ${allow.length ? allow.join(', ') : 'anyone who can join'}`,
-  statusHost: (hostPlays: boolean, fps: number, ports: { min: number; max: number } | null, iceServers: number) =>
-    `  host:     ${hostPlays ? 'plays' : 'spectates'}, ${fps} fps${ports ? `, UDP ports ${ports.min}-${ports.max}` : ''}${iceServers ? `, ${iceServers} extra ICE server(s)` : ''}`,
   sent: (text: string) => `Sent "${text}"`,
-  mapNow: (name: unknown, id: unknown, localMap: string) => `Map: ${stringOf(name)} (${stringOf(id)})${localMap ? `; local map ${localMap} is held` : ''}`,
-  mapLocalUsage: 'usage: server map local <name>   (a file in data/maps; "maps" lists them)',
   error: (message: string) => `error: ${message}`,
-  mapSent: (line: string, dropped: string) => `Sent "${line}"${dropped ? ` (local map ${dropped} no longer held)` : ''}`,
-  toPlayer: (name: string, text: string) => `To ${name}: ${text}`,
-  tellUsage: 'usage: server tell <player> <text>',
-  sayUsage: 'usage: say <text>',
-  pingUsage: 'usage: server ping <ms | off>',
-  pingActionUsage: (actions: readonly string[]) => `usage: ${pingActionsUsage(actions)}`,
-  minReputationUsage: 'usage: server min_reputation <n>',
-  matchEnded: 'Match ended. "server start" starts a new one.',
-  stopped: 'Stopped. "server start" starts a new match.',
-  starting: 'Starting',
-  restarting: 'Restarting in a few seconds',
-  unknownSubcommand: (word: string | undefined) => `unknown "server ${stringOf(word)}". Type "help server".`,
-});
-
-export const SUBCOMMAND_TEXT = Object.freeze({
-  status: { usage: 'server status', desc: 'What the host is doing, the match settings and who is in it' },
-  who: { usage: 'server who', desc: 'Everyone in the match: slot, name, ping, team, HP, reputation' },
-  kick: { usage: 'server kick <player>', desc: 'Exclude a player and keep them out of this match ("server unbanall" lets them back)' },
-  tell: { usage: 'server tell <player> <text>', desc: 'A server message only that player sees' },
-  say: { usage: 'server say <text>', desc: 'Chat to everyone in the match, as the host' },
-  map: {
-    usage: 'server map [<map ID> | next | reload | local <name>]',
-    desc: 'Change the map: a published one through the lobby server, or one from data/maps sent by this host',
-    about: [
-      'Without a word: the map now. A map ID, "next" (rotation on) or "reload" goes',
-      'through the lobby server, as the match owner\'s "-map" chat command does.',
-      '"local <name>" plays data/maps/<name>.xml: this host sends it to every',
-      'player, and puts it back over any map the lobby server sends later.',
-    ],
-    examples: [['server map nanotech-cht', 'a published map'], ['server map local my-arena', 'data/maps/my-arena.xml'], ['server map reload', 'restart the map']] as const,
-  },
-  pause: { usage: 'server pause', desc: 'Pause or resume the match ("-pause")' },
-  swap: { usage: 'server swap', desc: 'Swap the teams ("-swap")' },
-  endround: { usage: 'server endround', desc: 'End the round, Cooperative only ("-endround")' },
-  unbanall: { usage: 'server unbanall', desc: 'Let every kicked player join again ("-unbanall")' },
-  ping: { usage: 'server ping <ms | off>', desc: 'Ping limit for players ("-ping"); 0 or off removes it' },
-  pingAction: { usage: pingActionsUsage, desc: 'What happens over the ping limit ("-ping_action")' },
-  minReputation: { usage: 'server min_reputation <n>', desc: 'Lowest reputation that may stay ("-min_reputation"); players below it are removed' },
-  stop: { usage: 'server stop', desc: 'End the match ("-terminate") and stay stopped' },
-  start: { usage: 'server start', desc: 'Start a new match after "server stop"' },
-  restart: { usage: 'server restart', desc: 'End the match and start a new one with the same settings' },
-});
-
-export const SERVER_COMMAND_TEXT = Object.freeze({
-  usage: 'server <status | who | kick | tell | say | map | pause | swap | endround | unbanall | ping | stop | start | restart>',
-  desc: 'The dedicated host: its match, players and match owner commands',
-  about: [
-    'This window hosts one player-hosted match, set up from data/p2p-host.json.',
-    'Players find it in the game\'s match browser and play over WebRTC with this',
-    'host; the lobby server lists it and passes their connections along.',
-    'Commands that change the match are the match owner\'s own chat commands, sent',
-    'by this host. Every other console command works here too.',
-  ],
-  examples: [
-    ['server status', 'what it is doing'],
-    ['who', 'the players'],
-    ['kick 3', 'the player in slot 3'],
-    ['say gg', 'chat'],
-    ['server map local my-arena', 'a map from data/maps'],
-  ] as const,
-  notes: ['Type "quit" (or Ctrl+C) to end the match and close the host.'],
-});
-
-export const SHORTCUT_TEXT = Object.freeze({
-  who: { usage: 'who', desc: 'Everyone in the hosted match (same as "server who")' },
-  kick: { usage: 'kick <player>', desc: 'Same as "server kick"' },
-  say: { usage: 'say <text>', desc: 'Same as "server say"' },
 });

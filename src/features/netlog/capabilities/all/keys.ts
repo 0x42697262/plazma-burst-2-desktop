@@ -13,3 +13,5 @@ export const SETTINGS: Readonly<Record<string, KeySpec>> = Object.freeze({
       'each way: large files.'],
   },
 });
+
+export const ALL_COMMAND = Object.freeze({ name: 'all', aliases: ['everything'] });

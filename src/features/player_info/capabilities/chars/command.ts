@@ -3,7 +3,7 @@ import { COLOR } from '#console/kernel/core/keys.ts';
 import { level, playerFields as fields, playerGame as game } from '#console/kernel/game/player-access.ts';
 import { DISTANCE_WIDTH, HP_WIDTH, INDEX_WIDTH, NICKNAME_WIDTH, TEAM_WIDTH } from '../../constants.ts';
 import { COMMAND } from '../../keys.ts';
-import { TEXT } from '../../text.ts';
+import { TEXT } from './text.ts';
 
 function chars(): void {
   level.require();

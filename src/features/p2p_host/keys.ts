@@ -115,29 +115,5 @@ export const LOCAL_WORD = 'local';
 export const WORD_SEPARATOR = ' ';
 export const NO_VALUE = '-';
 export const WHO_COLUMNS: readonly string[] = Object.freeze(['slot', 'name', 'ping', 'team', 'hp', 'rep']);
-export const COMMAND_NAME = Object.freeze({
-  server: 'server',
-  status: 'status',
-  who: 'who',
-  kick: 'kick',
-  tell: 'tell',
-  say: 'say',
-  map: 'map',
-  pause: 'pause',
-  swap: 'swap',
-  endround: 'endround',
-  unbanall: 'unbanall',
-  ping: 'ping',
-  pingAction: 'ping_action',
-  minReputation: 'min_reputation',
-  stop: 'stop',
-  start: 'start',
-  restart: 'restart',
-});
-export const COMMAND_ALIASES = Object.freeze({
-  status: Object.freeze(['info']),
-  who: Object.freeze(['players']),
-  tell: Object.freeze(['pm', 'whisper']),
-  minReputation: Object.freeze(['minrep']),
-});
+export const SERVER_COMMAND = Object.freeze({ name: 'server' });
 export const SEE_ALSO_MAPS: readonly string[] = Object.freeze(['maps']);

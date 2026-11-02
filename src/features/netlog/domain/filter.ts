@@ -3,7 +3,7 @@ import { SHOW_LAST_DEFAULT, SHOW_LAST_MAX } from '../constants.ts';
 import {
   CONNECTION_WORD_SEPARATOR, DIRECTION, FILTER_OPTION, FILTER_TERM, FILTER_TERM_PATTERN, KIND_OPTIONS, MESSAGE_TYPE_IN_LINE, TYPE_PREFIX_AT_START,
 } from '../keys.ts';
-import { COMMAND_TEXT } from '../text.ts';
+import { FILTER_TEXT } from '../text.ts';
 import { parseLine } from './line.ts';
 
 export type LineFilter = { run: string | null; last: number; test: (line: string) => boolean; filtered: boolean };
@@ -14,13 +14,13 @@ const TERMS: readonly string[] = Object.values(FILTER_TERM);
 function parseLast(value: string): number {
   const last = Number(value);
   const isInRange = Number.isInteger(last) && last >= 1 && last <= SHOW_LAST_MAX;
-  if (!isInRange) throw new Error(COMMAND_TEXT.show.lastRange);
+  if (!isInRange) throw new Error(FILTER_TEXT.lastRange);
   return last;
 }
 
 export function parseFilter(args: readonly string[]): LineFilter {
   const { options, rest } = takeOptions(args, OPTIONS) as { options: Set<string>; rest: string[] };
-  if (options.has(FILTER_OPTION.in) && options.has(FILTER_OPTION.out)) throw new Error(COMMAND_TEXT.show.inAndOut);
+  if (options.has(FILTER_OPTION.in) && options.has(FILTER_OPTION.out)) throw new Error(FILTER_TEXT.inAndOut);
   const kinds = new Set([...options].map((option) => KIND_OPTIONS[option]).filter((kind): kind is string => kind !== undefined));
   const terms: { run: string | null; type: string | null; conn: string | null } = { run: null, type: null, conn: null };
   let last = SHOW_LAST_DEFAULT;
@@ -33,7 +33,7 @@ export function parseFilter(args: readonly string[]): LineFilter {
       continue;
     }
     const value = match[2] ?? '';
-    if (!value) throw new Error(COMMAND_TEXT.show.needsValue(key, COMMAND_TEXT.show.termExamples[key] ?? ''));
+    if (!value) throw new Error(FILTER_TEXT.needsValue(key, FILTER_TEXT.termExamples[key] ?? ''));
     if (key === FILTER_TERM.last) last = parseLast(value);
     else terms[key as keyof typeof terms] = value;
   }

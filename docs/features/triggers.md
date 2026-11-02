@@ -1,20 +1,24 @@
 # triggers: map triggers, regions, variables and the logic view
 
 Feature flag `triggers` (on by default; all modes). Code: `src/features/triggers/`:
-- `console.ts` wires the feature (commands, the run-log frame hook, the logic and vars
-  list sections);
-- `entry/` holds the `triggers`, `regions`, `vars` and `logic` commands;
+- `console.ts` wires the feature: the four commands as shells (`triggers`, `regions`,
+  `vars`, `logic`) and the run-log frame hook;
+- `entry/` holds what the commands share: their names, constants and common texts;
+- `trigger-view.ts`, `region-list.ts`, `logic/query.ts` are helpers several capabilities
+  use; `logic/tree-port.ts` lets `logic <uid>` reach the tree only when
+  `triggers.logic_tree` is in the app;
 - `run-log.ts`, `model.ts`, `run.ts`, `regions.ts`, `vars.ts`, `script.ts` are the trigger
   model, running, the run log, regions, variables and the map-editor script format;
 - `logic/` is the logic graph and its overlay.
 
-Capabilities, one folder per command under `capabilities/` (`triggers`, `regions`, `vars`,
-`logic`; a folder is built in when any of its capabilities is in the edition):
+Capabilities, one folder each under `capabilities/` (named after the capability, e.g.
+`capabilities/vars_sync/`), holding its command, texts and keys:
 `triggers.list` (`triggers`), `triggers.history` (with `trigger_history`), `triggers.find`,
 `triggers.run`, `triggers.exec` (with pasting scripts), `triggers.actions`,
 `triggers.regions`, `triggers.regions_run`, `triggers.vars`, `triggers.vars_set`,
 `triggers.vars_sync`, `triggers.logic` (`logic <uid>`), `triggers.logic_show` (`show` and
-`hide`) and `triggers.logic_tree`. The run log and the map model are the feature's own.
+`hide`) and `triggers.logic_tree`. The run log and the map model are the feature's own. The vars
+list section comes with `triggers.vars_set`, the logic one with `triggers.logic_show`.
 
 Tests: `src/features/triggers/triggers.test.ts`.
 

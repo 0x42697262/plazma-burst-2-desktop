@@ -6,11 +6,10 @@ import { levelWasActive } from '../overrides/frame.ts';
 import { gameMaxHp } from '../overrides/max-hp.ts';
 import { heldBack, refusal } from '../overrides/server-checks.ts';
 import { listSections, type ListSection } from '../list-sections.ts';
-import { checksBypassed } from '../danger/bypass.ts';
 import { CLIENT_TAG } from './help.ts';
 import type { CommandDefinition } from './registry.ts';
 import { KEY_SETTING_ARGUMENT, KEY_WIDTH, SET_KEY_ARGUMENT, VALUE_WIDTH } from './constants.ts';
-import { BOOL_TYPE, CHECKS_SECTION, KEY_TYPE, RESET_WORDS, SETTINGS_COMMAND, SOURCE_DEFAULT, SOURCE_YOURS } from './keys.ts';
+import { BOOL_TYPE, KEY_TYPE, RESET_WORDS, SETTINGS_COMMAND, SOURCE_DEFAULT, SOURCE_YOURS } from './keys.ts';
 import { SETTINGS_TEXT as TEXT } from './text.ts';
 
 const shown = (key: string): string => (settings.has(key) ? showValue(key, settings.get(key)) : TEXT.defaultWord);
@@ -62,10 +61,7 @@ export function runKey(key: string, args: readonly string[]): void {
   }
 }
 
-const EXTRAS: Readonly<Record<string, ListSection>> = Object.freeze({
-  [CHECKS_SECTION]: () => checksBypassed() && [TEXT.checksTitle, [TEXT.checksRow]] as const,
-});
-const allExtras = (): Record<string, ListSection> => ({ ...EXTRAS, ...Object.fromEntries(listSections()) });
+const allExtras = (): Record<string, ListSection> => Object.fromEntries(listSections());
 const listGroups = (): string[] => [...groupsOn(), ...Object.keys(allExtras())];
 
 function listExtras(only?: string): void {

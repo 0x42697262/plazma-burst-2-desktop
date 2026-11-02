@@ -3,7 +3,7 @@ import { COLOR } from '#console/kernel/core/keys.ts';
 import { commandText, warnKeyUses } from '#console/kernel/commands/command-text.ts';
 import { BIND_ARGUMENTS_MIN, KEY_WIDTH } from '../../constants.ts';
 import { ALL_WORDS, COMMAND, KEY_ARGUMENT } from '../../keys.ts';
-import { TEXT } from '../../text.ts';
+import { TEXT } from './text.ts';
 import { bindStore, keyNames } from '../../adapters/keys.ts';
 
 type Args = readonly string[];

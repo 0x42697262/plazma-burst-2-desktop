@@ -1,16 +1,12 @@
-import { CAPABILITY } from '#shared/features/keys.ts';
 import { showPaged, takePage, type Row } from '#console/kernel/ui/pager.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
-import { requireLevel } from '#console/kernel/game/level.ts';
 import { GAME_FIELDS } from '#console/kernel/game/fields.ts';
-import type { CommandDefinition } from '#console/kernel/commands/registry.ts';
-import { regionList, triggerList, regionModeName, regionUid, timerUid, findRegion, REGION_MODE } from '../../model.ts';
-import { fireRegion } from '../../regions.ts';
-import { takeRunOptions } from '../../run.ts';
+import { triggerList, regionModeName, regionUid, timerUid, REGION_MODE } from '../../model.ts';
 import { NO_TARGET } from '../../keys.ts';
 import { INDEX_WIDTH, REGION_MODE_WIDTH, REGION_UID_WIDTH } from '../../entry/constants.ts';
 import { NO_UID, REGIONS_COMMAND, SPACE } from '../../entry/keys.ts';
-import { REGIONS_TEXT as TEXT } from '../../entry/text.ts';
+import { TEXT } from './text.ts';
+import { regionsOrNone } from '../../region-list.ts';
 
 type Region = Record<string, unknown> & { x?: number; y?: number };
 
@@ -19,13 +15,6 @@ function firesText(region: Region): string {
   if (typeof target !== 'number' || target === NO_TARGET) return TEXT.nothing;
   if (region[GAME_FIELDS.R_USES_TIMER]) return TEXT.firesTimer(target, timerUid(target));
   return TEXT.firesTrigger(target, triggerList()[target]?.uid);
-}
-
-function regionsOrNone(): (Region | null | undefined)[] {
-  requireLevel();
-  const list = regionList();
-  if (!list.length) throw new Error(TEXT.noRegions);
-  return list;
 }
 
 function listRegions(rawArgs: readonly string[]): void {
@@ -44,34 +33,11 @@ function listRegions(rawArgs: readonly string[]): void {
   showPaged({ title: TEXT.title(list.length, filter, rows.length), rows, cmd: TEXT.command(filter), empty: TEXT.empty(filter), page });
 }
 
-function runRegion(args: readonly string[]): void {
-  const list = regionsOrNone();
-  const { rest, force, activator } = takeRunOptions(args, TEXT.runUsage);
-  if (!rest.length) throw new Error(TEXT.runUsage);
-  const query = rest.join(SPACE);
-  const index = findRegion(query);
-  if (index < 0 || !list[index]) throw new Error(TEXT.noRegion(query));
-  fireRegion(index, { force, activator });
-}
-
-export const regionsCommand: CommandDefinition = {
-  name: REGIONS_COMMAND.name,
-  capability: CAPABILITY.triggers.regions,
-  aliases: REGIONS_COMMAND.aliases,
+export const regionsCommand = Object.freeze({
+  parent: REGIONS_COMMAND.name,
+  ownRun: true,
   usage: TEXT.usage,
   desc: TEXT.desc,
   help: TEXT.help,
-  run: (args) => { listRegions(args); },
-  subcommands: [
-    {
-      name: REGIONS_COMMAND.run,
-      capability: CAPABILITY.triggers.regionsRun,
-      aliases: REGIONS_COMMAND.runAliases,
-      usage: TEXT.run.usage,
-      desc: TEXT.run.desc,
-      reportsReach: true,
-      help: { about: TEXT.run.about, args: TEXT.run.args, examples: TEXT.run.examples, notes: TEXT.run.notes, see: TEXT.run.see },
-      run: (args) => { runRegion(args); },
-    },
-  ],
-};
+  run: (args: string[]) => { listRegions(args); },
+});

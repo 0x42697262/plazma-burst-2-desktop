@@ -116,3 +116,7 @@ export const VARS_TEXT = Object.freeze({
 });
 
 export const RUN_LOG_TEXT = Object.freeze({ disabled: 'disabled', noCallsLeft: 'no calls left' });
+
+export const REGION_LIST_TEXT = Object.freeze({
+  noRegions: 'this map has no regions',
+});

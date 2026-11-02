@@ -2,8 +2,8 @@
 
 Feature flag `p2p_host` (on by default; server mode only, `npm run p2p-host`; not for Sad
 Burst 2). Code: `src/features/p2p_host/`: config, page log, the host driver in the page
-(`services/host.ts`), its `server` command and shortcuts (`entry/command.ts`) and the
-console side (`console.ts`). How to run it: [p2p-host](../operations/p2p-host.md).
+(`services/host.ts`), its `server` command and shortcuts (one folder per capability under `capabilities/`,
+helpers in `services/console-view.ts`) and the console side (`console.ts`). How to run it: [p2p-host](../operations/p2p-host.md).
 
 Console capabilities, one per `server` subcommand: `p2p_host.status` (`server`,
 `server status`), `who`, `kick`, `tell`, `say`, `map`, `pause`, `swap`, `endround`,
@@ -110,6 +110,6 @@ list, the local map, and starting again when the match is gone.
 - Chat lines reach the terminal (the game's chat trace is turned on at start), and any
   extra ICE servers from the config are added to the game's WebRTC configuration.
 - `server stop` sends `-terminate` when the match is running and stays stopped.
-- `entry/command.ts`: `server` and its subcommands; `who`, `kick` and `say` are the same
+- `capabilities/<name>/`: `server` and its subcommands; `who`, `kick` and `say` are the same
   as their `server` subcommands, for short. A player is found by slot (`3` or `#3`),
   nickname or login, or the unique start of one of them.

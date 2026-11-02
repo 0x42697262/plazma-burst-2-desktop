@@ -1,0 +1,55 @@
+export const TEXT = Object.freeze({
+  execUsage: 'usage: triggers exec [--check] [--force] <script>  (paste a trigger from the map editor\'s text view)',
+  headerEnabled: (value: string) => `it says "enabled: ${value}"`,
+  headerMaxCalls: 'it says "maxcalls: 0"',
+  runsMapTrigger: (name: string) => `"triggers exec" runs a pasted script, not the map trigger ${name}.`,
+  pastedLabel: (uid: string | undefined) => (uid ? `"${uid}"` : 'script'),
+  checked: (label: string, actions: string) => `Pasted trigger ${label}: ${actions}, not run (--check)`,
+  checkedRow: (line: string, name: string, type: number, targetA: string, targetB: string, what: string) => `  ${line}. ${name} (type ${type})  A = ${targetA}   B = ${targetB}${what}`,
+  notRun: (why: string) => `not run: ${why}. "triggers exec --force ..." runs it anyway.`,
+  ranPasted: (label: string, actions: string) => `Ran pasted trigger ${label} (${actions})`,
+  pastedLocalOnly: 'Note: ran in your game only: the other players do not have this trigger. What its actions send themselves (vars sync, ...) still reaches them.',
+});
+
+export const HELP = Object.freeze({
+  usage: 'triggers exec [--check] [--force] <script>',
+  desc: 'Run a trigger pasted from the map editor\'s text view (uid:/enabled:/maxcalls: lines optional). --check shows what it would do. Multiplayer: your game only',
+  about: Object.freeze([
+    'Runs trigger actions written the way the map editor\'s "edit triggers as text"',
+    'view shows them, once, as a trigger of its own, through the game\'s runner:',
+    '  uid: #trigger*1016',
+    '  enabled: true',
+    '  maxcalls: -1',
+    '  next if VarA == ValueB( "var_suddendeath", "1" );',
+    '  MovableTo( "#door*13", "#region*306" );',
+    'Paste a script with several lines into the console input: it becomes one line,',
+    'with "triggers exec" in front when the input was empty. Then press Enter.',
+    'Targets are read like the map loader reads them: "#door*13" is that object of',
+    'this map, a whole number is a number, anything else is text. You are the',
+    'activator ("the player who started it").',
+  ]),
+  args: Object.freeze([
+    ['<script>', 'the actions: Name( "A", "B" ); each, or op<number>( "A", "B" );'],
+    ['--check', 'show the actions and their targets in this map, do not run'],
+    ['--force', 'run even when the headers say "enabled: false" or "maxcalls: 0"'],
+  ] as const),
+  examples: Object.freeze([
+    ['triggers exec MovableTo( "#door*13", "#region*306" );', 'move a door'],
+    ['triggers exec --check TimerDisable( "#timer*631", "0" );', 'see what it would do'],
+    ['triggers exec op100( "my_var", "5" );', 'an action by number (set variable)'],
+  ] as const),
+  notes: Object.freeze([
+    'The headers are optional. uid only names the run; actions cannot refer to the',
+    'pasted trigger by it.',
+    'A "#uid" this map does not have is refused where the action expects an object:',
+    'the game would read it as object #0.',
+    'Nothing is escaped, like in the editor: ""1"" is the text "1" with its quotes.',
+    'The whole rest of the line is the script, so ";" cannot chain another command.',
+    'Multiplayer: it runs in your game only (the other players do not have this',
+    'trigger). Actions that send something themselves, like a var sync, still do.',
+    'Action names come from the map editor ("npm run fetch-opcodes"); without them',
+    'only op<number> works. "triggers actions" lists them.',
+  ]),
+  see: Object.freeze(['triggers actions', 'triggers run', 'triggers']),
+
+});

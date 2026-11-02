@@ -7,8 +7,7 @@ import { specOf, resolveKey, keyClientOnly, unphrase } from './state/schema.ts';
 import { findRunnable, findSubcommand, reachOf, type Command, type CommandContext, type Reach } from './commands/registry.ts';
 import { printTopicHelp } from './commands/help.ts';
 import { runKey, KEY_SETTING_ARGUMENT } from './commands/settings.ts';
-import { askingToBypass, answerBypass } from './danger/bypass.ts';
-import { BYPASSED_LINES, NOT_BYPASSED_LINE } from './danger/text.ts';
+import { answersNextLine, answerProtection } from './ports/protection.ts';
 import { ANONYMOUS_FRAME, CHAIN_SEPARATOR, KEY_TYPE, MODIFIERS_ONLY, QUOTE, WHITESPACE } from './commands/keys.ts';
 import { DISPATCH_TEXT as TEXT } from './commands/text.ts';
 
@@ -118,9 +117,8 @@ export function run(line: unknown, source?: string): void {
     return;
   }
   print(source ? TEXT.echoSourced(source, maskLine(text)) : TEXT.echo(maskLine(text)), COLOR.title);
-  if (!source && askingToBypass()) {
-    if (answerBypass(text)) for (const bypassedLine of BYPASSED_LINES) print(bypassedLine, COLOR.error);
-    else print(NOT_BYPASSED_LINE, COLOR.notice);
+  if (!source && answersNextLine()) {
+    answerProtection(text);
     return;
   }
   const parts = splitCommands(text);

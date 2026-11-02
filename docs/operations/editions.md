@@ -115,8 +115,11 @@ What needs what:
   part may be missing. `login`, `cert_pinning` and the Sad Burst 2 start check are small
   and imported directly, so their code is in every main process; their flags still turn
   them off.
-- Code a feature keeps in the console kernel (the player overrides, the settings table)
-  goes only with the whole console.
+- The kernel holds no feature code: overrides, keys and list sections come from the
+  capabilities' folders, and the console core reaches a feature only through a port it
+  provides when it starts (`src/console/kernel/ports/`).
+- A capability's texts live in its folder, so a left-out capability's commands, help and
+  messages are not in the app either, not even its name in a usage line.
 
 ## Where an installed app keeps its data
 
@@ -134,3 +137,7 @@ file of a left-out feature, and no file of a left-out capability's folder, is in
 page bundles, and that `console.js` exists only with `dev_console`. It also builds each edition's main process and checks that no left-out
 feature is in it, apart from the three above, and that the edition is compiled in. Adding
 an edition file adds it to the test.
+
+`src/tools/build/leaks.test.ts` builds every capability alone with the console and
+fails when the bundle holds the usage or description of any other capability's command,
+subcommand or key.

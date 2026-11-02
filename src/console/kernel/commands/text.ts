@@ -12,7 +12,11 @@ export const TEXT = Object.freeze({
 
 export const REGISTRY_TEXT = Object.freeze({
   subcommandTwice: (command: string, word: string) => `subcommand word "${command} ${word}" is defined twice`,
-  trimmedUsage: (command: string, subcommands: readonly string[]) => `${command} [${subcommands.join(' | ')}]`,
+  shellUsage: (command: string, ownUsage: string | null, subcommands: readonly string[]) => {
+    const subcommandUsage = `${command} [${subcommands.join(' | ')}]`;
+    if (!subcommands.length) return ownUsage ?? command;
+    return ownUsage === null || ownUsage === command ? subcommandUsage : `${ownUsage} | ${subcommandUsage}`;
+  },
   onlySubcommands: (command: string, subcommands: readonly string[]) => `this app has only ${subcommands.map((subcommand) => `"${command} ${subcommand}"`).join(', ')}`,
   commandTwice: (word: string) => `command word "${word}" is defined twice`,
   subcommandId: (command: string, subcommand: string) => `${command} ${subcommand}`,
@@ -93,8 +97,6 @@ export const SETTINGS_TEXT = Object.freeze({
   refusedWhat: (key: string, shown: string) => `${key} ${shown}`,
   appliesInLevel: '  (applies when you are in a level)',
   defaultWithNote: (key: string, note: string) => `${key} = default${note}`,
-  checksTitle: 'ranked match protection: OFF ("bypass checks")',
-  checksRow: '  nothing is held back in ranked matches; "bypass off" turns it back on',
   nothingIn: (section: string) => `[${section}] nothing`,
   sectionTitle: (title: string) => `[${title}]`,
   noGroup: (group: string, groups: readonly string[]) => `No group "${group}". Groups: ${groups.join(', ')}`,

@@ -1,0 +1,38 @@
+export const TEXT = Object.freeze({
+  elementNoun: 'element',
+  status: (shown: boolean, summary: string) => `Logic view ${shown ? 'on' : 'off'}${summary}`,
+  statusSummary: (elements: string, links: string) => `. This map: ${elements} with a uid, ${links}.`,
+  statusEnd: '.',
+  types: (types: string) => `  Types: ${types}`,
+  statusHint: '  "help logic" for more.',
+  usage: 'logic [show | hide | <uid>]',
+  desc: 'How the map\'s regions, triggers, timers, doors... are wired: draw the links over the level, or print one as a tree',
+  help: Object.freeze({
+    about: Object.freeze([
+      'Every element of the map with a uid (triggers, timers, regions, doors, decors,',
+      'players, guns...) and every reference between them: what a region or timer',
+      'starts, what a player\'s death runs, what each trigger action acts on, what is',
+      'attached to a door. Read from the map itself, so it also knows what a trigger',
+      'action targets, which the game only keeps as a number.',
+    ]),
+    args: Object.freeze([
+      ['(nothing)', 'how many elements and links the map has'],
+      ['<uid>', 'that element as a tree (the same as "logic tree <uid>")'],
+      ['show', 'draw the links over the level'],
+      ['hide', 'stop drawing them'],
+      ['type:<t>[,<t>]', 'only elements of these types; "logic" lists the map\'s types'],
+      ['not:<t>[,<t>]', 'no elements of these types'],
+      ['screen', 'only what is inside the camera view now'],
+    ] as const),
+    examples: Object.freeze([
+      ['logic #god_all', 'what reaches #god_all, and what it acts on'],
+      ['logic show', 'every link, drawn where it is'],
+      ['logic show #Commands_multiplex', 'only the links of one element'],
+      ['logic show start', 'only what starts triggers'],
+      ['logic show not:player', 'without the links to every player'],
+      ['logic #god_all not:player', 'the tree, without its player rows'],
+    ] as const),
+    notes: Object.freeze(['A uid used twice in a map means its first element, as the game resolves it.']),
+    see: Object.freeze(['logic show', 'logic tree', 'triggers find']),
+  }),
+});

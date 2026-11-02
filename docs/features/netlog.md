@@ -8,7 +8,11 @@ kernel (`src/console/kernel/net/`), because the fingerprint capture uses them to
 Capabilities: `netlog.status` (`netlog`), `netlog.show`, `netlog.runs`, `netlog.record`
 (recording itself, the `net_log` key, `netlog on` and `off`), and on top of recording
 `netlog.all` (`netlog all`, `net_log_all`) and `netlog.state` (`net_log_state`). Without
-`netlog.record` nothing is recorded; `show` and `runs` still read earlier logs.
+`netlog.record` nothing is recorded; `show` and `runs` still read earlier logs. Each
+capability has its folder under `capabilities/`. The status line of `netlog` is built from
+what the app has: `all` and `state` add their part of the header, and `show`, `runs` and
+`record` their hint (`services/status-lines.ts`); `show` reads the run list `runs` made
+(`services/run-list.ts`).
 
 ## What it does
 

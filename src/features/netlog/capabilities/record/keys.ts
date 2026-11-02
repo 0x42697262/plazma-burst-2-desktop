@@ -10,6 +10,8 @@ export const SETTINGS: Readonly<Record<string, KeySpec>> = Object.freeze({
     about: ['Every message the game sends and receives on its connections, packet losses',
       '(slow and missing acks, dropped packets, gaps, late messages) and once a second',
       'the ping and traffic of each connection, as plain text in data/netlogs/: one file per',
-      'run and game window. "netlog" shows it here, "netlog runs" lists other instances.'],
+      'run and game window. "netlog" shows it here.'],
   },
 });
+
+export const RECORD_COMMAND = Object.freeze({ on: 'on', off: 'off' });

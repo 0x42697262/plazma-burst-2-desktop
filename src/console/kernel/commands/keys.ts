@@ -22,4 +22,3 @@ export const CONSOLE_COMMAND = Object.freeze({
   more: 'more', moreAliases: Object.freeze(['next', 'page', 'pg']), chain: 'chain', chainAlso: ';',
   clear: 'clear', clearAlias: 'cls', close: 'close', closeAlias: 'exit',
 });
-export const CHECKS_SECTION = 'checks';

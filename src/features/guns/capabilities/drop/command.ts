@@ -1,8 +1,8 @@
 import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { ALL_WORD, COMMAND, MATCH_SEPARATOR, TARGET_WORD, YOU } from '../../keys.ts';
-import { TEXT } from '../../text.ts';
-import { dropGun } from '../../services/armory.ts';
+import { TEXT } from './text.ts';
+import { dropGun } from './drop.ts';
 import { characters, gunBindings, slots } from '../../adapters/game-guns.ts';
 
 type Args = readonly string[];

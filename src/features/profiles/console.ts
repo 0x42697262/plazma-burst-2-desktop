@@ -1,12 +1,13 @@
 import { FEATURE } from '#shared/features/keys.ts';
-import type { ConsoleFeature } from '#console/feature-types.ts';
+import { consoleFeatureOf } from '#console/feature-types.ts';
 import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { BIND_KEY_WIDTH, KEY_WIDTH, PROFILE_ERRORS_SHOWN, PROFILE_TICK_MS } from './constants.ts';
-import { LIST_SECTION } from './keys.ts';
+import { COMMAND, LIST_SECTION } from './keys.ts';
 import { TEXT } from './text.ts';
 import { profileContext as context } from './adapters/store.ts';
-import { profileCommand, summary } from './entry/command.ts';
+import { summary } from './services/profile-view.ts';
+import { PROFILES_PARTS } from './capabilities.ts';
 import { createProfileWatcher } from './services/watcher.ts';
 
 export const profileWatcher = createProfileWatcher({
@@ -16,9 +17,8 @@ export const profileWatcher = createProfileWatcher({
   onloadSource: TEXT.onloadSource,
 });
 
-export const profilesConsole: ConsoleFeature = Object.freeze({
-  id: FEATURE.profiles,
-  commands: [profileCommand],
+export const profilesConsole = consoleFeatureOf(FEATURE.profiles, PROFILES_PARTS, {
+  shells: [{ name: COMMAND.name, aliases: COMMAND.aliases }],
   ticks: [{ name: TEXT.tickName, everyMs: PROFILE_TICK_MS, errorsShown: PROFILE_ERRORS_SHOWN, run: profileWatcher.tick }],
   listSections: {
     [LIST_SECTION]: () => {

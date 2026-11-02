@@ -204,7 +204,7 @@ test('triggers exec runs a trigger pasted from the map editor\'s text view, once
   assert.match(refusal('triggers exec SetVar( "x", "1" ); heal'), /line 2 "heal": not an action/);
   assert.match(refusal('triggers exec color: red SetVar( "x", "1" );'), /unknown action "color: red SetVar"/);
   assert.match(refusal('triggers exec color: red'), /line 1 "color: red": "color" is not uid, enabled, maxcalls/);
-  assert.match(refusal('triggers exec #god'), /"triggers run #god" runs that map trigger/);
+  assert.match(refusal('triggers exec #god'), /runs a pasted script, not the map trigger #god/);
   assert.match(refusal('triggers exec uid: #x'), /no actions in the script/);
   assert.match(refusal('triggers exec --bogus SetVar( "x", "1" );'), /unknown option "--bogus"/);
   assert.match(refusal('triggers exec'), /usage: triggers exec/);

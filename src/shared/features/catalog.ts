@@ -1,4 +1,4 @@
-import { ALL_MODES, CAPABILITY, CAPABILITY_MODULE, CAPABILITY_SEPARATOR, CLIENT, FEATURE, FEATURE_OWNER, MODE, type ClientId, type FeatureId, type Mode } from './keys.ts';
+import { ALL_MODES, CAPABILITY, CAPABILITY_SEPARATOR, CLIENT, FEATURE, FEATURE_OWNER, MODE, type ClientId, type FeatureId, type Mode } from './keys.ts';
 import { FEATURE_DESCRIPTION } from './text.ts';
 import type { CapabilityDefinition, FeatureDefinition } from './types.ts';
 
@@ -44,10 +44,7 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   consoleFeature(FEATURE.movement, { capabilities: noNeeds(CAPABILITY.movement) }),
   consoleFeature(FEATURE.guns, { capabilities: noNeeds(CAPABILITY.guns) }),
   consoleFeature(FEATURE.binds, { capabilities: noNeeds(CAPABILITY.binds) }),
-  consoleFeature(FEATURE.triggers, {
-    capabilities: noNeeds(CAPABILITY.triggers),
-    modules: CAPABILITY_MODULE.triggers,
-  }),
+  consoleFeature(FEATURE.triggers, { capabilities: noNeeds(CAPABILITY.triggers) }),
   consoleFeature(FEATURE.trace),
   define(FEATURE.mapCache, { capabilities: noNeeds(CAPABILITY.mapCache) }),
   consoleFeature(FEATURE.mapEditor, { requires: [FEATURE.devConsole, FEATURE.mapCache, FEATURE.triggers] }),

@@ -2,7 +2,7 @@ import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { NAME_WIDTH } from '../../constants.ts';
 import { COMMAND } from '../../keys.ts';
-import { GAME_COMMANDS, TEXT } from '../../text.ts';
+import { GAME_COMMANDS, TEXT } from './text.ts';
 import { gameChat } from '../../adapters/game-chat.ts';
 import { createGameCommands } from '../../services/game-commands.ts';
 

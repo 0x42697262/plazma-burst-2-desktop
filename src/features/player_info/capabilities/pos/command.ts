@@ -1,7 +1,7 @@
 import { print } from '#console/kernel/ui/log.ts';
 import { level, playerFields as fields, playerGame as game } from '#console/kernel/game/player-access.ts';
 import { COMMAND } from '../../keys.ts';
-import { TEXT } from '../../text.ts';
+import { TEXT } from './text.ts';
 
 function pos(): void {
   level.require();

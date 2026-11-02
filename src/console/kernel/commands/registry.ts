@@ -30,6 +30,8 @@ export type CommandDefinition = Availability & {
   complete?: (argument: number) => readonly string[] | null | undefined;
   run?: (args: string[], context: CommandContext) => unknown;
   subcommands?: readonly CommandDefinition[];
+  container?: boolean;
+  ownUsage?: string;
 };
 export type Command = Omit<CommandDefinition, 'aliases' | 'subcommands'> & { aliases: readonly string[]; subcommands: Command[] };
 export type HelpEntry = { id: string; def: Command; also: string[] };
@@ -49,8 +51,8 @@ export function register(...definitions: readonly CommandDefinition[]): void {
     const command = normalize(definition);
     command.subcommands = (definition.subcommands ?? []).filter((subcommand) => allowedHere(subcommand) && capabilityOn(subcommand)).map(normalize);
     const isTrimmed = command.subcommands.length < (definition.subcommands ?? []).length;
-    const isOwnRunOn = capabilityOn(definition);
-    if (isTrimmed || !isOwnRunOn) command.usage = TEXT.trimmedUsage(command.name, command.subcommands.map((subcommand) => subcommand.name));
+    const isOwnRunOn = !definition.container && capabilityOn(definition);
+    if (isTrimmed || !isOwnRunOn) command.usage = TEXT.shellUsage(command.name, isOwnRunOn ? definition.ownUsage ?? null : null, command.subcommands.map((subcommand) => subcommand.name));
     if (!isOwnRunOn && !command.subcommands.length) continue;
     if (!isOwnRunOn) command.run = containerOnly(command);
     const subcommandWords = new Set<string>();

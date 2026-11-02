@@ -10,6 +10,7 @@ import { force, restore } from '#console/kernel/overrides/force.ts';
 import { heldBack, guarding } from '#console/kernel/overrides/server-checks.ts';
 import { gameMaxOf, hpBonusAppliedTo, setHpBonusApplied } from '#console/kernel/overrides/max-hp.ts';
 import { TEXT as OVERRIDE_TEXT } from '#console/kernel/overrides/text.ts';
+import { protectionHint } from '#console/kernel/ports/protection.ts';
 import { MIN_MAX_HP, PERCENT } from '../../constants.ts';
 import { NOTE_SEPARATOR, OVERRIDE_NAME } from '../../keys.ts';
 import { clampToMax, healthOf, isOverRankedLimit, maxHpOf } from '../../services/character.ts';
@@ -37,7 +38,7 @@ function noteHeld(character: Character): void {
   }
   const held = [SETTING.maxHp, SETTING.hpBonus, SETTING.hpBonusPct].filter((key) => settings.has(key) && heldBack(key, valueOf(key), gameMaxOf(character)));
   const note = held.join(NOTE_SEPARATOR);
-  if (note && note !== heldNote) print(OVERRIDE_TEXT.notApplying(note), COLOR.warn);
+  if (note && note !== heldNote) print(OVERRIDE_TEXT.notApplying(note, protectionHint()), COLOR.warn);
   heldNote = note;
 }
 

@@ -7,8 +7,11 @@ Capabilities: `scan_bypass.status` (`bypass`) and `scan_bypass.checks` (`bypass 
 and its undo, `bypass off`). The scan report hook is the feature's own.
 
 The ranked-match protection itself is not part of this feature. It stays in the console
-(`src/console/kernel/overrides/server-checks.ts`, `src/console/kernel/danger/bypass.ts`) and is always on unless turned off
-here. With this flag off there is no `bypass` command, so the protection cannot be
+(`src/console/kernel/overrides/server-checks.ts`) and is always on unless turned off
+here. The console asks whether it is off through a port
+(`src/console/kernel/ports/protection.ts`); `scan_bypass.checks` provides the switch
+(`capabilities/checks/state.ts`) when it starts, so an app without it has no way to turn
+the protection off. With this flag off there is no `bypass` command, so the protection cannot be
 turned off at all.
 
 ## The protection

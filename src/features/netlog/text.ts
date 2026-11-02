@@ -1,4 +1,4 @@
-import { SHOW_LAST_DEFAULT, SHOW_LAST_MAX } from './constants.ts';
+import { SHOW_LAST_MAX } from './constants.ts';
 
 const plural = (count: number, word: string): string => `${count} ${word}${count === 1 ? '' : 's'}`;
 
@@ -139,127 +139,11 @@ export const ROUTE_TEXT = Object.freeze({
   netlogsFolder: 'netlogs',
 });
 
-export const COMMAND_TEXT = Object.freeze({
-  usage: 'netlog [show | runs | on | off]',
-  description: 'The network log: messages sent and received, packet losses, ping. "netlog show" for the lines',
-  about: [
-    'Every message the game sends and receives on its connections (main server, P2P),',
-    'packet losses and once a second each connection\'s ping and traffic. Written as',
-    'plain text to data/netlogs/<date>_<time>_<instance>.log: one file per run and game',
-    'window, so other instances (another app, remote play testers) have their own.',
-    'Alone, "netlog" says whether it records, where, and the losses of each connection.',
-    'Passwords in a login or a match are written as ‹redacted›.',
-  ],
-  examples: (remote: boolean) => [
-    ['netlog', 'on or off, the file, each connection\'s ping and losses'],
-    ['netlog show --loss', 'every slow or missing ack, dropped packet, gap and late message'],
-    ['netlog show type:chat hello', 'chat messages with "hello"'],
-    ['netlog show --in conn:server', 'what the main server sent'],
-    ...(remote ? [] : [['netlog runs', 'other instances and earlier runs'], ['netlog show run:2 --loss', 'the losses of another one']]),
-    ['netlog off', 'stop recording (net_log off)'],
-    ['netlog all on', 'log everything: every packet and state update'],
-  ],
-  notes: [
-    'In the file each line is: time, connection, OUT/IN/---, kind (REL, LOSS, STAT, CONN,',
-    'STATE, PKT, PAGE), details. A message reads like a call: CHAT("hello", 7): text in',
-    'quotes, numbers bare (decoded), #<n> a sequence number. The file header explains it all.',
-    '"netlog all on" logs everything: every packet and every state update (off by default).',
-  ],
-  see: ['net_log', 'net_log_state', 'net_log_all'],
-  show: Object.freeze({
-    usage: 'netlog show [filters] [page <n>]',
-    description: 'The last lines of the network log, filtered',
-    about: [
-      'This page\'s lines (or another run\'s with run:), newest page first. Losses are',
-      'yellow, received messages bright, sent ones white.',
-    ],
-    args: (remote: boolean) => [
-      ['--in | --out', 'received or sent only'],
-      ['--loss', 'packet loss only: slow ack, no ack, dropped, gap, late'],
-      ['--rel --stat --conn --state --pkt', 'only these kinds (they combine)'],
-      ['type:<name>', 'messages of a type, e.g. type:chat (part of the name is enough)'],
-      ['conn:<c1 | server | p2p>', 'one connection'],
-      ['last:<n>', `look at the last n lines (default ${SHOW_LAST_DEFAULT})`],
-      ['<text>', 'lines with this text (several: all of them)'],
-      ...(remote ? [] : [['run:<n | name>', 'another instance or run, from "netlog runs"']]),
-      ['page <n>', 'a page of the result (it opens on the newest)'],
-    ],
-    examples: [
-      ['netlog show --loss', 'packet losses only'],
-      ['netlog show --out type:chat', 'chat messages you sent'],
-      ['netlog show --stat conn:c2', 'ping and traffic of connection c2, second by second'],
-    ],
-    see: ['netlog'],
-    pageCommand: 'netlog show',
-    thisPageTitle: 'Network log, this page',
-    runTitle: (name: string) => `Network log ${name}`,
-    runSource: (name: string) => `data/netlogs/${name}.log`,
-    thisPageSource: (file: string | null) => `${file ? `The whole run: ${file}` : 'Not written to a file yet'}. "netlog runs" = other instances.`,
-    matched: (title: string, count: number, lookedAt: number) => `${title}: ${count} of the last ${lookedAt} lines match.`,
-    total: (title: string, count: number) => `${title}: ${plural(count, 'line')}.`,
-    nothingMatches: 'Nothing matches. Leave out a filter, or look further back with last:<n>.',
-    nothingRecorded: 'Nothing recorded yet. Join a multiplayer lobby or match.',
-    inAndOut: '--in and --out do not go together (leave both out for both)',
-    needsValue: (key: string, example: string) => `${key}: needs a value, e.g. ${example}`,
-    termExamples: Object.freeze({ run: 'run:2', type: 'type:chat', conn: 'conn:c1', last: 'last:200' } as Readonly<Record<string, string>>),
-    lastRange: `last: a whole number from 1 to ${SHOW_LAST_MAX}`,
-    remoteRun: 'run: is not available in remote play',
-    noRunNumber: (word: string, count: number) => (count ? `no run ${word}: "netlog runs" lists ${count}` : 'run:<n> counts in the "netlog runs" list: run that first, or give the name'),
-    readFailed: (name: string, message: string) => `error: could not read network log ${name}: ${message} (desktop wrapper only)`,
-  }),
-  runs: Object.freeze({
-    usage: 'netlog runs',
-    description: 'Every network log in data/netlogs/: this window, other instances running now, earlier runs',
-    about: [
-      'One file per run and game instance: this window, remote play testers\' games,',
-      'another copy of the app, earlier runs. "running" means written in the last 15 s.',
-      'Then "netlog show run:<n>" reads one, with the same filters.',
-    ],
-    see: ['netlog show'],
-    none: 'No network logs in data/netlogs/ yet.',
-    title: (count: number) => `Network logs in data/netlogs/, newest first (${count}). "netlog show run:<n>" shows one.`,
-    owner: Object.freeze({ current: 'this window', mine: 'this app', active: 'other app, running', ended: 'ended' }),
-    size: (kilobytes: string) => `${kilobytes} KB`,
-    row: (index: string, name: string, owner: string, size: string, ago: string) => `  ${index}  ${name} ${owner} ${size}  updated ${ago}`,
-    listFailed: 'error: could not list network logs (desktop wrapper only)',
-  }),
-  all: Object.freeze({
-    usage: 'netlog all [on | off]',
-    description: 'Log everything: every packet (PKT) and every state update (net_log_all, off by default)',
-    about: [
-      'The same as "net_log_all". On, every packet sent and received gets a PKT line (its',
-      'size, ack, how many parts its state has, which reliable messages it carries), and',
-      'every unreliable state update is written decoded (STATE), and no message is cut',
-      '(without it a part over 2000 characters is). Alone it says on or off.',
-      '60 to 250 packets a second each way in a match: the files grow fast.',
-    ],
-    examples: [['netlog all on', 'log everything'], ['netlog show --pkt --state last:200', 'the latest packets and state updates']],
-    see: ['net_log_all', 'net_log_state'],
-    value: (on: boolean) => `net_log_all = ${on ? 'on' : 'off'}`,
-  }),
-  on: Object.freeze({
-    usage: 'netlog on',
-    description: 'Record the network log (net_log on, the default)',
-    about: ['The same as "net_log on". Connections already open are recorded from now on.'],
-    see: ['net_log'],
-  }),
-  off: Object.freeze({
-    usage: 'netlog off',
-    description: 'Stop recording the network log (net_log off)',
-    about: ['The same as "net_log off". The game\'s connections are left exactly as they were.'],
-    see: ['net_log'],
-  }),
-  status: Object.freeze({
-    header: (on: boolean, all: boolean, stateWritten: boolean) => `Network log: ${on ? 'on' : 'off'} (net_log). Everything (every packet and state update): ${all ? 'on' : 'off'} (net_log_all).`
-      + ` State updates: ${stateWritten ? 'written' : 'counted only'}${all ? '' : ' (net_log_state)'}.`,
-    writeError: (message: string) => `  Not written to a file: ${message}`,
-    file: (file: string | null) => `  File: ${file || 'none yet (made with the first line sent)'}`,
-    pageLines: (count: number) => `  This page: ${plural(count, 'line')}.`,
-    noConnections: '  No connections now.',
-    offNothing: '  Nothing is recorded while it is off.',
-    connection: (id: number, kind: string, connected: boolean, ping: string, outPackets: number, inPackets: number, loss: string, waiting: number, missing: number) => `  c${id} ${kind} ${connected ? 'connected' : 'not connected'}, ping ${ping}, out ${outPackets} packets, in ${inPackets} packets | loss: ${loss}`
-      + `${waiting ? ` | ${waiting} waiting for ack` : ''}${missing ? ` | ${missing} missing` : ''}`,
-    footer: (remote: boolean, on: boolean) => `"netlog show" = the last lines ("netlog show --loss", "netlog show type:chat")${remote ? '' : ', "netlog runs" = other instances'}, "netlog ${on ? 'off' : 'on'}".`,
-  }),
-  usageError: (usage: string) => `usage: ${usage}`,
+export const FILTER_TEXT = Object.freeze({
+  inAndOut: '--in and --out do not go together (leave both out for both)',
+  needsValue: (key: string, example: string) => `${key}: needs a value, e.g. ${example}`,
+  termExamples: Object.freeze({ run: 'run:2', type: 'type:chat', conn: 'conn:c1', last: 'last:200' } as Readonly<Record<string, string>>),
+  lastRange: `last: a whole number from 1 to ${SHOW_LAST_MAX}`,
 });
+
+export const usageError = (usage: string): string => `usage: ${usage}`;
