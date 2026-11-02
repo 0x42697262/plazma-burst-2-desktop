@@ -2,7 +2,9 @@ import { JOIN_STARTUP_FRAMES, OFFICIAL_LOCATION, lobbyAddressOf } from '../keys.
 import { JOIN_TEXT } from '../text.ts';
 import type { GameLobby } from '../adapters/game-lobby.ts';
 
-export type JoinTarget = Readonly<{ address: string; nickname: string; password: string }>;
+import type { JoinTarget } from '#page/join-target.ts';
+
+export type { JoinTarget };
 
 export type JoinClientDeps = {
   target: JoinTarget;

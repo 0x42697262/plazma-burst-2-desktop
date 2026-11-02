@@ -1,3 +1,4 @@
+import { CAPABILITY } from '#shared/features/keys.ts';
 import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { takeOptions } from '#console/kernel/core/args.ts';
@@ -79,6 +80,7 @@ export function createFingerprintCommand(deps: FingerprintCommandDeps) {
 
   return Object.freeze({
     name: COMMAND.name,
+    capability: CAPABILITY.fingerprint.run,
     aliases: COMMAND.aliases,
     remote: false,
     usage: COMMAND_TEXT.usage,
@@ -88,6 +90,7 @@ export function createFingerprintCommand(deps: FingerprintCommandDeps) {
     subcommands: [
       {
         name: COMMAND.list,
+        capability: CAPABILITY.fingerprint.list,
         aliases: COMMAND.listAliases,
         usage: COMMAND_TEXT.list.usage,
         desc: COMMAND_TEXT.list.description,

@@ -4,7 +4,7 @@ import { gameNetwork } from '#console/kernel/game/network.ts';
 import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { REMOTE } from '#console/kernel/core/mode.ts';
-import { isJoiningPrivateServer } from '#features/server_list/index.ts';
+import { isJoiningPrivateServer } from '#page/join-target.ts';
 import { CAPTURE_ERRORS_SHOWN, CAPTURE_TICK_MS } from './constants.ts';
 import { CAPTURE_TEXT } from './text.ts';
 import { createFingerprintCapture } from './services/capture.ts';

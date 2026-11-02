@@ -48,7 +48,9 @@ export function register(...definitions: readonly CommandDefinition[]): void {
     if (!allowedHere(definition)) continue;
     const command = normalize(definition);
     command.subcommands = (definition.subcommands ?? []).filter((subcommand) => allowedHere(subcommand) && capabilityOn(subcommand)).map(normalize);
+    const isTrimmed = command.subcommands.length < (definition.subcommands ?? []).length;
     const isOwnRunOn = capabilityOn(definition);
+    if (isTrimmed || !isOwnRunOn) command.usage = TEXT.trimmedUsage(command.name, command.subcommands.map((subcommand) => subcommand.name));
     if (!isOwnRunOn && !command.subcommands.length) continue;
     if (!isOwnRunOn) command.run = containerOnly(command);
     const subcommandWords = new Set<string>();

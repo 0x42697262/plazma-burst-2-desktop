@@ -3,6 +3,9 @@
 Feature flag `scan_bypass` (on by default; local and server modes, not in remote play).
 Code: `src/features/scan_bypass/`.
 
+Capabilities: `scan_bypass.status` (`bypass`) and `scan_bypass.checks` (`bypass checks`
+and its undo, `bypass off`). The scan report hook is the feature's own.
+
 The ranked-match protection itself is not part of this feature. It stays in the console
 (`src/console/kernel/overrides/server-checks.ts`, `src/console/kernel/danger/bypass.ts`) and is always on unless turned off
 here. With this flag off there is no `bypass` command, so the protection cannot be

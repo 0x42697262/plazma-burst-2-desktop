@@ -1,3 +1,4 @@
+import { CAPABILITY } from '#shared/features/keys.ts';
 import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { COMMAND } from '../keys.ts';
@@ -41,12 +42,13 @@ function turnOn(args: Args): void {
 export const bypassCommand = Object.freeze({
   remote: false,
   name: COMMAND.name,
+  capability: CAPABILITY.scanBypass.status,
   usage: TEXT.usage,
   desc: TEXT.description,
   help: { about: TEXT.about(protection.unlockPhrase), examples: TEXT.examples, notes: TEXT.notes, see: TEXT.see },
   run: status,
   subcommands: [
-    { name: COMMAND.checks, aliases: COMMAND.checksAliases, usage: TEXT.checks.usage, desc: TEXT.checks.desc, help: { about: TEXT.checks.about(protection.unlockPhrase), notes: TEXT.checks.notes, see: TEXT.checks.see }, run: askToTurnOff },
-    { name: COMMAND.off, aliases: COMMAND.offAliases, usage: TEXT.turnOn.usage, desc: TEXT.turnOn.desc, help: { about: TEXT.turnOn.about, see: TEXT.turnOn.see }, run: turnOn },
+    { name: COMMAND.checks, capability: CAPABILITY.scanBypass.checks, aliases: COMMAND.checksAliases, usage: TEXT.checks.usage, desc: TEXT.checks.desc, help: { about: TEXT.checks.about(protection.unlockPhrase), notes: TEXT.checks.notes, see: TEXT.checks.see }, run: askToTurnOff },
+    { name: COMMAND.off, capability: CAPABILITY.scanBypass.checks, aliases: COMMAND.offAliases, usage: TEXT.turnOn.usage, desc: TEXT.turnOn.desc, help: { about: TEXT.turnOn.about, see: TEXT.turnOn.see }, run: turnOn },
   ],
 });

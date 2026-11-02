@@ -4,6 +4,9 @@ Feature flag `fingerprint` (on by default; local and server modes, not in remote
 Code: `src/features/fingerprint/`. Background:
 [fingerprinting research](../research/fingerprinting.md).
 
+Capabilities: `fingerprint.run` (`fingerprint`: run the latest) and `fingerprint.list`
+(`fingerprint list`).
+
 ## What it does
 
 - **Capture** (`services/capture.ts`). The main server sends the game a browser

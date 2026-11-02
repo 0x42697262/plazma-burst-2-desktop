@@ -41,7 +41,7 @@ export const SOCKET_EVENT = Object.freeze({ error: 'error', connect: 'connect', 
 
 export const SERVERS_FILE_NAME = 'servers.json';
 export const OLD_JOIN_FILE_NAME = 'join.json';
-export const PAGE_JOIN_GLOBAL = 'PB2_JOIN';
+export { PAGE_JOIN_GLOBAL } from '#page/keys.ts';
 
 export const SERVER_FIELDS = Object.freeze(['address', 'fingerprint', 'nickname', 'password', 'name']);
 export const PAIR_PATTERN = /([A-Za-z_]+)=(?:"([^"]*)"|(\S*))/g;

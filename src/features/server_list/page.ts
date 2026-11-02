@@ -5,7 +5,7 @@ import { REPORT_LEVEL } from '#page/keys.ts';
 import { JOIN_TICK_MS } from './constants.ts';
 import { JOIN_TEXT } from './text.ts';
 import { createJoinClient } from './services/join-client.ts';
-import { pageJoinTarget } from './index.ts';
+import { pageJoinTarget } from '#page/join-target.ts';
 import { gameLobby } from './adapters/game-lobby.ts';
 import { isFeatureOn } from '#console/flags.ts';
 import { isGuardingPrivateLobby } from '#features/lobby_task_guard/index.ts';

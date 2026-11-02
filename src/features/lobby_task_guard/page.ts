@@ -3,7 +3,7 @@ import type { PageFeature } from '#page/feature-types.ts';
 import { report } from '#page/report.ts';
 import { REPORT_LEVEL } from '#page/keys.ts';
 import { gameNetwork } from '#console/kernel/game/network.ts';
-import { isJoiningPrivateServer } from '#features/server_list/index.ts';
+import { isJoiningPrivateServer } from '#page/join-target.ts';
 import { TEXT } from './text.ts';
 import { createLobbyTaskGuard } from './services/guard.ts';
 
