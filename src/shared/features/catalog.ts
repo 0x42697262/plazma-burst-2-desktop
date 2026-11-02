@@ -40,7 +40,7 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   }),
   consoleFeature(FEATURE.movement, { capabilities: noNeeds(CAPABILITY.movement) }),
   consoleFeature(FEATURE.guns, { capabilities: noNeeds(CAPABILITY.guns) }),
-  consoleFeature(FEATURE.binds),
+  consoleFeature(FEATURE.binds, { capabilities: noNeeds(CAPABILITY.binds) }),
   consoleFeature(FEATURE.triggers),
   consoleFeature(FEATURE.trace),
   define(FEATURE.mapCache),

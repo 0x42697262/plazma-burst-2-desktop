@@ -1,4 +1,5 @@
-import { isFeatureOn } from '../../flags.ts';
+import { isCapabilityOn } from '../../flags.ts';
+import { CAPABILITY } from '#shared/features/keys.ts';
 import { COLOR } from '../core/keys.ts';
 import { game } from '../game/bindings.ts';
 import { isActive } from '../game/level.ts';
@@ -14,7 +15,7 @@ import { print, attachLog, clearLog } from './log.ts';
 import { complete } from './complete.ts';
 import { BUTTON_LEFT, BUTTON_STEP } from './constants.ts';
 import {
-  BUTTON_STYLE, FUNCTION_KEY, INPUT_STYLE, LINE_BREAK, LINE_SPLIT, LOG_STYLE, MODIFIER_CODE, PANEL, PANEL_KEY, PIXELS, PROFILE_FEATURE_FLAGS,
+  BUTTON_STYLE, FUNCTION_KEY, INPUT_STYLE, LINE_BREAK, LINE_SPLIT, LOG_STYLE, MODIFIER_CODE, PANEL, PANEL_KEY, PIXELS,
   ROOT_STYLE, SPACE, STATUS_STYLE, TEXT_INPUT_TAGS, TITLE_STYLE, scrollbarColors,
 } from './keys.ts';
 import { PANEL_TEXT as TEXT } from './text.ts';
@@ -223,7 +224,7 @@ export function onKeyDownCapture(event: KeyboardEvent): void {
     heldBoundKeys.add(event.code);
     return;
   }
-  if (!isOpen && !event.metaKey && isFeatureOn(PROFILE_FEATURE_FLAGS.binds)) {
+  if (!isOpen && !event.metaKey && isCapabilityOn(CAPABILITY.binds.bind)) {
     const bound = keyName ? binds.active(keyName) : null;
     if (bound && !isTyping && isActive()) {
       swallowEvent(event);

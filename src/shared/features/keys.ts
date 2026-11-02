@@ -45,6 +45,7 @@ export const CAPABILITY_SEPARATOR = '.';
 export const capabilityId = (feature: FeatureId, name: string): string => feature + CAPABILITY_SEPARATOR + name;
 
 export const CAPABILITY = Object.freeze({
+  binds: Object.freeze({ bind: 'binds.bind', keyname: 'binds.keyname' }),
   guns: Object.freeze({ list: 'guns.list', give: 'guns.give', drop: 'guns.drop', gun: 'guns.gun', bullets: 'guns.bullets' }),
   playerInfo: Object.freeze({ pos: 'player_info.pos', chars: 'player_info.chars' }),
   health: Object.freeze({ god: 'health.god', hp: 'health.hp', heal: 'health.heal', revive: 'health.revive' }),

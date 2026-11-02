@@ -1,8 +1,8 @@
 import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
-import { COMMAND, SINGLE_CHARACTER } from '../keys.ts';
-import { TEXT } from '../text.ts';
-import { bindStore, keyNames, type KeyEvent } from '../adapters/keys.ts';
+import { COMMAND, SINGLE_CHARACTER } from '../../keys.ts';
+import { TEXT } from '../../text.ts';
+import { bindStore, keyNames, type KeyEvent } from '../../adapters/keys.ts';
 
 let stopWaiting: (() => void) | null = null;
 

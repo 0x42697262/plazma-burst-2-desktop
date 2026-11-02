@@ -4,6 +4,9 @@ Feature flag `binds` (on by default; all modes). Code: `src/features/binds/`. Th
 themselves are kept by the console's store (`dev-overrides.json`, `binds`), and the
 panel's key handler runs them.
 
+Capabilities: `binds.bind` (`bind`, `unbind`, and running bound keys) and
+`binds.keyname` (`keyname`), one folder each under `capabilities/`.
+
 - `bind <key> <command>` runs a console command with a key in levels, while the
   console and the game chat are both closed. The game never sees a bound key: not the
   press, its repeats, or its release.
