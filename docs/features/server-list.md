@@ -3,6 +3,11 @@
 Feature flag `server_list` (on by default; local mode, official client only). Code:
 `src/features/server_list/`.
 
+Console capabilities: `server_list.list` (`servers`, `servers list`),
+`server_list.connect`, `server_list.add`, `server_list.edit`, `server_list.remove`,
+`server_list.fingerprint` and `server_list.page`. The list page before the game, joining
+private servers and the `__dev/servers` route are the feature's own.
+
 ## What it does
 
 `npm start` opens the server list before the game. The page is

@@ -1,3 +1,4 @@
+import { CAPABILITY } from '#shared/features/keys.ts';
 import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { EDIT_WORDS, NAME_COLUMN_WIDTH, PING_GOOD_MS, PING_OK_MS, SUBCOMMAND_WORDS } from '../constants.ts';
@@ -99,19 +100,20 @@ const { sub } = COMMAND_TEXT;
 
 export const serversCommand = Object.freeze({
   name: COMMAND.name,
+  capability: CAPABILITY.serverList.list,
   aliases: COMMAND.aliases,
   remote: false,
   usage: COMMAND_TEXT.usage,
   desc: COMMAND_TEXT.description,
   help: { about: COMMAND_TEXT.about, examples: COMMAND_TEXT.examples, notes: COMMAND_TEXT.notes },
   subcommands: [
-    { name: COMMAND.list, aliases: COMMAND.listAliases, usage: sub.list.usage, desc: sub.list.desc, help: { about: sub.list.about }, run: reportingErrors(listServers) },
-    { name: COMMAND.connect, aliases: COMMAND.connectAliases, usage: sub.connect.usage, desc: sub.connect.desc, help: { about: sub.connect.about, examples: sub.connect.examples }, run: reportingErrors(connect) },
-    { name: COMMAND.add, usage: sub.add.usage, desc: sub.add.desc, rawLine: true, help: { about: sub.add.about, examples: sub.add.examples }, run: reportingErrors((_args, { rest }) => saveServer(parsePairs(textAfterWords(rest, SUBCOMMAND_WORDS)), COMMAND_TEXT.savedWord)) },
-    { name: COMMAND.edit, usage: sub.edit.usage, desc: sub.edit.desc, rawLine: true, help: { about: sub.edit.about, examples: sub.edit.examples }, run: reportingErrors(edit) },
-    { name: COMMAND.remove, aliases: COMMAND.removeAliases, usage: sub.remove.usage, desc: sub.remove.desc, help: { about: sub.remove.about }, run: reportingErrors(remove) },
-    { name: COMMAND.fingerprint, aliases: COMMAND.fingerprintAliases, usage: sub.fingerprint.usage, desc: sub.fingerprint.desc, help: { about: sub.fingerprint.about, examples: sub.fingerprint.examples }, run: reportingErrors(fingerprint) },
-    { name: COMMAND.page, aliases: COMMAND.pageAliases, usage: sub.page.usage, desc: sub.page.desc, help: { about: sub.page.about }, run: reportingErrors(async () => { await askServerList(OPERATION.openList); }) },
+    { name: COMMAND.list, capability: CAPABILITY.serverList.list, aliases: COMMAND.listAliases, usage: sub.list.usage, desc: sub.list.desc, help: { about: sub.list.about }, run: reportingErrors(listServers) },
+    { name: COMMAND.connect, capability: CAPABILITY.serverList.connect, aliases: COMMAND.connectAliases, usage: sub.connect.usage, desc: sub.connect.desc, help: { about: sub.connect.about, examples: sub.connect.examples }, run: reportingErrors(connect) },
+    { name: COMMAND.add, capability: CAPABILITY.serverList.add, usage: sub.add.usage, desc: sub.add.desc, rawLine: true, help: { about: sub.add.about, examples: sub.add.examples }, run: reportingErrors((_args, { rest }) => saveServer(parsePairs(textAfterWords(rest, SUBCOMMAND_WORDS)), COMMAND_TEXT.savedWord)) },
+    { name: COMMAND.edit, capability: CAPABILITY.serverList.edit, usage: sub.edit.usage, desc: sub.edit.desc, rawLine: true, help: { about: sub.edit.about, examples: sub.edit.examples }, run: reportingErrors(edit) },
+    { name: COMMAND.remove, capability: CAPABILITY.serverList.remove, aliases: COMMAND.removeAliases, usage: sub.remove.usage, desc: sub.remove.desc, help: { about: sub.remove.about }, run: reportingErrors(remove) },
+    { name: COMMAND.fingerprint, capability: CAPABILITY.serverList.fingerprint, aliases: COMMAND.fingerprintAliases, usage: sub.fingerprint.usage, desc: sub.fingerprint.desc, help: { about: sub.fingerprint.about, examples: sub.fingerprint.examples }, run: reportingErrors(fingerprint) },
+    { name: COMMAND.page, capability: CAPABILITY.serverList.page, aliases: COMMAND.pageAliases, usage: sub.page.usage, desc: sub.page.desc, help: { about: sub.page.about }, run: reportingErrors(async () => { await askServerList(OPERATION.openList); }) },
   ],
   mask: (line: string): string => line.replace(PASSWORD_IN_LINE, MASKED_PASSWORD_REPLACEMENT),
   run: reportingErrors(async (args) => {
