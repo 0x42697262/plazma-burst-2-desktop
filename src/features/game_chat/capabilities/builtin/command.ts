@@ -1,7 +1,7 @@
 import { runKey } from '#console/kernel/commands/settings.ts';
 import { KEY } from '#console/kernel/state/schema.ts';
-import { BUILTIN_COMMAND } from '../keys.ts';
-import { BUILTIN_TEXT } from '../text.ts';
+import { BUILTIN_COMMAND } from '../../keys.ts';
+import { BUILTIN_TEXT } from '../../text.ts';
 
 export const builtinCommand = Object.freeze({
   name: BUILTIN_COMMAND,

@@ -45,7 +45,7 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   consoleFeature(FEATURE.trace),
   define(FEATURE.mapCache),
   consoleFeature(FEATURE.mapEditor, { requires: [FEATURE.devConsole, FEATURE.mapCache, FEATURE.triggers] }),
-  consoleFeature(FEATURE.gameChat),
+  consoleFeature(FEATURE.gameChat, { capabilities: noNeeds(CAPABILITY.gameChat) }),
   consoleFeature(FEATURE.zoom),
   consoleFeature(FEATURE.screenshot),
   consoleFeature(FEATURE.netlog),
