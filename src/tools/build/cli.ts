@@ -26,12 +26,12 @@ async function main(): Promise<void> {
   const chosen = chosenEdition();
   if (chosen?.problems.length) {
     console.error(TEXT.editionProblems(chosen.edition.name, chosen.problems));
+    if (chosen.missing.length) console.error(TEXT.addThese(chosen.missing));
     process.exitCode = FAILED_EXIT_CODE;
     return;
   }
   if (chosen) {
     console.log(TEXT.edition(chosen.edition.name, chosen.edition.features ?? [], chosen.edition.capabilities));
-    for (const reason of chosen.added) console.log(TEXT.added(reason));
   }
   for (const output of await buildAll(chosen?.edition)) console.log(TEXT.built(path.relative(REPO_ROOT, output)));
 }

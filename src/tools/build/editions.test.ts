@@ -8,6 +8,7 @@ import { CAPABILITIES, CATALOG } from '#shared/features/catalog.ts';
 import type { Edition } from '#shared/editions/types.ts';
 import { pageBuildOptions, wrapperBuildOptions } from './build.ts';
 import { editionNames, oneOffEdition, readEdition } from './edition-file.ts';
+import { withRequirements } from '#kernel/editions/resolve.ts';
 import { onlyEditionFeatures } from './edition-plugin.ts';
 
 const ALWAYS_IN_THE_MAIN_PROCESS = ['login', 'cert_pinning', 'client_sadburst'];
@@ -105,7 +106,7 @@ test('an edition file must name itself and list known features', () => {
 
 test('every capability builds alone, without the code of its siblings', async () => {
   for (const capability of CAPABILITIES) {
-    const { edition, problems } = oneOffEdition([capability.id]);
+    const { edition, problems } = oneOffEdition(withRequirements(CATALOG, [capability.id]));
     assert.deepEqual(problems, [], capability.id);
     assert.ok(edition.capabilities?.includes(capability.id), capability.id);
     await assertHoldsOnly({ ...edition, name: capability.id });

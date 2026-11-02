@@ -16,12 +16,12 @@ const editionFileSchema = z.object({
   features: z.union([z.literal(EVERY_FEATURE), z.array(z.string())]),
 }).strict();
 
-export type BuiltEdition = Readonly<{ edition: Edition; added: readonly string[]; problems: readonly string[] }>;
+export type BuiltEdition = Readonly<{ edition: Edition; missing: readonly string[]; problems: readonly string[] }>;
 
 const withFeatures = (base: Omit<Edition, 'features' | 'capabilities'>, listed: EditionList): BuiltEdition => {
   const resolved = resolveEdition(CATALOG, listed);
   const features = listed === EVERY_FEATURE ? null : resolved.features;
-  return Object.freeze({ edition: Object.freeze({ ...base, features, capabilities: resolved.capabilities }), added: resolved.added, problems: resolved.problems });
+  return Object.freeze({ edition: Object.freeze({ ...base, features, capabilities: resolved.capabilities }), missing: resolved.missing, problems: resolved.problems });
 };
 
 export function readEdition(name: string, folder: string = EDITIONS_DIR): BuiltEdition {

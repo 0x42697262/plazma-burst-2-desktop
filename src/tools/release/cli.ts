@@ -37,11 +37,10 @@ async function main(): Promise<void> {
     return;
   }
   if (!options.edition) throw new Error(TEXT.noEdition);
-  const { edition, added, problems } = readEdition(options.edition);
+  const { edition, problems } = readEdition(options.edition);
   if (problems.length) throw new Error(problems.join(LINE_JOIN));
   if (edition.features === null) console.warn(TEXT.everyFeature);
   console.log(TEXT.building(edition.name, edition.features ?? []));
-  for (const reason of added) console.log(TEXT.added(reason));
 
   await fs.rm(DIST_DIR, { recursive: true, force: true });
   await buildAll(edition);

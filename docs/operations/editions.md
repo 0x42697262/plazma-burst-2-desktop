@@ -17,7 +17,7 @@ but `dev`.
   "name": "player",
   "title": "Plazma Burst 2 Client",
   "appId": "io.github.plazma-burst-2-desktop.player",
-  "features": ["server_list", "client_sadburst"]
+  "features": ["server_list", "lobby_task_guard", "cert_pinning", "client_sadburst", "game_setup"]
 }
 ```
 
@@ -42,7 +42,7 @@ npm run build -- --edition player            # an edition file
 npm run build -- --features server_list,zoom  # a one-off list (edition "custom")
 ```
 
-The build prints the edition's features and why each one it added is there, then builds
+The build prints the edition's features, then builds
 only what the edition needs: the page core always, the dev console only with
 `dev_console`, the server list page only with `server_list`, the hooks runtime only with
 `hooks`, the remote-play client only with `remote_play`.
@@ -62,16 +62,27 @@ leaves out (`dist/console/`, `dist/hooks/` …) can still be there from an earli
 `npm run release` empties `dist/` first. To package an edition for players, see
 [releases](releases.md).
 
-## What the build adds or refuses
+## Requirements are listed, never added
 
-The build resolves the list with the feature catalog (`src/kernel/editions/resolve.ts`):
-- a feature's `requires` are added (`map_editor` brings `dev_console`, `map_cache`,
-  `triggers`);
-- a locked feature comes with what it needs (`console_core` with `dev_console`);
-- `server_list` always brings `lobby_task_guard` and `cert_pinning`
-  (`ALWAYS_WITH` in `src/shared/editions/keys.ts`): an app that joins private servers is
-  always protected from their code and their certificates;
-- an unknown id stops the build.
+The build adds nothing on its own (`src/kernel/editions/resolve.ts`). An edition must list
+everything it needs, and a missing requirement stops the build, naming what to add:
+
+```
+Edition "custom" cannot be built:
+  teleport needs dev_console: add "dev_console" to the edition
+Add to its "features": "dev_console"
+```
+
+What needs what:
+- a feature's `requires` (`map_editor` needs `dev_console`, `map_cache`, `triggers`; every
+  console feature needs `dev_console`);
+- `dev_console` needs `console_core`, the console itself;
+- `server_list` needs `lobby_task_guard` and `cert_pinning` (`ALWAYS_WITH` in
+  `src/shared/editions/keys.ts`): an app that joins private servers is always protected
+  from their code and their certificates;
+- a capability's `requires` (`profiles.bind` needs `binds.bind`, `netlog.all` needs
+  `netlog.record`);
+- an unknown id is a problem too.
 
 ## Capabilities you can pick
 
@@ -80,11 +91,11 @@ The build resolves the list with the feature catalog (`src/kernel/editions/resol
 
 | `"features"` | The app has |
 |---|---|
-| `["teleport"]` | `tp` |
-| `["health.god"]` | the `god` key |
-| `["triggers.find"]` | `triggers find` |
-| `["trace", "binds.bind"]` | `trace`, `bind`, `unbind` |
-| `["server_list", "client_sadburst"]` | the player client |
+| `["dev_console", "console_core", "teleport"]` | `tp` |
+| `["dev_console", "console_core", "health.god"]` | the `god` key |
+| `["dev_console", "console_core", "triggers.find"]` | `triggers find` |
+| `["dev_console", "console_core", "trace", "binds.bind"]` | `trace`, `bind`, `unbind` |
+| `["server_list", "lobby_task_guard", "cert_pinning", "client_sadburst"]` | the player client |
 
 ## How left-out code stays out
 

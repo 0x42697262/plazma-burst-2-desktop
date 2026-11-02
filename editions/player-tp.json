@@ -4,8 +4,12 @@
   "appId": "io.github.plazma-burst-2-desktop.player-tp",
   "features": [
     "server_list",
+    "lobby_task_guard",
+    "cert_pinning",
     "client_sadburst",
     "game_setup",
+    "dev_console",
+    "console_core",
     "teleport"
   ]
 }
