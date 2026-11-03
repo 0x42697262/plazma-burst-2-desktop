@@ -56,7 +56,7 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   define(FEATURE.lobbyTaskGuard, { availableIn: LOCAL_ONLY }),
   consoleFeature(FEATURE.scanBypass, { availableIn: LOCAL_AND_SERVER, capabilities: noNeeds(CAPABILITY.scanBypass) }),
   consoleFeature(FEATURE.jsEval, { availableIn: LOCAL_AND_SERVER }),
-  define(FEATURE.hooks, { unavailableForClients: ONLY_OFFICIAL }),
+  define(FEATURE.hooks),
   define(FEATURE.serverList, { availableIn: LOCAL_ONLY, unavailableForClients: ONLY_OFFICIAL, capabilities: noNeeds(CAPABILITY.serverList) }),
   define(FEATURE.login),
   define(FEATURE.certPinning, { availableIn: LOCAL_ONLY }),

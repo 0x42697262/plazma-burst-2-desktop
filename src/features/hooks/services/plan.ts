@@ -1,9 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { EXAMPLE_SUFFIX, HOOK_EXTENSION, INDEX_HTML, LOG_LEVEL_OF_STATUS, SKIPPED_PREFIX, STATUS, TEXT_ENCODING, type HookStatus } from '../keys.ts';
+import type vm from 'node:vm';
+import { EXAMPLE_SUFFIX, HOOK_EXTENSION, INDEX_HTML, LOG_LEVEL_OF_STATUS, MANIFEST_FILE, SKIPPED_PREFIX, STATUS, TEXT_ENCODING, type HookStatus } from '../keys.ts';
 import { TEXT } from '../text.ts';
-import { HookClash, apply, listScripts, validate, type Names, type Patch, type Target } from '../domain/patching.ts';
-import { dryRun, type HookOptions } from '../adapters/sandbox.ts';
+import { HookClash, apply, listManifestScripts, listScripts, validate, type Names, type Patch, type Target } from '../domain/patching.ts';
+import { createSandboxContext, dryRun, type HookOptions } from '../adapters/sandbox.ts';
 
 export type Hook = { name: string; file: string; status: HookStatus; error: string; options: HookOptions; targets: Target[]; patches: Patch[]; code: string };
 export type Plan = { hooks: Hook[]; files: Map<string, string>; targets: Record<string, number>; loaded: Hook[]; names: Names };
@@ -11,12 +12,12 @@ export type Plan = { hooks: Hook[]; files: Map<string, string>; targets: Record<
 export const isHookFile = (file: string): boolean => file.endsWith(HOOK_EXTENSION) && !file.endsWith(EXAMPLE_SUFFIX) && !SKIPPED_PREFIX.test(file);
 const hookNameOf = (file: string): string => file.slice(0, -HOOK_EXTENSION.length);
 
-function readHook(hooksDir: string, entry: string, names: Names, originals: ReadonlyMap<string, string>): Hook {
+function readHook(hooksDir: string, entry: string, names: Names, originals: ReadonlyMap<string, string>, context: vm.Context): Hook {
   const file = path.join(hooksDir, entry);
   const hook: Hook = { name: hookNameOf(entry), file, status: STATUS.loaded, error: '', options: { enabled: true, multiplayer: true, description: '' }, targets: [], patches: [], code: '' };
   try {
     hook.code = fs.readFileSync(file, TEXT_ENCODING);
-    Object.assign(hook, dryRun(file, hook.code, names));
+    Object.assign(hook, dryRun(file, hook.code, names, context));
     if (!hook.options.enabled) {
       hook.status = STATUS.disabled;
       return hook;
@@ -27,6 +28,14 @@ function readHook(hooksDir: string, entry: string, names: Names, originals: Read
     hook.error = (error as Error | null)?.message ?? String(error);
   }
   return hook;
+}
+
+function readManifestScripts(gameDir: string): string[] {
+  try {
+    return listManifestScripts(fs.readFileSync(path.join(gameDir, MANIFEST_FILE), TEXT_ENCODING));
+  } catch {
+    return [];
+  }
 }
 
 export function buildPlan({ gameDir, hooksDir, names = {} }: { gameDir: string; hooksDir: string; names?: Names }): Plan {
@@ -40,7 +49,7 @@ export function buildPlan({ gameDir, hooksDir, names = {} }: { gameDir: string; 
   if (!entries.length) return plan;
   const html = fs.readFileSync(path.join(gameDir, INDEX_HTML), TEXT_ENCODING);
   const originals = new Map<string, string>();
-  for (const relative of listScripts(html)) {
+  for (const relative of [...listScripts(html), ...readManifestScripts(gameDir)]) {
     if (!relative.endsWith(HOOK_EXTENSION)) continue;
     try {
       originals.set(relative, fs.readFileSync(path.join(gameDir, relative), TEXT_ENCODING));
@@ -48,7 +57,8 @@ export function buildPlan({ gameDir, hooksDir, names = {} }: { gameDir: string; 
       continue;
     }
   }
-  plan.hooks = entries.map((entry) => readHook(hooksDir, entry, names, originals));
+  const context = createSandboxContext();
+  plan.hooks = entries.map((entry) => readHook(hooksDir, entry, names, originals, context));
   for (;;) {
     const ready = plan.hooks.filter((hook) => hook.status === STATUS.loaded);
     try {

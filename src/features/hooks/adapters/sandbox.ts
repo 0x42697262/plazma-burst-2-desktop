@@ -31,7 +31,9 @@ const markTarget = (key: string | null, name: string): TargetMark => ({ [TARGET]
 const isTargetMark = (value: unknown): value is TargetMark => typeof value === 'object' && value !== null && TARGET in value;
 const isValidCount = (count: unknown): count is number | typeof COUNT_ALL => count === COUNT_ALL || (Number.isInteger(count) && (count as number) > 0);
 
-export function dryRun(file: string, code: string, names: Names): DryRun {
+export const createSandboxContext = (): vm.Context => vm.createContext({ console });
+
+export function dryRun(file: string, code: string, names: Names, context: vm.Context = createSandboxContext()): DryRun {
   const targets: Target[] = [];
   const patches: Patch[] = [];
   const pageOnly = (what: string) => () => { throw new Error(TEXT.pageOnly(what)); };
@@ -68,7 +70,6 @@ export function dryRun(file: string, code: string, names: Names): DryRun {
     },
   };
   const module: HookModule = { exports: {} };
-  const context = vm.createContext({ console });
   const body = new vm.Script(sandboxWrapper(code), { filename: file, lineOffset: LINE_OFFSET }).runInContext(context) as HookBody;
   body(interceptor, script, game, () => undefined, module, module.exports);
   const exported = module.exports;

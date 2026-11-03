@@ -41,7 +41,7 @@ test('modes and clients rule features out', () => {
   assert.deepEqual(resolve({ mode: 'remote' }).states.js_eval, { on: false, source: 'constraint', reason: 'not available in remote mode' });
   assert.equal(resolve({ mode: 'remote' }).states.remote_play.on, true);
   assert.equal(resolve().states.remote_play.on, false);
-  assert.deepEqual(resolve({ client: 'sadburst' }).states.hooks, { on: false, source: 'constraint', reason: 'not available for the sadburst client' });
+  assert.deepEqual(resolve({ client: 'sadburst' }).states.server_list, { on: false, source: 'constraint', reason: 'not available for the sadburst client' });
   assert.equal(resolve({ mode: 'server' }).states.p2p_host.on, true);
 });
 

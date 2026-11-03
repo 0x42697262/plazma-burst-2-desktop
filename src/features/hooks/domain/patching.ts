@@ -1,6 +1,6 @@
 import { FIND_SHOWN_MAX } from '../constants.ts';
 import {
-  BACKSLASH, CLOSE_PAREN, COUNT_ALL, ESCAPED_MATCH, EXTERNAL_URL, GLOBAL_FLAG, NON_SPACE, OPEN_BRACE, OPEN_PAREN, PLACEHOLDER, QUOTES,
+  BACKSLASH, CLOSE_PAREN, COUNT_ALL, ESCAPED_MATCH, EXTERNAL_URL, GLOBAL_FLAG, LEADING_DOT_SLASH, NON_SPACE, OPEN_BRACE, OPEN_PAREN, PLACEHOLDER, QUOTES,
   REGEX_SPECIAL, REGEXP_TAG, SCRIPT_SOURCE, functionDeclaration, trampoline,
 } from '../keys.ts';
 import { TEXT } from '../text.ts';
@@ -26,7 +26,22 @@ export const escapeRegExp = (text: string): string => text.replace(REGEX_SPECIAL
 export const isRegExp = (value: unknown): value is RegExp => Object.prototype.toString.call(value) === REGEXP_TAG;
 
 export function listScripts(html: string): string[] {
-  return [...html.matchAll(SCRIPT_SOURCE)].map((match) => match[1] ?? '').filter((source) => source && !EXTERNAL_URL.test(source));
+  return [...html.matchAll(SCRIPT_SOURCE)]
+    .map((match) => (match[1] ?? '').replace(LEADING_DOT_SLASH, ''))
+    .filter((source) => source && !EXTERNAL_URL.test(source));
+}
+
+type ScriptsManifest = { strings?: Record<string, unknown>; order?: unknown };
+
+export function listManifestScripts(rawManifest: string): string[] {
+  try {
+    const parsed = JSON.parse(rawManifest) as ScriptsManifest;
+    const strings: unknown[] = parsed.strings && typeof parsed.strings === 'object' ? Object.values(parsed.strings) : [];
+    const order: unknown[] = Array.isArray(parsed.order) ? (parsed.order as unknown[]) : [];
+    return [...strings, ...order].filter((entry): entry is string => typeof entry === 'string' && entry.length > 0);
+  } catch {
+    return [];
+  }
 }
 
 export function fillNames(text: string, names: Names, regexSafe: boolean): string {
