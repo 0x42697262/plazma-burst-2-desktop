@@ -45,7 +45,7 @@ export const XML_START = '<';
 export const SCRIPTS: readonly string[] = Object.freeze(['_strings.js', 'scripts/libs/tools.js', 'scripts/libs/xml.js', 'scripts/connection.js', 'scripts/libs/flash.js']);
 export const NEEDED_NAMES = Object.freeze(['net', 'connClass', 'serverFlag', 'setupClass', 'setupMethod', 'p2pAuth', 'p2pAuthIds', 'serverStats',
   'webRequests', 'webRequest', 'mapUrl', 'mapKey', 'mapRequest', 'socketConn', 'connDevice', 'deviceId', 'connUser', 'connStats',
-  'connSay', 'connReason', 'connClosed', 'connMatch', 'authLogin', 'authRecords', 'authReport', 'authEndorse', 'authBan', 'authCheat',
+  'connSay', 'connReason', 'connClosed', 'connMatch', 'connListAt', 'authLogin', 'authRecords', 'authReport', 'authEndorse', 'authBan', 'authCheat',
   'authLog', 'logDisconnect', 'logChat', 'logCreate', 'logSpectate', 'logJoin', 'logLeave', 'netTick', 'matchEnd', 'matchLoadMap'] as const);
 export const MAP_SPLIT = '[^c]';
 export const MAP_JOIN = '[^#]';

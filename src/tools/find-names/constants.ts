@@ -291,6 +291,8 @@ export const RULES: readonly Rule[] = Object.freeze([
     re: String.raw`match\.⟨ID⟩\(⟨_⟩,"Server: Excluded from match by match owner",connection,⟨_⟩\);` },
   { file: 'flash', keys: ['connMatch'], what: ['connection property: the match it is in (server side)'],
     re: String.raw`let match=connection\.⟨ID⟩;\s*if\(match\)\s*\{\s*if\(connection\.⟨connUser⟩\["is_staff"\]\)` },
+  { file: 'flash', keys: ['connListAt'], what: ['connection property: when the server last answered its match list (server side; a list asked within 300 ms of it is "Too fast")'],
+    re: String.raw`if\(time>connection\.⟨ID⟩\+300\)\s*\{\s*connection\.⟨_⟩=time;` },
   { file: 'flash', keys: ['matchSay'], what: ['match method(text, color): a server line in everyone\'s chat'],
     re: String.raw`match\.⟨ID⟩\("Server: Minimum reputation to access this match was set to "` },
   { file: 'flash', keys: ['matchLoadMap'], what: ['match method(map ID, done(ok, message)): loads a map and moves everyone to it'],

@@ -23,7 +23,7 @@ export const NAME_KEYS = Object.freeze([
   'serverFlag', 'setupClass', 'setupMethod', 'serverStats', 'webRequests', 'webRequest', 'mapUrl', 'mapKey',
   'mapRequest', 'netTick', 'connClosed', 'socketConn', 'connDevice', 'deviceId', 'authLogin', 'authRecords',
   'authReport', 'authEndorse', 'authBan', 'authCheat', 'authLog', 'logDisconnect', 'logChat', 'logCreate',
-  'logSpectate', 'logJoin', 'logLeave', 'matchEnd', 'matchExclude', 'connMatch', 'matchSay', 'matchLoadMap',
+  'logSpectate', 'logJoin', 'logLeave', 'matchEnd', 'matchExclude', 'connMatch', 'connListAt', 'matchSay', 'matchLoadMap',
   'serverLocation', 'lobbyHosts', 'lobbyPort', 'lockedArrays', 'mapText', 'mapChunks', 'levelStart', 'charOnDeath',
   'zoom', 'timerTarget', 'varSyncOn', 'mapVars', 'mapId', 'keyUp', 'keyDown', 'mp', 'chatTyping', 'customMap',
   'openChat', 'sayTrigger', 'chatPopups', 'chatPanel', 'chatPanelText', 'uiOverlay', 'levelState', 'failText',

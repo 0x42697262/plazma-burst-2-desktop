@@ -28,6 +28,7 @@ export const MAX_MAP_PLAYERS = 64;
 export const MAP_TIMEOUT_MS = 15000;
 export const WELCOME_DELAY_MS = 1000;
 export const KICK_DELAY_MS = 300;
+export const NEVER_LISTED = 0;
 export const CLOSE_DELAY_MS = 500;
 export const CHEAT_DETAIL_LENGTH = 200;
 export const OK = 200;

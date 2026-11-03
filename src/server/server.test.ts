@@ -74,6 +74,7 @@ test('own server: the game\'s server code logs players in, lists, creates and jo
     const bob = client();
     assert.deepEqual(await bob.login('Bob', 'nope'), ['fail', 'Server: Wrong server password (Servers > Server list > Edit)']);
     assert.equal((await alice.login('Alice', 'pw'))[0], 'ok');
+    assert.equal((await alice.list())[0], 'ok', 'the lobby asks for the match list right after logging in, well within 300 ms of connecting');
     assert.deepEqual(await client().login('alice', 'pw'), ['fail', 'Server: That nickname is already playing here']);
     const oneLoginPerConnectionEvery3Seconds = 3100;
     await wait(oneLoginPerConnectionEvery3Seconds);

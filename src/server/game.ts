@@ -3,7 +3,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import type { Logger } from '#kernel/log/logger.ts';
 import { stringOf } from '#kernel/text/text-of.ts';
-import { CHEAT_DETAIL_LENGTH, FIRST_UID, KICK_DELAY_MS, MAX_MAP_PLAYERS, MAX_NICKNAME, REPUTATION, TICK_MS, WELCOME_DELAY_MS } from './constants.ts';
+import { CHEAT_DETAIL_LENGTH, FIRST_UID, KICK_DELAY_MS, MAX_MAP_PLAYERS, MAX_NICKNAME, NEVER_LISTED, REPUTATION, TICK_MS, WELCOME_DELAY_MS } from './constants.ts';
 import {
   ACCOUNT_KEY, CALL_USE, DEFAULT_SKIN_PART, DOLLAR, ESCAPED_DOLLAR, ESCAPED_LESS_THAN, GUEST_LOGIN, HTML_ENTITY, HTML_TAG, IPV6_PREFIX, KICK_ON_CHEAT,
   LESS_THAN, LIST_USES, LOG_MEMBER, MAP_FAILED, MAP_ID_SEPARATOR, MAP_JOIN, MAP_METHOD, MAP_NOT_APPROVED, MAP_REQUEST_NAME, MAP_SPLIT, NICKNAME_CHARACTERS,
@@ -284,6 +284,7 @@ export class GameServer {
     Object.defineProperty(socket, this.name('socketConn'), { get: () => socket.conn, configurable: true });
     const ip = stringOf(socket.handshake.address || '').replace(IPV6_PREFIX, '');
     const connection = new this.Conn({ socket, ip });
+    connection[this.name('connListAt')] = NEVER_LISTED;
     this.net.connections.push(connection);
     this.log.debug(LOG.connection(ip));
     return connection;
