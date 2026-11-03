@@ -19,7 +19,7 @@ import {
 } from '../services/edit.ts';
 import { editorOn, setEditorOn } from '../ui/editor.ts';
 import { kindTitle, kindWord, kindWords, requireShown } from './common.ts';
-import { exportCommand, load, paste } from './load.ts';
+import { exportCommand, load, paste, watchCommand } from './load.ts';
 import { inputStatus } from '../ui/input.ts';
 import { panelsOnPage } from '../ui/panels.ts';
 import { LAYER_NAME } from '../ui/keys.ts';
@@ -214,5 +214,6 @@ export const editorCommand: CommandDefinition = {
     subcommand('load', load),
     subcommand('paste', paste),
     subcommand('export', exportCommand),
+    subcommand('watch', watchCommand),
   ],
 };

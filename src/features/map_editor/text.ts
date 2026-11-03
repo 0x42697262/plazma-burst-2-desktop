@@ -63,7 +63,7 @@ export const COMMAND_TEXT = Object.freeze({
   statusSelected: (name: string | null) => `  selected: ${name ?? 'nothing'}`,
   layersUsage: (kinds: string) => `usage: editor layers all | nothing | statics | logics | entities | <kind>[,<kind>...] | +<kind> | -<kind>  (kinds: ${kinds})`,
   layersNow: (titles: readonly string[]) => `Layers: ${titles.length ? titles.join(', ') : 'nothing'} (the rest cannot be selected)`,
-  loadUsage: 'usage: editor load <name> [--add | --sync] [--only <kinds>] [--at x y | --offset dx dy | --here] [--reset] [--map-numbers] [--dry]',
+  loadUsage: 'usage: editor load <name> [--add | --sync] [--only <kinds>] [--at x y | --offset dx dy | --here] [--reset] [--map-numbers] [--dry | --watch]',
   pasteUsage: 'usage: editor paste [--add | --sync] [--only <kinds>] [--at x y | --offset dx dy | --here] [--reset] [--map-numbers] [--dry]',
   exportUsage: 'usage: editor export [all | statics | logics | entities | <kind>[,<kind>...]] [--to <name> [--force]]  (nothing: the selected object; without --to: the clipboard)',
   badKinds: (word: string, kinds: string) => `"${word}" is not a kind or a layer group (all, statics, logics, entities; kinds: ${kinds})`,
@@ -85,6 +85,14 @@ export const COMMAND_TEXT = Object.freeze({
   exportedClipboard: (count: number) => `Copied ${count} object${count === 1 ? '' : 's'} to the clipboard as map XML ("editor paste" puts them into a map)`,
   exportedFile: (count: number, file: string, name: string) => `Saved ${count} object${count === 1 ? '' : 's'} to ${file} ("editor load ${name}" puts them into a map)`,
   exportExists: (message: string, name: string) => `${message}; "editor export ... --to ${name} --force" replaces it`,
+  watching: (name: string) => `Watching data/maps/${name}.xml: every change to it is loaded again ("editor watch off" stops)`,
+  notWatching: 'Not watching a file ("editor load <name> --watch")',
+  watchSource: (name: string) => `${name} (changed)`,
+  watchFailed: (name: string, why: string) => `watching ${name}: could not load (${why}); trying again when it changes`,
+  watchStopped: (name: string, why: string) => `Stopped watching ${name}: ${why}`,
+  watchAsked: 'as asked',
+  watchFilesOnly: '--watch watches a file: "editor load <name> --watch"',
+  watchUsage: 'usage: editor watch [off]',
   couldNotCopy: (why: string) => `could not copy to the clipboard (${why})`,
   commandUsage: 'editor [on | off]',
   commandDesc: 'The in-game map editor: select, move, resize and edit the map\'s objects while you play',
@@ -284,7 +292,7 @@ export const SUBCOMMAND_HELP = (kindWords: string) => ({
   load: {
     name: 'load',
     aliases: ['merge', 'import'],
-    usage: 'editor load <name> [--add | --sync] [--only <kinds>] [--at x y | --offset dx dy | --here] [--reset] [--map-numbers] [--dry]',
+    usage: 'editor load <name> [--add | --sync] [--only <kinds>] [--at x y | --offset dx dy | --here] [--reset] [--map-numbers] [--dry | --watch]',
     desc: 'Put the objects of data/maps/<name>.xml into this map: same uid replaced, the rest added',
     help: {
       about: [
@@ -309,11 +317,13 @@ export const SUBCOMMAND_HELP = (kindWords: string) => ({
         ['--reset', 'build replaced objects again as at level start (a trigger\'s calls, a movable\'s place)'],
         ['--map-numbers', 'load references by number (maps without uids) as they are'],
         ['--dry', 'only say what it would do'],
+        ['--watch', 'keep loading the file again whenever it changes (not with --add)'],
       ],
       examples: [
         ['editor load door_logic', 'the triggers in data/maps/door_logic.xml replace this map\'s'],
         ['editor load turret --add --here', 'a copy of a saved piece at your crosshair'],
         ['editor load arena --only trigger --sync --dry', 'what syncing the triggers would change'],
+        ['editor load door_logic --watch', 'edit the file in a text editor; each save is loaded'],
       ],
       notes: [
         'A reference by number ("region 2", from maps without uids) means another object in',
@@ -357,6 +367,21 @@ export const SUBCOMMAND_HELP = (kindWords: string) => ({
       ],
       examples: [['editor export trigger,timer --to door_logic', 'the map\'s logic, to load into another map']],
       see: ['editor load', 'editor paste', 'editor save'],
+    },
+  },
+  watch: {
+    name: 'watch',
+    usage: 'editor watch [off]',
+    desc: 'What "editor load --watch" watches, or stop watching',
+    help: {
+      about: [
+        '"editor load <name> --watch" loads the file, then looks at it every second and',
+        'loads it again, with the same options, whenever its text changes: edit a map file',
+        'in a text editor and see each save in the running level. Each reload is its own',
+        'undo step. Watching stops when the editor is turned off or another map starts.',
+      ],
+      args: [['(nothing)', 'what is watched'], ['off', 'stop watching']],
+      see: ['editor load'],
     },
   },
 } satisfies Record<string, Omit<CommandDefinition, 'run'>>);

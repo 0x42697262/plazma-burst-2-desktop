@@ -49,6 +49,8 @@ export const SERVICES_TEXT = Object.freeze({
   noClipboard: 'no clipboard here',
   emptyClipboard: 'the clipboard is empty',
   notRebuilt: 'the running level cannot build it again',
+  watchEditorOff: 'the editor was turned off',
+  watchOtherMap: 'another map started, or the map was read again',
   lineBreak: '\n',
 });
 

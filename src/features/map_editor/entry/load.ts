@@ -7,7 +7,8 @@ import type { Placement } from '../domain/merge.ts';
 import { editorDoc, selected } from '../services/session.ts';
 import { saveText } from '../services/edit.ts';
 import { exportText, loadText, readClipboard, readLocalMap, writeClipboard, type LoadResult, type LoadRun } from '../services/load.ts';
-import { EXISTS_PATTERN, EXPORT_OPTION, EXPORT_VALUED, LAYER_WORD_SEPARATOR, LOAD_FLAGS, LOAD_OPTION, LOAD_VALUED, NAME_JOIN, PLACEMENT_OPTIONS } from '../keys.ts';
+import { startWatch, stopWatch, watchedName } from '../services/watch.ts';
+import { OFF_WORDS, EXISTS_PATTERN, EXPORT_OPTION, EXPORT_VALUED, LAYER_WORD_SEPARATOR, LOAD_FLAGS, LOAD_OPTION, LOAD_VALUED, NAME_JOIN, PLACEMENT_OPTIONS } from '../keys.ts';
 import { COMMAND_TEXT as TEXT } from '../text.ts';
 import { kindsOf, kindWords, requireShown } from './common.ts';
 
@@ -26,10 +27,12 @@ function crosshair(): Spot {
   return { x: Math.round(me.tarx as number), y: Math.round(me.tary as number) };
 }
 
-function loadRunOf(args: readonly string[]): { words: string[]; run: LoadRun } {
+function loadRunOf(args: readonly string[]): { words: string[]; run: LoadRun; watch: boolean } {
   const { options, values, rest } = takeValueOptions(args, LOAD_FLAGS, LOAD_VALUED);
   oneOf(options, [LOAD_OPTION.add, LOAD_OPTION.sync]);
   oneOf(options, [LOAD_OPTION.add, LOAD_OPTION.reset]);
+  oneOf(options, [LOAD_OPTION.add, LOAD_OPTION.watch]);
+  oneOf(options, [LOAD_OPTION.dry, LOAD_OPTION.watch]);
   oneOf(options, PLACEMENT_OPTIONS);
   const onlyWord = values.get(LOAD_OPTION.only)?.[0];
   const only = onlyWord === undefined ? null : kindsOf(onlyWord);
@@ -39,6 +42,7 @@ function loadRunOf(args: readonly string[]): { words: string[]; run: LoadRun } {
   const placement: Placement = offset ? { offset } : at ? { at } : null;
   return {
     words: rest,
+    watch: options.has(LOAD_OPTION.watch),
     run: {
       add: options.has(LOAD_OPTION.add),
       sync: options.has(LOAD_OPTION.sync),
@@ -64,28 +68,55 @@ function report(source: string, { plan, notLive, notReset, reset }: LoadResult, 
   if (!dry && changedSomething) print(TEXT.undoLoad);
 }
 
-function runLoad(source: string, read: () => Promise<string>, run: LoadRun): Promise<void> {
+const printLoadError = (message: string): void => { print(TEXT.error(TEXT.couldNotLoad(message || TEXT.desktopOnly)), COLOR.error); };
+
+function runLoad(source: string, read: () => Promise<string>, run: LoadRun, then: (text: string) => void = () => undefined): Promise<void> {
   return read()
     .then((text) => {
       requireShown();
+      then(text);
       report(source, loadText(text, run), run.dry);
     })
-    .catch((error: Error) => { print(TEXT.error(TEXT.couldNotLoad(error.message || TEXT.desktopOnly)), COLOR.error); });
+    .catch((error: Error) => { printLoadError(error.message); });
+}
+
+function watchFrom(name: string, run: LoadRun) {
+  return (text: string): void => {
+    startWatch(name, run, text, {
+      loaded: (result) => { report(TEXT.watchSource(name), result, false); },
+      failed: (message) => { print(TEXT.error(TEXT.watchFailed(name, message)), COLOR.error); },
+      stopped: (why) => { print(TEXT.watchStopped(name, why), COLOR.notice); },
+    });
+    print(TEXT.watching(name), COLOR.ok);
+  };
 }
 
 export function load(args: string[]): Promise<void> {
   requireShown();
-  const { words, run } = loadRunOf(args);
+  const { words, run, watch } = loadRunOf(args);
   const name = words.join(NAME_JOIN).trim();
   if (!name) throw new Error(TEXT.loadUsage);
-  return runLoad(name, () => readLocalMap(name), run);
+  return runLoad(name, () => readLocalMap(name), run, watch ? watchFrom(name, run) : undefined);
 }
 
 export function paste(args: string[]): Promise<void> {
   requireShown();
-  const { words, run } = loadRunOf(args);
+  const { words, run, watch } = loadRunOf(args);
   if (words.length) throw new Error(TEXT.pasteUsage);
+  if (watch) throw new Error(TEXT.watchFilesOnly);
   return runLoad(TEXT.clipboardSource, readClipboard, run);
+}
+
+export function watchCommand(args: string[]): void {
+  const word = (args[0] ?? '').toLowerCase();
+  if (args.length > 1 || (word && !OFF_WORDS.includes(word))) throw new Error(TEXT.watchUsage);
+  const name = watchedName();
+  if (!word) {
+    print(name ? TEXT.watching(name) : TEXT.notWatching, name ? COLOR.ok : COLOR.notice);
+    return;
+  }
+  if (stopWatch()) print(TEXT.watchStopped(name ?? '', TEXT.watchAsked), COLOR.ok);
+  else print(TEXT.notWatching, COLOR.notice);
 }
 
 function exported(words: readonly string[]): MapElement[] {

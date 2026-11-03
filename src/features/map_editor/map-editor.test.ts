@@ -1395,3 +1395,61 @@ test('editor load, paste and export: map tags merge into the map by uid as one u
     globals[names.mapText] = original;
   }
 });
+
+test('editor load --watch: each change to the file is loaded again, a bad version is said once, and watching stops with the editor', async () => {
+  const session = await import('#features/map_editor/services/session.ts');
+  const { watchTick, watchedName } = await import('#features/map_editor/services/watch.ts');
+  const { WATCH_POLL_MS } = await import('#features/map_editor/services/constants.ts');
+  const { globals, names, G } = game;
+  const original = globals[names.mapText];
+  const realFetch = G.fetch;
+  const files: Record<string, string> = {};
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 10));
+  const printedAfter = async (action: () => void): Promise<string[]> => {
+    game.log.printed.length = 0;
+    action();
+    await settle();
+    return game.log.printed.filter((printed) => !printed.startsWith('> '));
+  };
+  const nextPoll = () => { watchTick(Date.now() + WATCH_POLL_MS); };
+  G.fetch = async (url: string, options?: unknown) => {
+    if (!/__dev\/localmap/.test(url)) return realFetch(url, options);
+    const name = new URL(url, 'https://pb2.test/').searchParams.get('name') ?? '';
+    return name in files ? { ok: true, status: 200, text: async () => files[name] } : { ok: false, status: 404, text: async () => '' };
+  };
+  try {
+    game.run('editor on');
+    globals[names.mapText] = '<trigger uid="#t" x="500" y="0" enabled="true" maxcalls="1" />';
+    setLevelRunning(false); setLevelRunning(true);
+    const doc = session.editorDoc()!;
+    files.live = '<trigger uid="#t" enabled="true" maxcalls="2" />';
+    const started = await printedAfter(() => globals.pb2dev.run('editor load live --watch'));
+    assert.match(started[0] ?? '', /^Watching data\/maps\/live\.xml/, started.join(' | '));
+    assert.match(started[1] ?? '', /^Loaded live: 1 replaced$/);
+    assert.equal(watchedName(), 'live');
+    assert.deepEqual(await printedAfter(nextPoll), [], 'nothing changed: nothing loaded');
+    files.live = '<trigger uid="#t" enabled="true" maxcalls="3" />';
+    assert.match((await printedAfter(nextPoll))[0] ?? '', /^Loaded live \(changed\): 1 replaced$/);
+    assert.equal(doc.byUid('#t')!.attrs.maxcalls, '3');
+    files.live = '<trigger enabled="true" maxcalls="1" actions_1_type="0" actions_1_targetA="0" actions_1_targetB="1" />';
+    assert.match((await printedAfter(nextPoll))[0] ?? '', /^error: watching live: could not load \(it names objects by number/);
+    delete files.live;
+    assert.match((await printedAfter(nextPoll))[0] ?? '', /^error: watching live: could not load \(no data\/maps\/live\.xml/);
+    assert.deepEqual(await printedAfter(nextPoll), [], 'the same problem is said once');
+    files.live = '<trigger uid="#t" enabled="true" maxcalls="4" />';
+    assert.match((await printedAfter(nextPoll))[0] ?? '', /^Loaded live \(changed\): 1 replaced$/, 'and it picks up again once the file is fine');
+    assert.match(game.run('editor watch')[0], /^Watching data\/maps\/live\.xml/);
+    assert.match(game.run('editor watch off')[0], /^Stopped watching live: as asked/);
+    assert.equal(watchedName(), null);
+    assert.match(game.run('editor watch')[0], /^Not watching a file/);
+    assert.match(errorsOf(game.run('editor load live --watch --add'))[0], /--add and --watch do not go together/);
+    assert.match(errorsOf(game.run('editor paste --watch'))[0], /--watch watches a file/);
+    await printedAfter(() => globals.pb2dev.run('editor load live --watch'));
+    game.run('editor off');
+    assert.match((await printedAfter(nextPoll))[0] ?? '', /^Stopped watching live: the editor was turned off/);
+  } finally {
+    G.fetch = realFetch;
+    session.setEditor(false); session.forgetDocument();
+    globals[names.mapText] = original;
+  }
+});

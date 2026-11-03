@@ -10,9 +10,9 @@ export const QUOTED_VALUE = /^"(.*)"$/;
 export const UNQUOTE = '$1';
 export const FORCE_OPTION = 'force';
 export const LOAD_OPTION = Object.freeze({
-  add: 'add', sync: 'sync', dry: 'dry', reset: 'reset', mapNumbers: 'map-numbers', here: 'here', only: 'only', at: 'at', offset: 'offset',
+  add: 'add', sync: 'sync', dry: 'dry', reset: 'reset', mapNumbers: 'map-numbers', here: 'here', only: 'only', at: 'at', offset: 'offset', watch: 'watch',
 });
-export const LOAD_FLAGS: readonly string[] = Object.freeze([LOAD_OPTION.add, LOAD_OPTION.sync, LOAD_OPTION.dry, LOAD_OPTION.reset, LOAD_OPTION.mapNumbers, LOAD_OPTION.here]);
+export const LOAD_FLAGS: readonly string[] = Object.freeze([LOAD_OPTION.add, LOAD_OPTION.sync, LOAD_OPTION.dry, LOAD_OPTION.reset, LOAD_OPTION.mapNumbers, LOAD_OPTION.here, LOAD_OPTION.watch]);
 export const LOAD_VALUED: Readonly<Record<string, number>> = Object.freeze({ [LOAD_OPTION.only]: 1, [LOAD_OPTION.at]: 2, [LOAD_OPTION.offset]: 2 });
 export const PLACEMENT_OPTIONS: readonly string[] = Object.freeze([LOAD_OPTION.at, LOAD_OPTION.offset, LOAD_OPTION.here]);
 export const EXPORT_OPTION = Object.freeze({ to: 'to', force: 'force' });

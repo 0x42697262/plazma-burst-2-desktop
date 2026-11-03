@@ -201,6 +201,12 @@ session and draw again when it notifies them; the session never draws.
   - `--reset` builds replaced objects again with the game's loader (`rebuildLive`), as at
     level start. Objects it cannot build again are said when the load changed them.
   - `--dry` plans and reports, and changes nothing.
+  - `--watch` (`services/watch.ts`) keeps the file's text and reads it again once a second
+    from the editor's frame hook, only while the editor is shown and never twice at once.
+    New text is loaded with the same options, each time its own undo step. A load that
+    fails is said once per problem, and the next good version is loaded. Not with `--add`
+    (each change would add another copy) or `--dry`. It stops on "editor watch off", when
+    the editor is turned off, and when another map starts or the map is read again.
 - Which attributes name another object is the logic graph's `referenceKindOf`
   (`features/triggers/logic/graph.ts`): a trigger action's targets by its type, the rest by
   attribute. A reference by number (maps without uids: "region 2") means another object in
