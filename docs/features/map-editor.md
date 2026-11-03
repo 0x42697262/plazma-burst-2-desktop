@@ -39,6 +39,9 @@ Tests: `src/features/map_editor/map-editor.test.ts`.
 - `editor save <name>` writes `data/maps/<name>.xml` through the map cache's
   `__dev/saveedited`, played as `local-<name>`. `editor reset` undoes and forgets every
   edit.
+- `editor load <name>` and `editor paste` put map tags from `data/maps/<name>.xml` or the
+  clipboard into the map; `editor export` copies objects as map tags to the clipboard, or
+  writes them to `data/maps/` (see "Loading map tags" below).
 - `list editor` shows how many objects were changed, added and deleted.
 
 With the flag off there is no `editor` command and the editor key does nothing.
@@ -171,6 +174,46 @@ session and draw again when it notifies them; the session never draws.
 - Another map means another history; a new document clears it and forgets the guns and
   lamps found.
 - `editor save` writes `data/maps/<name>.xml`, played as `local-<name>`.
+
+### Loading map tags (`domain/merge.ts`, `services/load.ts`, `entry/load.ts`)
+
+- A map file is a flat list of tags with no root element, so a file of one `<trigger />`
+  is as valid as a whole map. Load reads any such list: a map, a piece of one, or tags
+  pasted from the clipboard. Nothing tells a map from a piece, and nothing tries to.
+- `planLoad` (pure) decides everything before anything changes; the load then runs as one
+  history entry (`applyPlan`), so one "editor undo" takes it back:
+  - An object with a uid this map has replaces that one: its attributes become the file's,
+    except a place the file does not give (`x`, `y` stay). Only the attributes that differ
+    are changed, so what the running level keeps of its own (a trigger turned off by an
+    action, its calls so far, a movable on its way) stays unless the file changes it.
+    A uid this map gives another kind is skipped and said.
+  - An object without a uid (walls, backgrounds, engine marks) is added, unless the map has
+    one with exactly the same attributes: loading a file twice changes nothing the second time.
+  - `--add` adds everything. A uid this map has gets a new one (numbered like the map
+    editor's), and every reference in the file to it follows. References to this map's own
+    objects stay.
+  - `--sync` also deletes what the file does not have, only of the kinds the file has: a
+    file of triggers never deletes a wall.
+  - `--only <kinds>` takes the file's objects of these kinds (layer groups too).
+  - `--offset dx dy` moves what is loaded; `--at x y` (or `--here`, the crosshair) puts its
+    top left corner there. A movable's target place (`tarx`, `tary`, absolute in the game:
+    it moves to them) moves with it.
+  - `--reset` builds replaced objects again with the game's loader (`rebuildLive`), as at
+    level start. Objects it cannot build again are said when the load changed them.
+  - `--dry` plans and reports, and changes nothing.
+- Which attributes name another object is the logic graph's `referenceKindOf`
+  (`features/triggers/logic/graph.ts`): a trigger action's targets by its type, the rest by
+  attribute. A reference by number (maps without uids: "region 2") means another object in
+  another map, so a file with any is refused, naming them, unless `--map-numbers`. A uid in
+  neither the file nor the map is loaded and said.
+- Custom images (`<image>`) and unknown tags are skipped and said; a uid twice in one file
+  refuses the load.
+- Sources: `__dev/localmap?name=` (map cache) reads `data/maps/<name>.xml` (or `.txt`), only
+  a file found by listing that folder, so a name cannot reach outside it. `editor paste`
+  reads `navigator.clipboard`.
+- `editor export` writes the selected object, or every object of some kinds, as the map has
+  them now (`elementText`), one per line: to the clipboard, or with `--to <name>` through
+  `__dev/saveedited`.
 
 ### Reaching the running level (`services/apply.ts`)
 

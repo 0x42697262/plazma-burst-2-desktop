@@ -1,15 +1,16 @@
 import { ROUTE } from '#shared/contract/routes.ts';
 import { stringOf } from '#kernel/text/text-of.ts';
-import { kindOf, SHAPE, DEFAULTS, NOT_PLACED, newUid, type Kind } from '../domain/kinds.ts';
+import { kindOf, nameOf, SHAPE, DEFAULTS, NOT_PLACED, newUid, tidy, type Kind } from '../domain/kinds.ts';
 import { MapDoc, newElement, type AttrValues, type Attrs, type MapElement } from '../domain/doc.ts';
-import { record, takeUndo, takeRedo, clearHistory, type Entry } from '../domain/history.ts';
+import { beginAction, endAction, record, takeUndo, takeRedo, clearHistory, type Entry } from '../domain/history.ts';
+import type { LoadPlan } from '../domain/merge.ts';
 import { CHANGE } from '../domain/keys.ts';
 import { applyLive } from './apply.ts';
 import { addLive, removeLive, restoreLive } from './rebuild.ts';
 import { forgetGuns } from './guns.ts';
 import { forgetLamps } from './lamps.ts';
-import { editorDoc, notify, markPending, onChange, select, selected, resetDocument, docInLevel, NOTICE } from './session.ts';
-import { DUPLICATE_OFFSET, NEW_RECT, TIDY_PRECISION } from './constants.ts';
+import { editorDoc, notify, isPending, markPending, onChange, select, selected, resetDocument, docInLevel, NOTICE } from './session.ts';
+import { DUPLICATE_OFFSET, NEW_RECT } from './constants.ts';
 import {
   ATTRIBUTE_NAME, DOUBLE_QUOTE, NUMBER_ATTRS, SAVE_METHOD, SAVE_NAME, liveKey, saveUrl,
 } from './keys.ts';
@@ -19,8 +20,7 @@ type Place = { x: number; y: number; w?: number; h?: number };
 type Quiet = { recorded?: boolean };
 export type ChangeResult = { changed: boolean; live: boolean; why?: string };
 export type EditSummary = { changed: number; added: number; deleted: number; inLevel: boolean };
-
-const tidy = (value: number): string => String(Math.round(value * TIDY_PRECISION) / TIDY_PRECISION);
+export type NotLive = { name: string; why: string };
 
 let lastWhy = '';
 export const notLiveReason = (): string => lastWhy;
@@ -139,6 +139,26 @@ export function duplicateElement(item: MapElement): MapElement {
   return copy;
 }
 
+export function applyPlan(plan: LoadPlan): NotLive[] {
+  const doc = currentDoc();
+  const notLive: NotLive[] = [];
+  beginAction();
+  try {
+    for (const { target, values } of plan.replace) {
+      const result = change(target, values);
+      if (!result.live) notLive.push({ name: nameOf(doc, target), why: result.why ?? '' });
+    }
+    for (const item of plan.remove) remove(item);
+    for (const item of plan.add) {
+      insert(item);
+      if (isPending(item)) notLive.push({ name: nameOf(doc, item), why: lastWhy });
+    }
+  } finally {
+    endAction();
+  }
+  return notLive;
+}
+
 function play(entry: Entry, backwards: boolean): void {
   const steps = backwards ? [...entry].reverse() : entry;
   for (const step of steps) {
@@ -250,10 +270,12 @@ onChange((what) => {
   }
 });
 
-export async function saveMap(name: string, { overwrite = false }: { overwrite?: boolean } = {}): Promise<{ file: string; id: string }> {
+export const saveMap = (name: string, { overwrite = false }: { overwrite?: boolean } = {}): Promise<{ file: string; id: string }> => saveText(name, currentDoc().toText(), { overwrite });
+
+export async function saveText(name: string, body: string, { overwrite = false }: { overwrite?: boolean } = {}): Promise<{ file: string; id: string }> {
   if (!SAVE_NAME.test(name)) throw new Error(TEXT.badSaveName);
   const url = saveUrl(ROUTE.saveEdited, name, overwrite);
-  const response = await fetch(url, { method: SAVE_METHOD, body: currentDoc().toText() });
+  const response = await fetch(url, { method: SAVE_METHOD, body });
   const text = await response.text();
   if (!response.ok) throw new Error(text || TEXT.httpStatus(response.status));
   return JSON.parse(text) as { file: string; id: string };

@@ -47,6 +47,8 @@ test('the routes list local maps, save edited ones without overwriting by surpri
     assert.equal(forced?.status, 200);
     assert.equal((await routes.saveedited?.handle(new Request(url('name=../x'), { method: 'POST', body: MAP }), url('name=../x'), {}))?.status, 400);
     assert.deepEqual(await (await routes.maps?.handle(new Request(url('')), url(''), {}))?.json(), ['local-mine']);
+    assert.match(await (await routes.localmap?.handle(new Request(url('name=MINE')), url('name=MINE'), {}))?.text() ?? '', /<door/, 'a local map by its name, as "local-<name>" finds it');
+    for (const outside of ['../x', 'nope', '']) assert.equal((await routes.localmap?.handle(new Request(url(`name=${outside}`)), url(`name=${outside}`), {}))?.status, 404, `only files in data/maps/: "${outside}"`);
     await context.files.save('author-arena', MAP);
     assert.match(await (await routes.mapfile?.handle(new Request(url('id=author-arena')), url('id=author-arena'), {}))?.text() ?? '', /<door/);
     assert.equal((await routes.mapfile?.handle(new Request(url('id=nope')), url('id=nope'), {}))?.status, 404);

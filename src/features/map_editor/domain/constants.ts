@@ -2,6 +2,8 @@ export type Box = Readonly<{ x: number; y: number; w: number; h: number }>;
 
 export const DECIMAL_RADIX = 10;
 export const HISTORY_MAX_ENTRIES = 200;
+export const TIDY_PRECISION = 100;
+export const REFERENCES_SHOWN = 5;
 export const FIRST_ACTION_SLOT = 1;
 
 export const BOX = Object.freeze({

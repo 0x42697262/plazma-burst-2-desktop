@@ -45,6 +45,11 @@ export const SERVICES_TEXT = Object.freeze({
   cannotAdd: (tag: string) => `cannot add a "${tag}"`,
   notCopiedByHand: (title: string) => `a ${title} comes with a custom image; it is not copied by hand`,
   badSaveName: 'a map name is letters, digits, spaces, _ . - (up to 60)',
+  noLocalMap: (name: string) => `no data/maps/${name}.xml (or .txt)`,
+  noClipboard: 'no clipboard here',
+  emptyClipboard: 'the clipboard is empty',
+  notRebuilt: 'the running level cannot build it again',
+  lineBreak: '\n',
 });
 
 export const READ_AT_START: Readonly<Record<string, Readonly<Record<string, string>>>> = Object.freeze({

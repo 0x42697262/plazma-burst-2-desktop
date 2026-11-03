@@ -59,6 +59,21 @@ const linkKindOfAttr = (attr: string): LinkKind => (STARTING_ATTRS.has(attr) ? L
 const linkKindOfAction = (type: number): LinkKind => (STARTS.has(type) ? LINK.START : CONTROLS.has(type) ? LINK.CONTROL : LINK.ACT);
 export const actionLabel = (action: number, type: number): string => TEXT.actionLabel(action, type, ACTION_NAMES[type]);
 
+export function referenceKindOf(attrs: Attributes, attr: string): string | undefined {
+  if (attr === UID_ATTR) return undefined;
+  const action = ACTION_ATTR.exec(attr)?.[1];
+  if (action !== undefined) {
+    const info = actionInfo(Number(attrs[typeAttr(action)]));
+    const kind = attr.endsWith(TARGET_A_SUFFIX) ? info?.a : info?.b;
+    return kind === undefined ? undefined : TARGET_KIND[kind];
+  }
+  const usesTimer = attr === USE_TARGET_ATTR && USES_TIMER_VALUES.has(attrs[USES_TIMER_ATTR] ?? '');
+  return usesTimer ? TIMER_KIND : ATTR_KIND[attr];
+}
+
+export const isUidReference = (value: string): boolean => value.startsWith(UID_MARK);
+export const isNumberReference = (value: string): boolean => WHOLE.test(value);
+
 function attributesOf(text: string): Attributes {
   const attrs: Attributes = {};
   for (const attribute of text.matchAll(ATTR)) attrs[attribute[1] ?? ''] = attribute[2] ?? '';
@@ -108,18 +123,15 @@ export function buildGraph(text: string): Graph {
   for (const from of nodes) {
     for (const [attr, value] of Object.entries(from.attrs)) {
       if (attr === UID_ATTR) continue;
+      const to = target(value, referenceKindOf(from.attrs, attr));
+      if (!to || to === from) continue;
       const action = ACTION_ATTR.exec(attr)?.[1];
-      if (action !== undefined) {
-        const type = Number(from.attrs[typeAttr(action)]);
-        const info = actionInfo(type);
-        const kind = attr.endsWith(TARGET_A_SUFFIX) ? info?.a : info?.b;
-        const to = target(value, kind === undefined ? undefined : TARGET_KIND[kind]);
-        if (to && to !== from) links.push({ from, to, kind: linkKindOfAction(type), label: actionLabel(Number(action), type) });
+      if (action === undefined) {
+        links.push({ from, to, kind: linkKindOfAttr(attr), label: attr });
         continue;
       }
-      const usesTimer = attr === USE_TARGET_ATTR && USES_TIMER_VALUES.has(from.attrs[USES_TIMER_ATTR] ?? '');
-      const to = target(value, usesTimer ? TIMER_KIND : ATTR_KIND[attr]);
-      if (to && to !== from) links.push({ from, to, kind: linkKindOfAttr(attr), label: attr });
+      const type = Number(from.attrs[typeAttr(action)]);
+      links.push({ from, to, kind: linkKindOfAction(type), label: actionLabel(Number(action), type) });
     }
   }
   const into = new Map<string, Link[]>();

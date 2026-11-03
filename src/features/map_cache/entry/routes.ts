@@ -39,6 +39,13 @@ export function mapRoutes({ files }: Pick<MapRouteDeps, 'files'>): DevRoute[] {
       },
     },
     {
+      name: ROUTE_NAME.localMap,
+      handle: async (_request, url) => {
+        const file = await files.findLocal((url.searchParams.get(QUERY.name) ?? '').trim());
+        return file ? textResponse(await files.readLocal(file)) : notFound();
+      },
+    },
+    {
       name: ROUTE_NAME.mapFile,
       handle: async (_request, url) => {
         const text = await files.readSaved(url.searchParams.get(QUERY.id));

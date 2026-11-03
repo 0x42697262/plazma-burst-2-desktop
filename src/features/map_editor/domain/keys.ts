@@ -76,6 +76,9 @@ export type Picture = { src: string; fit?: boolean; head?: boolean };
 type GameOnlyParam = { kind: string; title: string; desc: string; value: string };
 
 export const UID_ATTR = 'uid';
+export const AXES = Object.freeze(['x', 'y'] as const);
+export const SHIFTED_ATTRS: Readonly<Record<'x' | 'y', readonly string[]>> = Object.freeze({ x: ['x'], y: ['y'] });
+export const SHIFTED_WITH_PLACE: Readonly<Record<string, Readonly<Record<'x' | 'y', readonly string[]>>>> = Object.freeze({ door: { x: ['tarx'], y: ['tary'] } });
 export const PLACE_ATTRS: readonly string[] = Object.freeze(['x', 'y']);
 export const SIZE_ATTRS: readonly string[] = Object.freeze(['w', 'h']);
 export const ANY_KIND = '*';

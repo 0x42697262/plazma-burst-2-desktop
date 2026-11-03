@@ -4,4 +4,12 @@ export const DOMAIN_TEXT = Object.freeze({
   actionLine: (name: string, targetA: string, targetB: string) => `${name}( "${targetA}", "${targetB}" );`,
   lineBreak: '\n',
   labeledValue: (value: string, label: string) => `${value} (${label})`,
+  nothingToLoad: 'no map elements in it (tags like <trigger ... />)',
+  sameUidTwice: (uids: readonly string[]) => `the same uid more than once: ${uids.join(', ')}`,
+  numberReferences: (list: readonly string[], more: number) => `it names objects by number, as maps without uids do (${list.join(', ')}${more ? `, ${more} more` : ''}): in this map those numbers are other objects. --map-numbers loads them anyway`,
+  referenceAt: (name: string, attr: string, value: string) => `${name} ${attr}=${value}`,
+  tagName: (tag: string) => `<${tag}>`,
+  unknownKind: (tag: string) => `<${tag}> is not a map element the editor knows`,
+  notLoaded: (title: string) => `${title} is not loaded (only the map editor adds it)`,
+  otherKind: (uid: string, title: string) => `${uid} is a ${title} in this map`,
 });

@@ -23,6 +23,7 @@ function element(tag: string, attrs: Attrs, raw: string | null, before: string):
 }
 
 export const newElement = (tag: string, attrs: Attrs): MapElement => element(tag, { ...attrs }, null, NEW_ELEMENT_PREFIX);
+export const elementText = (item: MapElement): string => item.raw ?? serializeElement(item.tag, item.attrs);
 
 export function parseMap(text: string): { elements: MapElement[]; tail: string } {
   const elements: MapElement[] = [];
@@ -73,7 +74,7 @@ export class MapDoc {
   }
 
   toText(): string {
-    return this.elements.map((item) => item.before + (item.raw ?? serializeElement(item.tag, item.attrs))).join('') + this.tail;
+    return this.elements.map((item) => item.before + elementText(item)).join('') + this.tail;
   }
 
   byTag(tag: string): MapElement[] {

@@ -9,7 +9,7 @@ import { hasLayer } from '#console/kernel/ui/overlay.ts';
 import { REMOTE } from '#console/kernel/core/mode.ts';
 import type { CommandContext, CommandDefinition } from '#console/kernel/commands/registry.ts';
 import { stringOf } from '#kernel/text/text-of.ts';
-import { nameOf, kindOf, KINDS, KIND_TAGS, SHAPE, type Kind } from '../domain/kinds.ts';
+import { nameOf, kindOf, KIND_TAGS, SHAPE, type Kind } from '../domain/kinds.ts';
 import type { MapDoc } from '../domain/doc.ts';
 import {
   editorDoc, editorShown, selected, isPending, setTool, showLayer, TOOL, selectableLayers, setSelectable, LAYER_GROUPS,
@@ -18,6 +18,8 @@ import {
   setAttr, saveMap, addElement, deleteElement, duplicateElement, undo, redo, notLiveReason, resetEdits,
 } from '../services/edit.ts';
 import { editorOn, setEditorOn } from '../ui/editor.ts';
+import { kindTitle, kindWord, kindWords, requireShown } from './common.ts';
+import { exportCommand, load, paste } from './load.ts';
 import { inputStatus } from '../ui/input.ts';
 import { panelsOnPage } from '../ui/panels.ts';
 import { LAYER_NAME } from '../ui/keys.ts';
@@ -27,8 +29,6 @@ import {
   QUOTED_VALUE, SELECT_WORD, PLACE_WORD, SIGNED_LAYER, UNQUOTE,
 } from '../keys.ts';
 import { COMMAND_TEXT as TEXT, EDITOR_HELP, SUBCOMMAND_HELP, UNDO_VERB } from '../text.ts';
-
-const kindTitle = (tag: string): string => (KINDS[tag] as Kind).title;
 
 function editor(args: string[]): void {
   if (args.length > 1) throw new Error(TEXT.usage);
@@ -42,10 +42,6 @@ function editor(args: string[]): void {
   const key = settings.effective(SETTING.editorKey);
   const again = key ? TEXT.keyOrCommand(showKey(stringOf(key))) : TEXT.commandOnly;
   print(want ? TEXT.on(again) : TEXT.off, COLOR.ok);
-}
-
-function requireShown(): void {
-  if (!editorShown()) throw new Error(TEXT.notShown);
 }
 
 const currentDoc = (): MapDoc => editorDoc() as MapDoc;
@@ -85,12 +81,6 @@ function save(rawArgs: string[]): Promise<void> {
     },
   );
 }
-
-function kindWord(word: string | undefined): string | null {
-  const lowered = stringOf(word || '').toLowerCase();
-  return KIND_TAGS.find((tag) => tag === lowered || kindTitle(tag) === lowered) || null;
-}
-const kindWords = KIND_TAGS.map(kindTitle).join(TEXT.listSeparator);
 
 function add(args: string[]): void {
   requireShown();
@@ -221,5 +211,8 @@ export const editorCommand: CommandDefinition = {
     subcommand('tool', tool),
     subcommand('reset', reset),
     subcommand('save', save),
+    subcommand('load', load),
+    subcommand('paste', paste),
+    subcommand('export', exportCommand),
   ],
 };

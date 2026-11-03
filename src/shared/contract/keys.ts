@@ -9,6 +9,7 @@ export const ROUTE_NAME = Object.freeze({
   saveMap: 'savemap',
   saveEdited: 'saveedited',
   mapFile: 'mapfile',
+  localMap: 'localmap',
   screenshot: 'screenshot',
   netLog: 'netlog',
   netRuns: 'netruns',

@@ -1278,3 +1278,120 @@ test('editor reset: every edit undone in the running level and forgotten, nothin
     globals[names.regionCount] = count;
   }
 });
+
+test('editor load, paste and export: map tags merge into the map by uid as one undo step, from a file or the clipboard', async () => {
+  const session = await import('#features/map_editor/services/session.ts');
+  const { globals, names, G } = game;
+  const original = globals[names.mapText];
+  const realFetch = G.fetch;
+  const files: Record<string, string> = {};
+  let clipboardText = '';
+  Object.defineProperty(globalThis.navigator, 'clipboard', {
+    configurable: true,
+    value: { readText: async () => clipboardText, writeText: async (text: string) => { clipboardText = text; } },
+  });
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 10));
+  const runAndWait = async (line: string): Promise<string[]> => {
+    game.log.printed.length = 0;
+    globals.pb2dev.run(line);
+    await settle();
+    return game.log.printed.filter((printed) => !printed.startsWith('> '));
+  };
+  G.fetch = async (url: string, options?: { method?: string; body?: string }) => {
+    if (!/__dev\/(localmap|saveedited)/.test(url)) return realFetch(url, options);
+    const name = new URL(url, 'https://pb2.test/').searchParams.get('name') ?? '';
+    if (options?.method === 'POST') {
+      files[name] = options.body ?? '';
+      return { ok: true, status: 200, text: async () => JSON.stringify({ file: `data/maps/${name}.xml`, id: `local-${name}` }) };
+    }
+    return name in files ? { ok: true, status: 200, text: async () => files[name] } : { ok: false, status: 404, text: async () => '' };
+  };
+  try {
+    game.run('editor on');
+    globals[names.mapText] = [
+      '<box x="0" y="0" w="400" h="200" m="0" />',
+      '<door uid="#door" x="100" y="-200" w="20" h="100" moving="false" tarx="100" tary="-300" maxspeed="10" vis="true" attach="-1" />',
+      '<region uid="#spot" x="0" y="-100" w="50" h="50" use_target="#t" use_on="1" attach="-1" />',
+      '<trigger uid="#t" x="500" y="0" enabled="true" maxcalls="1" actions_1_type="0" actions_1_targetA="#door" actions_1_targetB="#spot" />',
+    ].join('\n');
+    setLevelRunning(false); setLevelRunning(true);
+    const doc = session.editorDoc()!;
+    const before = doc.toText();
+
+    files.logic = [
+      '<trigger uid="#t" enabled="true" maxcalls="5" actions_1_type="0" actions_1_targetA="#door" actions_1_targetB="#spot" />',
+      '<box x="0" y="0" w="400" h="200" m="0" />',
+      '<box x="0" y="300" w="100" h="20" m="0" />',
+    ].join('\n');
+    const dry = await runAndWait('editor load logic --dry');
+    assert.match(dry[0] ?? '', /^Would load logic: 1 replaced, 1 added, 1 unchanged$/, dry.join(' | '));
+    assert.equal(doc.toText(), before, '--dry changes nothing');
+
+    const loaded = await runAndWait('editor load logic');
+    assert.match(loaded[0] ?? '', /^Loaded logic: 1 replaced, 1 added, 1 unchanged$/, loaded.join(' | '));
+    assert.ok(loaded.some((line) => /"editor undo" takes the whole load back/.test(line)));
+    const trigger = doc.byUid('#t')!;
+    assert.equal(trigger.attrs.maxcalls, '5', 'same uid: replaced');
+    assert.deepEqual([trigger.attrs.x, trigger.attrs.y], ['500', '0'], 'the file gives the trigger no place: it keeps its own');
+    assert.equal(doc.byTag('box').length, 2, 'a wall exactly like one in the map is not added twice; the other is');
+    assert.equal(game.run('editor undo')[0], 'Undone');
+    assert.equal(doc.toText(), before, 'one undo takes the whole load back');
+
+    files.module = [
+      '<trigger uid="#t" x="0" y="0" enabled="true" maxcalls="1" actions_1_type="0" actions_1_targetA="#door" actions_1_targetB="#spot" actions_2_type="26" actions_2_targetA="#clock" actions_2_targetB="0" />',
+      '<door uid="#door" x="0" y="0" w="20" h="100" moving="false" tarx="0" tary="-100" maxspeed="10" vis="true" attach="-1" />',
+    ].join('\n');
+    const added = await runAndWait('editor load module --add --offset 1000 50');
+    assert.match(added[0] ?? '', /^Loaded module: 2 added$/, added.join(' | '));
+    assert.ok(added.some((line) => /new uids \(taken in this map\): #t -> #trigger\*1, #door -> #door\*1/.test(line)), added.join(' | '));
+    assert.ok(added.some((line) => /#trigger\*1 actions_2_targetA names #clock, which is in neither the file nor this map/.test(line)), 'a reference to nothing is said');
+    const copy = doc.byUid('#trigger*1')!;
+    assert.equal(copy.attrs.actions_1_targetA, '#door*1', 'the file\'s references follow its renamed objects');
+    assert.equal(copy.attrs.actions_1_targetB, '#spot', 'a reference to this map\'s object stays');
+    assert.deepEqual([doc.byUid('#door*1')!.attrs.x, doc.byUid('#door*1')!.attrs.tarx, doc.byUid('#door*1')!.attrs.tary], ['1000', '1000', '-50'], '--offset moves a movable and its target place');
+    assert.equal(doc.byUid('#t')!.attrs.maxcalls, '1', 'the map\'s own is untouched');
+    game.run('editor undo');
+
+    files.old = '<trigger enabled="true" maxcalls="1" actions_1_type="0" actions_1_targetA="0" actions_1_targetB="1" />';
+    const refused = await runAndWait('editor load old');
+    assert.match(refused[0] ?? '', /could not load \(it names objects by number, as maps without uids do \(trigger actions_1_targetA=0, trigger actions_1_targetB=1\).*--map-numbers loads them anyway\)/, refused.join(' | '));
+    assert.equal(doc.toText(), before);
+    assert.match((await runAndWait('editor load old --map-numbers'))[0] ?? '', /^Loaded old: 1 added$/);
+    game.run('editor undo');
+
+    files.walls = '<box x="5000" y="0" w="10" h="10" m="0" />';
+    assert.match((await runAndWait('editor load walls --sync'))[0] ?? '', /^Loaded walls: 1 added, 1 deleted$/, '--sync deletes what the file does not have, of its kinds only');
+    assert.deepEqual(doc.byTag('box').map((wall) => wall.attrs.x), ['5000']);
+    assert.ok(doc.byUid('#t') && doc.byUid('#door'), 'other kinds stay');
+    game.run('editor undo');
+    assert.match((await runAndWait('editor load logic --only door'))[0] ?? '', /^Loaded logic: nothing to change$/, '--only: none of those kinds in the file');
+    assert.match(errorsOf(game.run('editor load logic --add --sync'))[0], /--add and --sync do not go together/);
+    assert.match(errorsOf(game.run('editor load logic --at 1'))[0], /--at takes 2 values/);
+    assert.match(errorsOf(game.run('editor load logic --only nope'))[0], /"nope" is not a kind or a layer group/);
+    assert.match((await runAndWait('editor load missing'))[0] ?? '', /could not load \(no data\/maps\/missing\.xml/);
+
+    session.select(doc.byUid('#t'));
+    assert.match((await runAndWait('editor export'))[0] ?? '', /^Copied 1 object to the clipboard as map XML/);
+    assert.match(clipboardText, /^<trigger uid="#t" x="500"/);
+    clipboardText = clipboardText.replace('maxcalls="1"', 'maxcalls="9"');
+    assert.match((await runAndWait('editor paste'))[0] ?? '', /^Loaded the clipboard: 1 replaced$/);
+    assert.equal(doc.byUid('#t')!.attrs.maxcalls, '9');
+    assert.match((await runAndWait('editor paste --add --at 0 0'))[0] ?? '', /^Loaded the clipboard: 1 added$/);
+    assert.deepEqual([doc.byUid('#trigger*1')!.attrs.x, doc.byUid('#trigger*1')!.attrs.y], ['16', '16'], '--at puts the top left corner of what is loaded there (a trigger\'s box reaches 16 left and up)');
+    assert.match((await runAndWait('editor export door,region --to parts'))[0] ?? '', /^Saved 2 objects to data\/maps\/parts\.xml \("editor load parts" puts them into a map\)/);
+    assert.match(files.parts ?? '', /^<door uid="#door"[^\n]*\/>\n<region uid="#spot"/);
+    clipboardText = ' ';
+    assert.match((await runAndWait('editor paste'))[0] ?? '', /could not load \(the clipboard is empty\)/);
+    const reset = await runAndWait('editor load logic --reset');
+    assert.match(reset[0] ?? '', /^Loaded logic: 1 replaced, 1 added, 1 unchanged$/, reset.join(' | '));
+    const rebuildTries = reset.filter((line) => /not built again|built again as at level start/.test(line));
+    assert.equal(rebuildTries.length, 1, rebuildTries.join(' | '));
+    assert.match(rebuildTries[0] ?? '', /^ {2}not built again: #t \(the game's loader/, 'the replaced trigger is built again (here without a full game loader, so it says why); the unchanged wall has nothing to reset');
+    assert.match(errorsOf(game.run('editor load logic --add --reset'))[0], /--add and --reset do not go together/);
+  } finally {
+    G.fetch = realFetch;
+    Reflect.deleteProperty(globalThis.navigator, 'clipboard');
+    session.setEditor(false); session.forgetDocument();
+    globals[names.mapText] = original;
+  }
+});

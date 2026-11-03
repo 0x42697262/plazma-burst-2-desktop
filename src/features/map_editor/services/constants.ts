@@ -23,4 +23,4 @@ export const SAME_SPOT = 3;
 
 export const DUPLICATE_OFFSET = 20;
 export const NEW_RECT = 100;
-export const TIDY_PRECISION = 100;
+export const NOT_FOUND_STATUS = 404;

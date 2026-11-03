@@ -1,4 +1,4 @@
-import { BOX, DECIMAL_RADIX, VEHICLE_BOX, type Box } from './constants.ts';
+import { BOX, DECIMAL_RADIX, TIDY_PRECISION, VEHICLE_BOX, type Box } from './constants.ts';
 import { CHARACTER_TAGS, DEFAULTS, KIND_LOOK, NO_UID, NOT_PLACED, SHAPE, TAG, uidPrefix, type Shape } from './keys.ts';
 import { DOMAIN_TEXT as TEXT } from './text.ts';
 import type { Attrs, MapDoc, MapElement, Spot } from './doc.ts';
@@ -35,6 +35,8 @@ export const KINDS: Readonly<Record<string, Kind>> = Object.freeze({
 
 export const KIND_TAGS: readonly string[] = Object.freeze(Object.keys(KINDS));
 export const kindOf = (tag: string): Kind | null => (Object.hasOwn(KINDS, tag) ? KINDS[tag] ?? null : null);
+
+export const tidy = (value: number): string => String(Math.round(value * TIDY_PRECISION) / TIDY_PRECISION);
 
 const numberOf = (value: string | undefined): number => (value === undefined || value === '' ? NaN : Number(value));
 
