@@ -12,6 +12,8 @@ same plus the game, names and opcodes files). The gate: `src/wrapper/app.ts`.
   client with its own servers and accounts. Same obfuscated names, but bundled and
   minified, and loaded from a manifest of hashed script files. Only its game page is
   served from `game.sadburst/`; the rest of its site (login, API) is the network's.
+  Its anti-cheat and how it differs from the official one:
+  [anticheat-sadburst](../research/anticheat-sadburst.md).
 
 ## Choosing one
 - Every command is for the official client unless asked:

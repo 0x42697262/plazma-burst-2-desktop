@@ -55,5 +55,6 @@
 
 ## Research
 - [anticheat.md](research/anticheat.md): the game's anti-cheat, client and server side
+- [anticheat-sadburst.md](research/anticheat-sadburst.md): the same for Sad Burst 2, the community fork, and how it differs
 - [fingerprinting.md](research/fingerprinting.md): the main server's browser fingerprinter and the RELIABLE_TASK code path
 
