@@ -6,6 +6,7 @@ import { isActionAttr } from '../domain/actions.ts';
 import { paramsOf, paramInfo, defaultOf, shownValue, pickKindsOf, dropdownItems } from '../domain/params.ts';
 import { canUndo, canRedo } from '../domain/history.ts';
 import { TAG } from '../domain/keys.ts';
+import { isEmptyQuery, matchesQuery, parseQuery, sortedByName } from '../domain/search.ts';
 import type { MapElement } from '../domain/doc.ts';
 import {
   editorDoc, selected, select, currentLayer, showLayer, countByTag, onChange, pendingCount,
@@ -19,7 +20,7 @@ import { editField } from './fields.ts';
 import { openDropdown, closeDropdown } from './dropdown.ts';
 import { MESSAGE_MS, MESSAGE_SLACK_MS, OBJECTS_SHOWN } from './constants.ts';
 import {
-  ACTIONS_STYLE, DIMMED_OPACITY, ICON_NAME, LAYERS_BUTTON, LAYER_LIST_BUTTON, MUTED_STYLE, NOTICE_STYLE, OBJECTS_BOX_STYLE, PANEL_PLACE, PARAMS_HEAD_STYLE,
+  ACTIONS_STYLE, DIMMED_OPACITY, ICON_NAME, INPUT_EVENT, KEY_DOWN_EVENT, KEY_NAME, KEY_UP_EVENT, LAYERS_BUTTON, OBJECT_SEARCH_ROW_STYLE, OBJECT_SEARCH_STYLE, SORT_BUTTON, LAYER_LIST_BUTTON, MUTED_STYLE, NOTICE_STYLE, OBJECTS_BOX_STYLE, PANEL_PLACE, PARAMS_HEAD_STYLE,
   SECTION_GAP_STYLE, SMALL_TOOL, STATUS_STYLE, TOOL_GRID_STYLE, TOOL_SQUARE, PANEL_STATE,
 } from './keys.ts';
 import { PANELS_TEXT as TEXT } from './text.ts';
@@ -30,6 +31,8 @@ type Nodes = {
   tools: HTMLDivElement;
   layers: HTMLDivElement;
   objectsCaption: HTMLDivElement;
+  objectSearch: HTMLInputElement;
+  objectSort: HTMLDivElement;
   objects: HTMLDivElement;
   params: HTMLDivElement;
   status: HTMLDivElement;
@@ -41,6 +44,8 @@ let nodes: Nodes | null = null;
 let unsubscribe: (() => boolean) | null = null;
 let keyShown = '';
 let message: Message | null = null;
+let objectQuery = '';
+let objectsByName = false;
 
 const currentNodes = (): Nodes => nodes as Nodes;
 
@@ -125,16 +130,58 @@ function drawLayers(): void {
   }
 }
 
+function drawObjectSort(): void {
+  const box = currentNodes().objectSort;
+  box.textContent = '';
+  box.append(button(objectsByName ? TEXT.sortByName : TEXT.sortMapOrder, {
+    active: objectsByName,
+    title: TEXT.sortHint(objectsByName),
+    style: SORT_BUTTON,
+    onPress: () => {
+      objectsByName = !objectsByName;
+      drawObjectSort();
+      drawObjects();
+    },
+  }));
+}
+
 function drawObjects(): void {
   const doc = editorDoc();
-  const list = doc ? doc.elements.filter((item) => kindOf(item.tag) && isSelectable(item.tag)) : [];
+  const visible = doc ? doc.elements.filter((item) => kindOf(item.tag) && isSelectable(item.tag)) : [];
+  const query = parseQuery(objectQuery);
+  const found = doc ? visible.filter((item) => matchesQuery(doc, item, query)) : [];
+  const list = doc && objectsByName ? sortedByName(doc, found) : found;
   const current = selected();
   const all = currentNodes();
   const box = all.objects;
   box.textContent = '';
   for (const item of list.slice(0, OBJECTS_SHOWN)) box.append(listRow(item.tag, nameOf(doc as NonNullable<typeof doc>, item), item === current, () => { select(item); }));
   if (list.length > OBJECTS_SHOWN) box.append(el('div', MUTED_STYLE, TEXT.moreObjects(list.length - OBJECTS_SHOWN)));
-  all.objectsCaption.textContent = TEXT.objects(list.length);
+  const searching = !isEmptyQuery(query);
+  if (searching && !list.length && visible.length) box.append(el('div', MUTED_STYLE, TEXT.noMatches));
+  all.objectsCaption.textContent = searching ? TEXT.objectsFound(list.length, visible.length) : TEXT.objects(list.length);
+}
+
+function objectSearchField(): HTMLInputElement {
+  const input = el('input', OBJECT_SEARCH_STYLE);
+  input.value = objectQuery;
+  input.placeholder = TEXT.searchObjects;
+  input.title = TEXT.searchHint;
+  input.spellcheck = false;
+  input.addEventListener(INPUT_EVENT, () => {
+    objectQuery = input.value;
+    drawObjects();
+  });
+  input.addEventListener(KEY_DOWN_EVENT, (event) => {
+    event.stopPropagation();
+    if (event.key !== KEY_NAME.escape) return;
+    input.value = '';
+    objectQuery = '';
+    input.blur();
+    drawObjects();
+  });
+  input.addEventListener(KEY_UP_EVENT, (event) => { event.stopPropagation(); });
+  return input;
 }
 
 function editValue(cell: HTMLElement, span: HTMLElement, current: MapElement, attr: string, valueKind: string | undefined): void {
@@ -256,14 +303,18 @@ export function showPanels(on: boolean, keyName: string): void {
   const section = (): HTMLDivElement => el('div', {});
   const built: Nodes = {
     left, right, tools: section(), layers: section(), objectsCaption: caption(''), params: section(),
+    objectSearch: objectSearchField(), objectSort: el('div', {}),
     objects: scrolling(el('div', OBJECTS_BOX_STYLE)),
     status: el('div', STATUS_STYLE),
   };
   nodes = built;
   left.append(built.tools, el('div', SECTION_GAP_STYLE), built.layers);
-  right.append(built.objectsCaption, built.objects, el('div', SECTION_GAP_STYLE), built.params);
+  const searchRow = el('div', OBJECT_SEARCH_ROW_STYLE);
+  searchRow.append(built.objectSearch, built.objectSort);
+  right.append(built.objectsCaption, searchRow, built.objects, el('div', SECTION_GAP_STYLE), built.params);
   for (const node of [left, right, built.status]) (game.overlay() as HTMLElement).append(node);
   for (const draw of Object.values(DRAW)) draw();
+  drawObjectSort();
   unsubscribe = onChange((what) => {
     for (const part of REDRAW[what] || []) DRAW[part]();
   });

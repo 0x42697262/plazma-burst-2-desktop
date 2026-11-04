@@ -77,6 +77,13 @@ type GameOnlyParam = { kind: string; title: string; desc: string; value: string 
 
 export const UID_ATTR = 'uid';
 export const AXES = Object.freeze(['x', 'y'] as const);
+export const QUERY_WORD = /"([^"]*)"|'([^']*)'|(\S+)/g;
+export const QUERY_FIELD = /^(type|op|ref)\s*=\s*(.*)$/;
+export const QUERY_PREFIX = Object.freeze({ type: 'type', op: 'op', ref: 'ref' });
+export const SEARCHED_ATTRS: readonly string[] = Object.freeze(['model', 'mark', 'text']);
+export const SEARCH_JOIN = ' ';
+export const opWord = (type: string | number): string => `op${type}`;
+export const SORT_OPTIONS: Intl.CollatorOptions = Object.freeze({ numeric: true, sensitivity: 'base' });
 export const SHIFTED_ATTRS: Readonly<Record<'x' | 'y', readonly string[]>> = Object.freeze({ x: ['x'], y: ['y'] });
 export const SHIFTED_WITH_PLACE: Readonly<Record<string, Readonly<Record<'x' | 'y', readonly string[]>>>> = Object.freeze({ door: { x: ['tarx'], y: ['tary'] } });
 export const PLACE_ATTRS: readonly string[] = Object.freeze(['x', 'y']);

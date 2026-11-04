@@ -45,6 +45,7 @@ const thinBorder = (color: string): string => `0.5px solid ${color}`;
 
 export const CLICK_EVENT = 'click';
 export const KEY_DOWN_EVENT = 'keydown';
+export const KEY_UP_EVENT = 'keyup';
 export const BLUR_EVENT = 'blur';
 export const INPUT_EVENT = 'input';
 export const MOUSE_DOWN_EVENT = 'mousedown';
@@ -148,6 +149,9 @@ export const DIMMED_OPACITY = '0.55';
 export const OBJECTS_BOX_STYLE: Style = Object.freeze({
   height: px(OBJECTS_H), overflowY: 'auto', margin: '0 2px', padding: '1px', background: PALETTE.box, borderRadius: '2.5px',
 });
+export const OBJECT_SEARCH_ROW_STYLE: Style = Object.freeze({ display: 'flex', alignItems: 'center', gap: '2px', margin: '0 2px 2px' });
+export const OBJECT_SEARCH_STYLE: Style = Object.freeze({ ...EDIT_FIELD_STYLE, flex: '1', width: 'auto', minWidth: '0' });
+export const SORT_BUTTON: Style = Object.freeze({ width: 'auto', height: '9px', padding: '0 2px', flex: 'none' });
 export const SECTION_GAP_STYLE: Style = Object.freeze({ height: '4px' });
 export const STATUS_STYLE: Style = Object.freeze({
   ...IN_OVERLAY, position: 'absolute', ...PANEL_PLACE.status, zIndex: '45', textAlign: 'center', pointerEvents: 'none',

@@ -22,6 +22,8 @@ Tests: `src/features/map_editor/map-editor.test.ts`.
 - Selecting:
   - every object is outlined;
   - objects are selected by click or from the lists;
+  - the Objects list has a search box and a sort toggle (map order, or A-Z by name), as
+    the Sad Burst 2 map editor's object list does (see "Searching objects" below);
   - the selection's connections are drawn as in the game's map editor (dashed, green
     out, white in);
   - an object parameter is picked by clicking the object in the world.
@@ -174,6 +176,22 @@ session and draw again when it notifies them; the session never draws.
 - Another map means another history; a new document clears it and forgets the guns and
   lamps found.
 - `editor save` writes `data/maps/<name>.xml`, played as `local-<name>`.
+
+### Searching objects (`domain/search.ts`, `ui/panels.ts`)
+
+- The search box over the Objects list filters it as you type, among the objects of the
+  active layers. The rules are the Sad Burst 2 map editor's (its `rightRail` object
+  search): the text is split into words (quotes keep words together), and every word must
+  be found, in any case, in the object's kind (tag and title), its name (uid, or
+  "wall #3"), its number, its trigger actions (name and `op<type>`), its references, or
+  its model, engine mark or text. `type=`, `op=` and `ref=` look only at the kind, the
+  trigger actions or the references.
+- The caption says how many match of how many are listed ("Objects (3 of 6):"); nothing
+  matching says so. Esc in the box clears it. Keys typed there reach neither the game nor
+  binds (the console skips text inputs, and the box stops them).
+- The sort toggle shows the list in map order or A-Z by name, comparing numbers as numbers
+  (`#door*2` before `#door*10`); equal names keep map order. Search and sort stay while
+  the editor is on.
 
 ### Loading map tags (`domain/merge.ts`, `services/load.ts`, `entry/load.ts`)
 

@@ -1453,3 +1453,62 @@ test('editor load --watch: each change to the file is loaded again, a bad versio
     globals[names.mapText] = original;
   }
 });
+
+test('editor objects: the search box keeps the objects whose kind, name, actions or references match every word; A-Z sorts by name', async () => {
+  const session = await import('#features/map_editor/services/session.ts');
+  const { MapDoc } = await import('#features/map_editor/domain/doc.ts');
+  const { matchesQuery, parseQuery, sortedByName } = await import('#features/map_editor/domain/search.ts');
+  const { globals, names } = game;
+  const original = globals[names.mapText];
+  const mapText = [
+    '<box x="0" y="0" w="400" h="200" m="0" />',
+    '<door uid="#door*10" x="100" y="-200" w="20" h="100" />',
+    '<door uid="#door*2" x="200" y="-200" w="20" h="100" />',
+    '<region uid="#spot" x="0" y="-100" w="50" h="50" use_target="#open" use_on="1" />',
+    '<trigger uid="#open" x="500" y="0" enabled="true" maxcalls="1" actions_1_type="0" actions_1_targetA="#door*2" actions_1_targetB="#spot" />',
+    '<decor uid="#rock" x="9" y="9" model="stone" />',
+  ].join('\n');
+  const doc = new MapDoc(mapText);
+  const found = (query: string): string[] => doc.elements.filter((item) => matchesQuery(doc, item, parseQuery(query))).map((item) => item.attrs.uid ?? item.tag);
+  assert.deepEqual(found(''), ['box', '#door*10', '#door*2', '#spot', '#open', '#rock'], 'an empty search keeps everything');
+  assert.deepEqual(found('DOOR'), ['#door*10', '#door*2', '#open'], 'any case; the trigger names #door*2 in its actions');
+  assert.deepEqual(found('type=door'), ['#door*10', '#door*2'], 'type= looks at the kind only');
+  assert.deepEqual(found('ref=#door*2'), ['#open'], 'ref= looks at references only');
+  assert.deepEqual(found('op=movable'), ['#open'], 'op= looks at trigger actions, by name');
+  assert.deepEqual(found('op0'), ['#open'], 'and by number');
+  assert.deepEqual(found('door 10'), ['#door*10'], 'every word must match');
+  assert.deepEqual(found('stone'), ['#rock'], 'a decoration by its model');
+  assert.deepEqual(found('wall'), ['box'], 'a kind by its title');
+  assert.deepEqual(found('"type=door" spot'), [], 'quotes keep words together');
+  assert.deepEqual(sortedByName(doc, doc.byTag('door')).map((item) => item.attrs.uid), ['#door*2', '#door*10'], 'numbers sort as numbers');
+
+  try {
+    game.run('editor on');
+    globals[names.mapText] = mapText;
+    setLevelRunning(false); setLevelRunning(true);
+    game.run('editor layers all');
+    const overlay = globals[names.uiOverlay].overlay;
+    const find = (node: any, test: (child: any) => boolean): any => (test(node) ? node : (node.childNodes || []).map((child: any) => (typeof child === 'string' ? null : find(child, test))).find(Boolean) ?? null);
+    const search = find(overlay, (node) => node.placeholder === 'Search…');
+    assert.ok(search, 'a search box over the objects list');
+    const rightPanel = find(overlay, (node) => (node.childNodes || []).some((child: any) => typeof child !== 'string' && /^Objects \(/.test(child.text ?? '')));
+    const captionAt = rightPanel.childNodes.findIndex((child: any) => /^Objects \(/.test(child.text ?? ''));
+    const objectsBox = rightPanel.childNodes[captionAt + 2];
+    const rows = (): string[] => textsOf(objectsBox).filter((text) => /^#|^wall #/.test(text));
+    const type = (text: string) => { search.value = text; game.dispatch(search, 'input', {}); };
+    type('door');
+    assert.ok(textsOf(overlay).includes('Objects (3 of 6):'), textsOf(overlay).join(' | '));
+    assert.deepEqual(rows(), ['#door*10', '#door*2', '#open']);
+    const sort = find(overlay, (node) => node.text === 'Map');
+    game.dispatch(sort, 'click', { button: 0 });
+    assert.deepEqual(rows(), ['#door*2', '#door*10', '#open'], 'A-Z by name');
+    type('nothing like this');
+    assert.ok(textsOf(overlay).includes('No matching objects.'));
+    game.dispatch(search, 'keydown', { key: 'Escape' });
+    assert.equal(search.value, '', 'Esc clears it');
+    assert.ok(textsOf(overlay).includes('Objects (6):'));
+  } finally {
+    session.setEditor(false); session.forgetDocument();
+    globals[names.mapText] = original;
+  }
+});
