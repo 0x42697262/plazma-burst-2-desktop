@@ -5,7 +5,7 @@ export const FEATURE_DESCRIPTION: Readonly<Record<FeatureId, string>> = Object.f
   [FEATURE.consoleCore]: 'The console itself: help, settings, chained commands, the panel',
   [FEATURE.profiles]: 'Per-map profiles of settings, binds and start-up commands',
   [FEATURE.teleport]: 'tp: teleport to the crosshair, to coordinates or to a character',
-  [FEATURE.playerInfo]: 'pos and chars: your position, and the characters in the level',
+  [FEATURE.playerInfo]: 'pos, chars and uid: your position, the characters in the level, and their map uids',
   [FEATURE.health]: 'heal, hp and revive, and the keys god, max_hp, hp_bonus, hp_bonus_pct',
   [FEATURE.movement]: 'The keys speed, jump, gravity, fly, fly_speed, swords, world_gravity',
   [FEATURE.guns]: 'Gun list, give and drop, gun overrides',

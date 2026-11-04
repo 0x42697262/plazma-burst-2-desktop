@@ -16,7 +16,7 @@ type PlayerBindings = {
   updateBody(index: number): void; healChar(index: number, character: Character, power: number): void;
   levelState(): string; setLevelState(state: string): void; setFailText(text: string): void;
   fadeOverlay(): Fade | null; isRunning(): boolean; setRunning(running: boolean): void;
-  ptX(): number[]; ptY(): number[];
+  ptX(): number[]; ptY(): number[]; mapText(): unknown;
 };
 type Fields = {
   HP: string; MAX_HP: string; REF_PT: string;
