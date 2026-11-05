@@ -20,7 +20,4 @@ export const PAGE_EVENT = Object.freeze({ error: 'error', rejection: 'unhandledr
 export const NUMBER_WORD = /^\d+$/;
 
 export const REPLACEMENT = Object.freeze({ secret: '$1\u2039redacted\u203a', path: '~/', digest: '\u2039redacted\u203a' });
-export const SECRET_PAIR = /\b((?:password|passwd|pass|token|auth_token|game_token|authorization)["']?\s*[:=]\s*(?:bearer\s+)?["']?)[^\s"'&;,]+/gi;
-export const BEARER = /\b(bearer\s+)[A-Za-z0-9._~+/=-]+/gi;
-export const MD5_DIGEST = /\b[0-9a-f]{32}\b/gi;
 export const HOME_PATH = /(?:\/(?:home|Users)\/[^/\s"']+\/|[A-Za-z]:\\Users\\[^\\\s"']+\\)/g;

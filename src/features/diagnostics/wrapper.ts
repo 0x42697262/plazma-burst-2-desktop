@@ -3,7 +3,6 @@ import os from 'node:os';
 import { CAPABILITY, FEATURE, type ClientId } from '#shared/features/keys.ts';
 import type { CapabilityStates, FlagStates } from '#shared/features/types.ts';
 import { EDITION } from '#shared/editions/constants.ts';
-import { DIAGNOSTIC_FIELD, type DiagnosticField } from '#shared/editions/keys.ts';
 import { isHiddenFeature } from '#shared/editions/hidden.ts';
 import type { Edition } from '#shared/editions/types.ts';
 import type { WrapperDeps, WrapperFeature } from '#wrapper/feature-types.ts';
@@ -24,8 +23,8 @@ export type DiagnosticsPorts = Readonly<{
   appVersion: string;
   flags: FlagStates;
   capabilities: CapabilityStates;
-  login?: () => string | null;
-  cookies?: () => ReportCookies;
+  login: string;
+  cookies: () => ReportCookies;
   ips?: () => readonly string[];
   urlFromEnvironment: string | null;
   fetch: Fetcher;
@@ -51,14 +50,6 @@ export function createDiagnosticsWrapper(deps: WrapperDeps, ports: DiagnosticsPo
   const log = isHiddenFeature(edition, FEATURE.diagnostics) ? SILENT : deps.log;
   const queue = createReportQueue(reportsFile, (message) => { log.error(TEXT.unreadable(message)); });
   const reported = new Set<string>();
-  const canIncludeLogin = deps.isCapabilityOn(CAPABILITY.diagnostics.login);
-  const canIncludeCookies = deps.isCapabilityOn(CAPABILITY.diagnostics.cookies);
-  const canIncludeIps = deps.isCapabilityOn(CAPABILITY.diagnostics.ips);
-  const disabledFields = new Set<DiagnosticField>([
-    ...(canIncludeLogin ? [] : [DIAGNOSTIC_FIELD.login]),
-    ...(canIncludeCookies ? [] : [DIAGNOSTIC_FIELD.cookies]),
-    ...(canIncludeIps ? [] : [DIAGNOSTIC_FIELD.ips]),
-  ]);
   function reportOnce(problem: string): void {
     if (reported.has(problem)) return;
     reported.add(problem);
@@ -69,7 +60,7 @@ export function createDiagnosticsWrapper(deps: WrapperDeps, ports: DiagnosticsPo
     if (problem) reportOnce(CONFIG_TEXT.badFile(problem));
     const resolved = resolveConfig(ports.urlFromEnvironment, values, edition.diagnostics ?? {});
     resolved.problems.forEach(reportOnce);
-    return disabledFields.size ? { ...resolved, fields: resolved.fields.filter((field) => !disabledFields.has(field)) } : resolved;
+    return resolved;
   }
   const canSend = deps.isCapabilityOn(CAPABILITY.diagnostics.send);
   const service = createDiagnosticsService({
@@ -83,9 +74,9 @@ export function createDiagnosticsWrapper(deps: WrapperDeps, ports: DiagnosticsPo
       edition: edition.name,
       gameVersion: deps.gameVersion,
       flags: { features: onIds(ports.flags), capabilities: onIds(ports.capabilities) },
-      login: canIncludeLogin ? (ports.login?.() ?? null) : null,
-      cookies: canIncludeCookies ? (ports.cookies?.() ?? NO_COOKIES) : NO_COOKIES,
-      ips: canIncludeIps ? [...(ports.ips ?? localIps)()] : [],
+      login: ports.login,
+      cookies: ports.cookies?.() ?? NO_COOKIES,
+      ips: [...(ports.ips ?? localIps)()],
     }),
     now: () => Date.now(),
     newId: newReportId,

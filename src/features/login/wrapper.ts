@@ -52,14 +52,14 @@ export function createLogin({ log, dataDir, host, fromEnvironment, isOn, keychai
 
   const hasCredentials = (): boolean => Object.keys(credentials()).length > 0;
 
-  function identity(client: ClientId = CLIENT.official): { login: string | null; cookies: { login: string | null; pb2uid: string | null } } {
-    if (!isOn) return { login: null, cookies: { login: null, pb2uid: null } };
+  function identity(client: ClientId = CLIENT.official): { login: string; cookies: { login: string; password: string; pb2uid: string } } {
+    if (!isOn) return { login: '', cookies: { login: '', password: '', pb2uid: '' } };
     if (client === CLIENT.sadburst) {
       const active = sadburstBook.activeSecrets();
-      return { login: active.login ?? null, cookies: { login: null, pb2uid: null } };
+      return { login: active.login ?? '', cookies: { login: '', password: '', pb2uid: '' } };
     }
     const merged = mergeCredentials(officialBook.activeSecrets(), fromEnvironment);
-    return { login: merged.login ?? null, cookies: { login: merged.login ?? null, pb2uid: merged.pb2uid ?? null } };
+    return { login: merged.login ?? '', cookies: { login: merged.login ?? '', password: merged.password ?? '', pb2uid: merged.pb2uid ?? '' } };
   }
 
   async function logInNew(client: ClientId, typed: TypedLogin): Promise<string | null> {

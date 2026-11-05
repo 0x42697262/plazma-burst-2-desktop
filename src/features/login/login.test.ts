@@ -291,11 +291,11 @@ test('the account port: new accounts by client, the sign-out, the start-up scrip
     await Promise.resolve();
     site.set(signedIn);
     assert.equal(await official, 'me');
-    assert.deepEqual(login.identity('official'), { login: 'me', cookies: { login: 'me', pb2uid: '42' } });
+    assert.deepEqual(login.identity('official'), { login: 'me', cookies: { login: 'me', password: 'secret', pb2uid: '42' } });
     assert.deepEqual((accounts.list('official') as any).accounts.map((account: any) => account.login), ['me']);
     assert.equal(login.hasCredentials(), true);
     assert.equal(await accounts.logIn('sadburst', { login: 'sb', password: 'pw' }), 'sb');
-    assert.deepEqual(login.identity('sadburst'), { login: 'sb', cookies: { login: null, pb2uid: null } });
+    assert.deepEqual(login.identity('sadburst'), { login: 'sb', cookies: { login: '', password: '', pb2uid: '' } });
     assert.ok(!fs.readFileSync(path.join(folder, 'credentials.sadburst.json'), 'utf8').includes('"pw"'));
     assert.match(login.sadburstStartupScript() ?? '', /setItem\("auth_token","tok"\)/);
     assert.equal(login.sadburstStartupScript(), null, 'once per start');

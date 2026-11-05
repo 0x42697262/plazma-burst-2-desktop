@@ -22,7 +22,7 @@ const FACTS = {
   gameVersion: 'v1',
   flags: { features: ['diagnostics'], capabilities: [] },
   login: 'alice',
-  cookies: { login: 'alice', pb2uid: '42' },
+  cookies: { login: 'alice', password: 'secret', pb2uid: '42' },
   ips: ['203.0.113.5'],
 };
 
@@ -38,10 +38,10 @@ function setup({ host = null, auto = false, fields = DIAGNOSTIC_FIELDS, deliver 
   return { folder, queue, service, lines, advance: (ms: number) => { clock += ms; }, cleanup: () => fs.rmSync(folder, { recursive: true, force: true }) };
 }
 
-test('redaction removes secrets, the password cookie\'s md5 and home folders, while keeping login, pb2uid and IP addresses', () => {
+test('redaction removes home folders, while keeping login, pb2uid, secrets, the password cookie\'s md5, and IP addresses', () => {
   const text = redactText('password=hunter2 token: abc Authorization: Bearer xyz.1 5f4dcc3b5aa765d61d8327deb882cf99 /home/me/app.js C:\\Users\\me\\app.js login=alice pb2uid=42 203.0.113.5 fe80::1:2');
-  for (const secret of ['hunter2', 'abc', 'xyz.1', '5f4dcc3b5aa765d61d8327deb882cf99', '/home/me', 'Users\\me']) assert.ok(!text.includes(secret), secret);
-  for (const kept of ['login=alice', 'pb2uid=42', '203.0.113.5', 'fe80::1:2']) assert.ok(text.includes(kept), kept);
+  for (const secret of ['/home/me', 'Users\\me']) assert.ok(!text.includes(secret), secret);
+  for (const kept of ['hunter2', 'abc', 'xyz.1', '5f4dcc3b5aa765d61d8327deb882cf99', 'login=alice', 'pb2uid=42', '203.0.113.5', 'fe80::1:2']) assert.ok(text.includes(kept), kept);
   assert.match(redactText('a normal message at line 12:34'), /line 12:34/);
 });
 
@@ -50,9 +50,9 @@ test('a report carries what was asked, including login, cookies and IPs, redacte
   assert.equal(report.schemaVersion, 1);
   assert.equal(report.client, 'official');
   assert.equal(report.login, 'alice');
-  assert.deepEqual(report.cookies, { login: 'alice', pb2uid: '42' });
+  assert.deepEqual(report.cookies, { login: 'alice', password: 'secret', pb2uid: '42' });
   assert.deepEqual(report.ips, ['203.0.113.5']);
-  assert.ok(!report.error.message.includes('password=x'));
+  assert.ok(report.error.message.includes('password=secret'));
   assert.equal(report.error.message.length, 400);
   assert.equal(report.error.line, 3);
   assert.equal(report.error.column, null);
@@ -192,7 +192,7 @@ test('login, cookies and IPs are included by default and gated by their capabili
       flags: {} as never,
       capabilities: {},
       login: () => 'alice',
-      cookies: () => ({ login: 'alice', pb2uid: '42' }),
+      cookies: () => ({ login: 'alice', password: 'secret', pb2uid: '42' }),
       ips: () => ['192.0.2.10'],
       urlFromEnvironment: null,
       fetch: async () => new Response(),
