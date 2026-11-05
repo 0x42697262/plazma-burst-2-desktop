@@ -1,4 +1,4 @@
-export const OFFICIAL_DESCRIPTION = 'The official servers (USA, Arizona). Your PB2 account from data/credentials.json.';
+export const OFFICIAL_DESCRIPTION = 'The official servers (USA, Arizona). Choose an account below.';
 
 export const ENTRY_TEXT = Object.freeze({
   badAddress: (text: string) => `address: "${text}" is not like "203.0.113.5:2053"`,
@@ -87,7 +87,16 @@ export const LAUNCHER_TEXT = Object.freeze({
   fingerprintFetched: 'Got it from the server. Compare it with the fingerprint the host sent you before saving.',
   fingerprintFailed: (message: string) => `Could not get the fingerprint: ${message}`,
   confirmRemove: (name: string) => `Remove ${name} from the list?`,
-  otherClients: 'Also in this app: ',
-  playClient: (title: string) => `Play ${title}`,
+  clientTag: 'game',
+  clientDescription: (title: string) => `${title}, its own servers and accounts. Play starts the app again as ${title}.`,
+  accountsTitle: (name: string) => `Account for ${name}`,
+  noAccounts: 'No saved account: the game\'s own login is used',
+  accountOption: (login: string) => login,
+  overridden: 'PB2_LOGIN or PB2_PASSWORD is set, and wins over the choice here.',
+  waitingForSite: 'Log in in the window that opened. It closes by itself.',
+  loggedInAs: (login: string) => `Saved ${login}.`,
+  cancelled: 'Login window closed: nothing saved.',
+  confirmRemoveAccount: (login: string) => `Forget the account ${login}? You can log in to it again later.`,
+  loggingIn: 'Checking…',
   outsideApp: 'This page only works inside the desktop app (npm start).',
 });

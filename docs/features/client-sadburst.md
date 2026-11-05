@@ -20,7 +20,7 @@ same plus the game, names and opcodes files). The gate: `src/wrapper/app.ts`.
   `npm run fetch-game -- --sadburst`, `npm run find-names -- --sadburst`,
   `npm run sadburst` (`electron . --sadburst`). Running the usual commands never touches
   the Sad Burst files.
-- Inside the app: the server list offers "Play Sad Burst 2", and the Game menu (Alt)
+- Inside the app: the server list has a Sad Burst 2 row (select it to choose an account; Play starts it), and the Game menu (Alt)
   lists both clients. Choosing the other one starts the app again with or without
   `--sadburst` (`src/wrapper/platform/relaunch.ts`, `argsForClient` in
   `src/kernel/config/clients.ts`), which is how an installed app switches. An AppImage

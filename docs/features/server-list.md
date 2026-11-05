@@ -107,3 +107,6 @@ password }`. The page core's join client (`services/join-client.ts`, started by
 
 The join runs in the page core, not in the dev console, so joining a private server
 works with `dev_console` off.
+
+## Accounts
+Selecting the official server or the Sad Burst 2 row shows the account panel ([login](login.md#choosing-an-account)). The operations are only on the launcher's IPC, not on the `__dev/servers` route, so a game page cannot reach them.

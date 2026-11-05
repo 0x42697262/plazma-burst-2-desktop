@@ -10,5 +10,9 @@ if (location.protocol === FILE_PROTOCOL) {
     fingerprint: (address: string) => ipcRenderer.invoke(IPC_CHANNEL.fingerprint, address),
     play: (id: string) => ipcRenderer.invoke(IPC_CHANNEL.play, id),
     switchClient: (id: string) => ipcRenderer.invoke(IPC_CHANNEL.switchClient, id),
+    accounts: (client: string) => ipcRenderer.invoke(IPC_CHANNEL.accounts, client),
+    useAccount: (client: string, login: string) => ipcRenderer.invoke(IPC_CHANNEL.useAccount, { client, login }),
+    removeAccount: (client: string, login: string) => ipcRenderer.invoke(IPC_CHANNEL.removeAccount, { client, login }),
+    logIn: (client: string, login?: string, password?: string) => ipcRenderer.invoke(IPC_CHANNEL.logIn, { client, login, password }),
   });
 }

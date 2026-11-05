@@ -45,4 +45,10 @@ input:focus, button:focus-visible { outline: 1px solid var(--accent); }
 .row input { flex: 1; }
 .row button { margin-top: 4px; white-space: nowrap; }
 .errors { color: var(--bad); font-size: 12px; padding-left: 18px; }
-.other-clients { margin-top: 14px; display: flex; gap: 8px; align-items: center; }
+.accounts { margin-top: 14px; padding: 12px; background: var(--panel); border: 1px solid var(--line); }
+.accounts h2 { margin: 0 0 8px; font-size: 13px; font-weight: normal; color: var(--accent); }
+.accounts .row { align-items: center; }
+.accounts .row button { margin-top: 0; }
+.accounts p { margin: 8px 0 0; }
+select { flex: 1; min-width: 0; background: var(--bg); color: var(--text); border: 1px solid var(--line); padding: 7px 8px; font: inherit; }
+select:focus { outline: 1px solid var(--accent); }

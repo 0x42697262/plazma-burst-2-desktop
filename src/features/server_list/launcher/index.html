@@ -29,8 +29,16 @@
     <button id="remove">Remove</button>
     <button id="refresh">Refresh</button>
   </div>
-  <p id="other-clients" class="other-clients" hidden></p>
-  <p class="hint">Private servers run with <code>npm run server</code> (docs/operations/private-server.md). Back here from the game: <code>servers page</code> in the dev console (or Servers &gt; Server list in the menu, Alt). The console's <code>servers</code> does everything this page does.</p>
+  <section id="accounts" class="accounts" hidden>
+    <h2 id="accounts-title">Account</h2>
+    <div class="row">
+      <select id="account-list" aria-labelledby="accounts-title"></select>
+      <button id="account-new">Log in to a new account</button>
+      <button id="account-remove">Forget</button>
+    </div>
+    <p id="accounts-note" class="small-line muted" hidden></p>
+  </section>
+  <p class="hint">Private servers run with <code>npm run server</code> (docs/operations/private-server.md). Back here from the game: <code>servers page</code> in the dev console (or Servers &gt; Server list in the menu, Alt). The console's <code>servers</code> manages the same list.</p>
 </main>
 
 <dialog id="form">
@@ -49,6 +57,20 @@
       <button type="button" id="cancel">Cancel</button>
       <span class="gap"></span>
       <button id="save" value="save" class="primary">Save</button>
+    </div>
+  </form>
+</dialog>
+<dialog id="login-form">
+  <form method="dialog">
+    <h2>Log in to Sad Burst 2</h2>
+    <label>Login <input name="account-login" required autocomplete="off"></label>
+    <label>Password <input name="account-password" type="password" required autocomplete="off"></label>
+    <p class="small">Your password goes only to sadburst2.com and is not saved. The app saves the session it gets back.</p>
+    <ul id="login-errors" class="errors" hidden></ul>
+    <div class="actions">
+      <button type="button" id="login-cancel">Cancel</button>
+      <span class="gap"></span>
+      <button id="login-send" value="send" class="primary">Log in</button>
     </div>
   </form>
 </dialog>
