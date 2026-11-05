@@ -8,6 +8,7 @@ import { CAPABILITY, CLIENT, FEATURE, MODE, PAGE_CAPABILITIES_GLOBAL, PAGE_FLAGS
 import { DEV_DIR, ROUTE_NAME } from '#shared/contract/keys.ts';
 import { TEXT as SADBURST_TEXT } from '#features/client_sadburst/text.ts';
 import { createLogin } from '#features/login/wrapper.ts';
+import { COOKIES_CHANGED, COOKIE_NAME, SITE } from '#features/login/keys.ts';
 import { electronKeychain } from '#features/login/adapters/keychain.ts';
 import { siteWindowOpener } from '#features/login/adapters/site-window.ts';
 import { pinCertificates, type PinnedTarget } from '#features/cert_pinning/wrapper.ts';
@@ -79,19 +80,32 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
       await login.applyQuietly(session.defaultSession.cookies);
     },
   });
+  let sessionCookies: { login: string | null; pb2uid: string | null } = { login: null, pb2uid: null };
+  async function refreshSessionCookies(): Promise<void> {
+    if (!flags.login.on || isSadburst) {
+      sessionCookies = { login: null, pb2uid: null };
+      return;
+    }
+    const cookies = await session.defaultSession.cookies.get({ domain: SITE }).catch(() => []);
+    const byName = new Map(cookies.map((cookie) => [cookie.name, cookie.value || null]));
+    sessionCookies = { login: byName.get(COOKIE_NAME.login) ?? null, pb2uid: byName.get(COOKIE_NAME.pb2uid) ?? null };
+  }
   const siteCookies = createSiteCookies(session.defaultSession.cookies, path.join(DATA_DIR, OFFICIAL_LOGIN_FILE));
   async function startLoggedOut(): Promise<void> {
     const hidden = await siteCookies.hideForPrivateServer();
     if (hidden.length) log.info(TEXT.loginHidden(hidden));
+    await refreshSessionCookies();
   }
   async function applyCredentials(): Promise<void> {
     if (login.hasCredentials()) {
       await siteCookies.forget();
       await login.applyCredentials(session.defaultSession.cookies);
+      await refreshSessionCookies();
       return;
     }
     const restored = await siteCookies.restoreOfficial();
     if (restored.length) log.info(TEXT.loginRestored(restored));
+    await refreshSessionCookies();
   }
 
   const wrapper = buildWrapper(
@@ -114,6 +128,11 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
         appVersion: app.getVersion(),
         flags,
         capabilities,
+        login: () => login.identity(client.id).login ?? sessionCookies.login,
+        cookies: () => {
+          const current = login.identity(client.id).cookies;
+          return { login: current.login ?? sessionCookies.login, pb2uid: current.pb2uid ?? sessionCookies.pb2uid };
+        },
         urlFromEnvironment: environment.diagnosticsUrl,
         fetch: (url, init) => net.fetch(url, { ...init, bypassCustomProtocolHandlers: true }),
         onRendererGone: (listener) => { app.on(RENDER_PROCESS_GONE, (_event, _contents, details) => { listener(details.reason, details.exitCode); }); },
@@ -300,6 +319,8 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
     }
     if (isRemoteHost || isDedicatedHost) await applyCredentials();
     else if (flags.cert_pinning.on) pinCertificates(session.defaultSession, joinTarget, log);
+    await refreshSessionCookies();
+    session.defaultSession.cookies.on(COOKIES_CHANGED, () => { void refreshSessionCookies(); });
 
     const pageContext = isDedicatedHost ? serverContext : localContext;
     const handler = (request: Request): Promise<Response> => handleRequestLogged(request, pageContext);

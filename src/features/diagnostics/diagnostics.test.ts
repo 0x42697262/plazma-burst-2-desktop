@@ -11,9 +11,20 @@ import { diagnosticsRoute } from './entry/route.ts';
 import { resolveConfig, sendEnvelope } from './domain/config.ts';
 import { readConfigFile } from './adapters/config-file.ts';
 import { deliverReports } from './adapters/sender.ts';
+import { createDiagnosticsWrapper, localIps } from './wrapper.ts';
 import { DIAGNOSTIC_FIELDS } from '#shared/editions/keys.ts';
+import { CAPABILITY } from '#shared/features/keys.ts';
 
-const FACTS = { client: 'official', appVersion: '1.0.0', edition: 'dev', gameVersion: 'v1', flags: { features: ['diagnostics'], capabilities: [] } };
+const FACTS = {
+  client: 'official',
+  appVersion: '1.0.0',
+  edition: 'dev',
+  gameVersion: 'v1',
+  flags: { features: ['diagnostics'], capabilities: [] },
+  login: 'alice',
+  cookies: { login: 'alice', pb2uid: '42' },
+  ips: ['203.0.113.5'],
+};
 
 type Options = { host?: string | null; auto?: boolean; fields?: readonly any[]; deliver?: (host: string, body: string) => Promise<void>; canSend?: boolean };
 
@@ -27,16 +38,20 @@ function setup({ host = null, auto = false, fields = DIAGNOSTIC_FIELDS, deliver 
   return { folder, queue, service, lines, advance: (ms: number) => { clock += ms; }, cleanup: () => fs.rmSync(folder, { recursive: true, force: true }) };
 }
 
-test('redaction removes secrets, the password cookie\'s md5, home folders and addresses', () => {
-  const text = redactText('password=hunter2 token: abc Authorization: Bearer xyz.1 5f4dcc3b5aa765d61d8327deb882cf99 /home/me/app.js C:\\Users\\me\\app.js 203.0.113.5 fe80::1:2');
-  for (const secret of ['hunter2', 'abc', 'xyz.1', '5f4dcc3b5aa765d61d8327deb882cf99', '/home/me', 'Users\\me', '203.0.113.5', 'fe80::1:2']) assert.ok(!text.includes(secret), secret);
+test('redaction removes secrets, the password cookie\'s md5 and home folders, while keeping login, pb2uid and IP addresses', () => {
+  const text = redactText('password=hunter2 token: abc Authorization: Bearer xyz.1 5f4dcc3b5aa765d61d8327deb882cf99 /home/me/app.js C:\\Users\\me\\app.js login=alice pb2uid=42 203.0.113.5 fe80::1:2');
+  for (const secret of ['hunter2', 'abc', 'xyz.1', '5f4dcc3b5aa765d61d8327deb882cf99', '/home/me', 'Users\\me']) assert.ok(!text.includes(secret), secret);
+  for (const kept of ['login=alice', 'pb2uid=42', '203.0.113.5', 'fe80::1:2']) assert.ok(text.includes(kept), kept);
   assert.match(redactText('a normal message at line 12:34'), /line 12:34/);
 });
 
-test('a report carries what was asked, redacted and cut to size', () => {
+test('a report carries what was asked, including login, cookies and IPs, redacted and cut to size', () => {
   const report = buildReport(FACTS, 'manual', { name: 'Error', message: `password=x ${'y'.repeat(1000)}`, line: 3 }, 'id', 'now');
   assert.equal(report.schemaVersion, 1);
   assert.equal(report.client, 'official');
+  assert.equal(report.login, 'alice');
+  assert.deepEqual(report.cookies, { login: 'alice', pb2uid: '42' });
+  assert.deepEqual(report.ips, ['203.0.113.5']);
   assert.ok(!report.error.message.includes('password=x'));
   assert.equal(report.error.message.length, 400);
   assert.equal(report.error.line, 3);
@@ -164,4 +179,44 @@ test('the sender posts JSON with a timeout and treats any other answer as a fail
   assert.equal(seen[0][1].method, 'POST');
   assert.ok(seen[0][1].signal);
   await assert.rejects(deliverReports(async () => new Response('', { status: 500 }), 'https://s.test/r', '{}'), /500/);
+});
+
+test('login, cookies and IPs are included by default and gated by their capabilities and send list', () => {
+  assert.deepEqual(localIps({ lo: [{ address: '127.0.0.1', internal: true } as any], eth0: [{ address: '192.0.2.10', internal: false } as any, { address: '2001:db8::1', internal: false } as any] }), ['192.0.2.10', '2001:db8::1']);
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-diagnostics-'));
+  const make = (enabled: readonly string[]) => createDiagnosticsWrapper(
+    { log: { info: () => undefined, warn: () => undefined, error: () => undefined }, isCapabilityOn: (id: string) => enabled.includes(id), gameVersion: 'v1', isSadburst: false, repoRoot: folder, gameDir: folder, devKvFile: '', host: '' } as never,
+    {
+      client: 'official',
+      appVersion: '1.0.0',
+      flags: {} as never,
+      capabilities: {},
+      login: () => 'alice',
+      cookies: () => ({ login: 'alice', pb2uid: '42' }),
+      ips: () => ['192.0.2.10'],
+      urlFromEnvironment: null,
+      fetch: async () => new Response(),
+      onRendererGone: () => undefined,
+    },
+    path.join(folder, `${enabled.length}.json`),
+    path.join(folder, 'none.json'),
+  ).service;
+  try {
+    const allOn = make([CAPABILITY.diagnostics.login, CAPABILITY.diagnostics.cookies, CAPABILITY.diagnostics.ips, CAPABILITY.diagnostics.send]);
+    const full = allOn.capture('manual', { message: 'ok' });
+    assert.equal(full?.login, 'alice');
+    assert.deepEqual(full?.cookies, { login: 'alice', pb2uid: '42' });
+    assert.deepEqual(full?.ips, ['192.0.2.10']);
+    assert.deepEqual(allOn.config().fields, DIAGNOSTIC_FIELDS);
+    const locked = make([CAPABILITY.diagnostics.send]);
+    const redacted = locked.capture('manual', { message: 'ok' });
+    assert.equal(redacted?.login, null);
+    assert.deepEqual(redacted?.cookies, { login: null, pb2uid: null });
+    assert.deepEqual(redacted?.ips, []);
+    assert.ok(!locked.config().fields.includes('login'));
+    assert.ok(!locked.config().fields.includes('cookies'));
+    assert.ok(!locked.config().fields.includes('ips'));
+  } finally {
+    fs.rmSync(folder, { recursive: true, force: true });
+  }
 });

@@ -1,7 +1,8 @@
 # diagnostics
 
 Feature flag `diagnostics` (on by default; all modes). Code: `src/features/diagnostics/`.
-Capabilities: `diagnostics.capture`, `diagnostics.show`, `diagnostics.send`.
+Capabilities: `diagnostics.capture`, `diagnostics.show`, `diagnostics.send`,
+`diagnostics.login`, `diagnostics.cookies`, `diagnostics.ips`.
 
 ## What is captured
 - In the game page: uncaught errors and unhandled promise rejections
@@ -17,12 +18,16 @@ windows and accepts only the two page kinds from a page.
 
 ## What a report holds
 `schemaVersion`, `id`, `time`, `kind`, `client`, `appVersion`, `edition`, `gameVersion`,
-`flags` (the features and capabilities that are on) and `error` (`name`, `message`,
-`stack`, `source`, `line`, `column`).
+`flags` (the features and capabilities that are on), `login` (the active account's login, or
+`null`; capability `diagnostics.login`), `cookies` (`login` and `pb2uid`, never the
+`password` cookie; capability `diagnostics.cookies`), `ips` (this machine's non-internal IP
+addresses; capability `diagnostics.ips`) and `error` (`name`, `message`, `stack`, `source`,
+`line`, `column`).
 
-Every text is redacted before it is saved (`domain/redact.ts`): password, token, `pb2uid`,
-cookie and authorization values, bearer tokens, 32-digit md5 digests (the official site's
-`password` cookie is one, and it works as the password), home folders and IP addresses.
+Every text is redacted before it is saved (`domain/redact.ts`): password, token and
+authorization values, bearer tokens, 32-digit md5 digests (the official site's `password`
+cookie is one, and it works as the password) and home folders. Login names, `pb2uid` and IP
+addresses are kept.
 
 ## Where
 `data/diagnostics/reports.json`, readable only by you, the newest 50.
@@ -48,7 +53,7 @@ restart):
 | Key | What | Default |
 |---|---|---|
 | `host` | Where reports are POSTed: `https://`, or `http://` only for this machine | none: nothing is sent |
-| `send` | Which of `kind`, `client`, `appVersion`, `edition`, `gameVersion`, `flags`, `error` leave. `id`, `time` and `schemaVersion` always do | all of them |
+| `send` | Which of `kind`, `client`, `appVersion`, `edition`, `gameVersion`, `flags`, `login`, `cookies`, `ips`, `error` leave (a field whose capability is off is left out). `id`, `time` and `schemaVersion` always do | all of them |
 | `auto` | Send each report when it is saved, instead of waiting for `diagnostics send` | `false` |
 
 - The order is `PB2_DIAGNOSTICS_URL` (the server only), then this file, then the edition's

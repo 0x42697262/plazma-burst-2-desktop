@@ -52,6 +52,16 @@ export function createLogin({ log, dataDir, host, fromEnvironment, isOn, keychai
 
   const hasCredentials = (): boolean => Object.keys(credentials()).length > 0;
 
+  function identity(client: ClientId = CLIENT.official): { login: string | null; cookies: { login: string | null; pb2uid: string | null } } {
+    if (!isOn) return { login: null, cookies: { login: null, pb2uid: null } };
+    if (client === CLIENT.sadburst) {
+      const active = sadburstBook.activeSecrets();
+      return { login: active.login ?? null, cookies: { login: null, pb2uid: null } };
+    }
+    const merged = mergeCredentials(officialBook.activeSecrets(), fromEnvironment);
+    return { login: merged.login ?? null, cookies: { login: merged.login ?? null, pb2uid: merged.pb2uid ?? null } };
+  }
+
   async function logInNew(client: ClientId, typed: TypedLogin): Promise<string | null> {
     if (client === CLIENT.official) {
       if (!openSiteWindow) throw new Error(TEXT.noSite);
@@ -101,5 +111,5 @@ export function createLogin({ log, dataDir, host, fromEnvironment, isOn, keychai
     return sadburstBook.takeSignOut() ? tokenScript(null) : null;
   }
 
-  return Object.freeze({ applyCredentials, applyQuietly, hasCredentials, accounts, sadburstStartupScript });
+  return Object.freeze({ applyCredentials, applyQuietly, hasCredentials, identity, accounts, sadburstStartupScript });
 }

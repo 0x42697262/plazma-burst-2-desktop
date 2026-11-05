@@ -47,7 +47,7 @@ export const capabilityId = (feature: FeatureId, name: string): string => featur
 
 export const CAPABILITY = Object.freeze({
   login: Object.freeze({ site: 'login.site', accounts: 'login.accounts' }),
-  diagnostics: Object.freeze({ capture: 'diagnostics.capture', show: 'diagnostics.show', send: 'diagnostics.send' }),
+  diagnostics: Object.freeze({ capture: 'diagnostics.capture', show: 'diagnostics.show', send: 'diagnostics.send', login: 'diagnostics.login', cookies: 'diagnostics.cookies', ips: 'diagnostics.ips' }),
   p2pHost: Object.freeze({ status: 'p2p_host.status', who: 'p2p_host.who', kick: 'p2p_host.kick', tell: 'p2p_host.tell', say: 'p2p_host.say', map: 'p2p_host.map', pause: 'p2p_host.pause', swap: 'p2p_host.swap', endround: 'p2p_host.endround', unbanall: 'p2p_host.unbanall', ping: 'p2p_host.ping', pingAction: 'p2p_host.ping_action', minReputation: 'p2p_host.min_reputation', stop: 'p2p_host.stop', start: 'p2p_host.start', restart: 'p2p_host.restart' }),
   triggers: Object.freeze({ list: 'triggers.list', history: 'triggers.history', find: 'triggers.find', run: 'triggers.run', exec: 'triggers.exec', actions: 'triggers.actions', regions: 'triggers.regions', regionsRun: 'triggers.regions_run', vars: 'triggers.vars', varsSet: 'triggers.vars_set', varsSync: 'triggers.vars_sync', logic: 'triggers.logic', logicShow: 'triggers.logic_show', logicTree: 'triggers.logic_tree' }),
   serverList: Object.freeze({ list: 'server_list.list', connect: 'server_list.connect', add: 'server_list.add', edit: 'server_list.edit', remove: 'server_list.remove', fingerprint: 'server_list.fingerprint', page: 'server_list.page' }),

@@ -1,5 +1,5 @@
 export const REPORT_SCHEMA_VERSION = 1;
-export const REPORTS_FILE_VERSION = 1;
+export const REPORTS_FILE_VERSION = 2;
 export const REPORTS_FILE_MODE = 0o600;
 export const MAX_REPORTS = 50;
 export const MAX_TEXT_LENGTH = 400;

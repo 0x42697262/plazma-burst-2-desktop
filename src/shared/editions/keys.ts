@@ -7,6 +7,8 @@ export const ALWAYS_WITH: Readonly<Partial<Record<FeatureId, readonly FeatureId[
   [FEATURE.serverList]: Object.freeze([FEATURE.lobbyTaskGuard, FEATURE.certPinning]),
 });
 
-export const DIAGNOSTIC_FIELD = Object.freeze({ kind: 'kind', client: 'client', appVersion: 'appVersion', edition: 'edition', gameVersion: 'gameVersion', flags: 'flags', error: 'error' });
+export const DIAGNOSTIC_FIELD = Object.freeze({
+  kind: 'kind', client: 'client', appVersion: 'appVersion', edition: 'edition', gameVersion: 'gameVersion', flags: 'flags', login: 'login', cookies: 'cookies', ips: 'ips', error: 'error',
+});
 export type DiagnosticField = typeof DIAGNOSTIC_FIELD[keyof typeof DIAGNOSTIC_FIELD];
 export const DIAGNOSTIC_FIELDS = Object.freeze(Object.values(DIAGNOSTIC_FIELD)) as readonly DiagnosticField[];

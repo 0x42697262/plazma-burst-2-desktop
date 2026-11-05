@@ -3,8 +3,8 @@ export const SHOW_TEXT = Object.freeze({
   statusDescription: 'Crash and error reports: whether they are captured, and how many are kept',
   statusAbout: [
     'Page errors, unhandled promise rejections, game page crashes and main process errors are',
-    'saved to data/diagnostics/reports.json, with passwords, tokens, your home folder and',
-    'IP addresses removed. The newest 50 are kept.',
+    'saved to data/diagnostics/reports.json, with passwords, tokens and your home folder',
+    'removed. The newest 50 are kept.',
   ],
   showAbout: ['Without a number, one line per saved report. With a number from that list, or "last", the whole report as it would be sent.'],
   reportAbout: ['Saves a report of kind "manual" with your note, for something that went wrong without an error.'],

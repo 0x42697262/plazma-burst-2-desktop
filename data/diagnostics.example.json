@@ -1,5 +1,5 @@
 {
   "host": "https://reports.example.test/pb2",
-  "send": ["kind", "client", "appVersion", "edition", "gameVersion", "flags", "error"],
+  "send": ["kind", "client", "appVersion", "edition", "gameVersion", "flags", "login", "cookies", "ips", "error"],
   "auto": false
 }
