@@ -9,6 +9,7 @@ import { builderConfig, stagedPackage } from './config.ts';
 import { FAILED_EXIT_CODE, FIRST_USER_ARGUMENT, JSON_INDENT } from './constants.ts';
 import { ARG, DIST_FOLDER, ELECTRON_PACKAGE, LINE_JOIN, NEVER_PUBLISH, PACKAGE_FILE, PLATFORM, RELEASE_FOLDER, SOURCE_MAP_SUFFIX, STAGING_FOLDER, type Platform } from './keys.ts';
 import { TEXT } from './text.ts';
+import { TEXT as BUILD_TEXT } from '#tools/build/text.ts';
 
 type Options = { edition: string | null; platforms: Platform[]; help: boolean };
 
@@ -38,13 +39,14 @@ async function main(): Promise<void> {
     return;
   }
   if (!options.edition) throw new Error(TEXT.noEdition);
-  const { edition, defaults, problems } = await readyEdition(readEdition(options.edition), (host, port) => createProbe().fingerprint(host, port));
+  const { edition, obfuscate, defaults, problems } = await readyEdition(readEdition(options.edition), (host, port) => createProbe().fingerprint(host, port));
   if (problems.length) throw new Error(problems.join(LINE_JOIN));
   if (edition.features === null) console.warn(TEXT.everyFeature);
   console.log(TEXT.building(edition.name, edition.features ?? []));
 
   await fs.rm(DIST_DIR, { recursive: true, force: true });
-  await buildAll(edition, defaults);
+  const { obfuscated } = await buildAll(edition, defaults, { obfuscate });
+  if (obfuscated.length) console.log(BUILD_TEXT.obfuscated(obfuscated.length));
 
   const outDir = path.join(REPO_ROOT, RELEASE_FOLDER, edition.name);
   const appDir = path.join(outDir, STAGING_FOLDER);

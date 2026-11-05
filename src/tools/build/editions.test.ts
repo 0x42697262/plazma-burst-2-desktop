@@ -104,6 +104,24 @@ test('an edition file must name itself and list known features', () => {
   }
 });
 
+test('an edition is obfuscated only when its file says "obfuscate": true, and the flag stays out of the app', () => {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-editions-'));
+  const write = (extra: Record<string, unknown>) => fs.writeFileSync(path.join(folder, 'mine.json'), JSON.stringify({ name: 'mine', title: 'Mine', appId: 'a.b', features: ['hooks'], ...extra }));
+  try {
+    write({});
+    assert.equal(readEdition('mine', folder).obfuscate, false);
+    write({ obfuscate: true });
+    const built = readEdition('mine', folder);
+    assert.equal(built.obfuscate, true, 'hooks and obfuscation go together');
+    assert.deepEqual(built.problems, []);
+    assert.equal('obfuscate' in built.edition, false);
+    write({ obfuscate: 'yes' });
+    assert.throws(() => readEdition('mine', folder), /obfuscate/);
+  } finally {
+    fs.rmSync(folder, { recursive: true, force: true });
+  }
+});
+
 test('every capability builds alone, without the code of its siblings', async () => {
   for (const capability of CAPABILITIES) {
     const { edition, problems } = oneOffEdition(withRequirements(CATALOG, [capability.id]));

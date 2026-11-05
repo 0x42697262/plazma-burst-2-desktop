@@ -35,7 +35,9 @@ async function main(): Promise<void> {
   if (chosen) {
     console.log(TEXT.edition(chosen.edition.name, chosen.edition.features ?? [], chosen.edition.capabilities));
   }
-  for (const output of await buildAll(chosen?.edition, chosen?.defaults)) console.log(TEXT.built(path.relative(REPO_ROOT, output)));
+  const { outputs, obfuscated } = await buildAll(chosen?.edition, chosen?.defaults, { obfuscate: chosen?.obfuscate ?? false });
+  for (const output of outputs) console.log(TEXT.built(path.relative(REPO_ROOT, output)));
+  if (obfuscated.length) console.log(TEXT.obfuscated(obfuscated.length));
 }
 
 main().catch((error: unknown) => {

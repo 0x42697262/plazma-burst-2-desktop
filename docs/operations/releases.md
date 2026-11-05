@@ -35,7 +35,8 @@ npm run release -- --edition <name> --linux --windows
 1. reads `editions/<name>.json` and stops on a problem (an edition with every feature
    only gets a warning: it is meant for development);
 2. empties `dist/` and builds the edition: the page scripts, the main process
-   (`dist/wrapper/main.cjs`) and what its features need;
+   (`dist/wrapper/main.cjs`) and what its features need, obfuscated when the edition says
+   `"obfuscate": true` ([editions](editions.md#obfuscation));
 3. stages `release/<name>/app/`: `dist/` without source maps, and a `package.json` with
    the edition's id, title and `desktopName`, and `main` pointing at the bundled main
    process. No `node_modules`: everything the app runs is in the bundles, Electron aside;

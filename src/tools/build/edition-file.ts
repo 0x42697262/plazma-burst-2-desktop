@@ -17,6 +17,7 @@ const editionFileSchema = z.object({
   title: z.string().min(1),
   appId: z.string().regex(APP_ID_PATTERN),
   features: z.union([z.literal(EVERY_FEATURE), z.array(z.string())]),
+  obfuscate: z.boolean().optional(),
   diagnostics: z.object({
     hidden: z.boolean().optional(),
     host: z.string().optional(),
@@ -32,12 +33,12 @@ const editionFileSchema = z.object({
 
 const withoutUnset = <Value extends Record<string, unknown>>(values: Value): Value => Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined)) as Value;
 
-export type BuiltEdition = Readonly<{ edition: Edition; missing: readonly string[]; problems: readonly string[]; listedDefaults: ListedDefaults }>;
+export type BuiltEdition = Readonly<{ edition: Edition; obfuscate: boolean; missing: readonly string[]; problems: readonly string[]; listedDefaults: ListedDefaults }>;
 
-const withFeatures = (base: Omit<Edition, 'features' | 'capabilities'>, listed: EditionList, listedDefaults: ListedDefaults = {}): BuiltEdition => {
+const withFeatures = (base: Omit<Edition, 'features' | 'capabilities'>, listed: EditionList, listedDefaults: ListedDefaults = {}, obfuscate = false): BuiltEdition => {
   const resolved = resolveEdition(CATALOG, listed);
   const features = listed === EVERY_FEATURE ? null : resolved.features;
-  return Object.freeze({ edition: Object.freeze({ ...base, features, capabilities: resolved.capabilities }), missing: resolved.missing, problems: resolved.problems, listedDefaults });
+  return Object.freeze({ edition: Object.freeze({ ...base, features, capabilities: resolved.capabilities }), obfuscate, missing: resolved.missing, problems: resolved.problems, listedDefaults });
 };
 
 export function readEdition(name: string, folder: string = EDITIONS_DIR): BuiltEdition {
@@ -50,7 +51,7 @@ export function readEdition(name: string, folder: string = EDITIONS_DIR): BuiltE
     throw new Error(TEXT.editionUnreadable(shown, (error as Error).message), { cause: error });
   }
   if (parsed.name !== name) throw new Error(TEXT.nameMismatch(shown, parsed.name));
-  const built = withFeatures({ name: parsed.name, title: parsed.title, appId: parsed.appId, ...(parsed.diagnostics ? { diagnostics: withoutUnset(parsed.diagnostics) } : {}) }, parsed.features, parsed.defaults);
+  const built = withFeatures({ name: parsed.name, title: parsed.title, appId: parsed.appId, ...(parsed.diagnostics ? { diagnostics: withoutUnset(parsed.diagnostics) } : {}) }, parsed.features, parsed.defaults, parsed.obfuscate === true);
   const hasDiagnostics = built.edition.features === null || built.edition.features.includes(FEATURE.diagnostics);
   if (!parsed.diagnostics || hasDiagnostics) return built;
   return Object.freeze({ ...built, missing: [...built.missing, FEATURE.diagnostics], problems: [...built.problems, TEXT.diagnosticsNeedsFeature] });
@@ -62,12 +63,13 @@ export const oneOffEdition = (features: readonly string[]): BuiltEdition =>
 export const editionNames = (folder: string = EDITIONS_DIR): string[] =>
   fs.readdirSync(folder).filter((file) => file.endsWith(EDITION_FILE_EXTENSION)).map((file) => file.slice(0, -EDITION_FILE_EXTENSION.length)).sort();
 
-export type ReadyEdition = Readonly<{ edition: Edition; defaults: EditionDefaults; missing: readonly string[]; problems: readonly string[] }>;
+export type ReadyEdition = Readonly<{ edition: Edition; obfuscate: boolean; defaults: EditionDefaults; missing: readonly string[]; problems: readonly string[] }>;
 
 export async function readyEdition(built: BuiltEdition, fingerprintOf: FingerprintOf): Promise<ReadyEdition> {
   const checked = await checkDefaults(built.edition, built.listedDefaults, fingerprintOf);
   return Object.freeze({
     edition: built.edition,
+    obfuscate: built.obfuscate,
     defaults: checked.defaults,
     missing: [...new Set([...built.missing, ...checked.missing])],
     problems: [...built.problems, ...checked.problems],

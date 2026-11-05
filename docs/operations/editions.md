@@ -35,6 +35,7 @@ and `chars`, and nothing else: `player_info.chars` picks one command of `player_
 | `features` | Feature ids and capability ids (`npm start -- --features` lists them), or `"all"`. A feature id means all of its capabilities; a capability id (`health.god`) brings its feature with only that capability |
 | `defaults` | Optional: servers, binds and settings a new player starts with (see [Defaults](#defaults)) |
 | `diagnostics` | Optional: `hidden`, `host`, `send`, `auto` (see [Diagnostics settings](#diagnostics-settings)) |
+| `obfuscate` | Optional: `true` obfuscates the built scripts (see [Obfuscation](#obfuscation)) |
 
 `dev` is the one edition the tooling relies on: every feature, what `npm start` and
 `npm run verify` build.
@@ -90,6 +91,39 @@ An example (the server is made up):
   `PB2_DIAGNOSTICS_URL` win over them.
 - The edition must list `diagnostics`, and `send` takes only the known fields; otherwise the
   build stops.
+
+## Obfuscation
+
+`"obfuscate": true` makes the build run
+[javascript-obfuscator](https://github.com/javascript-obfuscator/javascript-obfuscator)
+over every script it built (`src/tools/build/obfuscate.ts`): the page core, the console,
+the main process, the launcher, the hooks runtime and the remote-play client. The page
+scripts are read as ES modules, the rest as scripts. Source maps are deleted, so a stack
+trace (in the terminal or a diagnostics report) shows obfuscated names. The flag is a build
+setting only: it is not compiled into the app. `npm run build -- --edition <name>` and
+`npm run release -- --edition <name>` both honor it and print `Obfuscated N files`.
+
+It works with every feature, hooks included. Players still write hooks the same way:
+- hook files (`hooks/*.js`) are the player's own code, read from disk, never obfuscated;
+- `Game.<name>` and `Script.patch` reach the game's own code through `names.js`, not ours;
+- the runtime is reached only through property names and strings (`startHooksRuntime`,
+  `Interceptor.attach`, `onEnter`, `retval.replace`, `this.original`, `module.exports.*`,
+  its global) and through code it builds from strings, all of which obfuscation keeps.
+
+That holds as long as `OBFUSCATOR_OPTIONS` (`src/tools/build/constants.ts`) keeps these
+off:
+
+| Option | Breaks |
+|---|---|
+| `renameProperties` | the hook API (`Interceptor.attach` would be renamed) |
+| `renameGlobals` | `pb2dev` and the hooks runtime's global |
+| `selfDefending`, `debugProtection`, `disableConsoleOutput` | they change `console` and globals, which the game's anti-tamper scan compares |
+| `controlFlowFlattening`, `deadCodeInjection` | nothing, but they slow down code that runs every frame |
+
+Two tests guard this: `src/features/hooks/hooks.test.ts` runs every hook test against the
+plain and the obfuscated runtime (with `renameProperties` on, 9 of them fail), and
+`src/tools/build/obfuscate.test.ts` boots the obfuscated page core and console in the fake
+game and checks that they add no global besides `pb2dev`.
 
 ## Building one
 

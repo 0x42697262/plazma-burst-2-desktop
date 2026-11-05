@@ -6,6 +6,7 @@ import { EDITION } from '#shared/editions/constants.ts';
 import type { Edition, EditionDefaults } from '#shared/editions/types.ts';
 import { FEATURE, type FeatureId } from '#shared/features/keys.ts';
 import { editionPlugin, packagedRootPlugin } from './edition-plugin.ts';
+import { obfuscateOutputs } from './obfuscate.ts';
 import {
   LAUNCHER_DIST_DIR, LAUNCHER_PRELOAD_SOURCE, LAUNCHER_SCRIPT_SOURCE, LAUNCHER_SOURCE_DIR, LAUNCHER_STATIC_FILES,
 } from '#features/server_list/paths.ts';
@@ -123,12 +124,17 @@ export async function buildWrapperBundle(outfile: string = path.join(WRAPPER_BUN
   return outfile;
 }
 
-export async function buildAll(edition: Edition = EDITION, defaults?: EditionDefaults): Promise<string[]> {
+export type BuildOptions = Readonly<{ obfuscate: boolean }>;
+export type BuildResult = Readonly<{ outputs: string[]; obfuscated: string[] }>;
+
+export async function buildAll(edition: Edition = EDITION, defaults?: EditionDefaults, options: BuildOptions = { obfuscate: false }): Promise<BuildResult> {
   const builds = [buildPage(PAGE_BUNDLE_DIR, edition), buildWrapperBundle(path.join(WRAPPER_BUNDLE_DIR, WRAPPER_BUNDLE_FILE), edition, defaults)];
   if (hasFeature(edition, FEATURE.serverList)) builds.push(buildLauncher());
   if (hasFeature(edition, FEATURE.hooks)) builds.push(buildHooksRuntime());
   if (hasFeature(edition, FEATURE.remotePlay)) builds.push(buildRemoteClient());
-  return Promise.all(builds);
+  const outputs = await Promise.all(builds);
+  const obfuscated = options.obfuscate ? await obfuscateOutputs(outputs, [PAGE_BUNDLE_DIR]) : [];
+  return { outputs, obfuscated };
 }
 
 export async function watchAll(): Promise<esbuild.BuildContext[]> {

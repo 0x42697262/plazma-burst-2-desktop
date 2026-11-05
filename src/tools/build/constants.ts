@@ -45,3 +45,22 @@ export const DEFAULTS_MODULE = 'src/shared/editions/defaults.ts';
 export const COMMAND_CHAIN_SEPARATOR = ';';
 export const COMMAND_QUOTE = '"';
 export const COMMAND_WORDS = /\s+/;
+export const OBFUSCATED_EXTENSIONS: readonly string[] = Object.freeze(['.js', '.cjs']);
+export const NODE_EXTENSION = '.cjs';
+export const SOURCE_MAP_EXTENSION = '.map';
+export const OBFUSCATOR_OPTIONS = Object.freeze({
+  compact: true,
+  identifierNamesGenerator: 'hexadecimal',
+  stringArray: true,
+  stringArrayThreshold: 0.75,
+  controlFlowFlattening: false,
+  deadCodeInjection: false,
+  renameGlobals: false,
+  renameProperties: false,
+  transformObjectKeys: false,
+  selfDefending: false,
+  debugProtection: false,
+  disableConsoleOutput: false,
+  unicodeEscapeSequence: false,
+  sourceMap: false,
+} as const);
