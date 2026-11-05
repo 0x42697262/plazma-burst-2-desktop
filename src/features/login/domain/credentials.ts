@@ -1,4 +1,5 @@
-import { CREDENTIAL_KEYS, type CredentialKey } from '../keys.ts';
+import crypto from 'node:crypto';
+import { CREDENTIAL_KEYS, HASH_ENCODING, PASSWORD_COOKIE, PASSWORD_HASH, TEXT_FOR_HASH, type CredentialKey } from '../keys.ts';
 
 export type Credentials = Partial<Record<CredentialKey, string>>;
 
@@ -15,3 +16,7 @@ export function mergeCredentials(saved: Readonly<Record<string, unknown>>, fromE
   }
   return merged;
 }
+
+export const passwordCookie = (password: string): string => (PASSWORD_COOKIE.test(password) ? password : crypto.createHash(PASSWORD_HASH).update(password, TEXT_FOR_HASH).digest(HASH_ENCODING));
+
+export const withPasswordCookie = (credentials: Credentials): Credentials => (credentials.password ? { ...credentials, password: passwordCookie(credentials.password) } : credentials);

@@ -4,8 +4,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { applyLogin, type Cookie, type CookieStore } from './adapters/cookies.ts';
-import { readCredentialsFile } from './adapters/credentials-file.ts';
-import { mergeCredentials } from './domain/credentials.ts';
+import { createAccountBook } from './services/account-book.ts';
+import { PLAIN_KEYCHAIN, type Keychain } from './adapters/keychain.ts';
+import { mergeCredentials, passwordCookie } from './domain/credentials.ts';
 import { createLogin } from './wrapper.ts';
 import type { Logger } from '#kernel/log/logger.ts';
 
@@ -62,7 +63,8 @@ test('with credentials, only that account\'s cookies exist', async () => {
 test('credentials: the environment wins over the file, and unset ones are left out', () => {
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-login-'));
   const file = path.join(folder, 'credentials.json');
-  const load = (fromEnvironment: Record<string, unknown>) => mergeCredentials(readCredentialsFile(file, () => {}), fromEnvironment);
+  const bookOf = (reportUnreadable: (message: string) => void = () => {}) => createAccountBook({ file, keychain: PLAIN_KEYCHAIN, now: () => 'now', reportUnreadable, warn: () => {} });
+  const load = (fromEnvironment: Record<string, unknown>) => mergeCredentials(bookOf().activeSecrets(), fromEnvironment);
   try {
     assert.deepEqual(load({}), {}, 'no file, no environment: nothing');
     fs.writeFileSync(file, '\uFEFF' + JSON.stringify({ login: 'file_login', password: 'file_pw', pb2uid: '' }));
@@ -70,7 +72,7 @@ test('credentials: the environment wins over the file, and unset ones are left o
     assert.deepEqual(load({ login: 'env_login', pb2uid: 42 }), { login: 'env_login', password: 'file_pw', pb2uid: '42' });
     fs.writeFileSync(file, '{ not json');
     const reported: string[] = [];
-    assert.deepEqual(readCredentialsFile(file, (message) => { reported.push(message); }), {}, 'a broken file counts as none');
+    assert.deepEqual(bookOf((message) => { reported.push(message); }).activeSecrets(), {}, 'a broken file counts as none');
     assert.equal(reported.length, 1);
   } finally {
     fs.rmSync(folder, { recursive: true });
@@ -92,4 +94,99 @@ test('with the login flag off, the saved credentials are not used and the game s
   } finally {
     fs.rmSync(folder, { recursive: true });
   }
+});
+
+const REVERSING_KEYCHAIN: Keychain = {
+  canEncrypt: () => true,
+  seal: (text) => [...text].reverse().join(''),
+  open: (secret) => [...secret].reverse().join(''),
+};
+
+function accountsFolder() {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-accounts-'));
+  const file = path.join(folder, 'credentials.json');
+  const warnings: string[] = [];
+  const bookWith = (keychain: Keychain) => createAccountBook({ file, keychain, now: () => '2026-11-05', reportUnreadable: (message) => { warnings.push(message); }, warn: (message) => { warnings.push(message); } });
+  return { file, warnings, bookWith, cleanup: () => fs.rmSync(folder, { recursive: true }) };
+}
+
+test('the password cookie is the password\'s md5; a value already like one is kept', () => {
+  assert.equal(passwordCookie('password'), '5f4dcc3b5aa765d61d8327deb882cf99');
+  assert.equal(passwordCookie('5f4dcc3b5aa765d61d8327deb882cf99'), '5f4dcc3b5aa765d61d8327deb882cf99');
+});
+
+test('a plain password in the old file or the environment reaches the game as its md5', async () => {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-login-'));
+  try {
+    const cookies = saved();
+    await createLogin({ log: quietLog([]), dataDir: folder, host: HOST, fromEnvironment: { login: 'env', password: 'password' }, isOn: true }).applyCredentials(cookies);
+    assert.equal(cookies.jar().find((cookie) => cookie.name === 'password')?.value, '5f4dcc3b5aa765d61d8327deb882cf99');
+  } finally { fs.rmSync(folder, { recursive: true }); }
+});
+
+test('accounts: several saved, one active, secrets encrypted on disk, the file readable only by you', () => {
+  const context = accountsFolder();
+  try {
+    const book = context.bookWith(REVERSING_KEYCHAIN);
+    book.add('one', { password: 'abc1', pb2uid: '11' });
+    book.add('two', { password: 'xyz2' });
+    assert.deepEqual(book.activeSecrets(), { login: 'two', password: 'xyz2' });
+    assert.deepEqual(book.list(), [{ login: 'one', active: false, updatedAt: '2026-11-05' }, { login: 'two', active: true, updatedAt: '2026-11-05' }]);
+    book.use('one');
+    assert.deepEqual(book.activeSecrets(), { login: 'one', password: 'abc1', pb2uid: '11' });
+    const onDisk = fs.readFileSync(context.file, 'utf8');
+    assert.ok(!onDisk.includes('abc1') && !onDisk.includes('xyz2'), 'no secret in the clear');
+    assert.equal(JSON.parse(onDisk).schemaVersion, 1);
+    assert.equal(fs.statSync(context.file).mode & 0o777, 0o600);
+    assert.throws(() => book.use('three'), /No saved account/);
+  } finally { context.cleanup(); }
+});
+
+test('accounts: the old plain file is one active account, and is encrypted the first time it is read', () => {
+  const context = accountsFolder();
+  const oldPassword = '0123456789abcdef0123456789abcdef';
+  const oldFile = JSON.stringify({ login: 'old', password: oldPassword, pb2uid: '77' });
+  try {
+    fs.writeFileSync(context.file, oldFile);
+    const book = context.bookWith(REVERSING_KEYCHAIN);
+    assert.deepEqual(book.activeSecrets(), { login: 'old', password: oldPassword, pb2uid: '77' });
+    assert.ok(!fs.readFileSync(context.file, 'utf8').includes(oldPassword), 'encrypted on disk from now on');
+    assert.equal(fs.statSync(context.file).mode & 0o777, 0o600);
+    book.add('new', { password: 'ddd' });
+    book.use('old');
+    assert.deepEqual(book.activeSecrets(), { login: 'old', password: oldPassword, pb2uid: '77' });
+  } finally { context.cleanup(); }
+});
+
+test('accounts: without a keychain they stay plain and it says so; one that cannot be opened is reported, not used', () => {
+  const context = accountsFolder();
+  try {
+    context.bookWith(PLAIN_KEYCHAIN).add('me', { password: 'eee' });
+    assert.match(context.warnings[0] ?? '', /no keychain/);
+    assert.equal(context.bookWith(PLAIN_KEYCHAIN).activeSecrets().password, 'eee');
+    const sealed = context.bookWith(REVERSING_KEYCHAIN);
+    sealed.add('me', { password: 'fff' });
+    const broken: Keychain = { ...REVERSING_KEYCHAIN, open: () => { throw new Error('locked'); } };
+    assert.deepEqual(context.bookWith(broken).activeSecrets(), {});
+    assert.match(context.warnings.at(-1) ?? '', /log in to it again/);
+  } finally { context.cleanup(); }
+});
+
+test('accounts: removing the active one leaves none active and asks for a sign-out once', () => {
+  const context = accountsFolder();
+  try {
+    const book = context.bookWith(REVERSING_KEYCHAIN);
+    book.add('one', { token: 't1' });
+    book.add('two', { token: 't2' });
+    book.remove('one');
+    assert.equal(book.takeSignOut(), false, 'it was not the active one');
+    book.remove('two');
+    assert.deepEqual(book.activeSecrets(), {});
+    assert.equal(book.takeSignOut(), true);
+    assert.equal(book.takeSignOut(), false, 'only once');
+    book.add('three', { token: 't3' });
+    book.remove('three');
+    book.add('four', { token: 't4' });
+    assert.equal(book.takeSignOut(), false, 'a new active account replaces the sign-out');
+  } finally { context.cleanup(); }
 });

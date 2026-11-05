@@ -2,3 +2,11 @@ export { SITE, COOKIE_DOMAIN, COOKIE_PATH, cookieUrl, siteUrl } from '#shared/si
 export const CREDENTIAL_KEYS = Object.freeze(['login', 'password', 'pb2uid'] as const);
 export type CredentialKey = typeof CREDENTIAL_KEYS[number];
 export const CREDENTIALS_FILE_NAME = 'credentials.json';
+export const SADBURST_CREDENTIALS_FILE_NAME = 'credentials.sadburst.json';
+export const PASSWORD_COOKIE = /^[0-9a-f]{32}$/i;
+export const PASSWORD_HASH = 'md5';
+export const HASH_ENCODING = 'hex';
+export const TEXT_FOR_HASH = 'utf8';
+export const SECRET_ENCODING = 'base64';
+export const PLAIN_BACKEND = 'basic_text';
+export const LEGACY_FIELD = Object.freeze({ login: 'login', password: 'password', pb2uid: 'pb2uid' });

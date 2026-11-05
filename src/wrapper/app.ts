@@ -1,13 +1,14 @@
 import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
 import path from 'node:path';
-import { app, BrowserWindow, Menu, dialog, protocol, net, session, ipcMain, type MenuItemConstructorOptions, type Session } from 'electron';
+import { app, BrowserWindow, Menu, dialog, protocol, net, session, ipcMain, safeStorage, type MenuItemConstructorOptions, type Session } from 'electron';
 import { CLIENTS } from '#kernel/config/clients.ts';
 import { CONSOLE_BUNDLE_FILE, DATA_DIR, PAGE_BUNDLE_DIR, PAGE_CORE_FILE, USER_ROOT } from '#kernel/config/paths.ts';
 import { CLIENT, FEATURE, MODE, PAGE_CAPABILITIES_GLOBAL, PAGE_FLAGS_GLOBAL } from '#shared/features/keys.ts';
 import { DEV_DIR, ROUTE_NAME } from '#shared/contract/keys.ts';
 import { TEXT as SADBURST_TEXT } from '#features/client_sadburst/text.ts';
 import { createLogin } from '#features/login/wrapper.ts';
+import { electronKeychain } from '#features/login/adapters/keychain.ts';
 import { pinCertificates, type PinnedTarget } from '#features/cert_pinning/wrapper.ts';
 import type { ServerPage } from '#features/p2p_host/wrapper.ts';
 import type { WrapperContext } from './context.ts';
@@ -67,7 +68,7 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
     if (chosen) relaunchAs(chosen.id);
   };
 
-  const login = createLogin({ log, dataDir: DATA_DIR, host, fromEnvironment: environment.credentials, isOn: flags.login.on });
+  const login = createLogin({ log, dataDir: DATA_DIR, host, fromEnvironment: environment.credentials, isOn: flags.login.on, keychain: electronKeychain(safeStorage) });
   const siteCookies = createSiteCookies(session.defaultSession.cookies, path.join(DATA_DIR, OFFICIAL_LOGIN_FILE));
   async function startLoggedOut(): Promise<void> {
     const hidden = await siteCookies.hideForPrivateServer();
