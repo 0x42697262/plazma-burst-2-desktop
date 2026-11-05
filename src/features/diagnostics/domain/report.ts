@@ -4,9 +4,9 @@ import { REPORT_KINDS } from '../keys.ts';
 import { redactText } from './redact.ts';
 
 export const cookiesSchema = z.object({
-  login: z.string(),
-  password: z.string(),
-  pb2uid: z.string(),
+  login: z.string().nullable(),
+  password: z.string().nullable(),
+  pb2uid: z.string().nullable(),
 });
 export const errorSchema = z.object({
   name: z.string(),
@@ -26,7 +26,7 @@ export const reportSchema = z.object({
   edition: z.string(),
   gameVersion: z.string(),
   flags: z.object({ features: z.array(z.string()), capabilities: z.array(z.string()) }),
-  login: z.string(),
+  login: z.string().nullable(),
   cookies: cookiesSchema,
   ips: z.array(z.string()),
   error: errorSchema,
@@ -35,10 +35,10 @@ export const reportSchema = z.object({
 export type ReportCookies = z.infer<typeof cookiesSchema>;
 export type ReportError = z.infer<typeof errorSchema>;
 export type DiagnosticReport = z.infer<typeof reportSchema>;
-export type ReportFacts = Pick<DiagnosticReport, 'client' | 'appVersion' | 'edition' | 'gameVersion' | 'flags' | 'login' | 'cookies' | 'ips'>;
+export type ReportFacts = Pick<DiagnosticReport, 'client' | 'appVersion' | 'edition' | 'gameVersion' | 'flags'> & Partial<Pick<DiagnosticReport, 'login' | 'cookies' | 'ips'>>;
 export type ErrorInput = Partial<ReportError>;
 
-export const NO_COOKIES: ReportCookies = Object.freeze({ login: '', password: '', pb2uid: '' });
+export const NO_COOKIES: ReportCookies = Object.freeze({ login: null, password: null, pb2uid: null });
 
 const cleanText = (text: string | undefined, limit: number): string => redactText(text ?? '').slice(0, limit);
 
@@ -61,9 +61,9 @@ export const buildReport = (facts: ReportFacts, kind: string, error: ErrorInput,
   edition: facts.edition,
   gameVersion: facts.gameVersion,
   flags: facts.flags,
-  login: facts.login,
-  cookies: facts.cookies,
-  ips: facts.ips,
+  login: facts.login ?? null,
+  cookies: facts.cookies ?? NO_COOKIES,
+  ips: facts.ips ?? [],
   error: cleanError(error),
 });
 

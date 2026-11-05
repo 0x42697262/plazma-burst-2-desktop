@@ -8,7 +8,7 @@ const queueSchema = z.object({ reports: z.array(reportSchema) });
 const addIdentityFields = (data: Record<string, unknown>): Record<string, unknown> => ({
   ...data,
   reports: Array.isArray(data.reports)
-    ? data.reports.map((report: unknown): unknown => (typeof report === 'object' && report !== null ? { login: '', cookies: NO_COOKIES, ips: [], ...report } : report))
+    ? data.reports.map((report: unknown): unknown => (typeof report === 'object' && report !== null ? { login: null, cookies: NO_COOKIES, ips: [], ...report } : report))
     : data.reports,
 });
 

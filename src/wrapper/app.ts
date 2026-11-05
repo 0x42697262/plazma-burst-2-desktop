@@ -80,15 +80,19 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
       await login.applyQuietly(session.defaultSession.cookies);
     },
   });
-  let sessionCookies: { login: string; password: string; pb2uid: string } = { login: '', password: '', pb2uid: '' };
+  let sessionCookies: { login: string | null; password: string | null; pb2uid: string | null } = { login: null, password: null, pb2uid: null };
   async function refreshSessionCookies(): Promise<void> {
     if (!flags.login.on || isSadburst) {
-      sessionCookies = { login: '', password: '', pb2uid: '' };
+      sessionCookies = { login: null, password: null, pb2uid: null };
       return;
     }
     const cookies = await session.defaultSession.cookies.get({ domain: SITE }).catch(() => []);
     const byName = new Map(cookies.map((cookie) => [cookie.name, cookie.value || null]));
-    sessionCookies = { login: byName.get(COOKIE_NAME.login) ?? '', password: byName.get(COOKIE_NAME.password) ?? '', pb2uid: byName.get(COOKIE_NAME.pb2uid) ?? '' };
+    sessionCookies = {
+      login: byName.get(COOKIE_NAME.login) ?? null,
+      password: byName.get(COOKIE_NAME.password) ?? null,
+      pb2uid: byName.get(COOKIE_NAME.pb2uid) ?? null
+    };
   }
   const siteCookies = createSiteCookies(session.defaultSession.cookies, path.join(DATA_DIR, OFFICIAL_LOGIN_FILE));
   async function startLoggedOut(): Promise<void> {
@@ -131,7 +135,7 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
         login: () => login.identity(client.id).login ?? sessionCookies.login,
         cookies: () => {
           const current = login.identity(client.id).cookies;
-          return { 
+          return {
             login: current.login ?? sessionCookies.login,
             password: current.password ?? sessionCookies.password,
             pb2uid: current.pb2uid ?? sessionCookies.pb2uid
