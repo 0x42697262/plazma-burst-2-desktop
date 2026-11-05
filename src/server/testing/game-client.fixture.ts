@@ -36,6 +36,7 @@ const reliableMessageHandlerName = (gameDir: string, netName: string): string =>
 
 export function createClient({ gameDir, names, url }: { gameDir: string; names: any; url: string }): GameClient {
   const chat: string[] = [];
+  const errors: string[] = [];
   const context: Record<string, any> = {
     console: { log: ignored, warn: ignored, error: ignored, info: ignored, debug: ignored },
     setTimeout, clearTimeout, setInterval, clearInterval, performance, URL, URLSearchParams, TextEncoder, TextDecoder, WebSocket,
@@ -52,13 +53,16 @@ export function createClient({ gameDir, names, url }: { gameDir: string; names: 
     trace: ignored, TRACK_MP_LOGS: false, ChatNewMsg: (message: unknown) => chat.push(String(message).replace(/<[^>]*>/g, '')),
   };
   Object.assign(context, whatFrame2GivesThePageAndThisClientDoesNotUse);
+  const whatErrorsJsGivesThePageSoACaughtErrorDoesNotStopTheTick = {
+    ReportCaughtError: (error: unknown) => { errors.push(error instanceof Error ? error.message : String(error)); },
+  };
+  Object.assign(context, whatErrorsJsGivesThePageSoACaughtErrorDoesNotStopTheTick);
   run('globalThis.HUD = new Proxy(function () {}, { get: () => globalThis.HUD, apply: () => undefined });');
   for (const guard of ANTI_CHEAT_GUARD_PAIR_NOTHING_TO_GUARD_HERE) context[guard] = ignored;
   const setUpTheDigitsOfEncodedNumbers = `${names.setupClass}.${names.setupMethod}(null, null)`;
   run(setUpTheDigitsOfEncodedNumbers);
   const net = run(names.net);
   const handlerName = reliableMessageHandlerName(gameDir, names.net);
-  const errors: string[] = [];
   const handle = net[handlerName];
   const noteAMessageThisPagelessClientCannotActOnInsteadOfStoppingEveryLaterOne = (...args: unknown[]) => {
     try { return handle.apply(net, args); } catch (error) { errors.push((error as Error).message); return undefined; }
