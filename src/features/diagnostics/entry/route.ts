@@ -19,7 +19,7 @@ const requestSchema = z.object({
   }).optional(),
 });
 
-export type RouteCapabilities = { capture: boolean; show: boolean };
+export type RouteCapabilities = { capture: boolean; show: boolean; send: boolean };
 export type RouteDeps = { service: DiagnosticsService; capabilities: RouteCapabilities };
 
 const summary = (report: DiagnosticReport) => ({ id: report.id, time: report.time, kind: report.kind, client: report.client, message: report.error.message });
@@ -33,7 +33,7 @@ export function diagnosticsRoute({ service, capabilities }: RouteDeps): DevRoute
   function read(url: URL): Response {
     const reports = service.reports();
     const word = url.searchParams.get(REPORT_QUERY);
-    if (word === null) return jsonResponse({ capture: capabilities.capture, reports: reports.map(summary) });
+    if (word === null) return jsonResponse({ capture: capabilities.capture, config: capabilities.send ? service.config() : null, reports: reports.map(summary) });
     const report = chosenReport(reports, word);
     return report ? jsonResponse(report) : errorResponse(TEXT.noReport, STATUS.notFound);
   }
@@ -47,6 +47,10 @@ export function diagnosticsRoute({ service, capabilities }: RouteDeps): DevRoute
       if (!kind || !error) return errorResponse(TEXT.invalid, STATUS.badRequest);
       return jsonResponse({ saved: service.capture(kind, error) !== null });
     }
+    if (op === ROUTE_OP.send || op === ROUTE_OP.preview) {
+      if (!capabilities.send) return errorResponse(TEXT.capabilityOff, STATUS.notFound);
+      return jsonResponse(op === ROUTE_OP.send ? await service.send() : service.preview());
+    }
     if (!capabilities.show) return errorResponse(TEXT.capabilityOff, STATUS.notFound);
     if (op === ROUTE_OP.manual) {
       const report = service.capture(REPORT_KIND.manual, { name: WRAPPER_TEXT.manualName, message: note || WRAPPER_TEXT.manualMessage });
@@ -59,7 +63,7 @@ export function diagnosticsRoute({ service, capabilities }: RouteDeps): DevRoute
   async function handle(request: Request, url: URL, context: RequestContext): Promise<Response> {
     if (context.remote) return errorResponse(TEXT.notHere, STATUS.forbidden);
     if (request.method === HTTP_METHOD.post) return write(request);
-    return capabilities.show ? read(url) : errorResponse(TEXT.capabilityOff, STATUS.notFound);
+    return capabilities.show || capabilities.send ? read(url) : errorResponse(TEXT.capabilityOff, STATUS.notFound);
   }
 
   return { name: ROUTE_NAME.diagnostics, handle };

@@ -100,6 +100,8 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
         appVersion: app.getVersion(),
         flags,
         capabilities,
+        urlFromEnvironment: environment.diagnosticsUrl,
+        fetch: (url, init) => net.fetch(url, { ...init, bypassCustomProtocolHandlers: true }),
         onRendererGone: (listener) => { app.on(RENDER_PROCESS_GONE, (_event, _contents, details) => { listener(details.reason, details.exitCode); }); },
       },
     },

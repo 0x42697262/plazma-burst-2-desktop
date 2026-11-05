@@ -7,3 +7,6 @@ export const MAX_STACK_LENGTH = 4000;
 export const REPEAT_WINDOW_MS = 60_000;
 export const MAX_REPORTS_PER_WINDOW = 10;
 export const ID_BYTES = 8;
+export const CONFIG_FILE_VERSION = 1;
+export const SEND_TIMEOUT_MS = 10_000;
+export const MAX_REPORTS_PER_SEND = 50;

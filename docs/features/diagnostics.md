@@ -1,7 +1,7 @@
 # diagnostics
 
 Feature flag `diagnostics` (on by default; all modes). Code: `src/features/diagnostics/`.
-Capabilities: `diagnostics.capture`, `diagnostics.show`.
+Capabilities: `diagnostics.capture`, `diagnostics.show`, `diagnostics.send`.
 
 ## What is captured
 - In the game page: uncaught errors and unhandled promise rejections
@@ -32,3 +32,30 @@ cookie and authorization values, bearer tokens, 32-digit md5 digests (the offici
 - `diagnostics show [<#> | last]`: the list, or one report in full.
 - `diagnostics report [<note>]`: save one by hand.
 - `diagnostics clear`: delete them.
+- `diagnostics send`: send the saved reports to the server now.
+- `diagnostics send preview`: print exactly what would be sent, and send nothing.
+- `diagnostics config`: the server, the fields and whether sending is automatic.
+
+## Sending and its settings
+Nothing leaves the machine until a server is set. `data/diagnostics.json`
+(`data/diagnostics.example.json` is a template; read at each use, so a change needs no
+restart):
+
+```json
+{ "host": "https://reports.example.test/pb2", "send": ["kind", "client", "error"], "auto": false }
+```
+
+| Key | What | Default |
+|---|---|---|
+| `host` | Where reports are POSTed: `https://`, or `http://` only for this machine | none: nothing is sent |
+| `send` | Which of `kind`, `client`, `appVersion`, `edition`, `gameVersion`, `flags`, `error` leave. `id`, `time` and `schemaVersion` always do | all of them |
+| `auto` | Send each report when it is saved, instead of waiting for `diagnostics send` | `false` |
+
+- The order is `PB2_DIAGNOSTICS_URL` (the server only), then this file, then the edition's
+  `diagnostics` values, then the defaults above.
+- The console shows the settings but cannot change them: a lobby server's code can run in
+  the game page ([fingerprinting](../research/fingerprinting.md) §9), and it must not be
+  able to point reports at its own server.
+- The body is `{ "schemaVersion": 1, "reports": [...] }`, at most 50 reports at a time.
+  Any 2xx answer removes them from the queue; anything else keeps them. The call times out
+  after 10 seconds.

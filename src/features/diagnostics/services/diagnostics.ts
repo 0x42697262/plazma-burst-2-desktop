@@ -1,10 +1,14 @@
-import { MAX_REPORTS_PER_WINDOW, REPEAT_WINDOW_MS } from '../constants.ts';
+import { MAX_REPORTS_PER_SEND, MAX_REPORTS_PER_WINDOW, REPEAT_WINDOW_MS } from '../constants.ts';
 import { buildReport, cleanError, isAllowed, type DiagnosticReport, type ErrorInput, type ReportFacts } from '../domain/report.ts';
+import { sendEnvelope, type DiagnosticsConfig } from '../domain/config.ts';
 import type { ReportQueue } from '../adapters/queue-file.ts';
 import { WRAPPER_TEXT as TEXT } from '../text.ts';
 
 export type DiagnosticsDeps = {
   queue: ReportQueue;
+  config: () => DiagnosticsConfig;
+  deliver: (host: string, body: string) => Promise<void>;
+  canSend: boolean;
   facts: () => ReportFacts;
   now: () => number;
   newId: () => string;
@@ -12,11 +16,14 @@ export type DiagnosticsDeps = {
   error: (message: string) => void;
 };
 
+export type SendResult = { sent: number; pending: number; host: string | null; error?: string };
+
 export type DiagnosticsService = ReturnType<typeof createDiagnosticsService>;
 
-export function createDiagnosticsService({ queue, facts, now, newId, info, error }: DiagnosticsDeps) {
+export function createDiagnosticsService({ queue, config, deliver, canSend, facts, now, newId, info, error }: DiagnosticsDeps) {
   const captureTimes: number[] = [];
   const lastSeen = new Map<string, number>();
+  let sending = false;
 
   function capture(kind: string, input: ErrorInput): DiagnosticReport | null {
     const time = now();
@@ -32,11 +39,38 @@ export function createDiagnosticsService({ queue, facts, now, newId, info, error
     } catch (failure) {
       error(TEXT.notSaved((failure as Error).message));
     }
+    if (canSend && config().auto) void send();
     return report;
+  }
+
+  async function send(): Promise<SendResult> {
+    const { host, fields } = config();
+    const reports = queue.read().slice(0, MAX_REPORTS_PER_SEND);
+    const pending = queue.read().length;
+    if (!host || !reports.length) return { sent: 0, pending, host };
+    if (sending) return { sent: 0, pending, host };
+    sending = true;
+    try {
+      await deliver(host, JSON.stringify(sendEnvelope(reports, fields)));
+      const sentIds = new Set(reports.map((report) => report.id));
+      const left = queue.read().filter((report) => !sentIds.has(report.id));
+      queue.write(left);
+      info(TEXT.sent(reports.length, host));
+      return { sent: reports.length, pending: left.length, host };
+    } catch (failure) {
+      const message = (failure as Error).message;
+      error(TEXT.sendFailed(message));
+      return { sent: 0, pending, host, error: message };
+    } finally {
+      sending = false;
+    }
   }
 
   return {
     capture,
+    send,
+    config,
+    preview: () => sendEnvelope(queue.read().slice(0, MAX_REPORTS_PER_SEND), config().fields),
     reports: (): DiagnosticReport[] => queue.read(),
     clear(): number {
       const count = queue.read().length;

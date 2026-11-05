@@ -9,6 +9,7 @@ export const ENV = Object.freeze({
   login: 'PB2_LOGIN',
   password: 'PB2_PASSWORD',
   uid: 'PB2_UID',
+  diagnosticsUrl: 'PB2_DIAGNOSTICS_URL',
   npmSadburst: 'npm_config_sadburst',
   appImage: 'APPIMAGE',
 });

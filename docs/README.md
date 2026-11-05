@@ -27,7 +27,7 @@
 - [js-eval.md](features/js-eval.md): `js_eval`, running JavaScript in the page
 - [lobby-task-guard.md](features/lobby-task-guard.md): `lobby_task_guard`, no code from a private server's lobby
 - [login.md](features/login.md): `login`
-- [diagnostics](features/diagnostics.md): crash and error reports.
+- [diagnostics.md](features/diagnostics.md): `diagnostics`, crash and error reports
 - [map-cache.md](features/map-cache.md): `map_cache`, local maps and the map cache
 - [map-editor.md](features/map-editor.md): `map_editor`, the in-game map editor
 - [netlog.md](features/netlog.md): `netlog`, the network recorder
