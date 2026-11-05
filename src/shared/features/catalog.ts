@@ -64,6 +64,7 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   define(FEATURE.p2pHost, { availableIn: [MODE.server], unavailableForClients: ONLY_OFFICIAL, capabilities: noNeeds(CAPABILITY.p2pHost) }),
   define(FEATURE.clientSadburst),
   define(FEATURE.gameSetup),
+  define(FEATURE.diagnostics, { capabilities: noNeeds(CAPABILITY.diagnostics) }),
 ]);
 
 export const CATALOG_BY_ID: ReadonlyMap<FeatureId, FeatureDefinition> = new Map(CATALOG.map((definition) => [definition.id, definition]));

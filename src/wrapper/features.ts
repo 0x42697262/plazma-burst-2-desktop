@@ -8,6 +8,7 @@ import { serverListPart } from '#features/server_list/wrapper.ts';
 import { remotePlayPart } from '#features/remote_play/wrapper.ts';
 import { p2pHostPart } from '#features/p2p_host/wrapper.ts';
 import { gameSetupPart } from '#features/game_setup/wrapper.ts';
+import { diagnosticsPart } from '#features/diagnostics/wrapper.ts';
 
 export const WRAPPER_PARTS: WrapperParts = Object.freeze({
   netlogWrapper,
@@ -19,4 +20,5 @@ export const WRAPPER_PARTS: WrapperParts = Object.freeze({
   remotePlayPart,
   p2pHostPart,
   gameSetupPart,
+  diagnosticsPart,
 });

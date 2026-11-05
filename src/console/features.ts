@@ -23,6 +23,7 @@ import { hooksConsole } from '#features/hooks/console.ts';
 import { triggersConsole } from '#features/triggers/console.ts';
 import { mapEditorConsole } from '#features/map_editor/console.ts';
 import { p2pHostConsole } from '#features/p2p_host/console.ts';
+import { diagnosticsConsole } from '#features/diagnostics/console.ts';
 
 export const CONSOLE_FEATURES: readonly ConsoleFeature[] = Object.freeze([
   netlogConsole,
@@ -46,6 +47,7 @@ export const CONSOLE_FEATURES: readonly ConsoleFeature[] = Object.freeze([
   triggersConsole,
   mapEditorConsole,
   p2pHostConsole,
+  diagnosticsConsole,
 ]);
 
 for (const feature of CONSOLE_FEATURES) if (feature.settings) registerSettings(feature.id, feature.settings);

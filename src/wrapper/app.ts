@@ -27,7 +27,7 @@ import { createDevFiles, checkNamesFile, checkPageBundle } from './platform/dev-
 import { textResponse, typedResponse } from './platform/responses.ts';
 import { logPage } from './platform/page-log.ts';
 import type { PageContext } from './platform/context.ts';
-import { CONSTRAINT_SOURCE, DEBUG_LEVEL, FETCH_DEST, FILE_ERROR_METHOD, HTTPS_PREFIX, MENU_ROLE, RELOAD_METHOD, WINDOW_ALL_CLOSED } from './keys.ts';
+import { CONSTRAINT_SOURCE, DEBUG_LEVEL, FETCH_DEST, FILE_ERROR_METHOD, HTTPS_PREFIX, MENU_ROLE, RELOAD_METHOD, RENDER_PROCESS_GONE, WINDOW_ALL_CLOSED } from './keys.ts';
 import { APP_TEXT as TEXT } from './text.ts';
 
 const ignore = (): void => undefined;
@@ -94,6 +94,13 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
         setTitle: (title) => { liveWindow()?.setTitle(title); },
         otherClients: () => otherClients,
         switchClient,
+      },
+      diagnostics: {
+        client: client.id,
+        appVersion: app.getVersion(),
+        flags,
+        capabilities,
+        onRendererGone: (listener) => { app.on(RENDER_PROCESS_GONE, (_event, _contents, details) => { listener(details.reason, details.exitCode); }); },
       },
     },
   );

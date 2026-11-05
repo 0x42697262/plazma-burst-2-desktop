@@ -1,0 +1,9 @@
+export const REPORT_SCHEMA_VERSION = 1;
+export const REPORTS_FILE_VERSION = 1;
+export const REPORTS_FILE_MODE = 0o600;
+export const MAX_REPORTS = 50;
+export const MAX_TEXT_LENGTH = 400;
+export const MAX_STACK_LENGTH = 4000;
+export const REPEAT_WINDOW_MS = 60_000;
+export const MAX_REPORTS_PER_WINDOW = 10;
+export const ID_BYTES = 8;
