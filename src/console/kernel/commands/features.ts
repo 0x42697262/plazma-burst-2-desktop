@@ -1,4 +1,6 @@
 import { CATALOG } from '#shared/features/catalog.ts';
+import { EDITION } from '#shared/editions/constants.ts';
+import { visibleCatalog } from '#shared/editions/hidden.ts';
 import { reportLines } from '#kernel/flags/resolve.ts';
 import { print } from '../ui/log.ts';
 import { COLOR } from '../core/keys.ts';
@@ -8,7 +10,7 @@ import { TEXT } from './text.ts';
 
 function listFeatures(args: readonly string[]): void {
   if (args.length) throw new Error(TEXT.noArguments);
-  const [header = '', ...rows] = reportLines(CATALOG, pageFlags(), pageCapabilities());
+  const [header = '', ...rows] = reportLines(visibleCatalog(CATALOG, EDITION), pageFlags(), pageCapabilities());
   print(TEXT.title, COLOR.title);
   print(header, COLOR.hint);
   for (const row of rows) print(row);

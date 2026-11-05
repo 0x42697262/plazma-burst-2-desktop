@@ -19,6 +19,8 @@ import { FOLDER_END, HTML_TYPE, HTTPS_SCHEME, INDEX_FILE, NO_STORE, OFFICIAL_LOG
 import { FILES_TEXT, PAGE_TEXT } from './platform/text.ts';
 import { createKvFile, seedKvFile } from './platform/kv-file.ts';
 import { EDITION_DEFAULTS } from '#shared/editions/defaults.ts';
+import { EDITION } from '#shared/editions/constants.ts';
+import { isHiddenFeature } from '#shared/editions/hidden.ts';
 import { createSiteCookies } from './platform/site-cookies.ts';
 import { relaunchAs } from './platform/relaunch.ts';
 import { prepareIndex, pageGlobalScript, type JoinPage } from './platform/index-page.ts';
@@ -192,8 +194,11 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
     return context.fetch(request);
   }
 
+  const quietRoute = isHiddenFeature(EDITION, FEATURE.diagnostics) ? devPrefix + ROUTE_NAME.diagnostics : null;
+
   async function handleRequestLogged(request: Request, context: PageContext): Promise<Response> {
-    if (!log.on(DEBUG_LEVEL)) return handleRequest(request, context);
+    const isQuiet = quietRoute !== null && new URL(request.url).pathname.startsWith(quietRoute);
+    if (isQuiet || !log.on(DEBUG_LEVEL)) return handleRequest(request, context);
     const started = Date.now();
     const response = await handleRequest(request, context);
     log.debug(PAGE_TEXT.request(context.name, request.method, request.url, response.status, Date.now() - started));

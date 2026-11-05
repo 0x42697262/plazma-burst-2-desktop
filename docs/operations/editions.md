@@ -34,6 +34,7 @@ and `chars`, and nothing else: `player_info.chars` picks one command of `player_
 | `appId` | Reverse-domain id; installed editions with different ids keep their settings and logins apart |
 | `features` | Feature ids and capability ids (`npm start -- --features` lists them), or `"all"`. A feature id means all of its capabilities; a capability id (`health.god`) brings its feature with only that capability |
 | `defaults` | Optional: servers, binds and settings a new player starts with (see [Defaults](#defaults)) |
+| `diagnostics` | Optional: `hidden`, `host`, `send`, `auto` (see [Diagnostics settings](#diagnostics-settings)) |
 
 `dev` is the one edition the tooling relies on: every feature, what `npm start` and
 `npm run verify` build.
@@ -73,6 +74,22 @@ example (the server, binds and values are made up):
   says "needs a nickname" and playing it is refused. No password is ever in an edition.
 - The defaults are compiled into the main process only (`src/shared/editions/defaults.ts`,
   replaced by the build like the edition itself), not into the game page.
+
+## Diagnostics settings
+
+An example (the server is made up):
+
+```json
+"diagnostics": { "hidden": true, "host": "https://reports.example.test/pb2", "send": ["kind", "error"], "auto": true }
+```
+
+- `hidden` is compiled in, and an edition file is the only place that sets it: the app has
+  no `diagnostics` command, no diagnostics log lines and no entry in the feature lists
+  ([diagnostics](../features/diagnostics.md#hidden-in-an-edition)). Leaving it out shows them.
+- `host`, `send` and `auto` are the starting values. A player's `data/diagnostics.json` and
+  `PB2_DIAGNOSTICS_URL` win over them.
+- The edition must list `diagnostics`, and `send` takes only the known fields; otherwise the
+  build stops.
 
 ## Building one
 

@@ -2,6 +2,8 @@ import crypto from 'node:crypto';
 import { CAPABILITY, FEATURE, type ClientId } from '#shared/features/keys.ts';
 import type { CapabilityStates, FlagStates } from '#shared/features/types.ts';
 import { EDITION } from '#shared/editions/constants.ts';
+import { isHiddenFeature } from '#shared/editions/hidden.ts';
+import type { Edition } from '#shared/editions/types.ts';
 import type { WrapperDeps, WrapperFeature } from '#wrapper/feature-types.ts';
 import { ID_BYTES } from './constants.ts';
 import { CLEAN_EXIT, REPORT_KIND, UNCAUGHT_MONITOR } from './keys.ts';
@@ -27,18 +29,21 @@ export type DiagnosticsPorts = Readonly<{
 const newReportId = (): string => crypto.randomBytes(ID_BYTES).toString('hex');
 const onIds = (states: Readonly<Record<string, { on: boolean }>>): string[] => Object.keys(states).filter((id) => states[id]?.on);
 
-export function createDiagnosticsWrapper(deps: WrapperDeps, ports: DiagnosticsPorts, reportsFile: string = REPORTS_PATH, configFile: string = CONFIG_PATH) {
-  const queue = createReportQueue(reportsFile, (message) => { deps.log.error(TEXT.unreadable(message)); });
+const SILENT = Object.freeze({ info: (): void => undefined, warn: (): void => undefined, error: (): void => undefined });
+
+export function createDiagnosticsWrapper(deps: WrapperDeps, ports: DiagnosticsPorts, reportsFile: string = REPORTS_PATH, configFile: string = CONFIG_PATH, edition: Edition = EDITION) {
+  const log = isHiddenFeature(edition, FEATURE.diagnostics) ? SILENT : deps.log;
+  const queue = createReportQueue(reportsFile, (message) => { log.error(TEXT.unreadable(message)); });
   const reported = new Set<string>();
   function reportOnce(problem: string): void {
     if (reported.has(problem)) return;
     reported.add(problem);
-    deps.log.warn(TEXT.configProblem(problem));
+    log.warn(TEXT.configProblem(problem));
   }
   function config() {
     const { values, problem } = readConfigFile(configFile);
     if (problem) reportOnce(CONFIG_TEXT.badFile(problem));
-    const resolved = resolveConfig(ports.urlFromEnvironment, values, EDITION.diagnostics ?? {});
+    const resolved = resolveConfig(ports.urlFromEnvironment, values, edition.diagnostics ?? {});
     resolved.problems.forEach(reportOnce);
     return resolved;
   }
@@ -51,14 +56,14 @@ export function createDiagnosticsWrapper(deps: WrapperDeps, ports: DiagnosticsPo
     facts: () => ({
       client: ports.client,
       appVersion: ports.appVersion,
-      edition: EDITION.name,
+      edition: edition.name,
       gameVersion: deps.gameVersion,
       flags: { features: onIds(ports.flags), capabilities: onIds(ports.capabilities) },
     }),
     now: () => Date.now(),
     newId: newReportId,
-    info: (message) => { deps.log.info(message); },
-    error: (message) => { deps.log.error(message); },
+    info: (message) => { log.info(message); },
+    error: (message) => { log.error(message); },
   });
   const capture = deps.isCapabilityOn(CAPABILITY.diagnostics.capture);
   if (capture) {

@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
 import { CATALOG } from '#shared/features/catalog.ts';
-import { EVERY_FEATURE } from '#shared/editions/keys.ts';
+import { DIAGNOSTIC_FIELDS, EVERY_FEATURE } from '#shared/editions/keys.ts';
+import { FEATURE } from '#shared/features/keys.ts';
 import type { Edition } from '#shared/editions/types.ts';
 import { EDITIONS_DIR, REPO_ROOT } from '#kernel/config/paths.ts';
 import { resolveEdition, type EditionList } from '#kernel/editions/resolve.ts';
@@ -16,12 +17,20 @@ const editionFileSchema = z.object({
   title: z.string().min(1),
   appId: z.string().regex(APP_ID_PATTERN),
   features: z.union([z.literal(EVERY_FEATURE), z.array(z.string())]),
+  diagnostics: z.object({
+    hidden: z.boolean().optional(),
+    host: z.string().optional(),
+    send: z.array(z.enum(DIAGNOSTIC_FIELDS as readonly [string, ...string[]])).optional(),
+    auto: z.boolean().optional(),
+  }).strict().optional(),
   defaults: z.object({
     servers: z.array(z.object({ name: z.string().optional(), address: z.string(), fingerprint: z.string() }).strict()).optional(),
     binds: z.record(z.string(), z.string()).optional(),
     settings: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
   }).strict().optional(),
 }).strict();
+
+const withoutUnset = <Value extends Record<string, unknown>>(values: Value): Value => Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined)) as Value;
 
 export type BuiltEdition = Readonly<{ edition: Edition; missing: readonly string[]; problems: readonly string[]; listedDefaults: ListedDefaults }>;
 
@@ -41,7 +50,10 @@ export function readEdition(name: string, folder: string = EDITIONS_DIR): BuiltE
     throw new Error(TEXT.editionUnreadable(shown, (error as Error).message), { cause: error });
   }
   if (parsed.name !== name) throw new Error(TEXT.nameMismatch(shown, parsed.name));
-  return withFeatures({ name: parsed.name, title: parsed.title, appId: parsed.appId }, parsed.features, parsed.defaults);
+  const built = withFeatures({ name: parsed.name, title: parsed.title, appId: parsed.appId, ...(parsed.diagnostics ? { diagnostics: withoutUnset(parsed.diagnostics) } : {}) }, parsed.features, parsed.defaults);
+  const hasDiagnostics = built.edition.features === null || built.edition.features.includes(FEATURE.diagnostics);
+  if (!parsed.diagnostics || hasDiagnostics) return built;
+  return Object.freeze({ ...built, missing: [...built.missing, FEATURE.diagnostics], problems: [...built.problems, TEXT.diagnosticsNeedsFeature] });
 }
 
 export const oneOffEdition = (features: readonly string[]): BuiltEdition =>

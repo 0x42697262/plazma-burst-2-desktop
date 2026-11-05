@@ -2,10 +2,11 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type * as esbuild from 'esbuild';
 import type { Edition, EditionDefaults } from '#shared/editions/types.ts';
-import { CAPABILITIES } from '#shared/features/catalog.ts';
+import { CAPABILITIES, CATALOG } from '#shared/features/catalog.ts';
+import { hiddenFeatures } from '#shared/editions/hidden.ts';
 import { REPO_ROOT } from '#kernel/config/paths.ts';
 import {
-  CAPABILITY_IMPORT, DEFAULTS_MODULE, EDITION_MODULE, EDITION_PLUGIN_NAME, FEATURES_FOLDER, FEATURE_IMPORT, featureCapabilityListFilter, FEATURE_LIST_MODULES, LINE_BREAK, LIST_ENTRY, PACKAGED_ROOT_MODULE, ROOT_MODULE, ROOT_PLUGIN_NAME,
+  CAPABILITY_IMPORT, CONSOLE_FEATURE_LIST, DEFAULTS_MODULE, EDITION_MODULE, EDITION_PLUGIN_NAME, FEATURES_FOLDER, FEATURE_IMPORT, featureCapabilityListFilter, FEATURE_LIST_MODULES, LINE_BREAK, LIST_ENTRY, PACKAGED_ROOT_MODULE, ROOT_MODULE, ROOT_PLUGIN_NAME,
   TYPESCRIPT_LOADER, exactPathFilter, wholeWord,
 } from './constants.ts';
 import { TEXT } from './text.ts';
@@ -35,6 +36,14 @@ export function editionPlugin(edition: Edition, defaults: EditionDefaults = NO_D
       build.onLoad({ filter: exactFile(EDITION_MODULE) }, () => ({ contents: TEXT.editionModule(JSON.stringify(edition)), loader: TYPESCRIPT_LOADER }));
       build.onLoad({ filter: exactFile(DEFAULTS_MODULE) }, () => ({ contents: TEXT.defaultsModule(JSON.stringify(defaults)), loader: TYPESCRIPT_LOADER }));
       const included = edition.features;
+      const hidden = hiddenFeatures(edition);
+      if (hidden.length) {
+        const shownInConsole = (included ?? CATALOG.map((definition) => definition.id)).filter((id) => !hidden.includes(id));
+        build.onLoad({ filter: exactFile(CONSOLE_FEATURE_LIST) }, async (args) => ({
+          contents: onlyEditionFeatures(await fs.readFile(args.path, 'utf8'), shownInConsole, CONSOLE_FEATURE_LIST),
+          loader: TYPESCRIPT_LOADER,
+        }));
+      }
       const capabilities = edition.capabilities;
       if (capabilities !== null && capabilities !== undefined) {
         build.onLoad({ filter: featureCapabilityListFilter(path.join(REPO_ROOT, ...FEATURES_FOLDER)) }, async (args) => {
@@ -45,7 +54,7 @@ export function editionPlugin(edition: Edition, defaults: EditionDefaults = NO_D
         });
       }
       if (included === null) return;
-      for (const list of FEATURE_LIST_MODULES) {
+      for (const list of FEATURE_LIST_MODULES.filter((module) => !hidden.length || module !== CONSOLE_FEATURE_LIST)) {
         build.onLoad({ filter: exactFile(list) }, async (args) => ({
           contents: onlyEditionFeatures(await fs.readFile(args.path, 'utf8'), included, list),
           loader: TYPESCRIPT_LOADER,

@@ -6,6 +6,7 @@ export const TEXT = Object.freeze({
   addThese: (missing: readonly string[]) => `Add to its "features": ${missing.map((id) => JSON.stringify(id)).join(', ')}`,
   editionUnreadable: (file: string, message: string) => `${file}: ${message}`,
   nameMismatch: (file: string, name: string) => `${file}: "name" is "${name}", but must be the file's name`,
+  diagnosticsNeedsFeature: 'the "diagnostics" settings need the feature: add "diagnostics" to the edition',
   editionModule: (json: string) => `export const EDITION = Object.freeze(${json});\n`,
   defaultsModule: (json: string) => `export const EDITION_DEFAULTS = Object.freeze(${json});\n`,
   defaultsNeed: (what: string, id: string) => `defaults: ${what} needs ${id}: add "${id}" to the edition`,

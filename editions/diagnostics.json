@@ -1,0 +1,18 @@
+{
+  "name": "diagnostics",
+  "title": "Plazma Burst 2 Diagnostics",
+  "appId": "io.github.plazma-burst-2-desktop.diagnostics",
+  "features": [
+    "diagnostics",
+    "server_list",
+    "lobby_task_guard",
+    "cert_pinning",
+    "client_sadburst",
+    "game_setup",
+    "dev_console",
+    "console_core"
+  ],
+  "diagnostics": {
+    "hidden": true
+  }
+}

@@ -59,3 +59,16 @@ restart):
 - The body is `{ "schemaVersion": 1, "reports": [...] }`, at most 50 reports at a time.
   Any 2xx answer removes them from the queue; anything else keeps them. The call times out
   after 10 seconds.
+
+## Hidden in an edition
+By default the feature is shown: it has its console command and writes log lines. Only an
+edition file can hide it ([editions](../operations/editions.md#diagnostics-settings)). No
+setting, flag, environment variable or console command can. Hidden, it still captures, and
+sends if a server is set, but:
+- the `diagnostics` command and its help are left out of the console bundle;
+- it writes no log lines, also not its requests at `--log-level=debug`;
+- `features` and `--features` do not list it.
+
+Nothing then tells a player that reports leave their machine. An edition that is hidden
+and also sets a `host` should say so to its players somewhere else, such as in its release
+notes or privacy text.
