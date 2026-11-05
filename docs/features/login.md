@@ -18,6 +18,27 @@ Feature flag `login` (on by default; all modes). Code: `src/features/login/`.
   A value that is not 32 hex digits, from the environment or an old file, is treated as the
   plain password and hashed before it is used (`passwordCookie`).
 
+## Choosing an account
+In the server list, selecting the official server or Sad Burst 2 shows the account panel:
+pick a saved account, forget one, or "Log in to a new account" (capability `login.site`).
+A private server shows no panel: there you have a nickname and that server's own password.
+Logging in appears nowhere else, not in the app menu and not in the console. The choice is
+used the next time that game starts.
+- **Official**: a window opens the site's own login page (`?a=&s=8`, the one the game opens)
+  in a separate session kept only in memory, so it starts logged out and leaves nothing
+  behind. The site sits behind a Cloudflare challenge and a script check, which is why it
+  is a real window. When the `login` cookie and a `password` cookie shaped like an md5
+  appear, the app asks the site once more and checks that it kept them, then saves
+  `login`, `password` and `pb2uid`. If the site cannot be reached or drops them, nothing is saved.
+- **Sad Burst 2**: a small form posts to `/api/game/client-login`, then confirms the token with
+  `/api/game/client-session`, as the game's own start screen does. The password is not saved,
+  only the token. A refused or unconfirmed login saves nothing.
+- Sad Burst's game reads `auth_token` from localStorage, so the app puts the active account's
+  token there when the game page first loads (a script before the game's own, in
+  `prepareIndex`). With no active account it leaves the storage alone, so the game's own login
+  keeps working. Forgetting the active account removes the token at the next start.
+- Forgetting the active official account clears the site's cookies at once.
+
 ## Saved accounts
 Capability `login.accounts`. `data/credentials.json` (official) and
 `data/credentials.sadburst.json` (Sad Burst 2) hold

@@ -1,3 +1,4 @@
+import { OPERATIONS } from './keys.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -184,4 +185,25 @@ test('the list offers the other game clients, and switching asks the session to 
     assert.ok(events.includes('switch sadburst'));
     assert.throws(() => service.operations.switchClient('flash'), /no game client "flash" in this app/);
   } finally { context.cleanup(); }
+});
+
+test('the account operations reach the port, are not on the page\'s route, and say so when there is none', async () => {
+  const calls: unknown[][] = [];
+  const accounts = {
+    list: (client: unknown) => { calls.push(['list', client]); return { accounts: [] }; },
+    use: (client: unknown, login: string) => { calls.push(['use', client, login]); },
+    remove: async (client: unknown, login: string) => { calls.push(['remove', client, login]); },
+    logIn: async (client: unknown, typed: unknown) => { calls.push(['logIn', client, typed]); return 'me'; },
+  };
+  const base: any = { store: { load: () => ({ servers: [], last: null, problems: [] }), save() {}, exists: () => true }, probe: {}, gameVersion: null, newId: () => 'id', readOldJoin: () => null, defaultServers: [], info() {}, warn() {}, later() {}, relativeServersFile: 'x' };
+  const { accountOperations } = createServerListService({ ...base, session: { accounts, otherClients: () => [] } });
+  assert.deepEqual(accountOperations.accountsOf('official'), { accounts: [] });
+  accountOperations.useAccount({ client: 'official', login: 'me' });
+  await accountOperations.removeAccount({ client: 'sadburst', login: 'me' });
+  assert.equal(await accountOperations.logIn({ client: 'sadburst', login: 'me', password: 'pw' }), 'me');
+  assert.deepEqual(calls.at(-1), ['logIn', 'sadburst', { login: 'me', password: 'pw' }]);
+  const none = createServerListService({ ...base, session: { otherClients: () => [] } }).accountOperations;
+  assert.equal(none.accountsOf('official'), null, 'no panel');
+  assert.throws(() => none.useAccount({ client: 'official', login: 'me' }), /not in this app/);
+  for (const operation of ['accounts', 'useAccount', 'removeAccount', 'logIn']) assert.ok(!OPERATIONS.includes(operation));
 });

@@ -10,6 +10,7 @@ export const OPERATIONS: readonly string[] = Object.freeze(Object.values(OPERATI
 export const IPC_CHANNEL = Object.freeze({
   list: 'servers:list', save: 'servers:save', remove: 'servers:remove', check: 'servers:check', fingerprint: 'servers:fingerprint', play: 'servers:play',
   switchClient: 'servers:switch-client',
+  accounts: 'servers:accounts', useAccount: 'servers:use-account', removeAccount: 'servers:remove-account', logIn: 'servers:log-in',
 });
 export const LAUNCHER_BRIDGE = 'pb2servers';
 export const FILE_PROTOCOL = 'file:';

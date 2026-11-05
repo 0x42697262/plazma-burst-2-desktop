@@ -1,6 +1,6 @@
 import { IPC_CHANNEL, URL_HASH } from '../keys.ts';
 import { ROUTE_TEXT } from '../text.ts';
-import type { ServerListService } from '../services/server-list.ts';
+import type { AccountRequest, ServerListService } from '../services/server-list.ts';
 
 type IpcEvent = { senderFrame?: { url: string } | null };
 export type IpcMainLike = { handle(channel: string, listener: (event: IpcEvent, ...args: unknown[]) => unknown): void };
@@ -21,4 +21,9 @@ export function registerServerListIpc(ipcMain: IpcMainLike, launcherUrl: string,
   handle(IPC_CHANNEL.fingerprint, (address) => operations.fingerprint(address));
   handle(IPC_CHANNEL.play, (id) => operations.play(id));
   handle(IPC_CHANNEL.switchClient, (id) => operations.switchClient(id));
+  const { accountOperations } = service;
+  handle(IPC_CHANNEL.accounts, (client) => accountOperations.accountsOf(client));
+  handle(IPC_CHANNEL.useAccount, (request) => accountOperations.useAccount(request as AccountRequest));
+  handle(IPC_CHANNEL.removeAccount, (request) => accountOperations.removeAccount(request as AccountRequest));
+  handle(IPC_CHANNEL.logIn, (request) => accountOperations.logIn(request as AccountRequest));
 }

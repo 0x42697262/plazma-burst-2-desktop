@@ -7,6 +7,8 @@ import { applyLogin, type Cookie, type CookieStore } from './adapters/cookies.ts
 import { createAccountBook } from './services/account-book.ts';
 import { PLAIN_KEYCHAIN, type Keychain } from './adapters/keychain.ts';
 import { mergeCredentials, passwordCookie } from './domain/credentials.ts';
+import { officialSiteLogin, sadburstLogin, type SiteWindow } from './services/new-login.ts';
+import { tokenScript } from './domain/token-script.ts';
 import { createLogin } from './wrapper.ts';
 import type { Logger } from '#kernel/log/logger.ts';
 
@@ -40,7 +42,7 @@ const saved = (): FakeStore => cookieStore([
   { domain: '.example.com', name: 'other', value: 'kept' },
 ]);
 
-const quietLog = (lines: string[]): Logger => ({ info: (line: string) => { lines.push(line); }, error: (line: string) => { lines.push(line); } }) as unknown as Logger;
+const quietLog = (lines: string[]): Logger => ({ info: (line: string) => { lines.push(line); }, warn: (line: string) => { lines.push(line); }, error: (line: string) => { lines.push(line); } }) as unknown as Logger;
 
 test('without credentials, the saved login is cleared and nothing is set', async () => {
   const cookies = saved();
@@ -189,4 +191,121 @@ test('accounts: removing the active one leaves none active and asks for a sign-o
     book.add('four', { token: 't4' });
     assert.equal(book.takeSignOut(), false, 'a new active account replaces the sign-out');
   } finally { context.cleanup(); }
+});
+
+const MD5 = '5f4dcc3b5aa765d61d8327deb882cf99';
+
+function fakeSite({ status = 200, keepsCookies = true, fails = false } = {}) {
+  let cookies: { name: string; value: string }[] = [];
+  let change = () => {};
+  let closed = () => {};
+  const site: SiteWindow & { didClose: boolean; set(next: { name: string; value: string }[]): void; userCloses(): void } = {
+    didClose: false,
+    cookies: async () => cookies,
+    onChange: (listener) => { change = listener; },
+    onClosed: (listener) => { closed = listener; },
+    check: async () => {
+      if (fails) throw new Error('offline');
+      if (!keepsCookies) cookies = [];
+      return status;
+    },
+    close() { site.didClose = true; closed(); },
+    set(next) { cookies = next; change(); },
+    userCloses() { closed(); },
+  };
+  return site;
+}
+const signedIn = [{ name: 'login', value: 'me' }, { name: 'password', value: MD5 }, { name: 'pb2uid', value: '42' }];
+
+test('official login: waits for the md5 cookie, asks the site once more, closes the window', async () => {
+  const site = fakeSite();
+  const pending = officialSiteLogin(() => site, 'https://site.test/login');
+  site.set([{ name: 'cf_clearance', value: 'x' }]);
+  site.set([{ name: 'login', value: '.guest' }, { name: 'password', value: MD5 }]);
+  site.set([{ name: 'login', value: 'me' }, { name: 'password', value: 'not a hash' }]);
+  assert.equal(site.didClose, false);
+  site.set(signedIn);
+  assert.deepEqual(await pending, { login: 'me', password: MD5, pb2uid: '42' });
+  assert.equal(site.didClose, true);
+});
+
+test('official login: closing the window saves nothing; an unreachable or forgetful site is an error', async () => {
+  const closedByUser = fakeSite();
+  const cancelled = officialSiteLogin(() => closedByUser, 'u');
+  closedByUser.userCloses();
+  assert.equal(await cancelled, null);
+  for (const [options, message] of [[{ fails: true }, /Could not reach/], [{ status: 503 }, /answered 503/], [{ keepsCookies: false }, /did not keep/]] as const) {
+    const site = fakeSite(options);
+    const pending = officialSiteLogin(() => site, 'u');
+    site.set(signedIn);
+    await assert.rejects(pending, message);
+    assert.equal(site.didClose, true);
+  }
+});
+
+const answer = (status: number, body: unknown) => new Response(JSON.stringify(body), { status });
+
+test('Sad Burst login: posts the login, confirms the token, never keeps the password', async () => {
+  const calls: { url: string; init: any }[] = [];
+  const fetcher = async (url: string, init: RequestInit) => {
+    calls.push({ url, init });
+    return url.endsWith('client-login') ? answer(200, { success: true, login: 'Me', token: 'tok' }) : answer(200, { success: true, login: 'Me', game_token: 'g' });
+  };
+  assert.deepEqual(await sadburstLogin(fetcher, 'https://sb.test', ' me ', 'pw'), { login: 'Me', token: 'tok' });
+  assert.equal(calls[0]?.url, 'https://sb.test/api/game/client-login');
+  assert.deepEqual(JSON.parse(calls[0]?.init.body), { login: 'me', password: 'pw' });
+  assert.equal(calls[1]?.init.headers.Authorization, 'Bearer tok');
+  assert.ok(calls.every(({ init }) => init.signal), 'every call has a timeout');
+});
+
+test('Sad Burst login: empty, refused, unreachable or unconfirmed saves nothing', async () => {
+  const never = async () => { throw new Error('must not be called'); };
+  await assert.rejects(sadburstLogin(never, 's', '', 'pw'), /Enter a login/);
+  await assert.rejects(sadburstLogin(async () => answer(401, { success: false, message: 'Bad pass' }), 's', 'me', 'pw'), /refused the login: Bad pass/);
+  await assert.rejects(sadburstLogin(async () => new Response('<html>', { status: 200 }), 's', 'me', 'pw'), /refused the login/);
+  await assert.rejects(sadburstLogin(async () => { throw new Error('down'); }, 's', 'me', 'pw'), /Could not reach/);
+  const unconfirmed = async (url: string) => (url.endsWith('client-login') ? answer(200, { success: true, login: 'me', token: 't' }) : answer(401, { success: false }));
+  await assert.rejects(sadburstLogin(unconfirmed, 's', 'me', 'pw'), /did not confirm/);
+});
+
+test('the token script: safe to put in a page, and sets or removes the token', () => {
+  assert.equal(tokenScript('a</script>b'), '<script>try{localStorage.setItem("auth_token","a\\u003c/script>b")}catch{}</script>');
+  assert.equal(tokenScript(null), '<script>try{localStorage.removeItem("auth_token")}catch{}</script>');
+});
+
+test('the account port: new accounts by client, the sign-out, the start-up script once; off means no panel', async () => {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-port-'));
+  try {
+    const site = fakeSite();
+    let signedOut = 0;
+    const deps = {
+      log: quietLog([]), dataDir: folder, host: HOST, fromEnvironment: {}, isOn: true,
+      openSiteWindow: () => site,
+      fetcher: async (url: string) => (url.endsWith('client-login') ? answer(200, { success: true, login: 'sb', token: 'tok' }) : answer(200, { success: true, login: 'sb', game_token: 'g' })),
+      onOfficialSignOut: async () => { signedOut++; },
+    };
+    const login = createLogin(deps);
+    const accounts = login.accounts;
+    assert.ok(accounts);
+    const official = accounts.logIn('official');
+    await Promise.resolve();
+    site.set(signedIn);
+    assert.equal(await official, 'me');
+    assert.deepEqual((accounts.list('official') as any).accounts.map((account: any) => account.login), ['me']);
+    assert.equal(login.hasCredentials(), true);
+    assert.equal(await accounts.logIn('sadburst', { login: 'sb', password: 'pw' }), 'sb');
+    assert.ok(!fs.readFileSync(path.join(folder, 'credentials.sadburst.json'), 'utf8').includes('"pw"'));
+    assert.match(login.sadburstStartupScript() ?? '', /setItem\("auth_token","tok"\)/);
+    assert.equal(login.sadburstStartupScript(), null, 'once per start');
+    await accounts.remove('official', 'me');
+    assert.equal(signedOut, 1);
+    assert.equal(login.hasCredentials(), false);
+    await accounts.remove('sadburst', 'sb');
+    assert.match(createLogin(deps).sadburstStartupScript() ?? '', /removeItem/);
+    assert.equal(createLogin(deps).sadburstStartupScript(), null, 'with no account, the game\'s own login is left alone');
+    assert.throws(() => accounts.list('nope'), /No game client/);
+    assert.equal(createLogin({ ...deps, isOn: false }).accounts, null);
+    assert.equal(createLogin({ ...deps, canUseAccounts: false }).accounts, null);
+    await assert.rejects(createLogin({ ...deps, canUseSite: false }).accounts?.logIn('official') as Promise<unknown>, /not in this app/);
+  } finally { fs.rmSync(folder, { recursive: true }); }
 });

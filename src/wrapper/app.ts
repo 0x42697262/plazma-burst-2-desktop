@@ -4,11 +4,12 @@ import path from 'node:path';
 import { app, BrowserWindow, Menu, dialog, protocol, net, session, ipcMain, safeStorage, type MenuItemConstructorOptions, type Session } from 'electron';
 import { CLIENTS } from '#kernel/config/clients.ts';
 import { CONSOLE_BUNDLE_FILE, DATA_DIR, PAGE_BUNDLE_DIR, PAGE_CORE_FILE, USER_ROOT } from '#kernel/config/paths.ts';
-import { CLIENT, FEATURE, MODE, PAGE_CAPABILITIES_GLOBAL, PAGE_FLAGS_GLOBAL } from '#shared/features/keys.ts';
+import { CAPABILITY, CLIENT, FEATURE, MODE, PAGE_CAPABILITIES_GLOBAL, PAGE_FLAGS_GLOBAL } from '#shared/features/keys.ts';
 import { DEV_DIR, ROUTE_NAME } from '#shared/contract/keys.ts';
 import { TEXT as SADBURST_TEXT } from '#features/client_sadburst/text.ts';
 import { createLogin } from '#features/login/wrapper.ts';
 import { electronKeychain } from '#features/login/adapters/keychain.ts';
+import { siteWindowOpener } from '#features/login/adapters/site-window.ts';
 import { pinCertificates, type PinnedTarget } from '#features/cert_pinning/wrapper.ts';
 import type { ServerPage } from '#features/p2p_host/wrapper.ts';
 import type { WrapperContext } from './context.ts';
@@ -62,13 +63,22 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
 
   const otherClients = Object.values(CLIENTS)
     .filter((other) => other.id !== client.id && (other.id !== CLIENT.sadburst || flags.client_sadburst.on))
-    .map((other) => Object.freeze({ id: other.id, title: other.title }));
+    .map((other) => Object.freeze({ id: other.id, title: other.title, host: other.host }));
   const switchClient = (id: string): void => {
     const chosen = Object.values(CLIENTS).find((other) => other.id === id);
     if (chosen) relaunchAs(chosen.id);
   };
 
-  const login = createLogin({ log, dataDir: DATA_DIR, host, fromEnvironment: environment.credentials, isOn: flags.login.on, keychain: electronKeychain(safeStorage) });
+  const login = createLogin({ log, dataDir: DATA_DIR, host, fromEnvironment: environment.credentials, isOn: flags.login.on, keychain: electronKeychain(safeStorage),
+    canUseAccounts: capabilities[CAPABILITY.login.accounts]?.on ?? false,
+    canUseSite: capabilities[CAPABILITY.login.site]?.on ?? false,
+    openSiteWindow: siteWindowOpener({ BrowserWindow, session, parent: () => liveWindow() }),
+    fetcher: (url, init) => net.fetch(url, { ...init, bypassCustomProtocolHandlers: true }),
+    onOfficialSignOut: async () => {
+      await siteCookies.forget();
+      await login.applyQuietly(session.defaultSession.cookies);
+    },
+  });
   const siteCookies = createSiteCookies(session.defaultSession.cookies, path.join(DATA_DIR, OFFICIAL_LOGIN_FILE));
   async function startLoggedOut(): Promise<void> {
     const hidden = await siteCookies.hideForPrivateServer();
@@ -97,6 +107,7 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
         setTitle: (title) => { liveWindow()?.setTitle(title); },
         otherClients: () => otherClients,
         switchClient,
+        accounts: login.accounts,
       },
       diagnostics: {
         client: client.id,
@@ -167,6 +178,7 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
       remoteNotMarked: remotePlayPart?.notMarked ?? '',
       verbose: log.on(DEBUG_LEVEL) && !isSadburst,
       isServer: !!context.server,
+      accountScript: isSadburst ? login.sadburstStartupScript() : null,
     });
     for (const error of prepared.errors) log.error(error);
     for (const warning of prepared.warnings) log.warn(warning);
@@ -176,7 +188,7 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
   async function serveLocal(url: URL, context: PageContext): Promise<Response> {
     let relative = decodeURIComponent(url.pathname.slice(prefix.length));
     if (relative === '' || relative.endsWith(FOLDER_END)) relative += INDEX_FILE;
-    const preparesIndex = pageCoreOn || hooksOn || context.remote || !!context.server || !!joinTarget();
+    const preparesIndex = pageCoreOn || hooksOn || context.remote || !!context.server || !!joinTarget() || (isSadburst && flags.login.on);
     if (preparesIndex && relative === INDEX_FILE) return serveIndex(context);
     const hooked = hooksOn && wrapper.hooks ? wrapper.hooks.changedScript(relative) : null;
     if (hooked !== null) return typedResponse(hooked, SCRIPT_TYPE, false);

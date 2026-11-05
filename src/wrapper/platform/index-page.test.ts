@@ -34,3 +34,8 @@ test('verbose: the game\'s trace() goes to the log, or a warning says it stays s
   assert.match(prepareIndex(GAME_INDEX, { ...NONE, verbose: true }).html ?? '', /flash\.js"><\/script><script>trace = console\.debug/);
   assert.deepEqual(prepareIndex('<body></body>', { ...NONE, verbose: true }).warnings, ['Verbose: scripts/flash.js not found in index.html; the game\'s trace() stays silent']);
 });
+
+test('a saved account\'s script goes before every script, so the game\'s loader finds the token', () => {
+  const html = prepareIndex(GAME_INDEX, { ...NONE, accountScript: '<ACCOUNT>' }).html ?? '';
+  assert.ok(html.indexOf('<ACCOUNT>') < html.indexOf('<script'));
+});

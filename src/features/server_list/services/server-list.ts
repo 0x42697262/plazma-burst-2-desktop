@@ -7,7 +7,14 @@ import type { ServersStore } from '../adapters/servers-file.ts';
 import type { ServerProbe } from '../adapters/probe.ts';
 import type { DefaultServer } from '#shared/editions/types.ts';
 
-export type ClientChoice = Readonly<{ id: string; title: string }>;
+export type ClientChoice = Readonly<{ id: string; title: string; host?: string }>;
+export type AccountsPort = Readonly<{
+  list(client: unknown): unknown;
+  use(client: unknown, login: string): void;
+  remove(client: unknown, login: string): Promise<void>;
+  logIn(client: unknown, typed?: Readonly<{ login?: unknown; password?: unknown }>): Promise<string | null>;
+}>;
+export type AccountRequest = Readonly<{ client?: unknown; login?: unknown; password?: unknown }>;
 
 export type GameSession = {
   otherClients(): readonly ClientChoice[];
@@ -17,6 +24,7 @@ export type GameSession = {
   loadGame(): void;
   showList(): void;
   setTitle(title: string): void;
+  accounts?: AccountsPort | null;
 };
 
 export type ServerListDeps = {
@@ -121,6 +129,25 @@ export function createServerListService(deps: ServerListDeps) {
     return true;
   }
 
+  function accountsPort(): AccountsPort {
+    if (!session.accounts) throw new Error(SERVICE_TEXT.noAccounts);
+    return session.accounts;
+  }
+
+  const accountsOf = (client: unknown): unknown => (session.accounts ? session.accounts.list(client) : null);
+
+  function useAccount({ client, login }: AccountRequest): boolean {
+    accountsPort().use(client, String(login));
+    return true;
+  }
+
+  async function removeAccount({ client, login }: AccountRequest): Promise<boolean> {
+    await accountsPort().remove(client, String(login));
+    return true;
+  }
+
+  const logIn = ({ client, login, password }: AccountRequest): Promise<string | null> => accountsPort().logIn(client, { login, password });
+
   function openList(): boolean {
     deps.later(showList);
     return true;
@@ -149,6 +176,7 @@ export function createServerListService(deps: ServerListDeps) {
 
   return {
     operations: { list, save, remove, check, fingerprint, play, openList, switchClient },
+    accountOperations: { accountsOf, useAccount, removeAccount, logIn },
     showList,
     createFirstList,
     joinTarget: (): ServerEntry | null => joinTarget,

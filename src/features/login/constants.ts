@@ -4,3 +4,6 @@ export const TEXT_ENCODING = 'utf8';
 export const BYTE_ORDER_MARK = /^\uFEFF/;
 export const ACCOUNTS_FILE_VERSION = 1;
 export const ACCOUNTS_FILE_MODE = 0o600;
+export const SERVER_ERROR_STATUS = 500;
+export const LOGIN_TIMEOUT_MS = 15_000;
+export const LOGIN_WINDOW = Object.freeze({ width: 900, height: 700 });

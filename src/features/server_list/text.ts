@@ -22,6 +22,7 @@ export const PROBE_TEXT = Object.freeze({
 
 export const SERVICE_TEXT = Object.freeze({
   notSaved: 'that server is not saved',
+  noAccounts: 'accounts are not in this app',
   unknownClient: (id: string) => `no game client "${id}" in this app`,
   notSavedShort: 'not saved',
   serversFileProblem: (problem: string) => `data/servers.json: ${problem}`,

@@ -14,6 +14,7 @@ export type IndexOptions = {
   remoteNotMarked: string;
   verbose: boolean;
   isServer: boolean;
+  accountScript?: string | null;
 };
 export type PreparedIndex = { html: string | null; errors: string[]; warnings: string[] };
 
@@ -51,6 +52,7 @@ export function prepareIndex(source: string, options: IndexOptions): PreparedInd
     if (html.includes(FLASH_SCRIPT_TAG)) html = html.replace(FLASH_SCRIPT_TAG, FLASH_SCRIPT_TAG + TRACE_SCRIPT_TAG);
     else warnings.push(TEXT.traceSilent);
   }
+  if (options.accountScript) html = beforeFirstScript(html, options.accountScript) ?? html;
   if (options.remoteScript) {
     const marked = beforeFirstScript(html, options.remoteScript);
     if (marked === null) return refused(options.remoteNotMarked);
