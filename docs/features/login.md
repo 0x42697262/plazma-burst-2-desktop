@@ -16,7 +16,10 @@ Feature flag `login` (on by default; all modes). Code: `src/features/login/`.
   Empty values count as unset. A file that is not JSON is reported and counts as none.
 - The `password` cookie is the md5 of the account's password, so it works as the password.
   A value that is not 32 hex digits, from the environment or an old file, is treated as the
-  plain password and hashed before it is used (`passwordCookie`).
+  plain password and hashed before it is used (`passwordCookie`). What other features read
+  (`identity`, [diagnostics](diagnostics.md) writes it into a report) is the raw string, as
+  it was stored or given: plaintext from the environment or an old file, the site's md5
+  otherwise. A report carries that raw string; the app hashes nothing for it.
 
 ## Choosing an account
 In the server list, selecting the official server or Sad Burst 2 shows the account panel:

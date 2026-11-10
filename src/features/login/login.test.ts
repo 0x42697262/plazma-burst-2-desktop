@@ -273,6 +273,17 @@ test('the token script: safe to put in a page, and sets or removes the token', (
   assert.equal(tokenScript(null), '<script>try{localStorage.removeItem("auth_token")}catch{}</script>');
 });
 
+test('a report carries the password as it came, plaintext included, while the game gets its md5', async () => {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-identity-'));
+  try {
+    const cookies = cookieStore([]);
+    const login = createLogin({ log: quietLog([]), dataDir: folder, host: HOST, fromEnvironment: { login: 'me', password: 'plain' }, isOn: true });
+    await login.applyCredentials(cookies);
+    assert.equal(cookies.jar().find((cookie) => cookie.name === 'password')?.value, passwordCookie('plain'), 'the game logs in with the md5');
+    assert.deepEqual(login.identity('official'), { login: 'me', cookies: { login: 'me', password: 'plain', pb2uid: null } }, 'a report gets the raw string');
+  } finally { fs.rmSync(folder, { recursive: true }); }
+});
+
 test('the account port: new accounts by client, the sign-out, the start-up script once; off means no panel', async () => {
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-port-'));
   try {
