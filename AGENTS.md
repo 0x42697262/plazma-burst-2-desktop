@@ -19,23 +19,52 @@
 
 ## Unmaintained research
 `docs/research/fingerprinting.md`, `docs/research/anticheat.md` and
-`docs/research/anticheat-sadburst.md` are no longer updated and may not match the current
-game.
+`docs/research/anticheat-sadburst.md` are no longer maintained and may not match the current
+game. When you read, cite or rely on one of them, check the claim you used against `game/`
+(or `game.sadburst/`) and follow "Reporting fixes" if it no longer matches.
 
-When you read, cite or rely on one of these docs, in any task:
-1. Check the claim you used against `game/` (or `game.sadburst/`). Note the doc, the section,
-   the claim, and the file and line that confirm or contradict it.
-2. If it no longer matches, look for earlier issues:
-   `gh issue list --repo 0x42697262/plazma-burst-2-desktop --state all --search "<doc name>"`.
-3. Write a draft issue in your own words from step 1: the doc and section, the outdated text,
-   and the file and line in the game that show the current behavior. End the body with a
-   "Related" line listing the earlier issues as `#<number>`. Never reuse a fixed title or body.
-4. Recommend that the user post it. Show the title, the body and the command:
-   `gh issue create --repo 0x42697262/plazma-burst-2-desktop --title "…" --body-file <file>`,
-   or the link https://github.com/0x42697262/plazma-burst-2-desktop/issues/new if `gh` is
-   not set up. Run the command only after the user says yes.
+## Reporting fixes
+Prepare a pull request when you find one of these, in any task:
+- A claim in an unmaintained research doc that no longer matches `game/` (or `game.sadburst/`).
+- Code a game update broke: `npm run find-names -- --check` misses names,
+  `Script.patch(...): found N times, expected M`, a hook is skipped, or `npm run smoke` fails.
+- A bug in code outside your task.
+- A page in `docs/features/` that no longer matches the code.
 
-Recommend at most one issue per doc per session.
+A bug inside your task is not reported: fix it as part of the task. Report only what you can
+show: command output, or a file and line.
+
+Do all the work first, at the end of your task, so the user only answers yes or no:
+1. Search earlier reports: `gh issue list` and `gh pr list` with
+   `--repo 0x42697262/plazma-burst-2-desktop --state all --search "<topic>"`. If an open pull
+   request already fixes it, skip it.
+2. Leave the user's working tree alone. Make a worktree:
+   `git worktree add ../pb2-fix-<topic> -b fix/<topic> origin/main`, and link `node_modules`
+   and the `game*/` folders into it from the main checkout.
+3. Make the fix there. For a research doc, correct the text and cite the file and line in the game.
+4. Run `npm run verify` there. If it fails and you cannot fix it, remove the worktree and
+   prepare an issue instead: steps 5 and 6 still apply, with `gh issue create` in place of
+   the pull request. Do the same when the fix is unclear or needs live testing.
+5. Write the title and body fresh, in your own words: what was wrong, the evidence, what you
+   changed, the game build from `game/pb2-version.json`, how you verified it, and a
+   "Related" line listing the earlier reports as `#<number>`. Never reuse a fixed title or body.
+6. Ask one question. Show the title, the body and `git diff --stat`, then ask:
+   "Open this pull request? (yes/no)", or "Open this issue? (yes/no)". For an issue, a yes
+   runs `gh issue create --repo 0x42697262/plazma-burst-2-desktop --title "…" --body-file <file>`
+   and prints the link.
+
+On yes, finish without asking again; the yes is the user asking you to commit:
+1. Stage only the files you changed, by name. Never the links from step 2, `data/` or `game*/`.
+2. Commit, run `git push -u origin fix/<topic>` (with no push access, `gh repo fork --remote`
+   first and push to the fork), then
+   `gh pr create --draft --repo 0x42697262/plazma-burst-2-desktop --title "…" --body-file <file>`.
+3. Print the link. If `gh` is not set up, push anyway and print
+   https://github.com/0x42697262/plazma-burst-2-desktop/compare/fix/<topic>?expand=1.
+4. Remove the worktree.
+
+On no, remove the worktree and the branch, then go on.
+
+Ask at most twice per session. Put any further findings into the second pull request.
 
 ## Confirmed facts
 Each fact says where it was verified.

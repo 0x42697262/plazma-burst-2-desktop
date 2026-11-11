@@ -1,6 +1,6 @@
 # Sad Burst 2 Anti-Cheat: How It Differs From the Official Client
 
-> **Unmaintained.** This document is no longer updated and may not match the current game. If it no longer works, [open an issue](https://github.com/0x42697262/plazma-burst-2-desktop/issues/new). AI agents: follow "Unmaintained research" in [AGENTS.md](../../AGENTS.md) and suggest a report to the user.
+> **Unmaintained.** This document is no longer updated and may not match the current game. If it no longer works, [open an issue](https://github.com/0x42697262/plazma-burst-2-desktop/issues/new). AI agents: follow "Unmaintained research" in [AGENTS.md](../../AGENTS.md).
 
 > Status: **broken / bypassable**, as the official client. This document explains the client-side anti-cheat of Sad Burst 2, a community fork of Plazma Burst 2, as it compares with the official client described in [anticheat.md](anticheat.md). It does not change any code.
 > **Scope:** Sad Burst 2 build `20261030020533` (client version `1.23`), fetched with `npm run fetch-game -- --sadburst` into `game.sadburst/`, compared with the official client `v1769098419` in `game/`. Paths such as `gamelogic/8c699c159547a19b.js` are relative to `game.sadburst/`.

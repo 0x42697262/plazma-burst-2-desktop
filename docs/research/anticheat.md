@@ -1,6 +1,6 @@
 # Client Anti-Cheat: How It Works
 
-> **Unmaintained.** This document is no longer updated and may not match the current game. If it no longer works, [open an issue](https://github.com/0x42697262/plazma-burst-2-desktop/issues/new). AI agents: follow "Unmaintained research" in [AGENTS.md](../../AGENTS.md) and suggest a report to the user.
+> **Unmaintained.** This document is no longer updated and may not match the current game. If it no longer works, [open an issue](https://github.com/0x42697262/plazma-burst-2-desktop/issues/new). AI agents: follow "Unmaintained research" in [AGENTS.md](../../AGENTS.md).
 
 > Status: **broken / bypassable**. This document explains the obfuscated client-side anti-cheat. It does not change any code.
 > **Exception: [section 14](#14-server-side-state-checks-ммpoeрм) is server-side.** Those checks run on the match's server, not on the player being checked. Their code is in the game files only because a player can host a match.
