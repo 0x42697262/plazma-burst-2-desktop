@@ -1,5 +1,7 @@
 # Client Anti-Cheat: How It Works
 
+> **Unmaintained.** This document is no longer updated and may not match the current game. If it no longer works, [open an issue](https://github.com/0x42697262/plazma-burst-2-desktop/issues/new). AI agents: follow "Unmaintained research" in [AGENTS.md](../../AGENTS.md) and report it yourself.
+
 > Status: **broken / bypassable**. This document explains the obfuscated client-side anti-cheat. It does not change any code.
 > **Exception: [section 14](#14-server-side-state-checks-ммpoeрм) is server-side.** Those checks run on the match's server, not on the player being checked. Their code is in the game files only because a player can host a match.
 > All line numbers refer to the current files in `game/scripts/…`; a bare name like `frame2.js:123` is relative to that folder. `_strings.js` is the exception: it is `game/_strings.js`.
