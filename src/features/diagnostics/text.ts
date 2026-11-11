@@ -1,3 +1,5 @@
+import { KEY_BYTES } from './constants.ts';
+
 export const WRAPPER_TEXT = Object.freeze({
   saved: (kind: string, message: string) => `Diagnostics: saved a ${kind} report: ${message}`,
   unreadable: (message: string) => `Diagnostics: could not read the reports: ${message}`,
@@ -23,6 +25,7 @@ export const ROUTE_TEXT = Object.freeze({
 export const CONFIG_TEXT = Object.freeze({
   badHost: (host: string) => `the server "${host}" is not an https:// address (http:// only for this machine); nothing is sent`,
   badFields: (fields: readonly string[]) => `unknown fields to send: ${fields.join(', ')}`,
+  badKey: (kids: readonly string[]) => `the key ${kids.join(', ')} is not a ${KEY_BYTES}-byte base64 public key; nothing is sent`,
   badFile: (message: string) => `the settings file was not used: ${message}`,
   httpStatus: (status: number) => `the server answered ${status}`,
 });

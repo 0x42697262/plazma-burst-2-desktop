@@ -9,6 +9,8 @@ import { createReportQueue } from './adapters/queue-file.ts';
 import { createDiagnosticsService } from './services/diagnostics.ts';
 import { diagnosticsRoute } from './entry/route.ts';
 import { resolveConfig, sendEnvelope } from './domain/config.ts';
+import { createSealer } from './adapters/seal.ts';
+import { newSealKeyPair, openSealed } from './adapters/seal.fixture.ts';
 import { readConfigFile } from './adapters/config-file.ts';
 import { deliverReports } from './adapters/sender.ts';
 import { createDiagnosticsWrapper, localIps } from './wrapper.ts';
@@ -26,15 +28,15 @@ const FACTS = {
   ips: ['203.0.113.5'],
 };
 
-type Options = { host?: string | null; auto?: boolean; fields?: readonly any[]; deliver?: (host: string, body: string) => Promise<void>; canSend?: boolean };
+type Options = { host?: string | null; auto?: boolean; fields?: readonly any[]; keys?: readonly any[]; deliver?: (host: string, body: string) => Promise<void>; canSend?: boolean };
 
-function setup({ host = null, auto = false, fields = DIAGNOSTIC_FIELDS, deliver = async () => undefined, canSend = true }: Options = {}) {
+function setup({ host = null, auto = false, fields = DIAGNOSTIC_FIELDS, keys = [], deliver = async () => undefined, canSend = true }: Options = {}) {
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-diagnostics-'));
   let clock = 1_000_000;
   let id = 0;
   const lines: string[] = [];
   const queue = createReportQueue(path.join(folder, 'nested', 'reports.json'), (message) => lines.push(message));
-  const service = createDiagnosticsService({ queue, config: () => ({ host, auto, fields, problems: [] }), deliver, canSend, facts: () => FACTS, now: () => clock, newId: () => `id${++id}`, info: (line) => lines.push(line), error: (line) => lines.push(line) });
+  const service = createDiagnosticsService({ queue, config: () => ({ host, auto, fields, keys, problems: [] }), deliver, seal: createSealer(), canSend, facts: () => FACTS, now: () => clock, newId: () => `id${++id}`, info: (line) => lines.push(line), error: (line) => lines.push(line) });
   return { folder, queue, service, lines, advance: (ms: number) => { clock += ms; }, cleanup: () => fs.rmSync(folder, { recursive: true, force: true }) };
 }
 
@@ -100,11 +102,11 @@ test('the route takes page reports, lists and clears, refuses remote windows and
 });
 
 test('settings: the environment wins over the file, the file over the edition; only https, or http on this machine', () => {
-  assert.deepEqual(resolveConfig(null, {}, {}), { host: null, fields: DIAGNOSTIC_FIELDS, auto: false, problems: [] });
+  assert.deepEqual(resolveConfig(null, {}, {}), { host: null, fields: DIAGNOSTIC_FIELDS, auto: false, keys: [], problems: [] });
   const edition = { host: 'https://edition.test/r', send: ['kind'], auto: true };
-  assert.deepEqual(resolveConfig(null, {}, edition), { host: 'https://edition.test/r', fields: ['kind'], auto: true, problems: [] });
+  assert.deepEqual(resolveConfig(null, {}, edition), { host: 'https://edition.test/r', fields: ['kind'], auto: true, keys: [], problems: [] });
   const file = { host: 'https://file.test/r', send: ['error', 'client'], auto: false };
-  assert.deepEqual(resolveConfig(null, file, edition), { host: 'https://file.test/r', fields: ['error', 'client'], auto: false, problems: [] });
+  assert.deepEqual(resolveConfig(null, file, edition), { host: 'https://file.test/r', fields: ['error', 'client'], auto: false, keys: [], problems: [] });
   assert.equal(resolveConfig('https://env.test/r', file, edition).host, 'https://env.test/r');
   assert.equal(resolveConfig('http://127.0.0.1:9/r', {}, {}).host, 'http://127.0.0.1:9/r');
   const plain = resolveConfig('http://example.test/r', {}, {});
@@ -195,6 +197,7 @@ test('login, cookies and IPs are included by default and gated by their capabili
       cookies: () => ({ login: 'alice', password: 'secret', pb2uid: '42' }),
       ips: () => ['192.0.2.10'],
       urlFromEnvironment: null,
+      keyFromEnvironment: null,
       fetch: async () => new Response(),
       onRendererGone: () => undefined,
     },
@@ -219,4 +222,74 @@ test('login, cookies and IPs are included by default and gated by their capabili
   } finally {
     fs.rmSync(folder, { recursive: true, force: true });
   }
+});
+
+test('with a key set the reports leave sealed: no plaintext in the body, and only the server opens them', async () => {
+  const pair = newSealKeyPair('abc');
+  const bodies: string[] = [];
+  const context = setup({ host: 'https://s.test', keys: [{ kid: pair.kid, key: pair.publicKey }], deliver: async (_host, body) => { bodies.push(body); } });
+  try {
+    context.service.capture('manual', { message: 'sealed please' });
+    assert.equal((await context.service.send()).sent, 1);
+    const envelope = JSON.parse(bodies[0] ?? '{}');
+    assert.equal(envelope.schemaVersion, 2);
+    assert.equal(envelope.reports.length, 1);
+    const sealed = envelope.reports[0];
+    assert.deepEqual(Object.keys(sealed).sort(), ['c', 'e', 'k', 'n']);
+    assert.equal(sealed.k, pair.kid);
+    for (const secret of ['alice', 'secret', 'sealed please', 'manual']) assert.ok(!(bodies[0] ?? '').includes(secret), secret);
+    const opened = JSON.parse(openSealed(sealed, pair.privateKey));
+    assert.equal(opened.login, 'alice');
+    assert.equal(opened.cookies.password, 'secret');
+    assert.equal(opened.error.message, 'sealed please');
+    assert.deepEqual(context.service.reports(), [], 'sent reports leave the queue');
+  } finally { context.cleanup(); }
+});
+
+test('the preview shows the sealed body, and a key that does not parse sends nothing', () => {
+  const pair = newSealKeyPair('abc');
+  const context = setup({ host: 'https://s.test', keys: [{ kid: pair.kid, key: pair.publicKey }] });
+  try {
+    context.service.capture('manual', { message: 'preview me' });
+    const preview = context.service.preview() as { schemaVersion: number; reports: { k: string }[] };
+    assert.equal(preview.schemaVersion, 2);
+    assert.equal(preview.reports[0]?.k, pair.kid);
+    assert.ok(!JSON.stringify(preview).includes('preview me'));
+  } finally { context.cleanup(); }
+
+  const refused = resolveConfig('https://s.test', { keys: [{ key: 'not-a-key' }] }, {});
+  assert.equal(refused.host, null, 'a key that does not parse sends nothing');
+  assert.deepEqual(refused.keys, []);
+  assert.match(refused.problems.join(' '), /is not a 32-byte base64 public key/);
+
+  const good = newSealKeyPair('good').publicKey.toString('base64');
+  const mixed = resolveConfig('https://s.test', { keys: [{ kid: 'bad', key: 'not-a-key' }, { kid: 'good', key: good }] }, {});
+  assert.equal(mixed.host, null, 'one broken key sends nothing, even with a good one after it');
+  assert.match(mixed.problems.join(' '), /the key bad is not/);
+});
+
+test('the settings a page reads name the keys by kid and never carry their bytes', async () => {
+  const pair = newSealKeyPair('abc');
+  const context = setup({ host: 'https://s.test', keys: [{ kid: pair.kid, key: pair.publicKey }] });
+  try {
+    const route = diagnosticsRoute({ service: context.service, capabilities: { capture: true, show: true, send: true } });
+    const url = new URL('https://game.test/__dev/diagnostics');
+    const listed: any = await (await route.handle(new Request(url), url, {})).json();
+    assert.deepEqual(listed.config.keys, ['abc']);
+    assert.ok(!JSON.stringify(listed).includes(pair.publicKey.toString('base64')));
+  } finally { context.cleanup(); }
+});
+
+test('the key comes from the environment first, then the file, then the edition', () => {
+  const environmentPair = newSealKeyPair('env');
+  const filePair = newSealKeyPair('file');
+  const editionPair = newSealKeyPair('edition');
+  const base64 = (pair: { publicKey: Buffer }): string => pair.publicKey.toString('base64');
+  const file = { keys: [{ kid: 'file', key: base64(filePair) }] };
+  const edition = { keys: [{ kid: 'edition', key: base64(editionPair) }] };
+  assert.deepEqual(resolveConfig('https://s.test', file, edition, `env:${base64(environmentPair)}`).keys.map((key) => key.kid), ['env']);
+  assert.deepEqual(resolveConfig('https://s.test', file, edition).keys.map((key) => key.kid), ['file']);
+  assert.deepEqual(resolveConfig('https://s.test', {}, edition).keys.map((key) => key.kid), ['edition']);
+  assert.deepEqual(resolveConfig(null, {}, {}, base64(environmentPair)).keys.map((key) => key.kid), ['default']);
+  assert.deepEqual(resolveConfig(null, {}, {}, base64(environmentPair)).keys[0]?.key, environmentPair.publicKey);
 });

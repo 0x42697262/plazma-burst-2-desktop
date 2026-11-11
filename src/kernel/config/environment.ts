@@ -19,6 +19,7 @@ export type Environment = Readonly<{
   featureToggles: readonly FeatureToggle[];
   credentials: Credentials;
   diagnosticsUrl: string | null;
+  diagnosticsKey: string | null;
   listFeatures: boolean;
   args: readonly string[];
 }>;
@@ -37,6 +38,7 @@ const environmentSchema = z.object({
   [ENV.password]: optionalText,
   [ENV.uid]: optionalText,
   [ENV.diagnosticsUrl]: optionalText,
+  [ENV.diagnosticsKey]: optionalText,
   [ENV.npmSadburst]: optionalText,
 });
 
@@ -97,6 +99,7 @@ export function parseEnvironment(argv: readonly string[], env: EnvironmentVariab
     featureToggles: Object.freeze(featureTogglesOf(variables[ENV.features], variables[ENV.devConsole], variables[ENV.hooks], problems)),
     credentials: credentialsOf(variables),
     diagnosticsUrl: nonEmpty(variables[ENV.diagnosticsUrl]),
+    diagnosticsKey: nonEmpty(variables[ENV.diagnosticsKey]),
     listFeatures: argv.includes(ARG.listFeatures),
     args: Object.freeze([...argv]),
   });

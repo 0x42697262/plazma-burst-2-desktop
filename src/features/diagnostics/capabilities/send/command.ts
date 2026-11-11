@@ -5,7 +5,7 @@ import { postDiagnostics, readDiagnostics } from '../../adapters/route-client.ts
 import { SEND_INDENT, SEND_WORD } from './keys.ts';
 import { SEND_TEXT as TEXT } from './text.ts';
 
-type Config = { host: string | null; fields: string[]; auto: boolean; problems: string[] };
+type Config = { host: string | null; fields: string[]; auto: boolean; keys: string[]; problems: string[] };
 type Sent = { sent: number; pending: number; host: string | null; error?: string };
 
 const printFailure = (error: Error): void => { print(TEXT.couldNot(error.message), COLOR.error); };
@@ -32,6 +32,7 @@ function config(): Promise<void> {
     if (!values) return;
     print(TEXT.host(values.host), values.host ? COLOR.ok : COLOR.notice);
     print(TEXT.fields(values.fields));
+    print(TEXT.sealed(values.keys));
     print(TEXT.auto(values.auto));
     for (const problem of values.problems) print(TEXT.problem(problem), COLOR.error);
   }, printFailure);

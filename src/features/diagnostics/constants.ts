@@ -1,4 +1,5 @@
 export const REPORT_SCHEMA_VERSION = 1;
+export const SEALED_SCHEMA_VERSION = 2;
 export const REPORTS_FILE_VERSION = 2;
 export const REPORTS_FILE_MODE = 0o600;
 export const MAX_REPORTS = 50;
@@ -10,3 +11,6 @@ export const ID_BYTES = 8;
 export const CONFIG_FILE_VERSION = 1;
 export const SEND_TIMEOUT_MS = 10_000;
 export const MAX_REPORTS_PER_SEND = 50;
+export const KEY_BYTES = 32;
+export const IV_BYTES = 12;
+export const AUTH_TAG_BYTES = 16;

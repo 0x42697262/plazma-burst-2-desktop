@@ -7,6 +7,7 @@ import { LAST_WORD, NUMBER_WORD, REPORT_KIND, REPORT_QUERY, ROUTE_OP } from '../
 import { ROUTE_TEXT as TEXT, WRAPPER_TEXT } from '../text.ts';
 import type { DiagnosticsService } from '../services/diagnostics.ts';
 import type { DiagnosticReport } from '../domain/report.ts';
+import type { DiagnosticsConfig } from '../domain/config.ts';
 
 const PAGE_KINDS = [REPORT_KIND.pageError, REPORT_KIND.unhandledRejection] as const;
 const requestSchema = z.object({
@@ -24,6 +25,8 @@ export type RouteDeps = { service: DiagnosticsService; capabilities: RouteCapabi
 
 const summary = (report: DiagnosticReport) => ({ id: report.id, time: report.time, kind: report.kind, client: report.client, message: report.error.message });
 
+const describeConfig = ({ host, fields, auto, keys, problems }: DiagnosticsConfig) => ({ host, fields, auto, keys: keys.map((key) => key.kid), problems });
+
 function chosenReport(reports: readonly DiagnosticReport[], word: string): DiagnosticReport | null {
   if (word === LAST_WORD) return reports.at(-1) ?? null;
   return NUMBER_WORD.test(word) ? reports[Number(word)] ?? null : null;
@@ -33,7 +36,7 @@ export function diagnosticsRoute({ service, capabilities }: RouteDeps): DevRoute
   function read(url: URL): Response {
     const reports = service.reports();
     const word = url.searchParams.get(REPORT_QUERY);
-    if (word === null) return jsonResponse({ capture: capabilities.capture, config: capabilities.send ? service.config() : null, reports: reports.map(summary) });
+    if (word === null) return jsonResponse({ capture: capabilities.capture, config: capabilities.send ? describeConfig(service.config()) : null, reports: reports.map(summary) });
     const report = chosenReport(reports, word);
     return report ? jsonResponse(report) : errorResponse(TEXT.noReport, STATUS.notFound);
   }

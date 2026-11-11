@@ -7,6 +7,15 @@ export const REPORT_KINDS = Object.freeze(Object.values(REPORT_KIND)) as readonl
 
 export const ROUTE_OP = Object.freeze({ report: 'report', manual: 'manual', clear: 'clear', send: 'send', preview: 'preview' });
 export const REPORT_QUERY = 'report';
+export const KEY_SEPARATOR = ':';
+export const DEFAULT_KID = 'default';
+export const CIPHER = 'aes-256-gcm';
+export const HKDF_HASH = 'sha256';
+export const KDF_INFO = 'pb2-diag';
+export const ENCODING = Object.freeze({ utf8: 'utf8', base64: 'base64', hex: 'hex' });
+export const KEY_FORMAT = Object.freeze({ x25519: 'x25519', der: 'der', spki: 'spki', pkcs8: 'pkcs8' });
+export const DER_PREFIX = Object.freeze({ publicKey: '302a300506032b656e032100', privateKey: '302e020100300506032b656e04220420' });
+export const SEALED_FIELD = Object.freeze({ kid: 'k', ephemeral: 'e', iv: 'n', ciphertext: 'c' } as const);
 export const LAST_WORD = 'last';
 export const REPORTS_FILE = 'reports.json';
 export const CONFIG_FILE = 'diagnostics.json';

@@ -8,6 +8,7 @@ import { DIAGNOSTIC_FIELD, type DiagnosticField } from '#shared/editions/keys.ts
 import type { Edition } from '#shared/editions/types.ts';
 import type { WrapperDeps, WrapperFeature } from '#wrapper/feature-types.ts';
 import { ID_BYTES } from './constants.ts';
+import { createSealer } from './adapters/seal.ts';
 import { CLEAN_EXIT, REPORT_KIND, UNCAUGHT_MONITOR } from './keys.ts';
 import { CONFIG_PATH, REPORTS_PATH } from './paths.ts';
 import { CONFIG_TEXT, WRAPPER_TEXT as TEXT } from './text.ts';
@@ -28,6 +29,7 @@ export type DiagnosticsPorts = Readonly<{
   cookies?: () => ReportCookies;
   ips?: () => readonly string[];
   urlFromEnvironment: string | null;
+  keyFromEnvironment: string | null;
   fetch: Fetcher;
   onRendererGone(listener: (reason: string, exitCode: number) => void): void;
 }>;
@@ -67,7 +69,7 @@ export function createDiagnosticsWrapper(deps: WrapperDeps, ports: DiagnosticsPo
   function config() {
     const { values, problem } = readConfigFile(configFile);
     if (problem) reportOnce(CONFIG_TEXT.badFile(problem));
-    const resolved = resolveConfig(ports.urlFromEnvironment, values, edition.diagnostics ?? {});
+    const resolved = resolveConfig(ports.urlFromEnvironment, values, edition.diagnostics ?? {}, ports.keyFromEnvironment);
     resolved.problems.forEach(reportOnce);
     return disabledFields.size ? { ...resolved, fields: resolved.fields.filter((field) => !disabledFields.has(field)) } : resolved;
   }
@@ -76,6 +78,7 @@ export function createDiagnosticsWrapper(deps: WrapperDeps, ports: DiagnosticsPo
     queue,
     config,
     deliver: (host, body) => deliverReports(ports.fetch, host, body),
+    seal: createSealer(),
     canSend,
     facts: () => ({
       client: ports.client,

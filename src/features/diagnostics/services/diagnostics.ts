@@ -1,6 +1,7 @@
 import { MAX_REPORTS_PER_SEND, MAX_REPORTS_PER_WINDOW, REPEAT_WINDOW_MS } from '../constants.ts';
 import { buildReport, cleanError, isAllowed, type DiagnosticReport, type ErrorInput, type ReportFacts } from '../domain/report.ts';
-import { sendEnvelope, type DiagnosticsConfig } from '../domain/config.ts';
+import { chosenReport, sealedEnvelope, sendEnvelope, type DiagnosticsConfig } from '../domain/config.ts';
+import type { Sealer } from '../adapters/seal.ts';
 import type { ReportQueue } from '../adapters/queue-file.ts';
 import { WRAPPER_TEXT as TEXT } from '../text.ts';
 
@@ -8,6 +9,7 @@ export type DiagnosticsDeps = {
   queue: ReportQueue;
   config: () => DiagnosticsConfig;
   deliver: (host: string, body: string) => Promise<void>;
+  seal: Sealer;
   canSend: boolean;
   facts: () => ReportFacts;
   now: () => number;
@@ -20,7 +22,13 @@ export type SendResult = { sent: number; pending: number; host: string | null; e
 
 export type DiagnosticsService = ReturnType<typeof createDiagnosticsService>;
 
-export function createDiagnosticsService({ queue, config, deliver, canSend, facts, now, newId, info, error }: DiagnosticsDeps) {
+const bodyOf = (reports: readonly DiagnosticReport[], { fields, keys }: DiagnosticsConfig, seal: Sealer): string => {
+  const recipient = keys[0];
+  if (!recipient) return JSON.stringify(sendEnvelope(reports, fields));
+  return JSON.stringify(sealedEnvelope(reports.map((report) => seal(recipient, JSON.stringify(chosenReport(report, fields))))));
+};
+
+export function createDiagnosticsService({ queue, config, deliver, seal, canSend, facts, now, newId, info, error }: DiagnosticsDeps) {
   const captureTimes: number[] = [];
   const lastSeen = new Map<string, number>();
   let sending = false;
@@ -44,14 +52,15 @@ export function createDiagnosticsService({ queue, config, deliver, canSend, fact
   }
 
   async function send(): Promise<SendResult> {
-    const { host, fields } = config();
+    const resolved = config();
+    const host = resolved.host;
     const reports = queue.read().slice(0, MAX_REPORTS_PER_SEND);
     const pending = queue.read().length;
     if (!host || !reports.length) return { sent: 0, pending, host };
     if (sending) return { sent: 0, pending, host };
     sending = true;
     try {
-      await deliver(host, JSON.stringify(sendEnvelope(reports, fields)));
+      await deliver(host, bodyOf(reports, resolved, seal));
       const sentIds = new Set(reports.map((report) => report.id));
       const left = queue.read().filter((report) => !sentIds.has(report.id));
       queue.write(left);
@@ -70,7 +79,7 @@ export function createDiagnosticsService({ queue, config, deliver, canSend, fact
     capture,
     send,
     config,
-    preview: () => sendEnvelope(queue.read().slice(0, MAX_REPORTS_PER_SEND), config().fields),
+    preview: (): unknown => JSON.parse(bodyOf(queue.read().slice(0, MAX_REPORTS_PER_SEND), config(), seal)),
     reports: (): DiagnosticReport[] => queue.read(),
     clear(): number {
       const count = queue.read().length;

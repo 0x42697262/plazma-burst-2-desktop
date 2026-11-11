@@ -1,6 +1,7 @@
 import type { FeatureId } from '#shared/features/keys.ts';
 
-export type EditionDiagnostics = Readonly<{ hidden?: boolean; host?: string; send?: readonly string[]; auto?: boolean }>;
+export type EditionDiagnosticKey = Readonly<{ kid?: string; key: string }>;
+export type EditionDiagnostics = Readonly<{ hidden?: boolean; host?: string; send?: readonly string[]; auto?: boolean; keys?: readonly EditionDiagnosticKey[] }>;
 
 export type Edition = Readonly<{
   name: string;

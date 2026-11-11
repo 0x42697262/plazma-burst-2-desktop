@@ -22,7 +22,7 @@ test('with nothing set: the official client, local mode, no overrides', () => {
   assert.deepEqual({ ...environment, args: [] }, {
     client: 'official', mode: 'local', gameDir: null, gameVersion: null, logLevel: 'info', logFormat: 'text',
     featureToggles: [], credentials: {},
-    diagnosticsUrl: null, listFeatures: false, args: [],
+    diagnosticsUrl: null, diagnosticsKey: null, listFeatures: false, args: [],
   });
 });
 

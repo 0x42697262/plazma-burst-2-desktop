@@ -51,7 +51,8 @@ test('hidden: no log lines, and reports are still saved', () => {
     const before = process.listenerCount('uncaughtExceptionMonitor');
     const { service } = createDiagnosticsWrapper(
       { log: { info: say, warn: say, error: say }, isCapabilityOn: () => false, gameVersion: 'v1', isSadburst: false, repoRoot: folder, gameDir: folder, devKvFile: '', host: '' } as never,
-      { client: 'official', appVersion: '1', flags: {} as never, capabilities: {}, urlFromEnvironment: null, fetch: async () => new Response(), onRendererGone: () => undefined },
+      { client: 'official', appVersion: '1', flags: {} as never, capabilities: {}, urlFromEnvironment: null,
+        keyFromEnvironment: null, fetch: async () => new Response(), onRendererGone: () => undefined },
       path.join(folder, `${edition.name}.json`),
       path.join(folder, 'none.json'),
       edition,

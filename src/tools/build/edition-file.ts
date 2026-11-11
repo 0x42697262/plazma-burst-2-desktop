@@ -23,6 +23,7 @@ const editionFileSchema = z.object({
     host: z.string().optional(),
     send: z.array(z.enum(DIAGNOSTIC_FIELDS as readonly [string, ...string[]])).optional(),
     auto: z.boolean().optional(),
+    keys: z.array(z.object({ kid: z.string().optional(), key: z.string() }).strict()).optional(),
   }).strict().optional(),
   defaults: z.object({
     servers: z.array(z.object({ name: z.string().optional(), address: z.string(), fingerprint: z.string() }).strict()).optional(),

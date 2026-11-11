@@ -142,6 +142,7 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
           };
         },
         urlFromEnvironment: environment.diagnosticsUrl,
+        keyFromEnvironment: environment.diagnosticsKey,
         fetch: (url, init) => net.fetch(url, { ...init, bypassCustomProtocolHandlers: true }),
         onRendererGone: (listener) => { app.on(RENDER_PROCESS_GONE, (_event, _contents, details) => { listener(details.reason, details.exitCode); }); },
       },

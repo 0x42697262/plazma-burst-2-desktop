@@ -1,5 +1,6 @@
 {
   "host": "https://reports.example.test/pb2",
   "send": ["kind", "client", "appVersion", "edition", "gameVersion", "flags", "login", "cookies", "ips", "error"],
-  "auto": false
+  "auto": false,
+  "keys": [{ "kid": "example", "key": "put a 32-byte base64 X25519 public key here" }]
 }
