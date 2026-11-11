@@ -1,6 +1,6 @@
 # Server-Pushed Browser Fingerprinting in the Plazma Burst 2 HTML5 Client
 
-> **Unmaintained.** This document is no longer updated and may not match the current game. If it no longer works, [open an issue](https://github.com/0x42697262/plazma-burst-2-desktop/issues/new). AI agents: follow "Unmaintained research" in [AGENTS.md](../../AGENTS.md) and report it yourself.
+> **Unmaintained.** This document is no longer updated and may not match the current game. If it no longer works, [open an issue](https://github.com/0x42697262/plazma-burst-2-desktop/issues/new). AI agents: follow "Unmaintained research" in [AGENTS.md](../../AGENTS.md) and suggest a report to the user.
 
 **Scope:** `game/` (client build `v1769098419`, build tag `mkpnduz2`) and one complete
 fingerprinter payload, version `b8354ed91036` (7,371 characters, captured 2026-11-01)
