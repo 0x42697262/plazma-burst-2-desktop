@@ -1,5 +1,5 @@
 import type { BrowserWindow as ElectronWindow, Session } from 'electron';
-import { COOKIES_CHANGED, LOGIN_PARTITION_PREFIX, SITE, WINDOW_CLOSED, WINDOW_OPEN_DENY } from '../keys.ts';
+import { COOKIES_CHANGED, LOGIN_PARTITION_PREFIX, WINDOW_CLOSED, WINDOW_OPEN_DENY, siteCookiesIn } from '../keys.ts';
 import { LOGIN_WINDOW } from '../constants.ts';
 import type { OpenSiteWindow } from '../services/new-login.ts';
 
@@ -22,7 +22,7 @@ export const siteWindowOpener = ({ BrowserWindow, session, parent }: SiteWindowD
   window.webContents.setWindowOpenHandler(() => ({ action: WINDOW_OPEN_DENY }));
   void window.loadURL(url);
   return {
-    cookies: () => memoryOnly.cookies.get({ domain: SITE }),
+    cookies: () => siteCookiesIn(memoryOnly.cookies),
     onChange(listener) { memoryOnly.cookies.on(COOKIES_CHANGED, listener); },
     onClosed(listener) { window.on(WINDOW_CLOSED, listener); },
     check: (checkUrl) => memoryOnly.fetch(checkUrl).then((response) => response.status),

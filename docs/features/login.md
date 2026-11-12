@@ -30,7 +30,10 @@ used the next time that game starts.
 - **Official**: a window opens the site's own login page (`?a=&s=8`, the one the game opens)
   in a separate session kept only in memory, so it starts logged out and leaves nothing
   behind. The site sits behind a Cloudflare challenge and a script check, which is why it
-  is a real window. When the `login` cookie and a `password` cookie shaped like an md5
+  is a real window. The site sets `login`, `password` and `pb2uid` on `www.plazmaburst2.com`
+  only, and Electron's `cookies.get({ domain })` leaves such host-only cookies out, so every
+  lookup of the site's cookies reads them all and keeps those of `plazmaburst2.com` and its
+  subdomains (`siteCookiesIn`). When the `login` cookie and a `password` cookie shaped like an md5
   appear, the app asks the site once more and checks that it kept them, then saves
   `login`, `password` and `pb2uid`. If the site cannot be reached or drops them, nothing is saved.
 - **Sad Burst 2**: a small form posts to `/api/game/client-login`, then confirms the token with

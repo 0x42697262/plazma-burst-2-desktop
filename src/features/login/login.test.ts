@@ -23,7 +23,7 @@ function cookieStore(initial: readonly (Omit<StoredCookie, 'path'> & { path?: st
   const store: FakeStore = {
     jar: () => jar,
     flushed: 0,
-    async get({ domain }) { return jar.filter((cookie) => bare(cookie.domain) === domain || bare(cookie.domain).endsWith(`.${domain}`)); },
+    async get(filter: { domain?: string }) { return filter.domain === undefined ? jar : jar.filter((cookie) => cookie.domain === `.${filter.domain}`); },
     async remove(url, name) {
       const parsed = new URL(url);
       jar = jar.filter((cookie) => !(cookie.name === name && bare(cookie.domain) === parsed.hostname && cookie.path === parsed.pathname));

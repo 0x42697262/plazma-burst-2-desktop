@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import { z } from 'zod';
 import { createVersionedFile } from '#kernel/persist/versioned.ts';
-import { COOKIE_PATH, SITE, cookieUrl } from '#shared/site/keys.ts';
+import { COOKIE_PATH, SITE, cookieUrl, siteCookiesIn, type EveryCookie } from '#shared/site/keys.ts';
 import { OFFICIAL_LOGIN_FILE_MODE, OFFICIAL_LOGIN_FILE_VERSION } from './constants.ts';
 
 const storedCookieSchema = z.object({
@@ -19,7 +19,7 @@ type StoredCookie = z.infer<typeof storedCookieSchema>;
 
 export type SiteCookie = Partial<StoredCookie> & { name: string; value?: string };
 export type SiteCookieStore = {
-  get(filter: { domain: string }): Promise<SiteCookie[]>;
+  get(filter: EveryCookie): Promise<SiteCookie[]>;
   remove(url: string, name: string): Promise<void>;
   set(details: { url: string; name: string; value: string; domain?: string; path: string; secure: boolean; httpOnly: boolean; expirationDate?: number }): Promise<void>;
   flushStore(): Promise<void>;
@@ -40,13 +40,13 @@ export function createSiteCookies(cookies: SiteCookieStore, stashFile: string) {
   const stash = createVersionedFile({ file: stashFile, version: OFFICIAL_LOGIN_FILE_VERSION, schema: officialLoginSchema, migrations: {}, fileMode: OFFICIAL_LOGIN_FILE_MODE });
 
   async function clear(): Promise<string[]> {
-    const site = await cookies.get({ domain: SITE });
+    const site = await siteCookiesIn(cookies);
     for (const cookie of site) await cookies.remove(cookieUrl(!!cookie.secure, cookie.domain ?? SITE, cookie.path ?? COOKIE_PATH), cookie.name);
     return site.map((cookie) => cookie.name);
   }
 
   async function hideForPrivateServer(): Promise<string[]> {
-    const current = await cookies.get({ domain: SITE });
+    const current = await siteCookiesIn(cookies);
     const alreadyHidden = (await stash.read()) !== null;
     if (!alreadyHidden && current.length) await stash.write({ cookies: current.map(stored) });
     const removed = await clear();

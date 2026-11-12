@@ -8,7 +8,7 @@ import { CAPABILITY, CLIENT, FEATURE, MODE, PAGE_CAPABILITIES_GLOBAL, PAGE_FLAGS
 import { DEV_DIR, ROUTE_NAME } from '#shared/contract/keys.ts';
 import { TEXT as SADBURST_TEXT } from '#features/client_sadburst/text.ts';
 import { createLogin } from '#features/login/wrapper.ts';
-import { COOKIES_CHANGED, COOKIE_NAME, SITE } from '#features/login/keys.ts';
+import { COOKIES_CHANGED, COOKIE_NAME, siteCookiesIn } from '#features/login/keys.ts';
 import { electronKeychain } from '#features/login/adapters/keychain.ts';
 import { siteWindowOpener } from '#features/login/adapters/site-window.ts';
 import { pinCertificates, type PinnedTarget } from '#features/cert_pinning/wrapper.ts';
@@ -86,7 +86,7 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
       sessionCookies = { login: null, password: null, pb2uid: null };
       return;
     }
-    const cookies = await session.defaultSession.cookies.get({ domain: SITE }).catch(() => []);
+    const cookies = await siteCookiesIn(session.defaultSession.cookies).catch(() => []);
     const byName = new Map(cookies.map((cookie) => [cookie.name, cookie.value || null]));
     sessionCookies = {
       login: byName.get(COOKIE_NAME.login) ?? null,

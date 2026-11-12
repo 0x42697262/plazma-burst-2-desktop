@@ -8,9 +8,9 @@ import { createSiteCookies, type SiteCookie, type SiteCookieStore } from './site
 function fakeCookies(initial: SiteCookie[]) {
   let jar = [...initial];
   const store: SiteCookieStore = {
-    get: async () => jar.map((cookie) => ({ ...cookie })),
+    get: async (filter: { domain?: string }) => jar.filter((cookie) => filter.domain === undefined || cookie.domain === `.${filter.domain}`).map((cookie) => ({ ...cookie })),
     remove: async (_url, name) => { jar = jar.filter((cookie) => cookie.name !== name); },
-    set: async (details) => { jar = [...jar.filter((cookie) => cookie.name !== details.name), { ...details, hostOnly: details.domain === undefined }]; },
+    set: async (details) => { jar = [...jar.filter((cookie) => cookie.name !== details.name), { ...details, domain: details.domain ?? new URL(details.url).hostname, hostOnly: details.domain === undefined }]; },
     flushStore: async () => undefined,
   };
   return { store, names: () => jar.map((cookie) => `${cookie.name}=${cookie.value ?? ''}`).sort() };
@@ -40,6 +40,26 @@ test('a private server never sees the official login, and the official server ge
 
     assert.deepEqual(await site.restoreOfficial(), [], 'nothing kept: the cookies here stay as they are');
     assert.deepEqual(cookies.names(), ['login=Pal', 'password=secret']);
+  } finally {
+    fs.rmSync(folder, { recursive: true, force: true });
+  }
+});
+
+test('the site\'s own login, set on www only, is hidden from a private server and comes back', async () => {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-cookies-'));
+  const stashFile = path.join(folder, 'official-login.json');
+  try {
+    const cookies = fakeCookies([
+      { name: 'login', value: 'Pal', domain: 'www.plazmaburst2.com', path: '/', secure: false, httpOnly: false, hostOnly: true },
+      { name: 'password', value: 'secret', domain: 'www.plazmaburst2.com', path: '/', secure: false, httpOnly: false, hostOnly: true },
+      { name: 'other', value: 'kept', domain: '.example.com', path: '/', secure: false, httpOnly: false, hostOnly: false },
+    ]);
+    const site = createSiteCookies(cookies.store, stashFile);
+
+    assert.deepEqual(await site.hideForPrivateServer(), ['login', 'password']);
+    assert.deepEqual(cookies.names(), ['other=kept'], 'the private server gets no login');
+    assert.deepEqual(await site.restoreOfficial(), ['login', 'password']);
+    assert.deepEqual(cookies.names(), ['login=Pal', 'other=kept', 'password=secret']);
   } finally {
     fs.rmSync(folder, { recursive: true, force: true });
   }
