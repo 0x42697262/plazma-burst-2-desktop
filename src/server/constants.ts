@@ -13,6 +13,8 @@ export const SERVER_DEFAULTS = Object.freeze({
   random_maps: Object.freeze([]),
   cheat_reports: 'log',
   welcome: '',
+  behind_proxy: false,
+  public_url: '',
 });
 export const PORT_RANGE = Object.freeze({ min: 0, max: 65535 });
 export const MAX_NAME_LENGTH = 40;

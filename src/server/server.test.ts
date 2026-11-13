@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { checkConfig } from './config.ts';
 import { memberShapes } from './game.ts';
 import { createMaps, httpMapSource } from './maps.ts';
+import { clientAddressOf } from './proxy.ts';
 import { createProbe } from '#features/server_list/adapters/probe.ts';
 import { checkServer as checkEntry } from '#features/server_list/domain/server.ts';
 import { findNames } from '#tools/find-names/find-names.ts';
@@ -42,6 +43,47 @@ test('server config: defaults, checks, the open-server warning', () => {
   assert.ok(checkConfig({ map_sources: ['ftp'] }).errors.some((error) => /map_sources/.test(error)));
   const bad = checkConfig({ port: 70000, nicknames: ['<b>'], cheat_reports: 'ban', download_maps: 'yes', skin: -1 });
   for (const want of [/port/, /nicknames/, /cheat_reports/, /download_maps/, /skin/]) assert.ok(bad.errors.some((error) => want.test(error)), String(want));
+});
+
+test('server config: behind a proxy, and the public address of its web pages', () => {
+  const plain = checkConfig({});
+  assert.equal(plain.server?.behind_proxy, false);
+  assert.equal(plain.server?.public_url, '');
+  const proxied = checkConfig({ behind_proxy: true, public_url: 'https://pb2.example.test/' });
+  assert.deepEqual(proxied.errors, []);
+  assert.equal(proxied.server?.public_url, 'https://pb2.example.test', 'kept without the trailing slash');
+  assert.ok(checkConfig({ public_url: 'pb2.example.test' }).errors.some((error) => /public_url/.test(error)));
+  assert.ok(checkConfig({ behind_proxy: 'yes' }).errors.some((error) => /behind_proxy/.test(error)));
+});
+
+test('behind a proxy, a player\'s address is the first one the proxy forwarded', () => {
+  assert.equal(clientAddressOf({ 'x-forwarded-for': '203.0.113.7, 172.18.0.2' }, '172.18.0.3'), '203.0.113.7');
+  assert.equal(clientAddressOf({}, '172.18.0.3'), '172.18.0.3', 'no header: the connection\'s own');
+});
+
+test('behind a proxy, the server speaks plain HTTP (the proxy does TLS)', { skip: !HAS_GAME && 'no game files' }, async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-proxied-'));
+  const cfg = path.join(dir, 'server.json');
+  fs.writeFileSync(cfg, JSON.stringify({ port: 0, bind: '127.0.0.1', password: 'pw', behind_proxy: true, download_maps: false }));
+  const srv = spawn(process.execPath, [path.join(REPO, 'src/server/index.ts'), '--config', cfg, '--data', dir], { stdio: ['pipe', 'pipe', 'pipe'] });
+  let out = '';
+  srv.stdout.on('data', (data) => { out += data; });
+  srv.stderr.on('data', (data) => { out += data; });
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  try {
+    for (let waited = 0; waited < 8000 && !/" on 127\.0\.0\.1:\d+/.test(out); waited += 50) await wait(50);
+    const port = out.match(/" on 127\.0\.0\.1:(\d+)/)?.[1];
+    assert.ok(port, out);
+    const status = await (await fetch(`http://127.0.0.1:${port}/status`)).json();
+    assert.equal(status.password, true);
+    assert.ok(!fs.existsSync(path.join(dir, 'cert.pem')), 'no certificate of its own');
+    assert.match(out, /behind a proxy/);
+  } finally {
+    srv.stdin.write('quit\n');
+    await wait(700);
+    srv.kill();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('the account module is built from how the game uses it', () => {

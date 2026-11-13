@@ -12,6 +12,8 @@ export const CONFIG_TEXT = Object.freeze({
   randomMaps: 'random_maps: a list of map IDs',
   cheatReports: (choices: readonly string[]) => `cheat_reports: ${choices.join(' or ')}`,
   welcome: 'welcome: text',
+  behindProxy: 'behind_proxy: true or false',
+  publicUrl: 'public_url: the address players open, like "https://pb2.example.com" (or "")',
   name: 'name: text, 1-40 characters',
   description: 'description: text, at most 200 characters',
   openToAnyone: 'no "password" and no "nicknames": anyone who can reach this address and port can log in',
@@ -90,6 +92,7 @@ export const GAME_LOG = Object.freeze({
 });
 
 export const SERVER_LOG = Object.freeze({
+  behindProxy: (publicUrl: string) => `Plain HTTP, behind a proxy that does TLS${publicUrl ? `: players open ${publicUrl}` : ''}`,
   sourcesUnavailable: (names: readonly string[]) => `map_sources: ${names.join(', ')} is not in this server (see docs/operations/private-server.md)`,
   usage: 'Usage: npm run server -- [--config file] [--game dir] [--data dir] [--verbose]',
   noConfig: (file: string) => `No ${file}: using the defaults (copy data/server/server.example.json to change them)`,

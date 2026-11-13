@@ -29,10 +29,12 @@ export const FEATURE = Object.freeze({
   clientSadburst: 'client_sadburst',
   gameSetup: 'game_setup',
   diagnostics: 'diagnostics',
+  webClient: 'web_client',
+  mapBot: 'map_bot',
 });
 export type FeatureId = typeof FEATURE[keyof typeof FEATURE];
 
-export const MODE = Object.freeze({ local: 'local', remote: 'remote', server: 'server' });
+export const MODE = Object.freeze({ local: 'local', remote: 'remote', server: 'server', lobby: 'lobby' });
 export type Mode = typeof MODE[keyof typeof MODE];
 export const ALL_MODES: readonly Mode[] = Object.freeze([MODE.local, MODE.remote, MODE.server]);
 

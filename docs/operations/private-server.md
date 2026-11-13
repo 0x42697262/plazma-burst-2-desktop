@@ -113,6 +113,8 @@ they happen. Players can be named by the start of their nickname.
 | `random_maps` | `[]` | your list of map IDs that `random approved` and `random approved in rotation` pick from (the example has one); empty = every map in `data/maps` |
 | `cheat_reports` | `"log"` | the game's anti-cheat reports: `"log"` them, or `"kick"` the player too |
 | `welcome` | `""` | a line each player gets in chat after logging in |
+| `behind_proxy` | `false` | `true`: plain HTTP, no certificate of its own, for a proxy (Caddy, Cloudflare) that does TLS in front of it; a player's address is the first in the proxy's `X-Forwarded-For`. Only for a server no one reaches but through the proxy |
+| `public_url` | `""` | the address players open, like `"https://pb2.example.com"`: the game's lobby connection is let in from there (besides plazmaburst2.com), and the web client ([web-client](../features/web-client.md)) is served for it |
 
 ## Maps
 

@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import http from 'node:http';
 import https from 'node:https';
 import crypto from 'node:crypto';
 import readline from 'node:readline';
@@ -24,6 +25,14 @@ import { loadConfig } from './config.ts';
 import { createMaps, httpMapSource, type MapSource } from './maps.ts';
 import type { MapSourceSetting } from './config.ts';
 import { GameServer } from './game.ts';
+import { clientAddressOf } from './proxy.ts';
+import { enabledServerFeatures } from './features.ts';
+import type { HttpHandler, ServerFeatureContext } from './feature-types.ts';
+import { CATALOG } from '#shared/features/catalog.ts';
+import { CLIENT, MODE } from '#shared/features/keys.ts';
+import { EDITION } from '#shared/editions/constants.ts';
+import { resolveFlags } from '#kernel/flags/resolve.ts';
+import { parseEnvironment } from '#kernel/config/environment.ts';
 
 type Arguments = { config: string; game: string; data: string; help?: boolean };
 type Tls = { cert: string; key: string; fingerprint: string };
@@ -144,7 +153,20 @@ function main(): void {
     process.exitCode = 1;
     return;
   }
-  const chosenSources = mapSourcesOf(config.download_maps ? config.map_sources : [], HTTP_SOURCES);
+  const environment = parseEnvironment(process.argv, process.env);
+  for (const problem of environment.problems) log.warn(problem);
+  const flags = resolveFlags({
+    catalog: CATALOG, fileOverrides: {}, fileUnknownIds: [], envToggles: environment.environment.featureToggles, mode: MODE.lobby, client: CLIENT.official, edition: EDITION,
+  });
+  for (const problem of flags.problems) log.warn(problem);
+  const features = enabledServerFeatures(flags.states);
+  const featureContext: ServerFeatureContext = Object.freeze({ config, gameDir: args.game, dataDir, names: found.found, log });
+  const sourceMakers: SourceMakers = Object.freeze(Object.fromEntries([
+    ...Object.entries(HTTP_SOURCES),
+    ...features.flatMap((feature) => Object.entries(feature.mapSources?.(featureContext) ?? {})),
+  ]));
+  const httpHandlers: HttpHandler[] = features.flatMap((feature) => (feature.http ? [feature.http(featureContext)] : []));
+  const chosenSources = mapSourcesOf(config.download_maps ? config.map_sources : [], sourceMakers);
   if (chosenSources.unavailable.length) {
     log.error(TEXT.sourcesUnavailable(chosenSources.unavailable));
     process.exitCode = 1;
@@ -154,25 +176,29 @@ function main(): void {
   const game = new GameServer({ gameDir: args.game, names: found.found, config, log, maps });
   game.onBans = (bans) => { writeBans(dataDir, bans); };
 
-  const tls = certificate(dataDir, log);
+  const tls = config.behind_proxy ? null : certificate(dataDir, log);
   const version = gameVersion(args.game);
   const status = (): string => JSON.stringify({
     name: config.name, description: config.description, version, password: !!config.password,
     players: game.online().length, max_players: config.max_players, matches: game.matches().length,
   });
-  const web = https.createServer({ cert: tls.cert, key: tls.key }, (request, response) => {
+  const answer = (request: http.IncomingMessage, response: http.ServerResponse): void => {
     if (request.method === GET_METHOD && request.url === STATUS_PATH) {
       const body = status();
       response.writeHead(OK, { [HEADER.contentType]: JSON_TYPE, [HEADER.contentLength]: Buffer.byteLength(body), [HEADER.cache]: NO_STORE });
       response.end(body);
       return;
     }
+    if (httpHandlers.some((handle) => handle(request, response))) return;
     response.writeHead(NOT_FOUND);
     response.end();
-  });
-  const io = new Server(web, { cors: { origin: ORIGIN, credentials: true }, serveClient: false });
+  };
+  const web = tls ? https.createServer({ cert: tls.cert, key: tls.key }, answer) : http.createServer(answer);
+  const origins = [ORIGIN, ...(config.public_url ? [new URL(config.public_url).origin] : [])];
+  const io = new Server(web, { cors: { origin: origins, credentials: true }, serveClient: false });
   io.on(CONNECTION_EVENT, (socket: Socket) => {
     try {
+      if (config.behind_proxy) socket.handshake.address = clientAddressOf(socket.handshake.headers, socket.handshake.address);
       game.accept(socket as unknown as Parameters<GameServer['accept']>[0]);
     } catch (error) {
       log.error(TEXT.connectionFailed((error as Error).message));
@@ -185,6 +211,10 @@ function main(): void {
   });
 
   function printJoin(): void {
+    if (!tls) {
+      log.info(TEXT.behindProxy(config.public_url));
+      return;
+    }
     const [first, ...others] = addresses();
     log.info(TEXT.joinTitle);
     log.info(TEXT.joinAddress(first, config.port));

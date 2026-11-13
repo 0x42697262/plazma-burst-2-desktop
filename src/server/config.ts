@@ -1,11 +1,12 @@
 import fs from 'node:fs';
-import { ADMINS_KEY, HTTP_URL, MAP_SOURCE, NAMED_MAP_SOURCES, CHEAT_ACTIONS, BYTE_ORDER_MARK, MAP_ID_SEPARATOR, MISSING_FILE, NAME_LISTS, NICKNAME, PRIVATE_KEY_PREFIX, TEXT_ENCODING } from './keys.ts';
+import { ADMINS_KEY, HTTP_URL, TRAILING_SLASHES, MAP_SOURCE, NAMED_MAP_SOURCES, CHEAT_ACTIONS, BYTE_ORDER_MARK, MAP_ID_SEPARATOR, MISSING_FILE, NAME_LISTS, NICKNAME, PRIVATE_KEY_PREFIX, TEXT_ENCODING } from './keys.ts';
 import { MAX_DESCRIPTION_LENGTH, MAX_NAME_LENGTH, MIN_ADMIN_SECRET, PORT_RANGE, SERVER_DEFAULTS } from './constants.ts';
 import { CONFIG_TEXT as TEXT } from './text.ts';
 
 export type ServerConfig = {
   name: string; description: string; port: number; bind: string; password: string; nicknames: string[]; admins: string[]; admin_secrets: Record<string, string>;
   max_players: number; skin: number; download_maps: boolean; map_sources: MapSourceSetting[]; random_maps: string[]; cheat_reports: string; welcome: string;
+  behind_proxy: boolean; public_url: string;
 };
 export type MapSourceSetting = Readonly<{ type: string; url?: string }>;
 export type CheckedServerConfig = { server: ServerConfig | null; problems: string[]; errors: string[] };
@@ -65,6 +66,9 @@ export function checkConfig(raw: unknown): CheckedServerConfig {
   if (!isMapList(randomMaps)) errors.push(TEXT.randomMaps);
   if (!CHEAT_ACTIONS.includes(given.cheat_reports as typeof CHEAT_ACTIONS[number])) errors.push(TEXT.cheatReports(CHEAT_ACTIONS));
   if (typeof given.welcome !== 'string') errors.push(TEXT.welcome);
+  if (typeof given.behind_proxy !== 'boolean') errors.push(TEXT.behindProxy);
+  const publicUrl = typeof given.public_url === 'string' ? given.public_url.replace(TRAILING_SLASHES, '') : null;
+  if (publicUrl === null || (publicUrl && !HTTP_URL.test(publicUrl))) errors.push(TEXT.publicUrl);
   const name = given.name;
   if (typeof name !== 'string' || !name.trim() || name.length > MAX_NAME_LENGTH) errors.push(TEXT.name);
   const description = given.description;
@@ -77,6 +81,7 @@ export function checkConfig(raw: unknown): CheckedServerConfig {
     nicknames: lists.nicknames ?? [],
     admins: lists.admins ?? [],
     admin_secrets: adminSecrets,
+    public_url: publicUrl ?? '',
     map_sources: hasValidSources ? mapSources.filter((source) => source !== null) : [],
     random_maps: isMapList(randomMaps) ? [...new Set(randomMaps.map((id) => id.trim()))] : [],
   };

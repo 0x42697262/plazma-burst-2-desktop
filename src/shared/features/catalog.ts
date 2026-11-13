@@ -9,6 +9,7 @@ type FeatureSpec = Partial<Omit<FeatureDefinition, 'id' | 'owner' | 'description
 
 const LOCAL_AND_SERVER: readonly Mode[] = Object.freeze([MODE.local, MODE.server]);
 const LOCAL_ONLY: readonly Mode[] = Object.freeze([MODE.local]);
+const LOBBY_SERVER_ONLY: readonly Mode[] = Object.freeze([MODE.lobby]);
 const ONLY_OFFICIAL: readonly ClientId[] = Object.freeze([CLIENT.sadburst]);
 const NEEDS_CONSOLE: readonly FeatureId[] = Object.freeze([FEATURE.devConsole]);
 
@@ -65,6 +66,8 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   define(FEATURE.clientSadburst),
   define(FEATURE.gameSetup),
   define(FEATURE.diagnostics, { capabilities: noNeeds(CAPABILITY.diagnostics) }),
+  define(FEATURE.webClient, { availableIn: LOBBY_SERVER_ONLY }),
+  define(FEATURE.mapBot, { availableIn: LOBBY_SERVER_ONLY }),
 ]);
 
 export const CATALOG_BY_ID: ReadonlyMap<FeatureId, FeatureDefinition> = new Map(CATALOG.map((definition) => [definition.id, definition]));

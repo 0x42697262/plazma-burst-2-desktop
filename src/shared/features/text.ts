@@ -31,4 +31,6 @@ export const FEATURE_DESCRIPTION: Readonly<Record<FeatureId, string>> = Object.f
   [FEATURE.p2pHost]: 'The player-hosted dedicated host (npm run p2p-host)',
   [FEATURE.gameSetup]: 'Downloading the game when it is missing (and, in an installed app, when a new version is out), and finding its names',
   [FEATURE.clientSadburst]: 'The Sad Burst 2 client (--sadburst)',
+  [FEATURE.webClient]: 'The lobby server (npm run server) serves the game to browsers, for this server only',
+  [FEATURE.mapBot]: 'The lobby server gets maps from the official lobby, with an account (map_sources: "official_lobby")',
 });

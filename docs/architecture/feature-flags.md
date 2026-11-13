@@ -12,7 +12,7 @@ Code: `src/shared/features/`,
 | `id` | Snake-case feature id, also the flag name |
 | `defaultOn` | Its state when nothing overrides it; defaults keep today's behavior |
 | `owner` | Who decides about the flag |
-| `availableIn` | The modes it can run in: `local`, `remote` (remote play), `server` (p2p host) |
+| `availableIn` | The modes it can run in: `local`, `remote` (remote play), `server` (p2p host), `lobby` (the lobby server, `npm run server`: its features are listed in `src/server/features.ts` and read `PB2_FEATURES` like the app) |
 | `requires` | Features that must be on for this one to be on |
 | `unavailableForClients` | Clients it is forced off for, e.g. hooks with the Sad Burst 2 client |
 | `locked` | It cannot be turned off (`console_core`) |
