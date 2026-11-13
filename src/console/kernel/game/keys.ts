@@ -21,7 +21,7 @@ export const NAME_KEYS = Object.freeze([
   'lobbyReady', 'spectatorSlot', 'chatToAll', 'chatTrace', 'stateHp', 'stateRespawns', 'stateAimX', 'stateAimY',
   'stateHeadHp', 'stateFaceHp', 'stateX', 'stateY', 'stateKiller', 'stateClock', 'stateVelScale', 'connClass',
   'serverFlag', 'setupClass', 'setupMethod', 'serverStats', 'webRequests', 'webRequest', 'mapUrl', 'mapKey',
-  'mapRequest', 'netTick', 'connClosed', 'socketConn', 'connDevice', 'deviceId', 'authLogin', 'authRecords',
+  'mapRequest', 'tickGuardBefore', 'tickGuardAfter', 'netTick', 'connClosed', 'socketConn', 'connDevice', 'deviceId', 'authLogin', 'authRecords',
   'authReport', 'authEndorse', 'authBan', 'authCheat', 'authLog', 'logDisconnect', 'logChat', 'logCreate',
   'logSpectate', 'logJoin', 'logLeave', 'matchEnd', 'matchExclude', 'connMatch', 'connListAt', 'matchSay', 'matchLoadMap',
   'serverLocation', 'lobbyHosts', 'lobbyPort', 'lockedArrays', 'mapText', 'mapChunks', 'levelStart', 'charOnDeath',
