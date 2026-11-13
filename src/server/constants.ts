@@ -15,6 +15,7 @@ export const SERVER_DEFAULTS = Object.freeze({
 });
 export const PORT_RANGE = Object.freeze({ min: 0, max: 65535 });
 export const MAX_NAME_LENGTH = 40;
+export const MIN_ADMIN_SECRET = 8;
 export const MAX_DESCRIPTION_LENGTH = 200;
 export const CERT_DAYS = 3650;
 export const CERT_KEY_SIZE = 2048;

@@ -30,6 +30,13 @@ test('server config: defaults, checks, the open-server warning', () => {
   assert.deepEqual(checked.errors, []);
   assert.deepEqual(checked.server?.nicknames, ['pal', 'bob']);
   assert.ok(checked.problems.some((problem) => /nope: unknown/.test(problem)));
+  const withSecrets = checkConfig({ admins: { Boss: 'a-long-secret' } });
+  assert.deepEqual(withSecrets.errors, []);
+  assert.deepEqual(withSecrets.server?.admins, ['boss']);
+  assert.deepEqual(withSecrets.server?.admin_secrets, { boss: 'a-long-secret' });
+  assert.ok(checkConfig({ admins: ['Me'] }).problems.some((problem) => /anyone who logs in as "me"/.test(problem)), 'an admin without a secret on a server without a password');
+  assert.ok(!checkConfig({ password: 'pw', admins: ['Me'] }).problems.some((problem) => /anyone who logs in as/.test(problem)), 'the server password guards them');
+  assert.ok(checkConfig({ admins: { Boss: 'short' } }).errors.some((error) => /admins: .*8/.test(error)), 'a short secret');
   const bad = checkConfig({ port: 70000, nicknames: ['<b>'], cheat_reports: 'ban', download_maps: 'yes', skin: -1 });
   for (const want of [/port/, /nicknames/, /cheat_reports/, /download_maps/, /skin/]) assert.ok(bad.errors.some((error) => want.test(error)), String(want));
 });
@@ -47,7 +54,7 @@ test('own server: the game\'s server code logs players in, lists, creates and jo
   fs.mkdirSync(path.join(dir, 'maps'));
   const cfg = path.join(dir, 'server.json');
   const map = fs.readdirSync(path.join(REPO, 'data', 'maps')).find((file) => file.endsWith('.xml'));
-  fs.writeFileSync(cfg, JSON.stringify({ port: 0, bind: '127.0.0.1', password: 'pw', welcome: 'hi there', download_maps: false, random_maps: map ? [map.slice(0, -4)] : [] }));
+  fs.writeFileSync(cfg, JSON.stringify({ port: 0, bind: '127.0.0.1', password: 'pw', admins: { Boss: 'the-boss-secret' }, welcome: 'hi there', download_maps: false, random_maps: map ? [map.slice(0, -4)] : [] }));
   const srv = spawn(process.execPath, [path.join(REPO, 'src/server/index.ts'), '--config', cfg, '--data', dir], { stdio: ['pipe', 'pipe', 'pipe'] });
   let out = '';
   srv.stdout.on('data', (data) => { out += data; });
@@ -101,6 +108,10 @@ test('own server: the game\'s server code logs players in, lists, creates and jo
     srv.stdin.write('ban bob\n');
     assert.ok(await until(() => bob.closed()), 'kicked');
     assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir, 'bans.json'), 'utf8')), ['bob']);
+    assert.deepEqual(await client().login('Boss', 'pw'), ['fail', 'Server: That nickname belongs to an admin: give its secret as the password']);
+    const boss = await client().login('boss', 'the-boss-secret');
+    assert.equal(boss[0], 'ok', 'an admin logs in with the secret instead of the server password');
+    assert.equal(JSON.parse(boss[1]).is_staff, true);
     const again = client();
     assert.deepEqual(await again.login('Bob', 'pw'), ['fail', 'Server: You are banned from this server']);
     assert.match(out, /\+ Alice logged in/);

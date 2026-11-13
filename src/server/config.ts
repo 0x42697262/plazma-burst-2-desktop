@@ -1,10 +1,10 @@
 import fs from 'node:fs';
-import { CHEAT_ACTIONS, BYTE_ORDER_MARK, MAP_ID_SEPARATOR, MISSING_FILE, NAME_LISTS, NICKNAME, PRIVATE_KEY_PREFIX, TEXT_ENCODING } from './keys.ts';
-import { MAX_DESCRIPTION_LENGTH, MAX_NAME_LENGTH, PORT_RANGE, SERVER_DEFAULTS } from './constants.ts';
+import { ADMINS_KEY, CHEAT_ACTIONS, BYTE_ORDER_MARK, MAP_ID_SEPARATOR, MISSING_FILE, NAME_LISTS, NICKNAME, PRIVATE_KEY_PREFIX, TEXT_ENCODING } from './keys.ts';
+import { MAX_DESCRIPTION_LENGTH, MAX_NAME_LENGTH, MIN_ADMIN_SECRET, PORT_RANGE, SERVER_DEFAULTS } from './constants.ts';
 import { CONFIG_TEXT as TEXT } from './text.ts';
 
 export type ServerConfig = {
-  name: string; description: string; port: number; bind: string; password: string; nicknames: string[]; admins: string[];
+  name: string; description: string; port: number; bind: string; password: string; nicknames: string[]; admins: string[]; admin_secrets: Record<string, string>;
   max_players: number; skin: number; download_maps: boolean; random_maps: string[]; cheat_reports: string; welcome: string;
 };
 export type CheckedServerConfig = { server: ServerConfig | null; problems: string[]; errors: string[] };
@@ -14,6 +14,9 @@ const isPlainObject = (value: unknown): value is Raw => !!value && typeof value 
 const isNameList = (value: unknown): value is string[] => Array.isArray(value) && value.every((name) => typeof name === 'string' && NICKNAME.test(name.trim()));
 const isMapList = (value: unknown): value is string[] => Array.isArray(value) && value.every((id) => typeof id === 'string' && !!id.trim() && !id.includes(MAP_ID_SEPARATOR));
 const uniqueLowered = (names: readonly string[]): string[] => [...new Set(names.map((name) => name.trim().toLowerCase()))];
+const isSecretMap = (value: unknown): value is Record<string, string> => isPlainObject(value)
+  && Object.entries(value).every(([name, secret]) => NICKNAME.test(name.trim()) && typeof secret === 'string' && secret.length >= MIN_ADMIN_SECRET);
+const loweredSecrets = (secrets: Record<string, string>): Record<string, string> => Object.fromEntries(Object.entries(secrets).map(([name, secret]) => [name.trim().toLowerCase(), secret]));
 
 export function checkConfig(raw: unknown): CheckedServerConfig {
   const problems: string[] = [];
@@ -33,8 +36,14 @@ export function checkConfig(raw: unknown): CheckedServerConfig {
   if (typeof given.bind !== 'string' || !given.bind) errors.push(TEXT.bind);
   if (typeof given.password !== 'string') errors.push(TEXT.password);
   const lists: Record<string, string[]> = {};
+  let adminSecrets: Record<string, string> = {};
+  if (isSecretMap(given.admins)) {
+    adminSecrets = loweredSecrets(given.admins);
+    given.admins = Object.keys(adminSecrets);
+  } else if (isPlainObject(given.admins)) errors.push(TEXT.adminSecrets(MIN_ADMIN_SECRET));
   for (const key of NAME_LISTS) {
     const names = given[key];
+    if (key === ADMINS_KEY && isPlainObject(names)) continue;
     if (isNameList(names)) lists[key] = uniqueLowered(names);
     else errors.push(TEXT.nameList(key));
   }
@@ -58,9 +67,12 @@ export function checkConfig(raw: unknown): CheckedServerConfig {
     skin,
     nicknames: lists.nicknames ?? [],
     admins: lists.admins ?? [],
+    admin_secrets: adminSecrets,
     random_maps: isMapList(randomMaps) ? [...new Set(randomMaps.map((id) => id.trim()))] : [],
   };
   if (!errors.length && !server.password && !server.nicknames.length) problems.push(TEXT.openToAnyone);
+  const unguardedAdmins = server.password ? [] : server.admins.filter((admin) => !Object.hasOwn(adminSecrets, admin));
+  for (const admin of unguardedAdmins) problems.push(TEXT.adminWithoutSecret(admin));
   return { server, problems, errors };
 }
 

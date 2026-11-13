@@ -14,6 +14,8 @@ export const CONFIG_TEXT = Object.freeze({
   name: 'name: text, 1-40 characters',
   description: 'description: text, at most 200 characters',
   openToAnyone: 'no "password" and no "nicknames": anyone who can reach this address and port can log in',
+  adminSecrets: (min: number) => `admins: a list of nicknames, or { "nickname": "secret" } with secrets of at least ${min} characters`,
+  adminWithoutSecret: (admin: string) => `admins: no "password" and no secret for "${admin}": anyone who logs in as "${admin}" is an admin. Give admins secrets: { "${admin}": "secret" }`,
   unreadable: (file: string, message: string) => `${file}: ${message}`,
   notJson: (file: string, message: string) => `${file} is not valid JSON: ${message}`,
 });
@@ -24,6 +26,7 @@ export const MAPS_TEXT = Object.freeze({
 
 export const GAME_TEXT = Object.freeze({
   wrongPassword: 'Server: Wrong server password (Servers > Server list > Edit)',
+  adminNeedsSecret: 'Server: That nickname belongs to an admin: give its secret as the password',
   needsNickname: 'Server: This server needs a nickname (Servers > Server list > Edit)',
   badNickname: (max: number) => `Server: Nicknames are 1-${max} letters, digits, spaces and _ . -`,
   notListed: 'Server: This nickname is not on the server\'s list',

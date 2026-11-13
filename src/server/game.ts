@@ -168,12 +168,14 @@ export class GameServer {
 
   login(connection: Connection, login: string, password: string): string | null {
     const config = this.config;
-    if (config.password && password !== config.password) return TEXT.wrongPassword;
     const nickname = login.trim();
+    const key = nickname.toLowerCase();
+    const adminSecret = Object.hasOwn(config.admin_secrets, key) ? config.admin_secrets[key] : undefined;
+    if (adminSecret !== undefined && password !== adminSecret) return TEXT.adminNeedsSecret;
+    if (adminSecret === undefined && config.password && password !== config.password) return TEXT.wrongPassword;
     if (!nickname || nickname === GUEST_LOGIN) return TEXT.needsNickname;
     if (nickname.length > MAX_NICKNAME || !NICKNAME_CHARACTERS.test(nickname)) return TEXT.badNickname(MAX_NICKNAME);
-    const key = nickname.toLowerCase();
-    if (config.nicknames.length && !config.nicknames.includes(key)) return TEXT.notListed;
+    if (adminSecret === undefined && config.nicknames.length && !config.nicknames.includes(key)) return TEXT.notListed;
     if (this.bans.has(key) || (connection.ip && this.bans.has(connection.ip))) return TEXT.banned;
     if (this.online().some((player) => player.nickname.toLowerCase() === key)) return TEXT.alreadyPlaying;
     if (this.online().length >= config.max_players) return TEXT.full;
