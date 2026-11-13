@@ -1,0 +1,9 @@
+export const MAX_FORM_BYTES = 4096;
+export const MAX_NICKNAME = 20;
+export const MAX_PASSWORD = 200;
+export const SEE_OTHER = 303;
+export const OK = 200;
+export const BAD_REQUEST = 400;
+export const NOT_FOUND = 404;
+export const PAYLOAD_TOO_LARGE = 413;
+export const UNAVAILABLE = 503;

@@ -11,7 +11,7 @@ import { parseLogLevel } from '#kernel/config/log-level.ts';
 import { CLIENT_PATHS, REPO_ROOT, SERVER_DATA_DIR } from '#kernel/config/paths.ts';
 import { NOTHING_MOVED, moveLegacyData, tellMoveReport } from '#kernel/data/move.ts';
 import { makeUnpacker } from '#kernel/maps/map-text.ts';
-import { findNames } from '#tools/find-names/find-names.ts';
+import { findNames, render as renderNames } from '#tools/find-names/find-names.ts';
 import selfsigned from 'selfsigned';
 import { stringOf } from '#kernel/text/text-of.ts';
 import { BANS_INDENT, CERT_DAYS, CERT_KEY_SIZE, CLOSE_DELAY_MS, KEY_FILE_MODE, MATCH_NUMBER_WIDTH, NICKNAME_WIDTH, NOT_FOUND, OK, ADDRESS_WIDTH, PING_WIDTH } from './constants.ts';
@@ -168,7 +168,7 @@ function main(): void {
   });
   for (const problem of flags.problems) log.warn(problem);
   const features = enabledServerFeatures(flags.states);
-  const featureContext: ServerFeatureContext = Object.freeze({ config, gameDir: args.game, dataDir, names: found.found, log });
+  const featureContext: ServerFeatureContext = Object.freeze({ config, gameDir: args.game, dataDir, names: found.found, namesScript: renderNames(found, gameVersion(args.game) ?? ''), log });
   const sourceMakers: SourceMakers = Object.freeze(Object.fromEntries([
     ...Object.entries(HTTP_SOURCES),
     ...features.flatMap((feature) => Object.entries(feature.mapSources?.(featureContext) ?? {})),

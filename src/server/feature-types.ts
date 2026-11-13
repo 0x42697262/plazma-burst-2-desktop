@@ -9,6 +9,7 @@ export type ServerFeatureContext = Readonly<{
   gameDir: string;
   dataDir: string;
   names: Readonly<Record<string, string>>;
+  namesScript: string;
   log: Logger;
 }>;
 
