@@ -12,6 +12,7 @@
 - [0004 Versioned local files](adr/0004-versioned-local-files.md)
 - [0005 Editions, and a page core apart from the dev console](adr/0005-editions-and-page-core.md)
 - [0006 Capabilities: one flag per command, inside feature folders](adr/0006-capabilities.md)
+- [0007 Server editions: a lobby server and its web client, released as one bundle](adr/0007-server-editions.md)
 
 ## Features
 - [hooks.md](features/hooks.md): changing the game's scripts as they are served
@@ -22,6 +23,8 @@
 - [dev-console.md](features/dev-console.md): `dev_console` and `console_core`, the console itself
 - [fingerprint.md](features/fingerprint.md): `fingerprint`, keeping and running the main server's fingerprinter
 - [game-setup.md](features/game-setup.md): `game_setup`, downloading and updating the game
+- [map-bot.md](features/map-bot.md): `map_bot`, the lobby server's maps from the official lobby
+- [web-client.md](features/web-client.md): `web_client`, the game in a browser for this server only
 - [game-chat.md](features/game-chat.md): `game_chat`, the game's own chat commands
 - [guns.md](features/guns.md): `guns`, the gun list, give and drop
 - [js-eval.md](features/js-eval.md): `js_eval`, running JavaScript in the page
@@ -49,6 +52,7 @@
 - [running.md](operations/running.md): start modes, settings, checks
 - [editions.md](operations/editions.md): building apps with different features (`npm run build -- --edition <name>`)
 - [releases.md](operations/releases.md): packaging an edition for Linux and Windows (`npm run release -- --edition <name>`)
+- [server-release.md](operations/server-release.md): a server edition on a cloud machine, with Docker, Caddy and Cloudflare
 - [find-names.md](operations/find-names.md): how the obfuscated game names are found (`npm run find-names`)
 - [private-server.md](operations/private-server.md): running your own server (`npm run server`)
 - [p2p-host.md](operations/p2p-host.md): the player-hosted dedicated host (`npm run p2p-host`)

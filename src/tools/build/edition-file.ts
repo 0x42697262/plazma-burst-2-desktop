@@ -9,6 +9,7 @@ import { EDITIONS_DIR, REPO_ROOT } from '#kernel/config/paths.ts';
 import { resolveEdition, type EditionList } from '#kernel/editions/resolve.ts';
 import { APP_ID_PATTERN, EDITION_FILE_EXTENSION, EDITION_NAME_PATTERN, ONE_OFF_EDITION_NAME } from './constants.ts';
 import { TEXT } from './text.ts';
+import { isServerEditionFile } from './server-edition.ts';
 import { checkDefaults, type FingerprintOf, type ListedDefaults } from './edition-defaults.ts';
 import type { EditionDefaults } from '#shared/editions/types.ts';
 
@@ -61,8 +62,12 @@ export function readEdition(name: string, folder: string = EDITIONS_DIR): BuiltE
 export const oneOffEdition = (features: readonly string[]): BuiltEdition =>
   withFeatures({ name: ONE_OFF_EDITION_NAME, title: TEXT.oneOffTitle, appId: TEXT.oneOffAppId }, features);
 
-export const editionNames = (folder: string = EDITIONS_DIR): string[] =>
+const editionFileNames = (folder: string): string[] =>
   fs.readdirSync(folder).filter((file) => file.endsWith(EDITION_FILE_EXTENSION)).map((file) => file.slice(0, -EDITION_FILE_EXTENSION.length)).sort();
+
+export const editionNames = (folder: string = EDITIONS_DIR): string[] => editionFileNames(folder).filter((name) => !isServerEditionFile(name, folder));
+
+export const serverEditionNames = (folder: string = EDITIONS_DIR): string[] => editionFileNames(folder).filter((name) => isServerEditionFile(name, folder));
 
 export type ReadyEdition = Readonly<{ edition: Edition; obfuscate: boolean; defaults: EditionDefaults; missing: readonly string[]; problems: readonly string[] }>;
 

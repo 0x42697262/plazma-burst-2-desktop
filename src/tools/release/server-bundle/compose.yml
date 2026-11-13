@@ -1,0 +1,32 @@
+services:
+  pb2:
+    build: .
+    restart: unless-stopped
+    stdin_open: true
+    environment:
+      PB2_MAP_BOT_ACCOUNT: /run/secrets/map_bot_account
+    secrets:
+      - map_bot_account
+    volumes:
+      - ./game:/app/game:ro
+      - ./data:/app/data
+    expose:
+      - "2053"
+  caddy:
+    image: caddy:2.8.4
+    restart: unless-stopped
+    ports:
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./certs:/certs:ro
+      - caddy_data:/data
+    depends_on:
+      - pb2
+
+secrets:
+  map_bot_account:
+    file: ./secrets/map-bot-account.json
+
+volumes:
+  caddy_data:

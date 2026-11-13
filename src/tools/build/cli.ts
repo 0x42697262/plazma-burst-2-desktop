@@ -5,6 +5,7 @@ import { EDITION_FLAG, FEATURES_FLAG, FEATURE_LIST_SEPARATOR, FAILED_EXIT_CODE, 
 import { oneOffEdition, readEdition, readyEdition, type BuiltEdition } from './edition-file.ts';
 import { createProbe } from '#features/server_list/adapters/probe.ts';
 import { TEXT } from './text.ts';
+import { buildServerEdition, isServerEditionFile, readServerEdition } from './server-edition.ts';
 
 const valueAfter = (flag: string): string | null => {
   const at = process.argv.indexOf(flag);
@@ -22,6 +23,19 @@ async function main(): Promise<void> {
   if (process.argv.includes(WATCH_FLAG)) {
     await watchAll();
     console.log(TEXT.watching);
+    return;
+  }
+  const serverEditionName = valueAfter(EDITION_FLAG);
+  if (serverEditionName !== null && isServerEditionFile(serverEditionName)) {
+    const serverEdition = readServerEdition(serverEditionName);
+    if (serverEdition.problems.length) {
+      console.error(TEXT.editionProblems(serverEdition.name, serverEdition.problems));
+      process.exitCode = FAILED_EXIT_CODE;
+      return;
+    }
+    console.log(TEXT.serverEdition(serverEdition.name, serverEdition.server.features ?? [], serverEdition.web.features ?? []));
+    const { serverBundle, webPage } = await buildServerEdition(serverEdition, REPO_ROOT);
+    for (const output of [serverBundle, webPage]) console.log(TEXT.built(path.relative(REPO_ROOT, output)));
     return;
   }
   const built = chosenEdition();

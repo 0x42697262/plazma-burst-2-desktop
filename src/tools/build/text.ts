@@ -26,6 +26,10 @@ export const TEXT = Object.freeze({
   settingNeeds: (key: string, id: string) => `defaults: setting ${key} needs ${id}: add "${id}" to the edition`,
   badSetting: (key: string, message: string) => `defaults: setting ${key}: ${message}`,
   stillUsed: (file: string, name: string) => `${file}: ${name} is left out of this edition but still used`,
+  notLobbyFeature: (id: string, lobbyFeatures: readonly string[]) => `server: "${id}" is not a lobby server feature (they are: ${lobbyFeatures.join(', ')})`,
+  notWebFeature: (id: string) => `web: "${id}" has no place in the web client`,
+  badServerConfig: (errors: readonly string[]) => `config: ${errors.join('; ')}`,
+  serverEdition: (name: string, server: readonly string[], web: readonly string[]) => `Server edition "${name}"\n  server: ${server.join(', ') || '(none)'}\n  web: ${web.join(', ') || '(none)'}`,
   oneOffTitle: 'Plazma Burst 2 (custom)',
   oneOffAppId: 'io.github.plazma-burst-2-desktop.custom',
 });

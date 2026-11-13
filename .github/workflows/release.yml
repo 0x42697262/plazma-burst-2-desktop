@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - id: list
-        run: echo "list=$(node -e "const fs = require('fs'); console.log(JSON.stringify(fs.readdirSync('editions').filter((file) => file.endsWith('.json')).map((file) => file.slice(0, -5)).filter((name) => name !== 'dev')))")" >> "$GITHUB_OUTPUT"
+        run: echo "list=$(node -e "const fs = require('fs'); console.log(JSON.stringify(fs.readdirSync('editions').filter((file) => file.endsWith('.json')).map((file) => file.slice(0, -5)).filter((name) => name !== 'dev').filter((name) => JSON.parse(fs.readFileSync('editions/' + name + '.json', 'utf8')).kind !== 'server')))")" >> "$GITHUB_OUTPUT"
 
   package:
     needs: editions

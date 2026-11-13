@@ -15,7 +15,7 @@ credentials, saved maps, logs, the generated `names.js` and `opcodes.js`, and in
 | `src/page/` | The page core: what every game page needs to play safely (the lobby task guard, the private-server join client), the game-ready wait and the report channel | `shared`, `kernel`, the console's game adapter (`src/console/kernel/game/`, `net/`), the page side of features |
 | `src/console/` | The in-page dev console: the composition root and its kernel (registry, dispatch, UI, store, game adapter) | `shared`, `kernel` (browser-safe parts), the console side of features |
 | `src/server/` | The private lobby server (`npm run server`): config, maps, the game server's stand-ins, TLS and the terminal; its feature list `features.ts` | `shared`, `kernel`, `tools/find-names`, the server side of features (only through `features.ts`) |
-| `src/tools/` | Command-line tools: build, fetch-game, find-names, fetch-opcodes, redact-netlogs, smoke, the ESLint rules | `shared`, `kernel`, `features` |
+| `src/tools/` | Command-line tools: build, fetch-game, find-names, fetch-opcodes, redact-netlogs, smoke, the ESLint rules | `shared`, `kernel`, `features`, `server` (its config check, for server editions) |
 | `src/features/<id>/` | One feature: `console.ts`, `wrapper.ts`, `server.ts` (a lobby server part), `domain/`, `services/`, `adapters/`, `entry/`, `constants.ts`, `text.ts`, `events.ts`, `keys.ts`, tests | `shared`, `kernel`, the console or wrapper kernel of its side, the lobby server's feature types and maps (`#server/feature-types.ts`, `#server/maps.ts`), other features only through their `index.ts` |
 
 ## Inside a feature

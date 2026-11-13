@@ -219,6 +219,37 @@ replaces that module (`packagedRootPlugin`): the code is next to the bundle, and
 the app is installed (`app.isPackaged`) the user's files (`data/`, `game/`, `hooks/`) go
 to Electron's per-user folder for the app, which differs per edition's title.
 
+## Server editions
+
+An edition file with `"kind": "server"` is a server edition: a lobby server and the web
+client it serves, released as one bundle ([ADR 0007](../adr/0007-server-editions.md),
+[server-release](server-release.md)). An example (not one of the files):
+
+```json
+{
+  "name": "example-server",
+  "kind": "server",
+  "title": "Example Server",
+  "include_game": false,
+  "server": { "features": ["map_bot", "web_client"] },
+  "web": { "features": ["server_list", "lobby_task_guard", "cert_pinning"] },
+  "config": { "name": "Example", "behind_proxy": true, "public_url": "https://pb2.example.com", "map_sources": ["official_lobby"] }
+}
+```
+
+| Field | What |
+|---|---|
+| `kind` | `"server"` |
+| `include_game` | `true` fetches the game into the bundle at release time; `false` leaves `game/` to be copied |
+| `server.features` | the lobby server's features (catalog mode `lobby`: `map_bot`, `web_client`) |
+| `web.features` | the web client's page core: the lobby task guard and the join client (`server_list`, which needs `lobby_task_guard` and `cert_pinning`); never the dev console |
+| `config` | the bundle's `server.example.json`, checked like `data/server/server.json`. A release needs `public_url`, here or from `npm run release -- --edition <name> --public-url <url>`, which keeps the domain out of the repository |
+
+`npm run build -- --edition <name>` builds its two parts into `dist/server/server.cjs` and
+`dist/web/page/` (what `npm run server` serves to browsers); `npm run release -- --edition
+<name>` makes the bundle. Server editions are not app editions: `editionNames()` and the
+release workflow leave them out.
+
 ## Tests
 
 `src/tools/build/editions.test.ts` builds every file in `editions/`, plus the smallest

@@ -1,9 +1,15 @@
 export const TEXT = Object.freeze({
-  usage: 'Usage: npm run release -- --edition <name> [--linux] [--windows]\n  Builds the edition (editions/<name>.json) and packages it into release/<name>/.\n  Without --linux or --windows, packages for the system it runs on.',
+  usage: 'Usage: npm run release -- --edition <name> [--linux] [--windows] [--public-url <url>]\n  Builds the edition (editions/<name>.json) and packages it into release/<name>/.\n  Without --linux or --windows, packages for the system it runs on.\n  --public-url: for a server edition, the address players open (instead of its config\'s public_url).',
   noEdition: 'Which edition? --edition <name> (the files in editions/)',
   everyFeature: 'This edition has every feature (the dev console, hooks, js …). Release it anyway? It is meant for development.',
   building: (name: string, features: readonly string[]) => `Edition "${name}": ${features.join(', ')}`,
   packaging: (platforms: readonly string[], folder: string) => `Packaging for ${platforms.join(', ')} into ${folder}`,
   done: (files: readonly string[]) => `Done:\n  ${files.join('\n  ')}`,
   unknownArgument: (arg: string) => `unknown argument: ${arg}`,
+  needsPublicUrl: 'a server release needs the address players open: --public-url https://pb2.example.com (or "public_url" in the edition\'s config)',
+  gameIncluded: (version: string) => `the game is in game/ (${version}, fetched for this release)`,
+  gameToCopy: 'copy the game here: `npm run fetch-game` in the repository fetches it into its game/',
+  fetchingGame: (version: string) => `Fetching the game (${version}) into the bundle`,
+  gameNamesMissing: (missing: readonly string[]) => `the fetched game misses names: ${missing.join(', ')}`,
+  serverDone: (folder: string, archive: string) => `Done:\n  ${folder}/\n  ${archive}\n  Copy the archive to the server and follow its README.md.`,
 });

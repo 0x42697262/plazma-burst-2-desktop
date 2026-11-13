@@ -10,16 +10,19 @@ import { FAILED_EXIT_CODE, FIRST_USER_ARGUMENT, JSON_INDENT } from './constants.
 import { ARG, DIST_FOLDER, ELECTRON_PACKAGE, LINE_JOIN, NEVER_PUBLISH, PACKAGE_FILE, PLATFORM, RELEASE_FOLDER, SOURCE_MAP_SUFFIX, STAGING_FOLDER, type Platform } from './keys.ts';
 import { TEXT } from './text.ts';
 import { TEXT as BUILD_TEXT } from '#tools/build/text.ts';
+import { isServerEditionFile, readServerEdition, withPublicUrl } from '#tools/build/server-edition.ts';
+import { releaseServerEdition } from './server-release.ts';
 
-type Options = { edition: string | null; platforms: Platform[]; help: boolean };
+type Options = { edition: string | null; platforms: Platform[]; publicUrl: string | null; help: boolean };
 
 function parseArgs(args: readonly string[]): Options {
-  const options: Options = { edition: null, platforms: [], help: false };
+  const options: Options = { edition: null, platforms: [], publicUrl: null, help: false };
   for (let index = 0; index < args.length; index++) {
     const arg = args[index] ?? '';
     if (arg === ARG.edition) options.edition = args[++index] ?? null;
     else if (arg === ARG.linux) options.platforms.push(PLATFORM.linux);
     else if (arg === ARG.windows) options.platforms.push(PLATFORM.windows);
+    else if (arg === ARG.publicUrl) options.publicUrl = args[++index] ?? null;
     else if (arg === ARG.help) options.help = true;
     else throw new Error(TEXT.unknownArgument(arg));
   }
@@ -39,6 +42,14 @@ async function main(): Promise<void> {
     return;
   }
   if (!options.edition) throw new Error(TEXT.noEdition);
+  if (isServerEditionFile(options.edition)) {
+    const serverEdition = withPublicUrl(readServerEdition(options.edition), options.publicUrl);
+    if (serverEdition.problems.length) throw new Error(serverEdition.problems.join(LINE_JOIN));
+    console.log(BUILD_TEXT.serverEdition(serverEdition.name, serverEdition.server.features ?? [], serverEdition.web.features ?? []));
+    const { folder, archive } = await releaseServerEdition(serverEdition);
+    console.log(TEXT.serverDone(path.relative(REPO_ROOT, folder), path.relative(REPO_ROOT, archive)));
+    return;
+  }
   const { edition, obfuscate, defaults, problems } = await readyEdition(readEdition(options.edition), (host, port) => createProbe().fingerprint(host, port));
   if (problems.length) throw new Error(problems.join(LINE_JOIN));
   if (edition.features === null) console.warn(TEXT.everyFeature);

@@ -37,6 +37,20 @@ export const WRAPPER_ENTRY = 'src/wrapper/main.ts';
 export const WRAPPER_BUNDLE_FILE = 'main.cjs';
 export const WRAPPER_TARGET = 'node24';
 export const ROOT_PLUGIN_NAME = 'packaged-root';
+export const SERVER_ROOT_PLUGIN_NAME = 'server-root';
+export const SERVER_ROOT_MODULE = [
+  "import path from 'node:path';",
+  "export const APP_ROOT = path.join(__dirname, '..', '..');",
+  'export const USER_ROOT = APP_ROOT;',
+].join('\n');
+export const SERVER_EDITION_KIND = 'server';
+export const FILE_ENCODING = 'utf8';
+export const SERVER_ENTRY = 'src/server/index.ts';
+export const SERVER_BUNDLE_PATH: readonly string[] = Object.freeze(['dist', 'server', 'server.cjs']);
+export const WEB_PAGE_PATH: readonly string[] = Object.freeze(['dist', 'web', 'page']);
+export const SERVER_TARGET = 'node24';
+export const OPTIONAL_NATIVE_MODULES: readonly string[] = Object.freeze(['bufferutil', 'utf-8-validate']);
+export const serverAppId = (name: string): string => `io.github.plazma-burst-2-desktop.${name}`;
 export const CAPABILITY_IMPORT = /^import \{ (\w+) \} from '\.\/capabilities\/(\w+)\/[^']+';$/;
 export const CAPABILITY_LIST_FILE = 'capabilities.ts';
 export const FEATURES_FOLDER: readonly string[] = Object.freeze(['src', 'features']);
