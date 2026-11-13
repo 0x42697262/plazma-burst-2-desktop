@@ -6,7 +6,6 @@ const GAME_SCRIPTS_IN_LOAD_ORDER = ['_strings.js', 'scripts/libs/socket.io.min.j
 const CONNECTION_SCRIPT = 'scripts/connection.js';
 const TICK_MS = 16;
 const CHAT_TO_EVERYONE_NOT_TEAM = 1;
-const ANTI_CHEAT_GUARD_PAIR_NOTHING_TO_GUARD_HERE = ['$pМоcT', '$oеeес'];
 const ignored = () => undefined;
 
 export type GameClient = {
@@ -58,7 +57,7 @@ export function createClient({ gameDir, names, url }: { gameDir: string; names: 
   };
   Object.assign(context, whatErrorsJsGivesThePageSoACaughtErrorDoesNotStopTheTick);
   run('globalThis.HUD = new Proxy(function () {}, { get: () => globalThis.HUD, apply: () => undefined });');
-  for (const guard of ANTI_CHEAT_GUARD_PAIR_NOTHING_TO_GUARD_HERE) context[guard] = ignored;
+  for (const levelCheckThatReturnsAtOnceWithNoLevel of [names.tickGuardBefore, names.tickGuardAfter]) context[levelCheckThatReturnsAtOnceWithNoLevel] = ignored;
   const setUpTheDigitsOfEncodedNumbers = `${names.setupClass}.${names.setupMethod}(null, null)`;
   run(setUpTheDigitsOfEncodedNumbers);
   const net = run(names.net);

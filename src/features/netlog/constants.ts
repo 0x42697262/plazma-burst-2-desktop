@@ -19,9 +19,6 @@ export const SIZE_DECIMALS = 1;
 export const SECONDS_DECIMALS = 1;
 export const MILLISECONDS_PER_SECOND = 1000;
 export const HIT_PLAYER_SENT_PARTS = 15;
-export const FIRST_RELIABLE_FIELD = 2;
-export const RELIABLE_FIELD_STRIDE = 2;
-export const DECIMAL_RADIX = 10;
 export const BINARY_RADIX = 2;
 
 export const KNOWN_STATE_LAYOUT = Object.freeze({ x: 1, y: 2, hp: 6, aimX: 7, aimY: 8, headHp: 12, faceHp: 13, killer: 16, clock: 19, respawns: 20 });

@@ -7,3 +7,6 @@ export const PART_CHARS_MAX = 2000;
 export const LAST_CONTROL_CODE = 0x1f;
 export const DELETE_CODE = 0x7f;
 export const JSON_START = /^[[{]/;
+export const FIRST_RELIABLE_FIELD = 2;
+export const RELIABLE_FIELD_STRIDE = 2;
+export const DECIMAL_RADIX = 10;

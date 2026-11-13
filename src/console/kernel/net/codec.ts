@@ -1,6 +1,6 @@
 import {
-  DELETE_CODE, LAST_CONTROL_CODE, ESCAPED_FIELD_SEPARATOR, ESCAPED_PART_SEPARATOR, FIELD_SEPARATOR, JSON_START, NEGATIVE_SIGN,
-  PART_CHARS_MAX, PART_SEPARATOR,
+  DECIMAL_RADIX, DELETE_CODE, FIRST_RELIABLE_FIELD, LAST_CONTROL_CODE, ESCAPED_FIELD_SEPARATOR, ESCAPED_PART_SEPARATOR, FIELD_SEPARATOR, JSON_START, NEGATIVE_SIGN,
+  PART_CHARS_MAX, PART_SEPARATOR, RELIABLE_FIELD_STRIDE,
 } from './constants.ts';
 import { TEXT } from './text.ts';
 
@@ -15,6 +15,19 @@ export const splitParts = (data: string): string[] => data.split(PART_SEPARATOR)
 export const escField = (text: string): string => text.split(FIELD_SEPARATOR).join(ESCAPED_FIELD_SEPARATOR);
 export const escPart = (text: string): string => escField(text).split(PART_SEPARATOR).join(ESCAPED_PART_SEPARATOR);
 export const joinParts = (parts: readonly string[]): string => parts.map(escPart).join(PART_SEPARATOR);
+
+export type ReliableEntry = { uid: number; data: string; size: number };
+export type Packet = { ack: number; state: string; stateSize: number; rel: ReliableEntry[] };
+
+export function parsePacket(text: string): Packet {
+  const raw = text.split(FIELD);
+  const fields = raw.map(unescField);
+  const rel: ReliableEntry[] = [];
+  for (let index = FIRST_RELIABLE_FIELD; index + 1 < fields.length; index += RELIABLE_FIELD_STRIDE) {
+    rel.push({ uid: parseInt(fields[index] ?? '', DECIMAL_RADIX), data: fields[index + 1] ?? '', size: (raw[index + 1] ?? '').length });
+  }
+  return { ack: parseInt(fields[0] ?? '', DECIMAL_RADIX), state: fields[1] || '', stateSize: (raw[1] || '').length, rel };
+}
 
 export function decodeNumber(text: unknown, digits: string): number | null {
   if (!digits || typeof text !== 'string' || !text) return null;
