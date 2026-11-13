@@ -10,3 +10,10 @@
 		header_up X-Forwarded-For {http.request.header.CF-Connecting-IP}
 	}
 }
+
+:2053 {
+	tls /certs/origin.pem /certs/origin.key
+	reverse_proxy pb2:2053 {
+		header_up X-Forwarded-For {remote_host}
+	}
+}

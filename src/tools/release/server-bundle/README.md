@@ -25,12 +25,19 @@ docker compose logs -f pb2
 The server's terminal (`help`, `who`, `kick`, `say`, …): `docker attach $(docker compose ps -q pb2)`;
 leave it with Ctrl-P Ctrl-Q.
 
+## The desktop app
+Browsers come through Cloudflare on 443. The desktop app (server list > Add server)
+pins the server's certificate, which Cloudflare's own would break, so it connects to this
+machine directly on TCP 2053: address `<this machine's Elastic IP>:2053`, fingerprint
+"Get from server". The fingerprint is that of `certs/origin.pem`: when you replace the
+certificate, players edit the server and get the new one.
+
 ## Cloudflare and the firewall
 - DNS: `{{domain}}` → this machine's Elastic IP, proxied (orange cloud).
 - SSL/TLS: Full (strict).
-- Caddy answers only Cloudflare's addresses. Let the EC2 security group allow TCP 443
-  from Cloudflare's ranges only (https://www.cloudflare.com/ips/), and SSH from your own
-  address. When Cloudflare's ranges change, update both, and the list in `Caddyfile`.
+- Caddy answers only Cloudflare's addresses on 443. Let the EC2 security group allow TCP
+  443 from Cloudflare's ranges only (https://www.cloudflare.com/ips/), TCP 2053 from
+  anywhere (the desktop app), and SSH from your own address. When Cloudflare's ranges change, update both, and the list in `Caddyfile`.
 
 ## Updating the game
 Fetch the new game where the site is reachable (`npm run fetch-game` in the

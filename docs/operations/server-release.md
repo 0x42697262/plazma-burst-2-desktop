@@ -29,7 +29,8 @@ yourself.
    - `data/server/server.json`: from `server.example.json`, with `admins` given secrets.
 3. `docker compose up -d --build`.
 4. Cloudflare: the domain's DNS record proxied, SSL/TLS "Full (strict)".
-5. Security group: TCP 443 from Cloudflare's ranges only, SSH from your own address.
+5. Security group: TCP 443 from Cloudflare's ranges only, TCP 2053 from anywhere (the
+   desktop app), SSH from your own address.
 
 ## Running it
 - Logs: `docker compose logs -f pb2`.
@@ -37,6 +38,13 @@ yourself.
 - A new game version: copy it over `game/`, `docker compose restart pb2`.
 - A new release: unpack it over the old folder (keep `game/`, `certs/`, `secrets/`,
   `data/`), `docker compose up -d --build`.
+
+## The desktop app
+The desktop app pins a server's certificate. Through Cloudflare it would see Cloudflare's
+edge certificate, which Cloudflare renews on its own, so the pin would break. Caddy also
+listens on TCP 2053 with the origin certificate and no Cloudflare check: in the app's server
+list the server is `<Elastic IP>:2053`, fingerprint "Get from server". A player's address
+there is the connection's own.
 
 ## What runs where
 - `pb2` is plain HTTP inside Docker's network (`behind_proxy`); a player's address is

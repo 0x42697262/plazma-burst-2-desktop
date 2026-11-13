@@ -17,6 +17,7 @@ services:
     restart: unless-stopped
     ports:
       - "443:443"
+      - "2053:2053"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./certs:/certs:ro

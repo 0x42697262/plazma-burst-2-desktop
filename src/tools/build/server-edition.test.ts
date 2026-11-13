@@ -77,6 +77,8 @@ test('server editions: a release is the bundle, its Docker and Caddy files, and 
     const caddyfile = fs.readFileSync(path.join(bundle, 'Caddyfile'), 'utf8');
     assert.match(caddyfile, /^pb2\.example\.test:443 \{/m);
     assert.match(caddyfile, /173\.245\.48\.0\/20/);
+    assert.match(caddyfile, /^:2053 \{/m, 'a direct port for the desktop app, which pins the certificate');
+    assert.match(fs.readFileSync(path.join(bundle, 'compose.yml'), 'utf8'), /"2053:2053"/);
     assert.doesNotMatch(fs.readFileSync(path.join(bundle, 'README.md'), 'utf8'), /\{\{/);
     assert.deepEqual(checkConfig(JSON.parse(fs.readFileSync(path.join(bundle, 'server.example.json'), 'utf8'))).errors, []);
     assert.ok(fs.statSync(archive).size > 0);
