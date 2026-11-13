@@ -1,0 +1,9 @@
+export const TICK_MS = 16;
+export const LOGIN_TO_CREATE_MS = 1500;
+export const BETWEEN_MATCHES_MS = 10_000;
+export const SESSION_TIMEOUT_MS = 30_000;
+export const MAP_WAIT_MS = 15_000;
+export const POLL_MS = 100;
+export const DEVICE_PARTS = 4;
+export const DEVICE_PART_BYTES = 6;
+export const TITLE_RANDOM_CHARS = 5;

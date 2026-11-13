@@ -1,5 +1,6 @@
+import { OFFICIAL_LOBBY } from '#shared/clients/keys.ts';
 export const OFFICIAL_ID = 'official';
-export const OFFICIAL_SERVER = Object.freeze({ id: OFFICIAL_ID, name: 'PlazmaBurst2.com', host: 'vvvv.plazmaburst2.com', port: 2053 });
+export const OFFICIAL_SERVER = Object.freeze({ id: OFFICIAL_ID, name: 'PlazmaBurst2.com', host: OFFICIAL_LOBBY.host, port: OFFICIAL_LOBBY.port });
 
 export const OPERATION = Object.freeze({
   list: 'list', save: 'save', remove: 'remove', check: 'check', fingerprint: 'fingerprint', play: 'play', openList: 'openList',

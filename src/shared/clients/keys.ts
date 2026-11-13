@@ -14,6 +14,7 @@ export type ClientDetails = Readonly<{
 }>;
 
 export const SADBURST_FLAG = '--sadburst';
+export const OFFICIAL_LOBBY = Object.freeze({ host: 'vvvv.plazmaburst2.com', port: 2053 });
 
 export const CLIENT_DETAILS: Readonly<Record<ClientId, ClientDetails>> = Object.freeze({
   [CLIENT.official]: Object.freeze({

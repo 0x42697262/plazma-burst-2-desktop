@@ -109,15 +109,23 @@ const HTTP_SOURCES: SourceMakers = Object.freeze({
   [MAP_SOURCE.http]: (setting) => httpMapSource(setting.url ?? MAP_SOURCE.http, setting.url ?? ''),
 });
 
-function mapSourcesOf(settings: readonly MapSourceSetting[], makers: SourceMakers): { sources: MapSource[]; unavailable: string[] } {
+function mapSourcesOf(settings: readonly MapSourceSetting[], makers: SourceMakers): { sources: MapSource[]; unavailable: string[]; failed: string[] } {
   const sources: MapSource[] = [];
   const unavailable: string[] = [];
+  const failed: string[] = [];
   for (const setting of settings) {
     const make = makers[setting.type];
-    if (make) sources.push(make(setting));
-    else unavailable.push(setting.type);
+    if (!make) {
+      unavailable.push(setting.type);
+      continue;
+    }
+    try {
+      sources.push(make(setting));
+    } catch (error) {
+      failed.push((error as Error).message);
+    }
   }
-  return { sources, unavailable };
+  return { sources, unavailable, failed };
 }
 
 function main(): void {
@@ -167,8 +175,9 @@ function main(): void {
   ]));
   const httpHandlers: HttpHandler[] = features.flatMap((feature) => (feature.http ? [feature.http(featureContext)] : []));
   const chosenSources = mapSourcesOf(config.download_maps ? config.map_sources : [], sourceMakers);
-  if (chosenSources.unavailable.length) {
-    log.error(TEXT.sourcesUnavailable(chosenSources.unavailable));
+  if (chosenSources.unavailable.length || chosenSources.failed.length) {
+    if (chosenSources.unavailable.length) log.error(TEXT.sourcesUnavailable(chosenSources.unavailable));
+    for (const message of chosenSources.failed) log.error(message);
     process.exitCode = 1;
     return;
   }
