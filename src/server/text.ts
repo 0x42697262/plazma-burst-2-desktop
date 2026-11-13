@@ -13,6 +13,7 @@ export const CONFIG_TEXT = Object.freeze({
   cheatReports: (choices: readonly string[]) => `cheat_reports: ${choices.join(' or ')}`,
   welcome: 'welcome: text',
   behindProxy: 'behind_proxy: true or false',
+  matchListGap: (max: number) => `match_list_gap_ms: a whole number of milliseconds, 0-${max} (0: no limit)`,
   publicUrl: 'public_url: the address players open, like "https://pb2.example.com" (or "")',
   name: 'name: text, 1-40 characters',
   description: 'description: text, at most 200 characters',

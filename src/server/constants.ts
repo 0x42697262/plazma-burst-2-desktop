@@ -15,6 +15,7 @@ export const SERVER_DEFAULTS = Object.freeze({
   welcome: '',
   behind_proxy: false,
   public_url: '',
+  match_list_gap_ms: 300,
 });
 export const PORT_RANGE = Object.freeze({ min: 0, max: 65535 });
 export const MAX_NAME_LENGTH = 40;
@@ -42,6 +43,8 @@ export const MAP_LIMITS = Object.freeze({
 export const WELCOME_DELAY_MS = 1000;
 export const KICK_DELAY_MS = 300;
 export const NEVER_LISTED = 0;
+export const GAME_MATCH_LIST_GAP_MS = 300;
+export const MATCH_LIST_GAP_RANGE = Object.freeze({ min: 0, max: 60_000 });
 export const CLOSE_DELAY_MS = 500;
 export const CHEAT_DETAIL_LENGTH = 200;
 export const OK = 200;

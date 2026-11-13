@@ -41,6 +41,9 @@ test('server config: defaults, checks, the open-server warning', () => {
   assert.deepEqual(defaults.server?.map_sources, [{ type: 'site' }], 'the site, as before');
   assert.deepEqual(checkConfig({ map_sources: ['official_lobby', { type: 'http', url: 'https://maps.test/pb2/server.php' }] }).server?.map_sources, [{ type: 'official_lobby' }, { type: 'http', url: 'https://maps.test/pb2/server.php' }]);
   assert.ok(checkConfig({ map_sources: ['ftp'] }).errors.some((error) => /map_sources/.test(error)));
+  assert.equal(defaults.server?.match_list_gap_ms, 300, 'the game\'s own gap');
+  assert.equal(checkConfig({ match_list_gap_ms: 0 }).server?.match_list_gap_ms, 0);
+  assert.ok(checkConfig({ match_list_gap_ms: -5 }).errors.some((error) => /match_list_gap_ms/.test(error)));
   const bad = checkConfig({ port: 70000, nicknames: ['<b>'], cheat_reports: 'ban', download_maps: 'yes', skin: -1 });
   for (const want of [/port/, /nicknames/, /cheat_reports/, /download_maps/, /skin/]) assert.ok(bad.errors.some((error) => want.test(error)), String(want));
 });
@@ -99,7 +102,7 @@ test('own server: the game\'s server code logs players in, lists, creates and jo
   fs.mkdirSync(path.join(dir, 'maps'));
   const cfg = path.join(dir, 'server.json');
   const map = fs.readdirSync(path.join(REPO, 'data', 'maps')).find((file) => file.endsWith('.xml'));
-  fs.writeFileSync(cfg, JSON.stringify({ port: 0, bind: '127.0.0.1', password: 'pw', admins: { Boss: 'the-boss-secret' }, welcome: 'hi there', download_maps: false, random_maps: map ? [map.slice(0, -4)] : [] }));
+  fs.writeFileSync(cfg, JSON.stringify({ port: 0, bind: '127.0.0.1', password: 'pw', admins: { Boss: 'the-boss-secret' }, welcome: 'hi there', download_maps: false, match_list_gap_ms: 0, random_maps: map ? [map.slice(0, -4)] : [] }));
   const srv = spawn(process.execPath, [path.join(REPO, 'src/server/index.ts'), '--config', cfg, '--data', dir], { stdio: ['pipe', 'pipe', 'pipe'] });
   let out = '';
   srv.stdout.on('data', (data) => { out += data; });
@@ -153,6 +156,23 @@ test('own server: the game\'s server code logs players in, lists, creates and jo
     srv.stdin.write('ban bob\n');
     assert.ok(await until(() => bob.closed()), 'kicked');
     assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir, 'bans.json'), 'utf8')), ['bob']);
+    if (map) {
+      const owner = client();
+      assert.equal((await owner.login('Leaver', 'pw'))[0], 'ok');
+      await wait(oneLoginPerConnectionEvery3Seconds);
+      assert.deepEqual((await owner.create({ ...preset, title: 'Left behind' })).slice(0, 1), ['ok']);
+      owner.close();
+      assert.ok(await until(() => /- Leaver disconnected/.test(out)), out);
+      await wait(oneLoginPerConnectionEvery3Seconds);
+      const lister = client();
+      assert.equal((await lister.login('Lister', 'pw'))[0], 'ok');
+      const listed = await lister.list();
+      assert.equal(listed[0], 'ok', 'the list still works once a match\'s owner is gone');
+      const [first, second] = await Promise.all([lister.list(), lister.list()]);
+      assert.deepEqual([first[0], second[0]], ['ok', 'ok'], 'match_list_gap_ms 0: two lists at once are both answered');
+      assert.doesNotMatch(out, /reading 'entry'/);
+      assert.doesNotMatch(out, /ReportCaughtError is not a function/);
+    }
     assert.deepEqual(await client().login('Boss', 'pw'), ['fail', 'Server: That nickname belongs to an admin: give its secret as the password']);
     const boss = await client().login('boss', 'the-boss-secret');
     assert.equal(boss[0], 'ok', 'an admin logs in with the secret instead of the server password');

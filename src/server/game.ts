@@ -3,7 +3,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import type { Logger } from '#kernel/log/logger.ts';
 import { stringOf } from '#kernel/text/text-of.ts';
-import { CHEAT_DETAIL_LENGTH, FIRST_UID, KICK_DELAY_MS, MAX_MAP_PLAYERS, MAX_NICKNAME, NEVER_LISTED, REPUTATION, TICK_MS, WELCOME_DELAY_MS } from './constants.ts';
+import { CHEAT_DETAIL_LENGTH, FIRST_UID, GAME_MATCH_LIST_GAP_MS, KICK_DELAY_MS, MAX_MAP_PLAYERS, MAX_NICKNAME, NEVER_LISTED, REPUTATION, TICK_MS, WELCOME_DELAY_MS } from './constants.ts';
 import {
   ACCOUNT_KEY, CALL_USE, DEFAULT_SKIN_PART, DOLLAR, ESCAPED_DOLLAR, ESCAPED_LESS_THAN, GUEST_LOGIN, HTML_ENTITY, HTML_TAG, IPV6_PREFIX, KICK_ON_CHEAT,
   LESS_THAN, LIST_USES, LOG_MEMBER, MAP_FAILED, MAP_ID_SEPARATOR, MAP_JOIN, MAP_METHOD, MAP_NOT_APPROVED, MAP_REQUEST_NAME, MAP_SPLIT, NICKNAME_CHARACTERS,
@@ -20,7 +20,7 @@ type Names = Readonly<Record<string, string>>;
 type Connection = Bag & { ip?: string; ping?: number; Disconnect: () => void };
 type Match = Bag & { title: string; uid: number; map_id: string };
 type Network = Bag & { connections: Connection[]; matches?: Match[] };
-type AccountRecord = { connection: Connection; entry: { login: string; nickname: string; reputation: number } };
+type AccountRecord = { connection: Connection | null; login: string; entry: { login: string; nickname: string; reputation: number } | null };
 type Realm = { Map: MapConstructor; Array: ArrayConstructor };
 export type OnlinePlayer = { conn: Connection; nickname: string; ip: unknown; ping: unknown; match: Match | null; admin: boolean };
 export type GameServerOptions = { gameDir: string; names: Names; config: ServerConfig & { bans: readonly string[] }; log: Logger; maps: Maps };
@@ -111,6 +111,7 @@ export class GameServer {
     context.trace = (...parts: unknown[]) => { log.debug(LOG.trace, ...parts); };
     context.ChatNewMsg = (message: unknown) => { log.debug(LOG.gameChat, plainText(message)); };
     context.TRACK_MP_LOGS = false;
+    context.ReportCaughtError = (error: unknown) => { log.warn(LOG.gameError, error instanceof Error ? error.message : stringOf(error)); };
     context.HUD = nothing();
 
     this.net = this.run(this.name('net')) as Network;
@@ -157,7 +158,7 @@ export class GameServer {
     accounts[this.name('authBan')] = (targetId: number) => {
       const record = (accounts[this.name('authRecords')] as Map<number, AccountRecord>).get(targetId);
       if (!record) return TEXT.notOnline;
-      this.ban(record.entry.login, TEXT.bannedByAdmin);
+      this.ban(record.login, TEXT.bannedByAdmin);
       return TEXT.userBanned;
     };
     accounts[this.name('authCheat')] = (connection: Connection, reason: unknown, cheatCode: unknown, detail: unknown) => { this.cheatReport(connection, reason, cheatCode, detail); };
@@ -189,7 +190,7 @@ export class GameServer {
     connection[this.name('connStats')] = { reputation: REPUTATION, key: ACCOUNT_KEY(key), skill: 0, wins: 0, loses: 0 };
     connection[this.name('connDevice')] = { [this.name('deviceId')]: () => null };
     this.authIds().set(connection, { id: uid });
-    this.records().set(uid, { connection, entry: { login: nickname, nickname, reputation: REPUTATION } });
+    this.records().set(uid, { connection, login: nickname, entry: { login: nickname, nickname, reputation: REPUTATION } });
     this.log.info(LOG.loggedIn(nickname, connection.ip ?? '', isStaff));
     if (config.welcome) {
       setTimeout(() => {
@@ -222,7 +223,8 @@ export class GameServer {
 
   forget(connection: Connection | null): void {
     const record = connection ? this.authIds().get(connection) : undefined;
-    if (record) this.records().delete(record.id);
+    const known = record ? this.records().get(record.id) : undefined;
+    if (record && known) this.records().set(record.id, { connection: null, login: known.login, entry: null });
   }
 
   cheatReport(connection: Connection | null, reason: unknown, cheatCode: unknown, detail: unknown): void {
@@ -286,7 +288,13 @@ export class GameServer {
     Object.defineProperty(socket, this.name('socketConn'), { get: () => socket.conn, configurable: true });
     const ip = stringOf(socket.handshake.address || '').replace(IPV6_PREFIX, '');
     const connection = new this.Conn({ socket, ip });
-    connection[this.name('connListAt')] = NEVER_LISTED;
+    const gap = this.config.match_list_gap_ms;
+    let listedAt = NEVER_LISTED;
+    Object.defineProperty(connection, this.name('connListAt'), {
+      get: () => (gap === 0 ? NEVER_LISTED : listedAt + gap - GAME_MATCH_LIST_GAP_MS),
+      set: (time: number) => { listedAt = time; },
+      configurable: true,
+    });
     this.net.connections.push(connection);
     this.log.debug(LOG.connection(ip));
     return connection;
