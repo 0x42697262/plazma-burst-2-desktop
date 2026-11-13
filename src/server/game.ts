@@ -267,7 +267,7 @@ export class GameServer {
         text = await this.maps.download(id);
       } catch (error) {
         this.log.warn(LOG.siteUnreachable(id, (error as Error).message));
-        return fail(TEXT.siteUnreachable(id));
+        return fail(TEXT.siteUnreachable(id, (error as Error).message));
       }
       if (!text) {
         this.log.info(LOG.missingMap(id));

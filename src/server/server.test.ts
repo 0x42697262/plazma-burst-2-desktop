@@ -7,7 +7,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { checkConfig } from './config.ts';
 import { memberShapes } from './game.ts';
-import { createMaps } from './maps.ts';
+import { createMaps, httpMapSource } from './maps.ts';
 import { createProbe } from '#features/server_list/adapters/probe.ts';
 import { checkServer as checkEntry } from '#features/server_list/domain/server.ts';
 import { findNames } from '#tools/find-names/find-names.ts';
@@ -37,6 +37,9 @@ test('server config: defaults, checks, the open-server warning', () => {
   assert.ok(checkConfig({ admins: ['Me'] }).problems.some((problem) => /anyone who logs in as "me"/.test(problem)), 'an admin without a secret on a server without a password');
   assert.ok(!checkConfig({ password: 'pw', admins: ['Me'] }).problems.some((problem) => /anyone who logs in as/.test(problem)), 'the server password guards them');
   assert.ok(checkConfig({ admins: { Boss: 'short' } }).errors.some((error) => /admins: .*8/.test(error)), 'a short secret');
+  assert.deepEqual(defaults.server?.map_sources, [{ type: 'site' }], 'the site, as before');
+  assert.deepEqual(checkConfig({ map_sources: ['official_lobby', { type: 'http', url: 'https://maps.test/pb2/server.php' }] }).server?.map_sources, [{ type: 'official_lobby' }, { type: 'http', url: 'https://maps.test/pb2/server.php' }]);
+  assert.ok(checkConfig({ map_sources: ['ftp'] }).errors.some((error) => /map_sources/.test(error)));
   const bad = checkConfig({ port: 70000, nicknames: ['<b>'], cheat_reports: 'ban', download_maps: 'yes', skin: -1 });
   for (const want of [/port/, /nicknames/, /cheat_reports/, /download_maps/, /skin/]) assert.ok(bad.errors.some((error) => want.test(error)), String(want));
 });
@@ -134,10 +137,10 @@ test('maps: this server\'s first, then the site (unpacked to plain XML and kept 
   const siteAnsweringCompressedOrNotPublished = async (_url: string, opt: any) => {
     const id = new URLSearchParams(String(opt.body)).get('cmap');
     asked.push({ id, login: new URLSearchParams(String(opt.body)).has('l') });
-    return { ok: true, text: async () => (id === 'site-map' ? '<q.^f10^Q20^030^Q40" />' : '<not_published />') };
+    return new Response(id === 'site-map' ? '<q.^f10^Q20^030^Q40" />' : '<not_published />');
   };
   try {
-    const maps = createMaps({ mapsDir, unpack: makeUnpacker(path.join(REPO, 'game')), fetch: siteAnsweringCompressedOrNotPublished as any });
+    const maps = createMaps({ mapsDir, unpack: makeUnpacker(path.join(REPO, 'game')), sources: [httpMapSource('site', 'https://site.test/pb2/server.php', siteAnsweringCompressedOrNotPublished as any)], sleep: async () => undefined });
     assert.equal(maps.local('local-mine'), '<player x="1" y="2" />');
     assert.equal(maps.local('site-map'), null);
     const xml = await maps.download('site-map');

@@ -16,12 +16,13 @@ import { stringOf } from '#kernel/text/text-of.ts';
 import { BANS_INDENT, CERT_DAYS, CERT_KEY_SIZE, CLOSE_DELAY_MS, KEY_FILE_MODE, MATCH_NUMBER_WIDTH, NICKNAME_WIDTH, NOT_FOUND, OK, ADDRESS_WIDTH, PING_WIDTH } from './constants.ts';
 import {
   ARG, BANS_FILE, CERT_ALGORITHM, CERT_FILE, CERT_NAME, CONFIG_FILE, CONNECTION_EVENT, ERROR_EVENT, GAME_DIR_VARIABLE, GAME_FOLDER, GET_METHOD,
-  INTERRUPT_SIGNAL, IPV4, JSON_TYPE, KEY_FILE, LINE_EVENT, NEEDED_NAMES, NO_STORE, ORIGIN, QUIT_WORDS, SPACE, STATUS_PATH, STRINGS_FILE,
+  INTERRUPT_SIGNAL, IPV4, JSON_TYPE, KEY_FILE, LINE_EVENT, MAP_SOURCE, NEEDED_NAMES, NO_STORE, ORIGIN, QUIT_WORDS, SADBURST_MAPS, SITE_MAPS, SPACE, STATUS_PATH, STRINGS_FILE,
   TEXT_ENCODING, VERSION_FILE, WORDS, LINE_JOIN, HEADER,
 } from './keys.ts';
 import { SERVER_LOG as TEXT } from './text.ts';
 import { loadConfig } from './config.ts';
-import { createMaps } from './maps.ts';
+import { createMaps, httpMapSource, type MapSource } from './maps.ts';
+import type { MapSourceSetting } from './config.ts';
 import { GameServer } from './game.ts';
 
 type Arguments = { config: string; game: string; data: string; help?: boolean };
@@ -91,6 +92,25 @@ function addresses(): string[] {
   return found;
 }
 
+type SourceMakers = Readonly<Record<string, ((setting: MapSourceSetting) => MapSource) | undefined>>;
+
+const HTTP_SOURCES: SourceMakers = Object.freeze({
+  [MAP_SOURCE.site]: () => httpMapSource(MAP_SOURCE.site, SITE_MAPS),
+  [MAP_SOURCE.sadburst]: () => httpMapSource(MAP_SOURCE.sadburst, SADBURST_MAPS),
+  [MAP_SOURCE.http]: (setting) => httpMapSource(setting.url ?? MAP_SOURCE.http, setting.url ?? ''),
+});
+
+function mapSourcesOf(settings: readonly MapSourceSetting[], makers: SourceMakers): { sources: MapSource[]; unavailable: string[] } {
+  const sources: MapSource[] = [];
+  const unavailable: string[] = [];
+  for (const setting of settings) {
+    const make = makers[setting.type];
+    if (make) sources.push(make(setting));
+    else unavailable.push(setting.type);
+  }
+  return { sources, unavailable };
+}
+
 function main(): void {
   const args = parseArgs(process.argv.slice(FIRST_USER_ARGUMENT));
   if (args.help) {
@@ -124,7 +144,13 @@ function main(): void {
     process.exitCode = 1;
     return;
   }
-  const maps = createMaps({ mapsDir: CLIENT_PATHS.official.mapsDir, unpack: makeUnpacker(args.game) });
+  const chosenSources = mapSourcesOf(config.download_maps ? config.map_sources : [], HTTP_SOURCES);
+  if (chosenSources.unavailable.length) {
+    log.error(TEXT.sourcesUnavailable(chosenSources.unavailable));
+    process.exitCode = 1;
+    return;
+  }
+  const maps = createMaps({ mapsDir: CLIENT_PATHS.official.mapsDir, unpack: makeUnpacker(args.game), sources: chosenSources.sources });
   const game = new GameServer({ gameDir: args.game, names: found.found, config, log, maps });
   game.onBans = (bans) => { writeBans(dataDir, bans); };
 

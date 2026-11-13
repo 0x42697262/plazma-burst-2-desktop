@@ -108,7 +108,8 @@ they happen. Players can be named by the start of their nickname.
 | `admins` | `[]` | nicknames with the game's staff rights: `-announce`, ending any match, kicking from any match, the in-game ban (a server ban). As `{ "nickname": "secret" }` (secrets of 8 or more characters), an admin gives its secret as the password instead of the server password, and nobody else can use that nickname. A plain list on a server without a `password` lets anyone who picks the nickname be an admin, and the server warns about it |
 | `max_players` | 64 | players online at once |
 | `skin` | 1 | the skin everyone starts with; players change it in the game as usual |
-| `download_maps` | `true` | published map IDs are downloaded from the site's public map download (and kept in `data/maps`); `false` = only `data/maps` |
+| `download_maps` | `true` | published map IDs are downloaded from `map_sources` (and kept in `data/maps`); `false` = only `data/maps` |
+| `map_sources` | `["site"]` | where published maps are downloaded from, tried in order (see [Maps](#maps)) |
 | `random_maps` | `[]` | your list of map IDs that `random approved` and `random approved in rotation` pick from (the example has one); empty = every map in `data/maps` |
 | `cheat_reports` | `"log"` | the game's anti-cheat reports: `"log"` them, or `"kick"` the player too |
 | `welcome` | `""` | a line each player gets in chat after logging in |
@@ -118,13 +119,34 @@ they happen. Players can be named by the start of their nickname.
 A match's map ID is looked up on the server's computer:
 - **`local-<name>` or `<name>`:** `data/maps/<name>.xml` (or `.txt`), the same local
   maps as the wrapper's.
-- **Any other ID:** a published map, downloaded from plazmaburst2.com (no login needed),
-  unpacked to plain XML with the game's own function, and kept in `data/maps/<map id>.xml`
-  (the same folder and file names the game client saves downloaded maps to, through
-  `src/kernel/maps/file-name.ts`), so each map is downloaded once, by either. This is the only time the server contacts the site.
-- **Only if the site doesn't have it either** does the match get an error ("does not exist:
-  not on this server, not on plazmaburst2.com"). A map without player starts (an add-on
-  such as `nanotech-cht`) leaves the player count to the match's own setting.
+- **Any other ID:** a published map, downloaded from the first of `map_sources` that
+  answers, unpacked to plain XML with the game's own function, and kept in
+  `data/maps/<map id>.xml` (the same folder and file names the game client saves downloaded
+  maps to, through `src/kernel/maps/file-name.ts`), so each map is downloaded once, by either.
+  This is the only time the server contacts a map source.
+- **Only if a source says the map is not published** does the match get an error ("does
+  not exist"). A map without player starts (an add-on such as `nanotech-cht`) leaves the
+  player count to the match's own setting.
+
+The map sources (`map_sources`, tried in order):
+
+| | |
+|---|---|
+| `"site"` | plazmaburst2.com's public map download (`/pb2/server.php`, no login). Cloudflare answers datacenter addresses (AWS and the like) with a challenge, so from a cloud server it fails |
+| `"official_lobby"` | the official lobby sends the map, through the map bot ([map-bot](../features/map-bot.md)): an account creates a private match with the map, gets it and leaves. Works from a cloud server |
+| `"sadburst"` | Sad Burst 2's copy of the public map download (`sadburst2.com/pb2/server.php`). Off unless listed; it is their service, so ask them first |
+| `{ "type": "http", "url": "…" }` | any other server answering like `/pb2/server.php` |
+
+How the server treats them:
+- One download at a time, at least 1.5 s apart, at most 6 new maps a minute (saved maps
+  don't count; the 7th gets "try again in a minute").
+- A source that fails (no answer, an HTTP error, an answer that is no map, such as a
+  Cloudflare challenge page) is passed over for the next one. After 3 failures in a row it
+  is left out for 5 minutes.
+- "Not published" from a source that answers ends the search, and is remembered for 10
+  minutes, so asking again costs no request.
+- Every answer is unpacked and checked before it is kept: an answer that is no map is never
+  saved.
 
 - **`random approved`, `random approved in rotation`:** the create screen's default IDs. The
   official map service picks a random approved map for them; this server picks one from

@@ -8,6 +8,7 @@ export const CONFIG_TEXT = Object.freeze({
   maxPlayers: 'max_players: a whole number from 1',
   skin: 'skin: a skin number',
   downloadMaps: 'download_maps: true or false',
+  mapSources: (names: readonly string[]) => `map_sources: a list of ${names.map((name) => `"${name}"`).join(', ')} or { "type": "http", "url": "https://…/server.php" }`,
   randomMaps: 'random_maps: a list of map IDs',
   cheatReports: (choices: readonly string[]) => `cheat_reports: ${choices.join(' or ')}`,
   welcome: 'welcome: text',
@@ -22,6 +23,12 @@ export const CONFIG_TEXT = Object.freeze({
 
 export const MAPS_TEXT = Object.freeze({
   siteAnswered: (status: number) => `the site answered HTTP ${status}`,
+  tooManyNewMaps: (count: number) => `more than ${count} new maps in a minute: try again in a minute (saved maps load at once)`,
+  sourcePaused: (name: string) => `${name}: paused after failing several times in a row`,
+  sourceFailed: (name: string, message: string) => `${name}: ${message}`,
+  notAMap: (name: string) => `${name}: the answer is no map`,
+  problemJoin: '; ',
+  noSources: 'no map sources (map_sources)',
 });
 
 export const GAME_TEXT = Object.freeze({
@@ -46,8 +53,8 @@ export const GAME_TEXT = Object.freeze({
   noRandomMaps: (asked: string) => `This server has no maps to pick from for "${asked}": put maps in data/maps on the server, or list some in its "random_maps"`,
   noMerging: 'Merging maps ("a,b") is done by the official map service; this server plays one map ID at a time',
   notDownloading: (id: string) => `Map "${id}" is not on this server (it downloads no maps)`,
-  siteUnreachable: (id: string) => `Map "${id}" is not on this server, and plazmaburst2.com could not be reached`,
-  noSuchMap: (id: string) => `Map "${id}" does not exist (not on this server, not on plazmaburst2.com)`,
+  siteUnreachable: (id: string, message: string) => `Map "${id}" is not on this server and could not be downloaded: ${message}`,
+  noSuchMap: (id: string) => `Map "${id}" does not exist (not on this server, and not published)`,
   mapNotLoaded: (id: string) => `Map "${id}" could not be loaded`,
   ambiguous: (word: string, names: readonly string[]) => `"${word}" could be ${names.join(', ')}`,
   nobodyCalled: (word: string) => `nobody called "${word}" is online`,
@@ -69,9 +76,9 @@ export const GAME_LOG = Object.freeze({
   cheatCode: (code: unknown) => `code ${String(code as string)}`,
   randomMap: (asked: string, id: string) => `"${asked}": ${id}`,
   localMap: (id: string) => `Map ${id} from this server`,
-  siteUnreachable: (id: string, message: string) => `Map ${id}: plazmaburst2.com could not be asked (${message})`,
+  siteUnreachable: (id: string, message: string) => `Map ${id}: could not be downloaded (${message})`,
   missingMap: (id: string) => `Map ${id}: not on this server nor on plazmaburst2.com`,
-  downloadedMap: (id: string) => `Map ${id} downloaded from plazmaburst2.com`,
+  downloadedMap: (id: string) => `Map ${id} downloaded and saved`,
   mapFailed: (id: string, message: string) => `Map ${id}: ${message}`,
   connection: (address: string) => `connection from ${address}`,
   tickFailed: (detail: string) => `tick: ${detail}`,
@@ -83,6 +90,7 @@ export const GAME_LOG = Object.freeze({
 });
 
 export const SERVER_LOG = Object.freeze({
+  sourcesUnavailable: (names: readonly string[]) => `map_sources: ${names.join(', ')} is not in this server (see docs/operations/private-server.md)`,
   usage: 'Usage: npm run server -- [--config file] [--game dir] [--data dir] [--verbose]',
   noConfig: (file: string) => `No ${file}: using the defaults (copy data/server/server.example.json to change them)`,
   configProblem: (problem: string) => `Config: ${problem}`,

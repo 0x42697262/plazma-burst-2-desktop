@@ -39,9 +39,14 @@ export const LOCAL_PREFIX = 'local-';
 export const HIDDEN_FILE = '.';
 export const PATH_SEPARATORS: readonly string[] = Object.freeze(['/', '\\']);
 export const SITE_MAPS = 'https://www.plazmaburst2.com/pb2/server.php';
+export const SADBURST_MAPS = 'https://sadburst2.com/pb2/server.php';
+export const MAP_SOURCE = Object.freeze({ site: 'site', sadburst: 'sadburst', officialLobby: 'official_lobby', http: 'http' });
+export const NAMED_MAP_SOURCES: readonly string[] = Object.freeze([MAP_SOURCE.site, MAP_SOURCE.sadburst, MAP_SOURCE.officialLobby]);
+export const HTTP_URL = /^https?:\/\/\S+$/;
 export const MAP_REQUEST = Object.freeze({ rq: 'cmap', qpack: '1.0' });
 export const POST_METHOD = 'POST';
 export const XML_START = '<';
+export const NOT_A_MAP = /^<!|<html/i;
 
 export const SCRIPTS: readonly string[] = Object.freeze(['_strings.js', 'scripts/libs/tools.js', 'scripts/libs/xml.js', 'scripts/connection.js', 'scripts/libs/flash.js']);
 export const NEEDED_NAMES = Object.freeze(['net', 'connClass', 'serverFlag', 'setupClass', 'setupMethod', 'p2pAuth', 'p2pAuthIds', 'serverStats',

@@ -9,6 +9,7 @@ export const SERVER_DEFAULTS = Object.freeze({
   max_players: 64,
   skin: 1,
   download_maps: true,
+  map_sources: Object.freeze(['site']),
   random_maps: Object.freeze([]),
   cheat_reports: 'log',
   welcome: '',
@@ -27,6 +28,15 @@ export const REPUTATION = 40;
 export const MAX_NICKNAME = 20;
 export const MAX_MAP_PLAYERS = 64;
 export const MAP_TIMEOUT_MS = 15000;
+export const MAP_LIMITS = Object.freeze({
+  gapMs: 1500,
+  newMapsPerMinute: 6,
+  windowMs: 60_000,
+  missMemoryMs: 10 * 60_000,
+  failuresBeforePause: 3,
+  pauseMs: 5 * 60_000,
+  maxChars: 5_000_000,
+});
 export const WELCOME_DELAY_MS = 1000;
 export const KICK_DELAY_MS = 300;
 export const NEVER_LISTED = 0;
