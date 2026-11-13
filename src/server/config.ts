@@ -43,16 +43,16 @@ export function checkConfig(raw: unknown): CheckedServerConfig {
   if (typeof given.bind !== 'string' || !given.bind) errors.push(TEXT.bind);
   if (typeof given.password !== 'string') errors.push(TEXT.password);
   const lists: Record<string, string[]> = {};
-  let adminSecrets: Record<string, string> = {};
-  if (isSecretMap(given.admins)) {
-    adminSecrets = loweredSecrets(given.admins);
-    given.admins = Object.keys(adminSecrets);
-  } else if (isPlainObject(given.admins)) errors.push(TEXT.adminSecrets(MIN_ADMIN_SECRET));
+  const adminEntries: unknown[] = isPlainObject(given.admins) ? [given.admins] : Array.isArray(given.admins) ? given.admins : [given.admins];
+  const secretEntries = adminEntries.filter(isPlainObject);
+  const hasValidSecrets = secretEntries.every(isSecretMap);
+  const adminSecrets: Record<string, string> = hasValidSecrets ? loweredSecrets(Object.assign({}, ...secretEntries) as Record<string, string>) : {};
+  given.admins = adminEntries.flatMap((entry) => (isPlainObject(entry) ? Object.keys(entry) : [entry]));
   for (const key of NAME_LISTS) {
     const names = given[key];
-    if (key === ADMINS_KEY && isPlainObject(names)) continue;
-    if (isNameList(names)) lists[key] = uniqueLowered(names);
-    else errors.push(TEXT.nameList(key));
+    const isAdmins = key === ADMINS_KEY;
+    if (isNameList(names) && (!isAdmins || hasValidSecrets)) lists[key] = uniqueLowered(names);
+    else errors.push(isAdmins ? TEXT.adminSecrets(MIN_ADMIN_SECRET) : TEXT.nameList(key));
   }
   const maxPlayers = Number(given.max_players);
   if (!Number.isInteger(maxPlayers) || maxPlayers < 1) errors.push(TEXT.maxPlayers);

@@ -105,7 +105,7 @@ they happen. Players can be named by the start of their nickname.
 | `description` | `""` | a line under it there |
 | `password` | `""` | the server password players enter when they add the server |
 | `nicknames` | `[]` | if set, only these nicknames may log in |
-| `admins` | `[]` | nicknames with the game's staff rights: `-announce`, ending any match, kicking from any match, the in-game ban (a server ban). As `{ "nickname": "secret" }` (secrets of 8 or more characters), an admin gives its secret as the password instead of the server password, and nobody else can use that nickname. A plain list on a server without a `password` lets anyone who picks the nickname be an admin, and the server warns about it |
+| `admins` | `[]` | nicknames with the game's staff rights: `-announce`, ending any match, kicking from any match, the in-game ban (a server ban). As `{ "nickname": "secret" }` (secrets of 8 or more characters; a list may mix both, `["helper", { "boss": "secret" }]`), an admin gives its secret as the password instead of the server password, and nobody else can use that nickname. A plain list on a server without a `password` lets anyone who picks the nickname be an admin, and the server warns about it |
 | `max_players` | 64 | players online at once |
 | `skin` | 1 | the skin everyone starts with; players change it in the game as usual |
 | `download_maps` | `true` | published map IDs are downloaded from `map_sources` (and kept in `data/maps`); `false` = only `data/maps` |

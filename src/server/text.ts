@@ -18,7 +18,7 @@ export const CONFIG_TEXT = Object.freeze({
   name: 'name: text, 1-40 characters',
   description: 'description: text, at most 200 characters',
   openToAnyone: 'no "password" and no "nicknames": anyone who can reach this address and port can log in',
-  adminSecrets: (min: number) => `admins: a list of nicknames, or { "nickname": "secret" } with secrets of at least ${min} characters`,
+  adminSecrets: (min: number) => `admins: nicknames, { "nickname": "secret" } (secrets of at least ${min} characters), or a list of both, like ["helper", { "boss": "a-long-secret" }]`,
   adminWithoutSecret: (admin: string) => `admins: no "password" and no secret for "${admin}": anyone who logs in as "${admin}" is an admin. Give admins secrets: { "${admin}": "secret" }`,
   unreadable: (file: string, message: string) => `${file}: ${message}`,
   notJson: (file: string, message: string) => `${file} is not valid JSON: ${message}`,

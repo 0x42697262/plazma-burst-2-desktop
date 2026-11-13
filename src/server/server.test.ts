@@ -38,6 +38,11 @@ test('server config: defaults, checks, the open-server warning', () => {
   assert.ok(checkConfig({ admins: ['Me'] }).problems.some((problem) => /anyone who logs in as "me"/.test(problem)), 'an admin without a secret on a server without a password');
   assert.ok(!checkConfig({ password: 'pw', admins: ['Me'] }).problems.some((problem) => /anyone who logs in as/.test(problem)), 'the server password guards them');
   assert.ok(checkConfig({ admins: { Boss: 'short' } }).errors.some((error) => /admins: .*8/.test(error)), 'a short secret');
+  const listed = checkConfig({ password: 'pw', admins: [{ Boss: 'a-long-secret' }, 'Helper'] });
+  assert.deepEqual(listed.errors, [], 'a list may hold nicknames and { "nickname": "secret" } objects');
+  assert.deepEqual(listed.server?.admins, ['boss', 'helper']);
+  assert.deepEqual(listed.server?.admin_secrets, { boss: 'a-long-secret' });
+  assert.ok(checkConfig({ admins: [42] }).errors.some((error) => /\{ "nickname": "secret" \}/.test(error)), 'the error names both forms');
   assert.deepEqual(defaults.server?.map_sources, [{ type: 'site' }], 'the site, as before');
   assert.deepEqual(checkConfig({ map_sources: ['official_lobby', { type: 'http', url: 'https://maps.test/pb2/server.php' }] }).server?.map_sources, [{ type: 'official_lobby' }, { type: 'http', url: 'https://maps.test/pb2/server.php' }]);
   assert.ok(checkConfig({ map_sources: ['ftp'] }).errors.some((error) => /map_sources/.test(error)));
