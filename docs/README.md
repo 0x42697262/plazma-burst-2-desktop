@@ -61,6 +61,7 @@
 ## Research
 - [anticheat.md](research/anticheat.md): the game's anti-cheat, client and server side
 - [anticheat-sadburst.md](research/anticheat-sadburst.md): the same for Sad Burst 2, the community fork, and how it differs
+- [scan-gating.md](research/scan-gating.md): the condition that decides whether the anti-tamper scan is installed at all, and the one login it exempts
 - [fingerprinting.md](research/fingerprinting.md): the main server's browser fingerprinter and the RELIABLE_TASK code path
 - [reputation.md](research/reputation.md): reputation points: what the lobby sends and receives, the relations behind them, and what the game cannot tell
 

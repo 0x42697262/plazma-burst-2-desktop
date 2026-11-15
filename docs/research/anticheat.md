@@ -1282,6 +1282,8 @@ So `RELIABLE_PING` exists to make sure there is **always something to acknowledg
 - `isCompiled`, **or** in a match (`$pMМ1`) (`main.js:950–951`), **and**
 - at least 300 ms since the last pass (`main.js:956`). Each pass does about 1 ms of work.
 
+The condition, its inputs, and what each page layout allows: [scan-gating.md](scan-gating.md).
+
 **Failure:** when a pass finds a change, it sets a code and a detail:
 
 | Code | Found | Detail |

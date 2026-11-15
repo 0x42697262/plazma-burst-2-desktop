@@ -14,6 +14,10 @@ here. The console asks whether it is off through a port
 the protection off. With this flag off there is no `bypass` command, so the protection cannot be
 turned off at all.
 
+This feature covers the game's *report* and this app's server-side protections. The game's
+own anti-tamper scan, and the condition that decides whether it is installed at all, are
+not part of it: [scan-gating](../research/scan-gating.md).
+
 ## The protection
 
 In an approved, ranked match the console holds back what the match's server checks
