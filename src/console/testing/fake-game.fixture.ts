@@ -175,6 +175,8 @@ export async function bootConsole({ mapFile = DEFAULT_MAP_FILE, sayTrigger, page
   set('net', {
     RELIABLE_EXEC_TRIGGER: 'EXEC', RELIABLE_VAR_SYNC: 'VSYNC', RELIABLE_JOIN_MATCH: 'JOIN', RELIABLE_GET_MATCH_LIST: 'LIST',
     RELIABLE_PING: 'PING',
+    [names.teamNames]: ['Alpha', 'Beta', 'Gamma', 'Delta', 'Zeta', 'Lambda', 'Sigma', 'Omega', 'Counter-Terrorists', 'Terrorists',
+      'Usurpation Forces', 'Civil Security', 'Red Team', 'Blue Team', 'Green Team', 'White Team', 'Black Team', 'Spectator'],
     [names.netNum]: (number: number) => `n${number}`, [names.mapChunks]: null, [names.netLog]: [], Event: (...args: unknown[]) => log.net.push(args),
   });
   set('lockedArrays', []);

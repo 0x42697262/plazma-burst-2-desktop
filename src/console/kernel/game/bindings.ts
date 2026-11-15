@@ -289,6 +289,11 @@ export const game = {
   },
   enterMatch: (hostInfo: unknown, slot: unknown): unknown => invoke(requireNetwork(), 'enterMatch', hostInfo, slot),
   setJoinPassword: (password: string): void => { write('joinPassword', password); },
+  teamNames: (): readonly unknown[] => {
+    const net = network();
+    const names = net && field(net, 'teamNames');
+    return Array.isArray(names) ? names : [];
+  },
   matchDetails: (): Bag | null => network()?.match_details || null,
   hostedMatch: (): Bag | null => {
     const net = network();

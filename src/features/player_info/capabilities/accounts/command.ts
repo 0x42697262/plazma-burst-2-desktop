@@ -18,6 +18,7 @@ function tagsOf(index: number, me: number, character: Record<string, unknown>): 
 
 function accounts(): void {
   level.require();
+  if (!game.isMP()) throw new Error(TEXT.notInMatch);
   const me = game.me();
   const characters = game.chars();
   const bySlot = game.playersBySlot() ?? [];
@@ -25,11 +26,12 @@ function accounts(): void {
   for (let index = 0; index < slots; index++) {
     const character = bySlot[index] ?? characters[index];
     if (!character?.io) continue;
+    const hasAccount = !!character[fields.HUMAN];
     print(TEXT.accountRow(
       String(index).padEnd(INDEX_WIDTH),
       shown(character.nickname, TEXT.noValue).padEnd(NICKNAME_WIDTH),
-      shown(character[fields.LOGIN], TEXT.noValue).padEnd(LOGIN_WIDTH),
-      shown(character[fields.AUTH_ID], TEXT.notSynced).padStart(AUTH_ID_WIDTH),
+      (hasAccount ? shown(character[fields.LOGIN], TEXT.noValue) : TEXT.noValue).padEnd(LOGIN_WIDTH),
+      (hasAccount ? shown(character[fields.AUTH_ID], TEXT.notSynced) : TEXT.noValue).padStart(AUTH_ID_WIDTH),
       tagsOf(index, me, character),
     ), index === me ? COLOR.ok : undefined);
   }

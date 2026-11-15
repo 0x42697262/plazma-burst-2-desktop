@@ -17,7 +17,7 @@ export const NAME_KEYS = Object.freeze([
   'waterW', 'waterH', 'waterDamage', 'displayInit', 'textureFollows', 'net', 'netNum', 'lobbyConn', 'netSend',
   'netLog', 'connRecv', 'connPeer', 'connReason', 'netDigits', 'netTypeNames', 'buildTag', 'p2pConn', 'netChannel',
   'netReplyTo', 'enterMatch', 'spectatorSlots', 'matchSlots', 'connUser', 'connStats', 'p2pAuth', 'p2pAuthIds',
-  'connPlayer', 'connSpectator', 'connSay', 'matchSetMap', 'acceptManually', 'createSettings', 'joinPassword',
+  'connPlayer', 'connSpectator', 'teamNames', 'connSay', 'matchSetMap', 'acceptManually', 'createSettings', 'joinPassword',
   'lobbyReady', 'spectatorSlot', 'chatToAll', 'chatTrace', 'stateHp', 'stateRespawns', 'stateAimX', 'stateAimY',
   'stateHeadHp', 'stateFaceHp', 'stateX', 'stateY', 'stateKiller', 'stateClock', 'stateVelScale', 'connClass',
   'serverFlag', 'setupClass', 'setupMethod', 'serverStats', 'webRequests', 'webRequest', 'mapUrl', 'mapKey',

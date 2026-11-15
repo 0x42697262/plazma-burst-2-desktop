@@ -1,15 +1,22 @@
-# player_info: pos, chars, uid and accounts
+# player_info: pos, chars, players, bots, uid and accounts
 
 Feature flag `player_info` (on by default; all modes). Code: `src/features/player_info/`.
 
 - `pos` shows your position and the crosshair's, both rounded: what `tp x y` takes.
-- `chars` lists the characters in the level: index, nickname, team, HP, alive or dead,
-  and distance. The index is what `tp`, `give to`, `drop from`, `revive` and
-  `triggers run as` take.
+- `chars [<team>] [players | bots]` lists the characters in the level: index, nickname,
+  team, HP, alive or dead, and distance. The index is what `tp`, `give to`, `drop from`,
+  `revive` and `triggers run as` take. Filters narrow the list:
+  - a team by the game's own name for it, or the start of the name, in any case: `alpha`,
+    `beta`, `red` (for Red Team), `blue`. Several teams list all of them. The names are the
+    game's team table (`teamNames`); without it, the team shows as its number and a team
+    word is refused.
+  - `players` keeps the characters a person plays (`charHuman`), `bots` the others.
+  A word that is not a filter, or that starts more than one team name (`c`), is an error.
+- `players [<team>]` and `bots [<team>]` are `chars players` and `chars bots`.
 - `accounts` (aliases `authids`, `ids`) lists the players and spectators connected to the
   match: index, nickname, login and the **auth id** that `RELIABLE_REPORT_USER`,
-  `RELIABLE_ENDORDSE_USER`, `RELIABLE_KICK_USER` and `RELIABLE_BAN_USER` take. A map actor
-  with no account shows `-`, `?` means the match has not sent that player's account yet
+  `RELIABLE_ENDORDSE_USER`, `RELIABLE_KICK_USER` and `RELIABLE_BAN_USER` take. A bot or map
+  actor has no account and shows `-`, `?` means the match has not sent that player's account yet
   (before the first sync), and a spectator carries `(spectating)`. An empty slot is left out,
   so the numbers can have gaps. Players come from the characters array, spectators only from
   the per-slot table (`playersBySlot`), which is why an id read in one session must be read
