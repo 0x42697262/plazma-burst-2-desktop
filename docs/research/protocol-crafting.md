@@ -171,26 +171,54 @@ Three worth knowing before you try them:
 
 ## Every section's line, gathered
 
-Generated from the sections of [protocol.md](protocol.md) so the two cannot disagree.
+Extracted from the sections of [protocol.md](protocol.md), so the two cannot disagree.
 
-| Message | Line |
-|---|---|
-| 1 · EXEC_TRIGGER — client → match server → every client | `pb.event("EXEC_TRIGGER", pb.num(0), pb.num(0), pb.num(100))` |
-| 5 · DAMAGE_PLAYERS_VIA_EXPLOSION — client → match server → every client | `pb.event("DAMAGE_PLAYERS_VIA_EXPLOSION", pb.num(1), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0))` |
-| 6 · HEAL_PLAYER — client → match server → every client | `pb.event("HEAL_PLAYER", pb.num(100), pb.num(0), pb.num(1), pb.num(0))` |
-| 7 · PROJECTILE_CREATE — client → match server → every client | `pb.event("PROJECTILE_CREATE", pb.num(0), pb.num(1), pb.num(0), pb.num(0), pb.num(0))` |
-| 8 · PROJECTILE_REMOVE — client → match server → every client | `pb.event("PROJECTILE_REMOVE", pb.num(1), pb.num(0), pb.num(0))` |
-| 9 · BARREL — client → match server → every client | `pb.event("BARREL", pb.num(3), pb.num(0), "1", pb.num(100), pb.num(50))` |
-| 10 · THROW_GUN — client → match server → every client | `pb.event("THROW_GUN", pb.num(0), pb.num(100), pb.num(200), pb.num(0), pb.num(0), pb.num(110), pb.num(200), pb.num(0), pb.num(0))` |
-| 11 · HIT_GRENADE — client → match server → every client | `pb.event("HIT_GRENADE", pb.num(1), pb.num(0), pb.num(0), pb.num(0))` |
-| 12 · PLAYER_DIES — client → match server → every client | `pb.event("PLAYER_DIES", pb.num(0), pb.num(1), pb.num(0), pb.num(74), pb.num(0), pb.num(3), pb.num(5))` |
-| 13 · HIT_SHIELD — client → match server → every client | `pb.event("HIT_SHIELD", pb.num(1), pb.num(100), pb.num(10), pb.num(0))` |
-| 17 · LIST_ME_AS_HOST — client → lobby | `pb.req("LIST_ME_AS_HOST", ["REPLY"])` |
-| 35 · SWORD_ATTACK — client → match server → every client | `pb.event("SWORD_ATTACK")` |
-| 36 · VAR_SYNC — client → match server → every client | `pb.event("VAR_SYNC", "r", "varname", "1")` |
-| 37 · FLOW_AT — client → match server → every client | `pb.event("FLOW_AT", pb.num(0), pb.num(100), pb.num(200), pb.num(0), pb.num(0), pb.num(0))` |
-| 38 · AI_STATE_SYNC — client → match server → every client | `pb.event("AI_STATE_SYNC", pb.num(13), pb.num(850), pb.num(0), pb.num(200), pb.num(300), pb.num(400), pb.num(300), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0))` |
-| 39 · AI_HEALTH_SYNC — client → match server → every client | `pb.event("AI_HEALTH_SYNC", pb.num(13), pb.num(850), pb.num(100), pb.num(100), pb.num(100), pb.num(100))` |
+| Op | Message | Line |
+|---|---|---|
+| 0 | `RESPONSE` | `pb.req("PING", ["REPLY"])` |
+| 1 | `EXEC_TRIGGER` | `pb.event("EXEC_TRIGGER", pb.num(0), pb.num(0), pb.num(100))` |
+| 2 | `RESPAWN` | `pb.event("RESPAWN", pb.num(0), pb.num(0), pb.num(100))` |
+| 3 | `GRENADE_THROW` | `pb.event("GRENADE_THROW", pb.num(1), pb.num(0), pb.num(0))` |
+| 4 | `HIT_PLAYER` | `pb.event("HIT_PLAYER", pb.num(1), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(10), pb.num(0))` |
+| 5 | `DAMAGE_PLAYERS_VIA_EXPLOSION` | `pb.event("DAMAGE_PLAYERS_VIA_EXPLOSION", pb.num(1), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0))` |
+| 6 | `HEAL_PLAYER` | `pb.event("HEAL_PLAYER", pb.num(100), pb.num(0), pb.num(1), pb.num(0))` |
+| 7 | `PROJECTILE_CREATE` | `pb.event("PROJECTILE_CREATE", pb.num(0), pb.num(1), pb.num(0), pb.num(0), pb.num(0))` |
+| 8 | `PROJECTILE_REMOVE` | `pb.event("PROJECTILE_REMOVE", pb.num(1), pb.num(0), pb.num(0))` |
+| 9 | `BARREL` | `pb.event("BARREL", pb.num(3), pb.num(0), "1", pb.num(100), pb.num(50))` |
+| 10 | `THROW_GUN` | `pb.event("THROW_GUN", pb.num(0), pb.num(100), pb.num(200), pb.num(0), pb.num(0), pb.num(110), pb.num(200), pb.num(0), pb.num(0))` |
+| 11 | `HIT_GRENADE` | `pb.event("HIT_GRENADE", pb.num(1), pb.num(0), pb.num(0), pb.num(0))` |
+| 12 | `PLAYER_DIES` | `pb.event("PLAYER_DIES", pb.num(0), pb.num(1), pb.num(0), pb.num(74), pb.num(0), pb.num(3), pb.num(5))` |
+| 13 | `HIT_SHIELD` | `pb.event("HIT_SHIELD", pb.num(1), pb.num(100), pb.num(10), pb.num(0))` |
+| 14 | `CHAT` | `pb.event("CHAT", pb.num(1), "hello")` |
+| 15 | `CREATE_MATCH` | `pb.req("CREATE_MATCH", [JSON.stringify({title:"probe",game_type:"DM",max_players:8,min_reputation:0,map_id:"random approved",ranked:false}), "REPLY"])` |
+| 16 | `AUTHENTICATE` | `pb.req("AUTHENTICATE", ["<login>", "<password>", "version_h5", "hash_h5", "REPLY", "", "\"device\"", pb.num(1769098189070)])` |
+| 17 | `LIST_ME_AS_HOST` | `pb.req("LIST_ME_AS_HOST", ["REPLY"])` |
+| 18 | `SERVICE_MESSAGE` | `pb.event("SERVICE_MESSAGE", "<font color=\"#ffff00\">hello</font>")` |
+| 19 | `GET_MATCH_LIST` | `pb.req("GET_MATCH_LIST", ["{}", "REPLY", "match_list"])` |
+| 20 | `JOIN_MATCH` | `pb.req("JOIN_MATCH", ["<uid>", "REPLY", -1, "", ""])` |
+| 21 | `MATCH_JOIN_RESPONSE` | `pb.event("MATCH_JOIN_RESPONSE", pb.num(0), JSON.stringify({title:"probe"}), pb.num(0))` |
+| 22 | `MAP_CHUNK` | `pb.event("MAP_CHUNK", pb.num(0), pb.num(1), "<map text>")` |
+| 23 | `CLIENT_READY_FOR_FIRST_SYNC` | `pb.req("CLIENT_READY_FOR_FIRST_SYNC", ["REPLY"])` |
+| 24 | `FIRST_SYNC_RESPONSE` | `pb.event("FIRST_SYNC_RESPONSE", pb.num(0), JSON.stringify({login:"x",nickname:"x",auth_id:1,team:1}), "")` |
+| 25 | `MY_PLAYER_PROPERTIES_CHANGED` | `pb.event("MY_PLAYER_PROPERTIES_CHANGED", pb.num(0), pb.num(0), JSON.stringify(1))` |
+| 26 | `PING` | `pb.req("PING", ["REPLY"])` |
+| 27 | `REPORT_USER` | `pb.req("REPORT_USER", ["<auth id>", "REPLY"])` |
+| 28 | `ENDORDSE_USER` | `pb.req("ENDORDSE_USER", ["<auth id>", "REPLY"])` |
+| 29 | `KICK_USER` | `pb.req("KICK_USER", ["<auth id>", "REPLY", "1"])` |
+| 30 | `MATCH_INFO_PARTIAL_UDPATE` | `pb.event("MATCH_INFO_PARTIAL_UDPATE", "coop_state", JSON.stringify("1"))` |
+| 31 | `PLAYER_SCORE_UPDATE` | `pb.event("PLAYER_SCORE_UPDATE", pb.num(1), pb.num(3), pb.num(5))` |
+| 32 | `PLAY_SOUND` | `pb.event("PLAY_SOUND", pb.num(0))` |
+| 33 | `BAN_USER` | `pb.req("BAN_USER", ["<auth id>", "REPLY"])` |
+| 34 | `RESSURECT` | `pb.event("RESSURECT", pb.num(0), pb.num(0), pb.num(100))` |
+| 35 | `SWORD_ATTACK` | `pb.event("SWORD_ATTACK")` |
+| 36 | `VAR_SYNC` | `pb.event("VAR_SYNC", "r", "varname", "1")` |
+| 37 | `FLOW_AT` | `pb.event("FLOW_AT", pb.num(0), pb.num(100), pb.num(200), pb.num(0), pb.num(0), pb.num(0))` |
+| 38 | `AI_STATE_SYNC` | `pb.event("AI_STATE_SYNC", pb.num(13), pb.num(850), pb.num(0), pb.num(200), pb.num(300), pb.num(400), pb.num(300), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0))` |
+| 39 | `AI_HEALTH_SYNC` | `pb.event("AI_HEALTH_SYNC", pb.num(13), pb.num(850), pb.num(100), pb.num(100), pb.num(100), pb.num(100))` |
+| 40 | `TASK` | `pb.event("TASK", "1+1", pb.num(0))` |
+| 41 | `TASK_ASNYC` | `pb.event("TASK_ASNYC", "1+1", pb.num(0))` |
+| 42 | `YOU_ARE_STILL_DEAD` | `pb.event("YOU_ARE_STILL_DEAD")` |
+| 43 | `ENTER_RESPAWN_QUEUE` | `pb.req("ENTER_RESPAWN_QUEUE", ["REPLY"])` |
 
 ## Loops, and reading what came back
 
