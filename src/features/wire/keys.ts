@@ -18,6 +18,7 @@ export const DEFAULT_RULE = Object.freeze({
   aim: 'aim',
   near: 'near',
   area: 'area',
+  ally: 'ally',
   replyId: 'replyId',
   myHmax: 'myHmax',
   myGun: 'myGun',
@@ -41,7 +42,11 @@ export const TOKEN = Object.freeze({
 
 export const FLAG = Object.freeze({ dry: 'dry', raw: 'raw', force: 'force' });
 
-export const SELECTOR = Object.freeze({ me: 'me', all: 'all', aim: 'aim', near: 'near', area: 'area' });
+export const SELECTOR = Object.freeze({ me: 'me', all: 'all', aim: 'aim', near: 'near', area: 'area', ally: 'ally', enemy: 'enemy' });
+
+export const SIDE_WORDS: Readonly<Record<string, string>> = Object.freeze({
+  ally: SELECTOR.ally, allies: SELECTOR.ally, enemy: SELECTOR.enemy, enemies: SELECTOR.enemy,
+});
 
 export const FILTER = Object.freeze({ players: 'players', bots: 'bots' });
 

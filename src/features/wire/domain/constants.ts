@@ -69,7 +69,7 @@ export const MESSAGES: readonly Message[] = Object.freeze([
     fields: [
       { name: 'power', kind: KIND.decimal, scale: SCALE.hundredth, default: RULE.zero, desc: 'heal power' },
       { name: 'gun', kind: KIND.number, default: RULE.myGun, desc: "the healer's gun index" },
-      { name: 'target', kind: KIND.slot, default: RULE.aim, desc: 'the target slot' },
+      { name: 'target', kind: KIND.slot, default: RULE.ally, desc: 'the target slot' },
       { name: 'respawns', kind: KIND.number, default: RULE.targetRespawns, desc: "the target's respawn counter" },
     ],
   },

@@ -28,7 +28,9 @@ player ([protocol.md](../research/protocol.md) §4).
 - `wire list` lists every message with its direction; the ones the server sends are marked
   `[receive only]` and cannot be sent.
 - `wire help <message>` says what the message does, then lists its fields under a header
-  (`field`, `type`, `default`, `meaning`): `type` is `player`, `number`, `text`, `JSON`, `flag`
+  (`field`, `type`, `default`, `what to put`, `meaning`). `what to put` is the kind of value the
+  field takes, e.g. `a gun index; your held gun` for `source`, `0-3; 0 hurts most` for `limb`,
+  or `leave it out` for a field `wire` fills in itself: `type` is `player`, `number`, `text`, `JSON`, `flag`
   or `choice`, with `xN` when you type game units and the wire value is N times larger;
   `default` is what a field you leave out takes, in words (`your x`, `your gun`, `aim`,
   `target's count`, `(automatic)`), or `required` when you must give it. It ends with an example
@@ -52,11 +54,16 @@ Any field that picks a player (a victim, a target, a bot) takes:
 - a list, `bob,#4`;
 - a filter, `@alpha` (a team by name or the start of it), `@players`, `@bots`;
 - `all`;
+- `ally` or `enemy` (also `allies`, `enemies`): everyone on your team, or not on it, other than
+  you. Alone on a single-target field it means the ally (or enemy) nearest your crosshair; follow
+  it with a rule to pick differently: `ally:near`, `enemy:near:3`, `enemy:area:300`. `@alpha`,
+  `@players` and `@bots` work the same way;
 - a rule, all measured from your crosshair: `aim` (the closest, within `wire_radius`),
   `near` or `near:3` (the closest, or the closest 3, at any distance), `area` or `area:300`
   (everyone within that many pixels).
 
-Left out, a single target defaults to `aim` and a multi-target field (the explosion victims) to
+Left out, a single target defaults to `aim`, except `heal_player`, whose target defaults to
+`ally` (the ally nearest your crosshair); and a multi-target field (the explosion victims) to
 `area`. `aim`, `near` and `area` never pick you; name yourself with `me` (`area,me`). An auth-id
 field (`report_user`, `endordse_user`, `kick_user`, `ban_user`) takes the same selectors, or a
 plain auth id; outside a level only the plain auth id works, since there are no characters to

@@ -16,6 +16,7 @@ export const WIRE_TEXT = Object.freeze({
   nobodyAtAll: (selector: string) => `${selector} matched nobody, and there is no one else in range`,
   tooMany: (field: string, count: number) => `${field} needs one target, but the selector matched ${count}; name just one`,
   noCrosshair: 'no crosshair position; aim with the mouse or name a target',
+  unknownRule: (selector: string, rule: string) => `${selector}: "${rule}" is not aim, near, near:n, area or area:n`,
   resolvedTo: (field: string, who: string) => `  ${field} -> ${who}`,
   resolvedTargets: (field: string, list: string) => `  ${field} -> ${list}`,
   dryHeader: 'would send (nothing sent):',

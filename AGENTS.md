@@ -128,11 +128,12 @@ One line per behavior change: what to do, and the result to expect.
 - wire: `npm test` (src/features/wire/*.test.ts). In a match, `wire heal_player target=bob
   power=5 --dry` shows `power 5 -> 500` and the picked target and sends nothing; `wire hit_player`
   with no target aims at the nearest within `wire_radius`; `wire list` lists 44 messages;
-  `wire help hit_player` lists its fields; `wire task` is refused as receive-only; `wire
+  `wire help hit_player` lists its fields; `wire heal_player --dry` picks the ally nearest the crosshair, not an enemy under it, and
+  `target=enemy:near:3` picks the 3 closest enemies; `wire task` is refused as receive-only; `wire
   authenticate` needs `--force`. With `net_log on`, `wire enter_respawn_queue` shows a numeric reply
   id in `netlog show` and its answer in the console; `wire report_user` in the menu asks for an
   auth id instead of failing. `wire help <message>` starts with what the message does, has a `field type default meaning`
-  header with defaults in words and `required` where there is none, ends with an `example:` line, and a message
+  header with defaults in words, a `what to put` column, and `required` where there is none, ends with an `example:` line, and a message
   relayed to every other client prints a note that your own screen does not change. `PB2_FEATURES=-wire` makes `wire` unknown;
   `PB2_FEATURES=-wire.match` refuses match messages but still sends lobby ones. The table
   matches docs/research/protocol.md (src/features/wire/domain/table.test.ts).

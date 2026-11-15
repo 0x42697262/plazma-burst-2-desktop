@@ -3,7 +3,7 @@ import { settings } from '#console/kernel/state/store.ts';
 import { level, playerFields as fields, playerGame as game, words } from '#console/kernel/game/player-access.ts';
 import { teamsMatching } from '#console/kernel/game/teams.ts';
 import { AIM_RADIUS_DEFAULT, EMPTY_JSON, NEAREST_DEFAULT, NO_GUN } from '../constants.ts';
-import { CHANNEL, CHAR, DEFAULT_RULE as RULE, FIELD_KIND as KIND, FILTER, SELECTOR, SETTING, TOKEN, WIRE_VALUE } from '../keys.ts';
+import { CHANNEL, CHAR, DEFAULT_RULE as RULE, FIELD_KIND as KIND, FILTER, SELECTOR, SETTING, SIDE_WORDS, TOKEN, WIRE_VALUE } from '../keys.ts';
 import { WIRE_TEXT as TEXT } from '../text.ts';
 import { toWire } from '../domain/units.ts';
 import type { Parsed } from '../domain/parse.ts';
@@ -60,6 +60,38 @@ function filterSlots(name: string): number[] {
   return ioSlots().filter((slot) => teams.has(Number(game.chars()[slot]?.team)));
 }
 
+const teamOf = (slot: number): number => Number(game.chars()[slot]?.team);
+
+function poolOf(word: string): number[] | null {
+  const side = SIDE_WORDS[word.toLowerCase()];
+  if (side === SELECTOR.ally) return others().filter((slot) => teamOf(slot) === teamOf(game.me()));
+  if (side === SELECTOR.enemy) return others().filter((slot) => teamOf(slot) !== teamOf(game.me()));
+  if (word.startsWith(TOKEN.filterPrefix)) return filterSlots(word.slice(TOKEN.filterPrefix.length));
+  return null;
+}
+
+function ruleSlots(rule: string, pool: readonly number[]): number[] | null {
+  const lowered = rule.toLowerCase();
+  if (lowered === SELECTOR.aim) {
+    const nearest = byDistance(pool, crosshair())[0];
+    return nearest !== undefined && distance(posOf(nearest), crosshair()) <= radius() ? [nearest] : [];
+  }
+  if (lowered === SELECTOR.near || lowered.startsWith(SELECTOR.near + TOKEN.ruleSeparator)) {
+    return byDistance(pool, crosshair()).slice(0, afterSeparator(lowered, NEAREST_DEFAULT));
+  }
+  if (lowered === SELECTOR.area || lowered.startsWith(SELECTOR.area + TOKEN.ruleSeparator)) {
+    const reach = afterSeparator(lowered, radius());
+    return pool.filter((slot) => distance(posOf(slot), crosshair()) <= reach);
+  }
+  return null;
+}
+
+const splitFilter = (token: string): { pool: number[] | null; rule: string | null } => {
+  const at = token.indexOf(TOKEN.ruleSeparator);
+  const head = at === -1 ? token : token.slice(0, at);
+  return { pool: poolOf(head), rule: at === -1 ? null : token.slice(at + TOKEN.ruleSeparator.length) };
+};
+
 function selectorSlots(selector: string): number[] {
   const token = selector.trim();
   if (token.includes(TOKEN.listSeparator)) {
@@ -68,24 +100,27 @@ function selectorSlots(selector: string): number[] {
     return [...seen];
   }
   const lowered = token.toLowerCase();
-  if (token.startsWith(TOKEN.filterPrefix)) return filterSlots(token.slice(TOKEN.filterPrefix.length));
   if (lowered === SELECTOR.all) return ioSlots();
   if (lowered === SELECTOR.me) return [game.me()];
-  if (lowered === SELECTOR.aim) {
-    const nearest = byDistance(others(), crosshair())[0];
-    return nearest !== undefined && distance(posOf(nearest), crosshair()) <= radius() ? [nearest] : [];
+  const { pool, rule } = splitFilter(token);
+  if (pool) {
+    if (rule === null) return pool;
+    const picked = ruleSlots(rule, pool.filter((slot) => slot !== game.me()));
+    if (!picked) throw new Error(TEXT.unknownRule(token, rule));
+    return picked;
   }
-  if (lowered === SELECTOR.near || lowered.startsWith(SELECTOR.near + TOKEN.ruleSeparator)) {
-    return byDistance(others(), crosshair()).slice(0, afterSeparator(lowered, NEAREST_DEFAULT));
-  }
-  if (lowered === SELECTOR.area || lowered.startsWith(SELECTOR.area + TOKEN.ruleSeparator)) {
-    const reach = afterSeparator(lowered, radius());
-    return others().filter((slot) => distance(posOf(slot), crosshair()) <= reach);
-  }
-  return [level.resolve(token)];
+  return ruleSlots(token, others()) ?? [level.resolve(token)];
 }
 
-const defaultSelector = (rule: Field['default']): string => (rule === RULE.area ? SELECTOR.area : rule === RULE.near ? SELECTOR.near : rule === RULE.self ? SELECTOR.me : SELECTOR.aim);
+const isFilterOnly = (selector: string): boolean => !selector.includes(TOKEN.listSeparator) && splitFilter(selector.trim()).pool !== null && splitFilter(selector.trim()).rule === null;
+
+const defaultSelector = (rule: Field['default']): string => {
+  if (rule === RULE.area) return SELECTOR.area;
+  if (rule === RULE.near) return SELECTOR.near;
+  if (rule === RULE.self) return SELECTOR.me;
+  if (rule === RULE.ally) return SELECTOR.ally;
+  return SELECTOR.aim;
+};
 
 function resolveTargets(field: Field, raw: string | undefined): number[] {
   if (!level.isActive()) throw new Error(TEXT.needsLevel(field.name));
@@ -98,7 +133,8 @@ function resolveTargets(field: Field, raw: string | undefined): number[] {
 }
 
 function singleTarget(field: Field, raw: string | undefined): number {
-  const slots = resolveTargets(field, raw);
+  const selector = raw ?? defaultSelector(field.default);
+  const slots = resolveTargets(field, isFilterOnly(selector) ? selector + TOKEN.ruleSeparator + SELECTOR.aim : selector);
   if (slots.length > 1) throw new Error(TEXT.tooMany(field.name, slots.length));
   return slots[0] as number;
 }
