@@ -199,6 +199,12 @@ export const game = {
   isMP: (): unknown => read('mp'),
   setMP: (multiplayer: unknown): void => { write('mp', multiplayer); },
   messageType: (name: string): unknown => requireNetwork()[name],
+  encodeNumber: (value: number): unknown => (field(requireNetwork(), 'netNum') as Callable)(value),
+  sendEvent: (typeName: string, parts: readonly unknown[]): void => {
+    const net = requireNetwork();
+    if (typeof net.Event !== 'function') throw new Error(TEXT.noNetwork);
+    net.Event(net[typeName], ...parts);
+  },
   sendTriggerRun: (index: number, region?: number): void => {
     const net = requireNetwork();
     const encode = field(net, 'netNum') as Callable;

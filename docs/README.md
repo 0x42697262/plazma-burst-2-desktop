@@ -37,6 +37,7 @@
 - [p2p-host.md](features/p2p-host.md): `p2p_host`, the player-hosted dedicated host
 - [teleport.md](features/teleport.md): `teleport`, `tp`
 - [player-info.md](features/player-info.md): `player_info`, `pos`, `chars`, `players`, `bots`, `uid` and `accounts`
+- [wire.md](features/wire.md): `wire`, send a protocol message by name
 - [health.md](features/health.md): `health`, `heal`, `hp`, `revive` and the HP keys
 - [movement.md](features/movement.md): `movement`, the movement keys
 - [profiles.md](features/profiles.md): `profiles`, settings for some maps

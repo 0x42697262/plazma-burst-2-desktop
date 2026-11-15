@@ -125,3 +125,10 @@ One line per behavior change: what to do, and the result to expect.
 - player_info chars filters: `npm test` (src/features/player_info/chars.test.ts). In a team
   match, `chars alpha` lists only team Alpha, `players` lists no bots, `bots blue` lists
   Blue Team's bots, and `chars zzz` is an error that lists the filters.
+- wire: `npm test` (src/features/wire/*.test.ts). In a match, `wire heal_player target=bob
+  power=5 --dry` shows `power 5 -> 500` and the picked target and sends nothing; `wire hit_player`
+  with no target aims at the nearest within `wire_radius`; `wire list` lists 44 messages;
+  `wire help hit_player` lists its fields; `wire task` is refused as receive-only; `wire
+  authenticate` needs `--force`. `PB2_FEATURES=-wire` makes `wire` unknown;
+  `PB2_FEATURES=-wire.match` refuses match messages but still sends lobby ones. The table
+  matches docs/research/protocol.md (src/features/wire/domain/table.test.ts).

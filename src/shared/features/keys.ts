@@ -31,6 +31,7 @@ export const FEATURE = Object.freeze({
   diagnostics: 'diagnostics',
   webClient: 'web_client',
   mapBot: 'map_bot',
+  wire: 'wire',
 });
 export type FeatureId = typeof FEATURE[keyof typeof FEATURE];
 
@@ -63,6 +64,7 @@ export const CAPABILITY = Object.freeze({
   binds: Object.freeze({ bind: 'binds.bind', keyname: 'binds.keyname' }),
   guns: Object.freeze({ list: 'guns.list', give: 'guns.give', drop: 'guns.drop', gun: 'guns.gun', bullets: 'guns.bullets' }),
   playerInfo: Object.freeze({ pos: 'player_info.pos', chars: 'player_info.chars', uid: 'player_info.uid', accounts: 'player_info.accounts' }),
+  wire: Object.freeze({ send: 'wire.send', list: 'wire.list', help: 'wire.help', lobby: 'wire.lobby', match: 'wire.match' }),
   health: Object.freeze({ god: 'health.god', hp: 'health.hp', heal: 'health.heal', revive: 'health.revive' }),
   movement: Object.freeze({
     speed: 'movement.speed', jump: 'movement.jump', gravity: 'movement.gravity', fly: 'movement.fly', swords: 'movement.swords', worldGravity: 'movement.world_gravity',
