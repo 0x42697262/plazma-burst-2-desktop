@@ -205,6 +205,12 @@ export const game = {
     if (typeof net.Event !== 'function') throw new Error(TEXT.noNetwork);
     net.Event(net[typeName], ...parts);
   },
+  sendRequest: (typeName: string, parts: readonly unknown[], reply: unknown): void => {
+    const net = requireNetwork();
+    const connection = field(net, 'p2pConn') || field(net, 'lobbyConn');
+    if (!connection) throw new Error(TEXT.noNetwork);
+    invoke(connection, 'netSend', field(net, 'netChannel'), [net[typeName], ...parts], reply);
+  },
   sendTriggerRun: (index: number, region?: number): void => {
     const net = requireNetwork();
     const encode = field(net, 'netNum') as Callable;

@@ -8,6 +8,7 @@ type SendBindings = Readonly<{
   replyTo(): unknown;
   sendLobby(typeName: string, parts: readonly unknown[], reply?: unknown): void;
   sendEvent(typeName: string, parts: readonly unknown[]): void;
+  sendRequest(typeName: string, parts: readonly unknown[], reply: unknown): void;
   encodeNumber(value: number): unknown;
 }>;
 
@@ -32,10 +33,11 @@ export function dryLines(resolution: Resolution): string[] {
   return lines;
 }
 
-export function sendResolved(resolution: Resolution, onReply?: (reply: unknown) => void): void {
+export function sendResolved(resolution: Resolution, onReply: (reply: unknown) => void): void {
   const { message, parts } = resolution;
   const args = parts.map(toArg);
   const typeName = TYPE_PREFIX + message.name;
-  if (message.channel === CHANNEL.lobby && message.reply) bind.sendLobby(typeName, args, onReply);
-  else bind.sendEvent(typeName, args);
+  if (!message.reply) bind.sendEvent(typeName, args);
+  else if (message.channel === CHANNEL.lobby) bind.sendLobby(typeName, args, onReply);
+  else bind.sendRequest(typeName, args, onReply);
 }

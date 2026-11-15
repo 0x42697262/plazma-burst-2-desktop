@@ -6,6 +6,7 @@ export const SCALE = Object.freeze({
 
 export const AIM_RADIUS_DEFAULT = 150;
 export const NEAREST_DEFAULT = 1;
+export const NO_GUN = -1;
 export const EMPTY_JSON = '{}';
 export const MESSAGE_NAME_WIDTH = 30;
 export const FIELD_NAME_WIDTH = 12;

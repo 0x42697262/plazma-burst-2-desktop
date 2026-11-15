@@ -2,7 +2,7 @@ import { stringOf } from '#kernel/text/text-of.ts';
 import { settings } from '#console/kernel/state/store.ts';
 import { level, playerFields as fields, playerGame as game, words } from '#console/kernel/game/player-access.ts';
 import { teamsMatching } from '#console/kernel/game/teams.ts';
-import { AIM_RADIUS_DEFAULT, EMPTY_JSON, NEAREST_DEFAULT } from '../constants.ts';
+import { AIM_RADIUS_DEFAULT, EMPTY_JSON, NEAREST_DEFAULT, NO_GUN } from '../constants.ts';
 import { CHANNEL, CHAR, DEFAULT_RULE as RULE, FIELD_KIND as KIND, FILTER, SELECTOR, SETTING, TOKEN, WIRE_VALUE } from '../keys.ts';
 import { WIRE_TEXT as TEXT } from '../text.ts';
 import { toWire } from '../domain/units.ts';
@@ -33,6 +33,8 @@ const posOf = (index: number): Point => {
   const point = Number(character?.[fields.REF_PT] ?? index);
   return { x: game.ptX()[point] ?? character?.x ?? 0, y: game.ptY()[point] ?? character?.y ?? 0 };
 };
+
+const others = (): number[] => ioSlots().filter((slot) => slot !== game.me());
 
 const crosshair = (): Point => {
   const me = level.player();
@@ -70,15 +72,15 @@ function selectorSlots(selector: string): number[] {
   if (lowered === SELECTOR.all) return ioSlots();
   if (lowered === SELECTOR.me) return [game.me()];
   if (lowered === SELECTOR.aim) {
-    const nearest = byDistance(ioSlots(), crosshair())[0];
+    const nearest = byDistance(others(), crosshair())[0];
     return nearest !== undefined && distance(posOf(nearest), crosshair()) <= radius() ? [nearest] : [];
   }
   if (lowered === SELECTOR.near || lowered.startsWith(SELECTOR.near + TOKEN.ruleSeparator)) {
-    return byDistance(ioSlots(), posOf(game.me())).slice(0, afterSeparator(lowered, NEAREST_DEFAULT));
+    return byDistance(others(), posOf(game.me())).slice(0, afterSeparator(lowered, NEAREST_DEFAULT));
   }
   if (lowered === SELECTOR.area || lowered.startsWith(SELECTOR.area + TOKEN.ruleSeparator)) {
     const reach = afterSeparator(lowered, radius());
-    return ioSlots().filter((slot) => distance(posOf(slot), crosshair()) <= reach);
+    return others().filter((slot) => distance(posOf(slot), crosshair()) <= reach);
   }
   return [level.resolve(token)];
 }
@@ -86,11 +88,11 @@ function selectorSlots(selector: string): number[] {
 const defaultSelector = (rule: Field['default']): string => (rule === RULE.area ? SELECTOR.area : rule === RULE.near ? SELECTOR.near : rule === RULE.self ? SELECTOR.me : SELECTOR.aim);
 
 function resolveTargets(field: Field, raw: string | undefined): number[] {
+  if (!level.isActive()) throw new Error(TEXT.needsLevel(field.name));
   const selector = raw ?? defaultSelector(field.default);
   const slots = selectorSlots(selector);
   if (slots.length) return slots;
-  const others = ioSlots();
-  const closest = byDistance(others, crosshair())[0];
+  const closest = byDistance(others(), crosshair())[0];
   if (closest !== undefined) throw new Error(TEXT.nobodyInRange(selector, level.label(closest)));
   throw new Error(TEXT.nobodyAtAll(selector));
 }
@@ -102,10 +104,10 @@ function singleTarget(field: Field, raw: string | undefined): number {
 }
 
 const defaultNumber = (rule: Field['default'], targetSlot: number | null): number => {
-  const me = level.player();
   if (rule === RULE.myPosX) return Math.round(posOf(game.me()).x);
   if (rule === RULE.myPosY) return Math.round(posOf(game.me()).y);
-  if (rule === RULE.myHmax) return Number(me[fields.MAX_HP] ?? 0);
+  if (rule === RULE.myHmax) return Number(level.player()[fields.MAX_HP] ?? 0);
+  if (rule === RULE.myGun) return Number(level.player()[CHAR.currentGun] ?? NO_GUN);
   if (rule === RULE.targetRespawns && targetSlot !== null) return Number(game.chars()[targetSlot]?.[CHAR.respawns] ?? 0);
   return 0;
 };
@@ -134,18 +136,18 @@ function scalarPart(field: Field, raw: string | undefined, flags: Parsed['flags'
     return { fieldName: field.name, encode: false, reply: false, text: raw && raw !== WIRE_VALUE.off ? WIRE_VALUE.on : '', typed: raw ?? '' };
   }
   if (field.kind === KIND.choice) {
-    if (raw === undefined) throw new Error(TEXT.requiredField(field.name, field.name));
+    if (raw === undefined) throw new Error(TEXT.requiredField(field.name));
     if (field.choices && !field.choices.includes(raw)) throw new Error(TEXT.notAChoice(field.name, raw, field.choices));
     return { fieldName: field.name, encode: false, reply: false, text: raw, typed: raw };
   }
   if (field.kind === KIND.json) {
     const value = raw ?? (field.default === RULE.empty ? EMPTY_JSON : undefined);
-    if (value === undefined) throw new Error(TEXT.requiredField(field.name, field.name));
+    if (value === undefined) throw new Error(TEXT.requiredField(field.name));
     try { JSON.parse(value); } catch { throw new Error(TEXT.badJson(field.name, value)); }
     return { fieldName: field.name, encode: false, reply: false, text: value, typed: value };
   }
   const value = raw ?? (field.default === RULE.empty ? '' : undefined);
-  if (value === undefined) throw new Error(TEXT.requiredField(field.name, field.name));
+  if (value === undefined) throw new Error(TEXT.requiredField(field.name));
   return { fieldName: field.name, encode: false, reply: false, text: value, typed: value };
 }
 
@@ -167,12 +169,13 @@ export function resolve(parsed: Parsed): Resolution {
     return scalarPart(field, raw(field), flags, targetSlot);
   });
 
-  if (!message.group) return { message, parts: topParts, report };
+  const group = message.group;
+  if (!group) return { message, parts: topParts, report };
 
-  const victimField = message.group.find((field) => field.kind === KIND.slot);
+  const victimField = group.find((field) => field.kind === KIND.slot);
   const victims = victimField ? resolveTargets(victimField, raw(victimField)) : [game.me()];
   report.push(TEXT.resolvedTargets(victimField?.name ?? SELECTOR.all, victims.map((slot) => level.label(slot)).join(TOKEN.listSeparator + ' ')));
-  const groupParts = victims.flatMap((slot) => message.group!.map((field) => {
+  const groupParts = victims.flatMap((slot) => group.map((field) => {
     if (field === victimField) return { fieldName: field.name, encode: true, reply: false, number: slot, typed: level.label(slot) } satisfies OutPart;
     return scalarPart(field, raw(field), flags, slot);
   }));

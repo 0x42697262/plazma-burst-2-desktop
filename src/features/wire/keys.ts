@@ -44,7 +44,7 @@ export const SELECTOR = Object.freeze({ me: 'me', all: 'all', aim: 'aim', near: 
 
 export const FILTER = Object.freeze({ players: 'players', bots: 'bots' });
 
-export const CHAR = Object.freeze({ respawns: 'respawns' });
+export const CHAR = Object.freeze({ respawns: 'respawns', currentGun: 'curwea' });
 
 export const SETTING = Object.freeze({ radius: 'wire_radius' });
 

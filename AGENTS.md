@@ -129,6 +129,8 @@ One line per behavior change: what to do, and the result to expect.
   power=5 --dry` shows `power 5 -> 500` and the picked target and sends nothing; `wire hit_player`
   with no target aims at the nearest within `wire_radius`; `wire list` lists 44 messages;
   `wire help hit_player` lists its fields; `wire task` is refused as receive-only; `wire
-  authenticate` needs `--force`. `PB2_FEATURES=-wire` makes `wire` unknown;
+  authenticate` needs `--force`. With `net_log on`, `wire enter_respawn_queue` shows a numeric reply
+  id in `netlog show` and its answer in the console; `wire report_user` in the menu asks for an
+  auth id instead of failing. `PB2_FEATURES=-wire` makes `wire` unknown;
   `PB2_FEATURES=-wire.match` refuses match messages but still sends lobby ones. The table
   matches docs/research/protocol.md (src/features/wire/domain/table.test.ts).
