@@ -74,3 +74,13 @@ test('outside a level a lobby target needs an auth id instead of crashing', asyn
   assert.match(errorsOf(game.run('wire report_user'))[0] ?? '', /needs a level.*auth id/);
   assert.ok(game.run('wire report_user target=777 --dry').some((line) => /"777"/.test(String(line))));
 });
+
+test('near measures from the crosshair, not from your body, and has no radius', async () => {
+  const { game } = await wiredGame();
+  game.run('wire_radius 1');
+  game.chars[0].tarx = 600;
+  game.chars[0].tary = 100;
+  const near = (count: string) => game.run(`wire damage_players_via_explosion victim=near${count} --dry`).find((line) => /victim ->/.test(String(line)));
+  assert.match(String(near('')), /victim -> #2 bluebot$/, 'bluebot sits under the crosshair; bob is closer to your body');
+  assert.match(String(near(':2')), /victim -> #2 bluebot, #1 bob$/, 'the closest two, in order, though both are past wire_radius');
+});

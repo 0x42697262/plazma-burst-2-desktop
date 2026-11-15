@@ -37,8 +37,9 @@ Any field that picks a player (a victim, a target, a bot) takes:
 - a list, `bob,#4`;
 - a filter, `@alpha` (a team by name or the start of it), `@players`, `@bots`;
 - `all`;
-- a rule: `aim` (nearest to the crosshair), `near` or `near:3` (the closest, or closest 3),
-  `area` or `area:300` (everyone within that many pixels of the crosshair).
+- a rule, all measured from your crosshair: `aim` (the closest, within `wire_radius`),
+  `near` or `near:3` (the closest, or the closest 3, at any distance), `area` or `area:300`
+  (everyone within that many pixels).
 
 Left out, a single target defaults to `aim` and a multi-target field (the explosion victims) to
 `area`. `aim`, `near` and `area` never pick you; name yourself with `me` (`area,me`). An auth-id

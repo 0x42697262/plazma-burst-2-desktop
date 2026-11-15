@@ -12,7 +12,7 @@ export const SEND_TEXT = Object.freeze({
   ],
   args: [
     ['<message>', 'the message name, any case, "reliable_" optional, a unique prefix works'],
-    ['field=value', 'set a field; a target can be #n, a nickname, me, a list, @alpha/@players/@bots, aim, near, near:3, area, area:300'],
+    ['field=value', 'set a field; a target can be #n, a nickname, me, a list, @alpha/@players/@bots, aim, near, near:3, area, area:300 (aim, near and area measure from your crosshair)'],
     ['--dry', 'print the resolved parts and send nothing'],
     ['--raw', 'send every number unscaled (wire values)'],
     ['--force', 'required for messages that re-log the connection'],

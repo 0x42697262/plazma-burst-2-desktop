@@ -76,7 +76,7 @@ function selectorSlots(selector: string): number[] {
     return nearest !== undefined && distance(posOf(nearest), crosshair()) <= radius() ? [nearest] : [];
   }
   if (lowered === SELECTOR.near || lowered.startsWith(SELECTOR.near + TOKEN.ruleSeparator)) {
-    return byDistance(others(), posOf(game.me())).slice(0, afterSeparator(lowered, NEAREST_DEFAULT));
+    return byDistance(others(), crosshair()).slice(0, afterSeparator(lowered, NEAREST_DEFAULT));
   }
   if (lowered === SELECTOR.area || lowered.startsWith(SELECTOR.area + TOKEN.ruleSeparator)) {
     const reach = afterSeparator(lowered, radius());
