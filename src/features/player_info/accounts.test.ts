@@ -6,12 +6,12 @@ import { errorsOf } from '#console/testing/console-output.fixture.ts';
 test('accounts: slot, nickname, login and auth id of everyone connected', async () => {
   const game = await bootConsole();
   const { chars } = game;
-  chars[0].login = 'epic sxnakALTS';
+  chars[0].login = 'epic sansXALT';
   chars[0].auth_id = 322947;
   chars[1].login = '.guest';
   chars[1].auth_id = 322951;
   assert.deepEqual(game.run('accounts'), [
-    '  #0   you              epic sxnakALTS        auth   322947 (you)',
+    '  #0   you              epic sansXALT        auth   322947 (you)',
     '  #1   bob              .guest               auth   322951',
     '  #2   bluebot          -                    auth        ?',
   ]);
