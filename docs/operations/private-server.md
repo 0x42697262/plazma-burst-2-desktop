@@ -159,11 +159,57 @@ How the server treats them:
 
 Players don't need the map file: the server sends each map to whoever joins.
 
+## Reputation
+
+Reputation is the lobby's number, not the game's: the game never computes it, it only shows
+what the lobby puts in its messages. The lobby writes it when an account logs in, sends a
+match owner's as `match_owner_reputation` in the match list
+(`scripts/libs/flash.js:2764`), and sends every player's inside the per-player match state
+as `ping~skill~reputation` (`scripts/libs/flash.js:835`, the client stores it at `:1297`).
+Three things read it:
+- **Joining a match:** below its `min_reputation` is refused with "This match does not
+  allow users with reputation below N to join" (`scripts/libs/flash.js:6573`). Staff skip
+  the check.
+- **Creating a match:** a negative reputation cannot create one (`:2673`), and the
+  `min_reputation` asked for is lowered to the creator's own reputation (`:2686`). The
+  owner's in-game `-min_reputation N` command is lowered the same way (`:4998`). The create
+  screen offers 0, 1, 5, 10, 20 and 40 (`scripts/screens/MPCreateMatch.js:288`).
+- **The match list:** with its filter on, matches whose owner has no reputation are hidden
+  (`scripts/screens/MPLobby.js:306`).
+
+Where the number comes from is not in the game files. Reports and endorsements are calls
+into the lobby's account module (`scripts/libs/flash.js:2879`, `:2882`), the "potential"
+figure in the lobby's reputation tooltip is another (`:2647`), and on a client that module
+is a stand-in with three no-ops (`:345`). The real one, with the accounts' entries and the
+rules that move a reputation up and down, runs on the official lobby.
+
+This server replaces that module with its own (`src/server/game.ts`): a login is a
+nickname and the server password, and its stats are a constant, `reputation` 40
+(`src/server/constants.ts:30`, `src/server/game.ts:190`, `:193`). Reporting and endorsing
+are answered "Server: This server keeps no reputation; nothing was changed"
+(`src/server/game.ts:156`, `:157`). What the official module does with those two requests —
+the wire format, the two deltas per report, the cap time — is in
+[reputation](../research/reputation.md).
+
+So on this server:
+- **Nobody is ever below a match's minimum.** 40 is the top of the create screen's list,
+  so the join check, both clamps and the `-min_reputation` command never refuse or lower
+  anything: a match set to 40 lets everyone in.
+- **Everyone shows 40.** In the lobby's `REPUTATION` line, in a match's join requirements,
+  and on the Tab scoreboard.
+- **Reputation starts at 40 on every login.** Nothing in `data/server/` keeps it, and
+  there is no setting to change it.
+- **The lobby's reputation tooltip says "Your potential reputation: undefined points".**
+  The tooltip asks the account module for the figure (`scripts/libs/flash.js:2647`) and
+  reads its answer (`scripts/screens/MPLobby.js:233`); the stand-in has that member as a
+  function that returns nothing, so the lobby's answer leaves the field out. Cosmetic: no
+  rule uses it.
+
 ## Next to the official server
 
 | | Official | Yours |
 |---|---|---|
-| Accounts | PB2 accounts | a nickname and the server password; no profiles, stats, reputation (everyone has 40, enough for any "min reputation") or relations |
+| Accounts | PB2 accounts | a nickname and the server password; no profiles, stats, reputation (everyone has 40, enough for any "min reputation"; see [Reputation](#reputation)) or relations |
 | Ranked, stats | yes | ranked matches can be created, but nothing is kept |
 | Reports, endorsements | change reputation | answered "nothing was changed" |
 | Anti-cheat reports | the server disconnects the player | printed (`cheat_reports: "kick"` disconnects too). The game still reloads the page of a player whose own scan trips, as it always does |
