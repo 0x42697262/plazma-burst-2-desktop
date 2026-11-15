@@ -12,14 +12,14 @@ export type Character = { x: number; y: number; io?: unknown; team?: unknown; ni
 type Fade = { alpha: number; visible: boolean };
 
 type PlayerBindings = {
-  me(): number; chars(): (Character | null)[]; charCount(): number; isMP(): boolean;
+  me(): number; chars(): (Character | null)[]; playersBySlot(): (Character | null)[] | undefined; charCount(): number; isMP(): boolean;
   updateBody(index: number): void; healChar(index: number, character: Character, power: number): void;
   levelState(): string; setLevelState(state: string): void; setFailText(text: string): void;
   fadeOverlay(): Fade | null; isRunning(): boolean; setRunning(running: boolean): void;
   ptX(): number[]; ptY(): number[]; mapText(): unknown;
 };
 type Fields = {
-  HP: string; MAX_HP: string; REF_PT: string;
+  HP: string; MAX_HP: string; REF_PT: string; LOGIN: string; AUTH_ID: string; SPECTATOR: string;
   HEAD_HP: string; HEAD_OFF: string; FACE_HP: string; FACE_GONE: string; LEGS_HP: string; LEGS_BROKEN: string; ARMS_HP: string; ARMS_BROKEN: string;
 };
 type Settings = { has(key: string): boolean; get(key: string): unknown; effective(key: string): unknown };

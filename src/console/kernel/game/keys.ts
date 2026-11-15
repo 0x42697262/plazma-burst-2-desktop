@@ -1,7 +1,7 @@
 export const CONNECTION_CLASS_NAME = 'connClass';
 
 export const NAME_KEYS = Object.freeze([
-  'chars', 'me', 'dead', 'dying', 'updateBody', 'charCount', 'refreshChar', 'healChar', 'headHp', 'faceHp',
+  'chars', 'me', 'playersBySlot', 'dead', 'dying', 'updateBody', 'charCount', 'refreshChar', 'healChar', 'headHp', 'faceHp',
   'legsHp', 'armsHp', 'headOff', 'faceGone', 'legsBroken', 'armsBroken', 'jump', 'walk', 'playerDt', 'noSwords', 'moveIntentX', 'moveIntentY', 'stability',
   'ptCount', 'ptOwner', 'charIndex', 'gunPtBase', 'gunPtRange', 'guns', 'ptX', 'ptY', 'interpolating', 'ptPrevX',
   'ptPrevY', 'clearPtInterp', 'cameraTarget', 'spectating', 'refPoint', 'effect', 'effectTypes', 'effectTeleport',
@@ -62,7 +62,7 @@ export const missingNameLabel = (key: string): string => `<${key}>`;
 export const readerSource = (name: string): string => `(() => typeof ${name} === 'undefined' ? undefined : ${name})`;
 export const writerSource = (name: string): string => `((value) => { ${name} = value; })`;
 
-export const FIELD = Object.freeze({ hp: 'hea', maxHp: 'hmax' });
+export const FIELD = Object.freeze({ hp: 'hea', maxHp: 'hmax', login: 'login', authId: 'auth_id' });
 export const slotField = (slot: number): string => `slot${slot}`;
 export const PICKED_BY = 'picken_by';
 

@@ -1,4 +1,4 @@
-# player_info: pos, chars and uid
+# player_info: pos, chars, uid and accounts
 
 Feature flag `player_info` (on by default; all modes). Code: `src/features/player_info/`.
 
@@ -6,6 +6,14 @@ Feature flag `player_info` (on by default; all modes). Code: `src/features/playe
 - `chars` lists the characters in the level: index, nickname, team, HP, alive or dead,
   and distance. The index is what `tp`, `give to`, `drop from`, `revive` and
   `triggers run as` take.
+- `accounts` (aliases `authids`, `ids`) lists the players and spectators connected to the
+  match: index, nickname, login and the **auth id** that `RELIABLE_REPORT_USER`,
+  `RELIABLE_ENDORDSE_USER`, `RELIABLE_KICK_USER` and `RELIABLE_BAN_USER` take. A map actor
+  with no account shows `-`, `?` means the match has not sent that player's account yet
+  (before the first sync), and a spectator carries `(spectating)`. An empty slot is left out,
+  so the numbers can have gaps. Players come from the characters array, spectators only from
+  the per-slot table (`playersBySlot`), which is why an id read in one session must be read
+  again after a rejoin: the lobby assigns it per join. Capability `player_info.accounts`.
 - `uid [<# | name> | all]` gives a character's map uid (`#player*1`), as triggers name
   it: yours, one by index or (part of a) nickname as `tp` takes them, or everyone's.
   Characters are the map's `<player>` and `<enemy>` tags in map order, so character #3

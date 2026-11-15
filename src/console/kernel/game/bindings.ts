@@ -68,6 +68,7 @@ export const game = {
   setRunning: (running: unknown): void => { writeGlobal(GAME_GLOBAL.running, running); },
 
   chars: (): (Character | null | undefined)[] => read('chars') as (Character | null | undefined)[],
+  playersBySlot: (): (Character | null | undefined)[] | undefined => read('playersBySlot') as (Character | null | undefined)[] | undefined,
   me: (): number => read('me') as number,
   charCount: (): number => read('charCount') as number,
   playerDt: (): number => read('playerDt') as number,

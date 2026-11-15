@@ -9,6 +9,9 @@ const field = (name: string | undefined): string => name ?? '';
 export const GAME_FIELDS = Object.freeze({
   HP: FIELD.hp,
   MAX_HP: FIELD.maxHp,
+  LOGIN: FIELD.login,
+  AUTH_ID: FIELD.authId,
+  SPECTATOR: field(NAMES.connSpectator),
   DEAD: field(NAMES.dead),
   DYING: field(NAMES.dying),
   JUMP: field(NAMES.jump),
