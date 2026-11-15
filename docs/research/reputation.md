@@ -119,7 +119,99 @@ drawn at `scripts/frame2.js:20729`).
 | A relation's effect | its initiator, `delete_relation: <since>` | only the side that created it (`flash.js:2588`) |
 | A match's `min_reputation` | owner or staff: create settings, or `-min_reputation <n> [-recheck <slot>]` in chat | lowered to the setter's own reputation (`:2686`, `:4998`); with `-recheck`, players below it are disconnected (`:5010-5021`) |
 | Creating a match | — | refused at negative reputation (`:2673`) |
-| Joining a match | — | refused below its `min_reputation` (`:6573`); staff bypass (`:6567`) |
+| Joining a match | — | refused below its `min_reputation` (`:6573`); staff bypass (`:6568`) |
+
+### What a report or an endorsement may carry
+
+The request is `[<opcode>, <target auth id>, <reply id>]` and the lobby reads only those two
+values (`flash.js:2851`, `:2853`). Consequences a client can see:
+
+- **No amount, ever.** There is no fourth value that means points: the only other part the
+  lobby reads on this branch is `parts[3] === "1"` (`:2857`), and that is used by kick and
+  ban, not by report or endorse. A hand-sent message with an extra part changes nothing.
+- **The target is a number, normalised.** `parseInt(parts[1])`, so `"1042"`, `" 1042"`,
+  `"01042"` and `"1042abc"` all mean auth id 1042.
+- **Self is refused by the lobby, not by the page.** `parts[1]` is compared with the
+  initiator's own id, read from the account module's map keyed by the connection
+  (`:2865-2871`). The client never states who it is, and the page's report and endorse
+  handlers carry no self-check of their own (`HUD.js:2061-2070`, `:2123-2133`): the answer
+  comes back as the chat string `Error: Can't do this to yourself`.
+- **No throttle and no "we played together" check.** The dispatcher's only time gates are
+  creating a match, once a second (`:2671`), the join-password cooldown (`:2965`) and chat,
+  five a second (`:4016-4019`). This branch has none of them and does not compare matches.
+  Every message is another call into the module.
+- **Spectating allows it** (`:1730-1753` lists report and endorse among the messages a
+  spectator may still send).
+
+## What each object checks before it changes
+
+| Object | Who may change it | Checked at |
+|---|---|---|
+| A profile (`nickname`, `uid`, `is_staff`) | only the account module during login | `flash.js:2008`. The only other write is the player-hosted p2p branch (`:3180`), which the lobby returns from first (`:3147`) |
+| An account's stats (`reputation`, `skill`, wins, losses) | only the account module during login | `:3181`, the same p2p branch; nothing else |
+| Your player's fields in a match | you | whitelist `team`, `skin_snapshot`, `slot0…slot9`, `curwea` (`:216-221`), each validated and applied to your own player (`:3576-3620`) |
+| Kills and deaths | a match server only | the lobby drops a player's own report of them (`:2062`) |
+| A relation's `is_active` | the side that created it | `:2570-2588` |
+| A match's ban list | staff, or the owner if not a guest | `:2897-2914`, `:7183-7227` |
+| An account ban | staff | `:2886` |
+| Match settings, `min_reputation` | owner or staff | `:4029-4033`, `:4998` |
+
+"The lobby drops it" in those rows is `$с0А0О`, which is
+`connection.$с0А0О = $ММ.$T0еcр` — "this code is the lobby server"
+(`scripts/connection.js:248`, so every player connection on a lobby has it set, including
+this repo's server, which raises the same flag at `src/server/game.ts:119`).
+
+Two references carry no owner check, and both are inside these rules rather than around
+them: report and endorse reach any online auth id, not only players in your match (`:2855`
+resolves it from the module's global map), and a kick resolves the target the same way but
+adds them to the *actor's* match ban list, disconnecting them only if they are in it
+(`:7183-7227`).
+
+## Probing the live lobby
+
+Every number above is enforced by the lobby, so the only way to learn what its account
+module decides is to ask it and watch the two numbers the client is allowed to see. Two of
+your own accounts, the lobby's own server, nothing else. The same lines, one per block and
+with the target set once, are in [reputation-probe.md](reputation-probe.md).
+
+1. `net_log on` in the dev console. Join a match with the second account, open the Tab
+   scoreboard, click **Endorse** on that account once.
+2. `netlog show` and read the `ENDORDSE_USER` line: it is
+   `[<opcode>, <target auth id>, <reply id>]`, and the answer is `[<string>]`. Write both
+   down, plus the target's `REPUTATION` in the lobby and its `reputation_potential` in the
+   tooltip.
+3. Replay it, same target id, as often as you like ([js](../features/js-eval.md) runs in the
+   page and has `PB2_NAMES`). First check the four pieces are there:
+
+```
+js JSON.stringify((()=>{const N=PB2_NAMES,M=(0,eval)(N.net),c=M[N.lobbyConn];return {build:N.version,net:typeof M,connected:!!c,channel:!!M[N.netChannel],placeholder:typeof M[N.netReplyTo]}})())
+```
+
+   `(0,eval)` is not decoration: the network object is `class $ММ` at the top of
+   `scripts/libs/flash.js:5`, and a top-level class is a binding, not a property of
+   `globalThis`, so `globalThis[PB2_NAMES.net]` is `undefined`. The replies collect in
+   `probe`, which `js` prints as `[object Object]` unless it is stringified:
+
+```
+js globalThis.probe=[];(()=>{const N=PB2_NAMES,M=(0,eval)(N.net),c=M[N.lobbyConn],T="1042";const send=(extra)=>new Promise(d=>{const p=[M.RELIABLE_ENDORDSE_USER,T,M[N.netReplyTo]];if(extra)p.push(extra);c[N.netSend](M[N.netChannel],p,r=>{probe.push(Array.from(r));d()})});let i=0;const step=()=>{if(i++>=5)return;send().then(step)};step()})()
+js JSON.stringify(probe)
+```
+
+4. Send it once with the target set to **your own** auth id: expect
+   `Error: Can't do this to yourself` and no change on the other account.
+5. Send it once with a fourth part, `"11"`: the reply and both numbers should be
+   indistinguishable from one plain send.
+6. After each round, the target opens the lobby's Relations screen: one row per relation,
+   with `Since`, `Until`, `Active` and `Reputation delta` (`MPLobby.js:38-51`). That is the
+   only view of what the module stored.
+
+What each outcome proves: whether the lobby took the message and, for a live target, how the
+module answers — the string in chat is its own wording. The sizes stay hidden. First live
+results are in [reputation-probe.md](reputation-probe.md#observed-so-far).
+
+An id that is not live is harmless: the lookup fails before the module is called
+(`flash.js:2855`) and the reply `Error: Target user wasn't online for too long` is not even
+logged (`:2920-2923`). So a batch with a wrong id leaves no trace and needs no cleanup.
 
 ## Staff
 

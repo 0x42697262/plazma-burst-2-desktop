@@ -36,7 +36,6 @@
 - [netlog.md](features/netlog.md): `netlog`, the network recorder
 - [p2p-host.md](features/p2p-host.md): `p2p_host`, the player-hosted dedicated host
 - [teleport.md](features/teleport.md): `teleport`, `tp`
-- [player-info.md](features/player-info.md): `player_info`, `pos` and `chars`
 - [health.md](features/health.md): `health`, `heal`, `hp`, `revive` and the HP keys
 - [movement.md](features/movement.md): `movement`, the movement keys
 - [profiles.md](features/profiles.md): `profiles`, settings for some maps
@@ -64,4 +63,5 @@
 - [scan-gating.md](research/scan-gating.md): the condition that decides whether the anti-tamper scan is installed at all, and the one login it exempts
 - [fingerprinting.md](research/fingerprinting.md): the main server's browser fingerprinter and the RELIABLE_TASK code path
 - [reputation.md](research/reputation.md): reputation points: what the lobby sends and receives, the relations behind them, and what the game cannot tell
+- [reputation-probe.md](research/reputation-probe.md): the console lines that ask the live lobby, one per block, for copying
 
