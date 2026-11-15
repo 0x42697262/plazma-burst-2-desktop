@@ -322,15 +322,80 @@ the value if it is a string, number or boolean (`:3740-3746`). That is why this 
 guards the message ([lobby_task_guard](../features/lobby-task-guard.md)) and why a private
 server's code never runs here.
 
-### 42 · YOU_ARE_STILL_DEAD, 43 · ENTER_RESPAWN_QUEUE, 2 · RESPAWN, 34 · RESSURECT
+### 42 · YOU_ARE_STILL_DEAD — match server → client
 
-Respawn handshake. The client asks (`:3775-3829`), the lobby or match server answers with
-`YOU_ARE_STILL_DEAD` (`:3511`) or moves the player and relays `RESPAWN` / `RESSURECT` with the
-position and view (`:3830-4013`), which every client applies to that slot.
+The answer to a respawn request that cannot be granted yet: the client shows "you are still
+dead" instead of placing the player (`:3511-3525`). The rest of the handshake is below.
 
-### The gameplay messages
+### 4 · HIT_PLAYER — client → match server → every client in the match
 
-`EXEC_TRIGGER` (1), `HIT_PLAYER` (4), `DAMAGE_PLAYERS_VIA_EXPLOSION` (5), `HEAL_PLAYER` (6),
+The whole combat model in one message. The shooter builds it when a bullet lands
+(`frame2.js:30493-30512`), the match server checks and rewrites it (`flash.js:3866-3931`), and
+every client applies it (`:4314-4383`).
+
+| Part | Read as | Meaning |
+|---|---|---|
+| 1 | number | the **victim's** slot |
+| 2 | number | `limb_type`: which body part was hit (`:4337`) |
+| 3 | number / 100 | `projectile_power` (`:4338`) |
+| 4 | number / 100 | `projectile_knockback_multiplier` (`:4339`) |
+| 5 | number | `projectile_frame`, the animation frame of the hit (`:4340`) |
+| 6, 7 | number | x, y of the hit |
+| 8, 9 | number / 100 | `spx`, `spy`, the projectile's velocity (`:4341-4342`) |
+| 10 | number | `cclass`, the projectile class (`:4343`) |
+| 11 | number | `source`, the weapon (`:4344`) |
+| 12 | number | `local_atom_id`, the shooter's local id for that atom (`:4345`) |
+| 13 | number / 100 | `provided_health_delta`: the damage the shooter claims (`:4346`) |
+| 14 | number | the victim's `respawns` counter — a stale-message guard (`:4349`) |
+| 15 | string, server-written | non-empty means "the victim was left at 0 HP" (`:3929`, `:4330`) |
+
+What the match server does, in order (`:3866-3931`):
+
+1. Reads parts 1, 2, 13, 14 and 11; a `NaN` damage drops the message (`:3881`).
+2. A **negative** damage (a heal sent as a hit) is clamped to `0` and passed to the match's
+   own check (`match.$1eMМеТ`, `:6923`) as a no-damage claim (`$е10еМp`). If the check refuses
+   it, the relayed copy is rewritten with `parts[13] = 0` and the died flag cleared.
+3. Otherwise the check is called with `hea_damage`. That check is the trust boundary: the
+   target's `respawns` counter must match (`:6930`), the shooter must not be shooting a
+   teammate in a mode that cares (`:6944`), and then — on the server's own copy of the victim —
+   `hea -= hea_damage` and, at `0` or below, the victim is killed (`:6979-6982`). A refusal
+   sets `parts[15] = "1"` when the victim is already dead.
+4. The message is relayed to every other client in the match (`:4058-4067`), and in a
+   team-limited mode only to the shooter's own team.
+
+Every client then applies it (`:4314-4383`): the hit animation, then the victim's HP, with two
+clamps — a positive delta can only *lower* the current HP (`Math.min`, `:4375`) and a negative
+one is bounded by `hmax` and the current value (`:4377`) — and, when the died flag is set and
+the victim is the local player, HP is forced to `0` (`:4380-4383`). So the number in part 13 is
+believed, but only inside limits the receiver enforces; nothing about the hit is recomputed.
+
+### 2, 34, 43 · RESPAWN, RESSURECT, ENTER_RESPAWN_QUEUE — the respawn handshake
+
+Three messages, one queue.
+
+- **`ENTER_RESPAWN_QUEUE` (43), client → match server.** `[op, replyId]`. Outside a match, when
+  the player is not allowed, or when already queued, the answer is `["n"]` (`:3775-3796`);
+  otherwise the connection is pushed onto `match.$lOрplр` and its callback list, and the answer
+  carries the success flag **later**, when the match grants the slot (`:3801-3806`).
+- **`RESPAWN` (2) / `RESSURECT` (34), client → match server → clients.** Under
+  `respawn_model: "v2"` the server first insists the sender is at the head of that queue and
+  otherwise announces in chat `"Player X (Y) respawns yet is not at the start of the respawn
+  queue"` or `"... respawns without respawn permission or it has expired"` (`:3833-3849`).
+  Then, on its own copy of the player: HP is taken from **part 3**, the `respawns` counter is
+  incremented, the fire and respawn timers are reset, **part 4 is rewritten** with the new
+  counter, and the message is relayed (`:3851-3863`).
+- **Clients apply it** (`:4095-4140`): part 1 and part 2 are the position, part 3 the HP, part 4
+  the new respawn counter (stored on the player). A player who is not the local one is moved
+  there and every body part's HP is set to that value (`:4113-4136`); the local player's own
+  placement came through its own state instead.
+
+The client sends its own `RESPAWN` on the **state** channel, not the reliable one
+(`frame2.js:42923` calls `Event`), so a lost respawn is corrected by the next state message
+rather than retransmitted.
+
+### The other gameplay messages
+
+`EXEC_TRIGGER` (1), `DAMAGE_PLAYERS_VIA_EXPLOSION` (5), `HEAL_PLAYER` (6),
 `PROJECTILE_CREATE`/`REMOVE` (7, 8), `BARREL` (9), `THROW_GUN` (10), `HIT_GRENADE` (11),
 `PLAYER_DIES` (12), `HIT_SHIELD` (13), `SWORD_ATTACK` (35), `VAR_SYNC` (36), `FLOW_AT` (37),
 `AI_STATE_SYNC` (38), `AI_HEALTH_SYNC` (39): each is relayed by the match server to the other
