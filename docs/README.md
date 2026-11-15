@@ -68,4 +68,5 @@
 - [protocol.md](research/protocol.md): the lobby socket in one place: framing, opcodes, what each message carries, and how to craft or watch one
 - [protocol-messages.md](research/protocol-messages.md): generated table of every message: opcode, dispatch line and every send site (`npm run protocol`)
 - [protocol-messages.md](research/protocol-messages.md): generated: every opcode with its dispatch line and every script that sends it (`npm run protocol`)
+- [protocol-crafting.md](research/protocol-crafting.md): copy-paste console lines that send each message, with the variations
 

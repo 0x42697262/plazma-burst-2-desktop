@@ -125,6 +125,8 @@ is read for, and extra parts are ignored (proven for `ENDORDSE_USER`, see
 
 ## Crafting one
 
+Every message has a ready line in [protocol-crafting.md](protocol-crafting.md); the general shape is below.
+
 In the page, with the dev console ([js](../features/js-eval.md)). `RELIABLE_<NAME>` is a
 property of the network class, which is a top-level class, so it is a binding rather than a
 `globalThis` property:
