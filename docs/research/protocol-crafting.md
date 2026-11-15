@@ -146,22 +146,51 @@ second is the respawn itself: parts 1-2 are the position, part 3 the HP you clai
 `respawn_model: "v2"` it only works from the head of the queue, and the server rewrites part 4
 with your new respawn counter (`:3830-3863`).
 
-## A gameplay message, by hand
+## Gameplay messages
+
+One line per message, in [protocol.md](protocol.md) — each message's own section ends with the
+line that sends it, because the parts differ enough that a single example would mislead. The
+recipe is always:
 
 ```
-js pb.event("VAR_SYNC", "r", "varname", "1")
-js pb.event("EXEC_TRIGGER", pb.num(0), pb.num(0), pb.num(100))
-js pb.event("HIT_PLAYER", pb.num(1), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(10), pb.num(0))
+js pb.event("<NAME>", <part 1>, <part 2>, ...)
 ```
 
-In order: a map variable set to `1`, trigger 0 run by player 0, and a 0.1-damage hit
-(`10/100`) on slot 1 with every other field zeroed. The last one is the clearest illustration of
-who checks what: the match server keeps its own copy of the victim's HP, subtracts the damage
-after its checks, and rewrites the message for the other clients — see
-[protocol.md](protocol.md#4--hit_player--client--match-server--every-client-in-the-match).
+`pb.event` goes through the game's own `Event`, which routes to the match server and expects no
+answer. Numbers the receiver parses can be sent as strings (`pb.num` is shorthand for the
+game's encoder and is what the game itself uses), and a part the receiver never reads may be
+anything — `0` is the safe filler.
 
-The complete parts list of every gameplay message is in [protocol.md](protocol.md); the recipe
-is always the same, `pb.event("<NAME>", …)` in order.
+Three worth knowing before you try them:
+
+| Message | Line | Why it is interesting |
+|---|---|---|
+| `HIT_PLAYER` | [protocol.md](protocol.md#4--hit_player--client--match-server--every-client-in-the-match) | the match server subtracts the damage on its own copy and rewrites the message; the receiver clamps what it is told |
+| `VAR_SYNC` | [protocol.md](protocol.md#36--var_sync--client--match-server--every-client) | five merge modes, so applying it twice in any order converges |
+| `AI_HEALTH_SYNC` | [protocol.md](protocol.md#39--ai_health_sync--client--match-server--every-client) | every value can only go down, so it never heals a bot |
+
+## Every section's line, gathered
+
+Generated from the sections of [protocol.md](protocol.md) so the two cannot disagree.
+
+| Message | Line |
+|---|---|
+| 1 · EXEC_TRIGGER — client → match server → every client | `pb.event("EXEC_TRIGGER", pb.num(0), pb.num(0), pb.num(100))` |
+| 5 · DAMAGE_PLAYERS_VIA_EXPLOSION — client → match server → every client | `pb.event("DAMAGE_PLAYERS_VIA_EXPLOSION", pb.num(1), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0))` |
+| 6 · HEAL_PLAYER — client → match server → every client | `pb.event("HEAL_PLAYER", pb.num(100), pb.num(0), pb.num(1), pb.num(0))` |
+| 7 · PROJECTILE_CREATE — client → match server → every client | `pb.event("PROJECTILE_CREATE", pb.num(0), pb.num(1), pb.num(0), pb.num(0), pb.num(0))` |
+| 8 · PROJECTILE_REMOVE — client → match server → every client | `pb.event("PROJECTILE_REMOVE", pb.num(1), pb.num(0), pb.num(0))` |
+| 9 · BARREL — client → match server → every client | `pb.event("BARREL", pb.num(3), pb.num(0), "1", pb.num(100), pb.num(50))` |
+| 10 · THROW_GUN — client → match server → every client | `pb.event("THROW_GUN", pb.num(0), pb.num(100), pb.num(200), pb.num(0), pb.num(0), pb.num(110), pb.num(200), pb.num(0), pb.num(0))` |
+| 11 · HIT_GRENADE — client → match server → every client | `pb.event("HIT_GRENADE", pb.num(1), pb.num(0), pb.num(0), pb.num(0))` |
+| 12 · PLAYER_DIES — client → match server → every client | `pb.event("PLAYER_DIES", pb.num(0), pb.num(1), pb.num(0), pb.num(74), pb.num(0), pb.num(3), pb.num(5))` |
+| 13 · HIT_SHIELD — client → match server → every client | `pb.event("HIT_SHIELD", pb.num(1), pb.num(100), pb.num(10), pb.num(0))` |
+| 17 · LIST_ME_AS_HOST — client → lobby | `pb.req("LIST_ME_AS_HOST", ["REPLY"])` |
+| 35 · SWORD_ATTACK — client → match server → every client | `pb.event("SWORD_ATTACK")` |
+| 36 · VAR_SYNC — client → match server → every client | `pb.event("VAR_SYNC", "r", "varname", "1")` |
+| 37 · FLOW_AT — client → match server → every client | `pb.event("FLOW_AT", pb.num(0), pb.num(100), pb.num(200), pb.num(0), pb.num(0), pb.num(0))` |
+| 38 · AI_STATE_SYNC — client → match server → every client | `pb.event("AI_STATE_SYNC", pb.num(13), pb.num(850), pb.num(0), pb.num(200), pb.num(300), pb.num(400), pb.num(300), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0))` |
+| 39 · AI_HEALTH_SYNC — client → match server → every client | `pb.event("AI_HEALTH_SYNC", pb.num(13), pb.num(850), pb.num(100), pb.num(100), pb.num(100), pb.num(100))` |
 
 ## Loops, and reading what came back
 

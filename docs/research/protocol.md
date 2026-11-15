@@ -395,6 +395,547 @@ The client sends its own `RESPAWN` on the **state** channel, not the reliable on
 (`frame2.js:42923` calls `Event`), so a lost respawn is corrected by the next state message
 rather than retransmitted.
 
+### 1 · EXEC_TRIGGER — client → match server → every client
+
+| Part | Read as | Meaning |
+|---|---|---|
+| 1 | number | the trigger's index in the map |
+| 2 | number, may be empty | the activator's slot; empty means nobody (`-1`) |
+| 3 | number / 100 | `projectile_power` |
+
+The receiver runs that trigger with the activator (`:4651-4671`), and logs
+`trigger_name` from the trigger's own uid, so a map's script sees who set it off. Sent by the
+client that fired it (`frame2.js:29318`, `:33790`, `:35545`, `:40575`).
+
+```
+js pb.event("EXEC_TRIGGER", pb.num(0), pb.num(0), pb.num(100))
+```
+
+That runs trigger 0 with player 0 at full power.
+
+### 3 · GRENADE_THROW — reserved
+
+The opcode is assigned (`:89`) but nothing in this build sends or handles it: the grenade throw
+travels inside the state message and as `PROJECTILE_CREATE`. Treat it as reserved, not gone.
+
+### 5 · DAMAGE_PLAYERS_VIA_EXPLOSION — client → match server → every client
+
+A request **and** a relay: the shooter asks, the match server answers (`:3936-3937`, an empty
+list), rewrites what a client is allowed to claim, and forwards it (`:4386-4480`).
+
+| Part | Read as | Meaning |
+|---|---|---|
+| 1 | number | reply id (server side); blanked before the relay (`:3939`) |
+| then, per victim | 11 values | see the group below |
+| then, per atom | 5 values | see the group below |
+
+Per victim group, in order (`:4396-4412`): the victim's slot, the explosion's x and y,
+`tox` and `toy` (both /100), the stability damage (/100), the health damage — **empty means
+"whatever their HP is", i.e. a kill claim** (`:4406-4408`) — then four more damage figures
+(head, face, arms, legs, `:4409-4412`), then the number of atoms that follow (`:4437`).
+
+Per atom group (`:4469-4474`): the local atom id and four positions/velocities, each /100.
+
+The match server clamps the health damage (`:3957-3965`), checks it through the match's own
+check like `HIT_PLAYER` does (`:3972-3982`), and blanks what it refuses before relaying.
+
+```
+js pb.event("DAMAGE_PLAYERS_VIA_EXPLOSION", pb.num(1), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0))
+```
+
+Part 1 is the reply id a hand-crafted send can leave at `0`; after it, one victim group with
+zeroed positions and zero damage, followed by a zero atom count.
+
+### 6 · HEAL_PLAYER — client → match server → every client
+
+| Part | Read as | Meaning |
+|---|---|---|
+| 1 | number / 100 | `stat_power`, the heal amount |
+| 2 | number | the initiator's slot |
+| 3 | number | the target's slot |
+| 4 | number | the target's `respawns` counter (stale-message guard) |
+
+The receiver heals, revives and updates the stat counters (`:4533-4555`); the match server
+arbitrates the same way as a hit, with the target's respawn counter as the guard (`:3990-4048`).
+
+```
+js pb.event("HEAL_PLAYER", pb.num(100), pb.num(0), pb.num(1), pb.num(0))
+```
+
+100/100 healing to slot 1 from slot 0.
+
+### 7 · PROJECTILE_CREATE — client → match server → every client
+
+| Part | Read as | Meaning |
+|---|---|---|
+| 1 | number | the owner's slot |
+| then 4 per projectile | | the batch below |
+
+Per projectile (`:4203-4206`): the atom id, the projectile type (its model/frame), a third
+figure the client reads as a frame, and one more scaled by 1000 (`:4206`). The receiver creates
+the projectile locally so the others see the same shot (`:4177-4240`).
+
+```
+js pb.event("PROJECTILE_CREATE", pb.num(0), pb.num(1), pb.num(0), pb.num(0), pb.num(0))
+```
+
+One projectile from slot 0: atom 1, type 0, and the two figures at 0.
+
+### 8 · PROJECTILE_REMOVE — client → match server → every client
+
+| Part | Read as | Meaning |
+|---|---|---|
+| 1 | number | the projectile's atom id |
+| 2, 3 | number | x, y where it ended |
+
+`:4241-4260`. The receiver drops that projectile from every client's world.
+
+```
+js pb.event("PROJECTILE_REMOVE", pb.num(1), pb.num(0), pb.num(0))
+```
+
+### 9 · BARREL — client → match server → every client
+
+| Part | Read as | Meaning |
+|---|---|---|
+| 1 | number | `barrel_id` |
+| 2 | number | `hea`, the barrel's health after the interaction |
+| 3 | string | non-empty: `by_player` (a player did it, not a shot) |
+| 4, 5 | number | `xx`, `yy` where it was hit |
+
+`:4807-4850`. The receiver moves the barrel by the difference between that point and its own
+position, then applies the health, so a death animation lines up.
+
+```
+js pb.event("BARREL", pb.num(3), pb.num(0), "1", pb.num(100), pb.num(50))
+```
+
+### 10 · THROW_GUN — client → match server → every client
+
+| Part | Read as | Meaning |
+|---|---|---|
+| 1 | number | the gun's slot index |
+| 2, 3 | number | x, y of its first node |
+| 4, 5 | number / 100 | velocity x, y of its first node |
+| 6, 7 | number | x, y of its second node |
+| 8, 9 | number / 100 | velocity x, y of its second node |
+
+`:4142-4176`; a gun has two nodes, and both are placed in one message.
+
+```
+js pb.event("THROW_GUN", pb.num(0), pb.num(100), pb.num(200), pb.num(0), pb.num(0), pb.num(110), pb.num(200), pb.num(0), pb.num(0))
+```
+
+### 11 · HIT_GRENADE — client → match server → every client
+
+| Part | Read as | Meaning |
+|---|---|---|
+| 1 | number | the grenade's atom id |
+| 2, 3 | number | x, y of the hit |
+| 4 | number | the target or the surface struck |
+
+`:4261-4313`, logged as `tox`/`toy`. The receiver detonates or bounces that grenade.
+
+```
+js pb.event("HIT_GRENADE", pb.num(1), pb.num(0), pb.num(0), pb.num(0))
+```
+
+### 12 · PLAYER_DIES — client → match server → every client
+
+| Part | Read as | Meaning |
+|---|---|---|
+| 1 | number | the killer's slot |
+| 2 | number | the victim's slot |
+| 3 | number | `damaged_limb_type` |
+| 4 | number | `damage_source`, the weapon |
+| 5 | number | a further figure the receiver reads at `:2133` |
+| 6 | number | the killer's `kills` counter |
+| 7 | number | the victim's `deaths` counter |
+
+`:2082-2132`. The receiver marks the death, then **sets** both counters from the message
+(`:2105`, `:2108`) — the counters are part of the claim, not computed locally.
+
+```
+js pb.event("PLAYER_DIES", pb.num(0), pb.num(1), pb.num(0), pb.num(74), pb.num(0), pb.num(3), pb.num(5))
+```
+
+### 13 · HIT_SHIELD — client → match server → every client
+
+| Part | Read as | Meaning |
+|---|---|---|
+| 1 | number | the shield's atom id |
+| 2 | number | its health before the hit |
+| 3 | number | `dmg` |
+| 4 | number | a fourth figure the receiver reads at `:4568` |
+
+`:4556-4586`. The receiver plays the impact and lowers the shield.
+
+```
+js pb.event("HIT_SHIELD", pb.num(1), pb.num(100), pb.num(10), pb.num(0))
+```
+
+### 17 · LIST_ME_AS_HOST — client → lobby
+
+Marks the connection as the host of a player-hosted match; it has no parts and no answer, and
+the lobby's own join and relay rules key off it (`:1802-1835`).
+
+```
+js pb.req("LIST_ME_AS_HOST", ["REPLY"])
+```
+
+### 35 · SWORD_ATTACK — client → match server → every client
+
+No parts: the receiver sets the attacking flag on that player (`:4672-4675`). The blade's
+damage travels as `HIT_PLAYER` like any other hit.
+
+```
+js pb.event("SWORD_ATTACK")
+```
+
+### 36 · VAR_SYNC — client → match server → every client
+
+| Part | Read as | Meaning |
+|---|---|---|
+| 1 | string | the mode: `r` replace, `d` set if unset, `x` keep the larger, `n` keep the smaller, `l` keep the longer |
+| 2 | string | the variable's name |
+| 3 | string | the value |
+
+`:4677-4716`. This is how a map's variables stay in step between players; each mode is a
+merge rule, so the same message applied in any order converges.
+
+```
+js pb.event("VAR_SYNC", "r", "varname", "1")
+js pb.event("VAR_SYNC", "x", "score", "10")
+```
+
+### 37 · FLOW_AT — client → match server → every client
+
+| Part | Read as | Meaning |
+|---|---|---|
+| 1 | number | the player's slot |
+| 2, 3 | number | x, y |
+| 4, 5 | number / 100 | velocity x, y |
+| 6 | number | a direction/aim figure |
+
+`:4718-4728`. It feeds the "where a shot is going" indicator the other players see.
+
+```
+js pb.event("FLOW_AT", pb.num(0), pb.num(100), pb.num(200), pb.num(0), pb.num(0), pb.num(0))
+```
+
+### 38 · AI_STATE_SYNC — client → match server → every client
+
+| Part | Read as | Meaning |
+|---|---|---|
+| 1 | number | the bot's slot |
+| 2 | number | `hea` |
+| 3 | number | a state byte (the receiver reads it at `:4741`) |
+| 4, 5 | number | x, y |
+| 6, 7 | number | `tox`, `toy`, the point it is heading for |
+| 8, 9 | number | `tarx`, `tary`, the target point |
+| 10 | number | `hunt` |
+| 11, 12 | number | `botaction`, `rand` |
+| 13, 14 | number | `rand2`, `rand3` |
+
+`:4730-4783`, logged field by field with those names (`:4764-4778`). Only a bot slot is
+accepted (`:4735-4736`), and only by clients that are not the bot's owner, so a peer applies
+another machine's bot.
+
+```
+js pb.event("AI_STATE_SYNC", pb.num(13), pb.num(850), pb.num(0), pb.num(200), pb.num(300), pb.num(400), pb.num(300), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0), pb.num(0))
+```
+
+### 39 · AI_HEALTH_SYNC — client → match server → every client
+
+| Part | Read as | Meaning |
+|---|---|---|
+| 1 | number | the bot's slot |
+| 2 | number | `hea` |
+| 3 | number | head HP |
+| 4 | number | face HP |
+| 5 | number | arms HP |
+| 6 | number | legs HP |
+
+`:4784-4806`. Every value can only go **down** (`Math.min` each, `:4795-4800`), so a desynced
+bot never heals from this message, and the receiver re-runs its body-part update when the total
+fell.
+
+```
+js pb.event("AI_HEALTH_SYNC", pb.num(13), pb.num(850), pb.num(100), pb.num(100), pb.num(100), pb.num(100))
+```
+
+## Crafting one
+
+Every message has a ready line in [protocol-crafting.md](protocol-crafting.md); the general shape is below.
+
+In the page, with the dev console ([js](../features/js-eval.md)). `RELIABLE_<NAME>` is a
+property of the network class, which is a top-level class, so it is a binding rather than a
+`globalThis` property:
+
+```
+js (0,eval)(PB2_NAMES.net).RELIABLE_ENDORDSE_USER
+```
+
+Sending, with the reply as a promise-ish callback — `Multiplayer.$p1еeс` is the placeholder
+object, and `PB2_NAMES` names it:
+
+```
+js globalThis.reply=[];(()=>{const N=PB2_NAMES,M=(0,eval)(N.net),c=M[N.lobbyConn];c[N.netSend](M[N.netChannel],[M.RELIABLE_GET_MATCH_LIST,"{}",M[N.netReplyTo],"match_list"],r=>{reply.push(Array.from(r))})})()
+js JSON.stringify(reply)
+```
+
+Rules that save an evening: `connected` must be true (a logged-in lobby connection),
+`reply` stays empty when the id or the message type is wrong, and a message the server does not
+answer leaves nothing to read — use `netlog` instead of guessing.
+
+## Watching one
+
+`net_log on`, then `netlog show` prints every packet with type names, decoded numbers, and a
+line for each request/reply pair (`IN`/`OUT REL #n`, and `<- answers #m`). The whole run is
+also a text file under `data/netlogs/` ([netlog](../features/netlog.md)).
+
+## Re-checking the table
+
+```
+npm run find-names -- --decode scripts/libs/flash.js > /tmp/flash.js
+rg -n '"(RELIABLE_[A-Z_]+)"\]=\$сеMlO' /tmp/flash.js      # opcode order
+rg -n 'type===\$ММ\["RELIABLE_' /tmp/flash.js            # the dispatch, in order
+rg -n 'parts\[[0-9]+\]' /tmp/flash.js                     # what each branch reads
+```
+
+Opcode numbers move when a game update adds or reorders a message; names do not. If a table row
+no longer matches, the claim is to be corrected here (see "Reporting fixes" in `AGENTS.md`).
+
+## What is not here
+
+- The bytes inside a match's *state* message (position, HP, aim, …), which
+  [anticheat.md](anticheat.md) §13 maps field by field.
+- What the lobby decides to do with a message once it has it — the account module is not
+  shipped ([reputation.md](reputation.md)).
+- The private server's side of the same protocol: it runs this very code
+  ([private-server](../operations/private-server.md)).
+
+## The messages in detail
+
+Opcode, dispatch line and every send site for all 44 are in
+[protocol-messages.md](protocol-messages.md) (`npm run protocol` regenerates it). What follows
+is what each one carries and what the receiving side does with it, for the messages a client
+actually talks to the lobby with; the gameplay ones point at their handler, which
+[anticheat.md](anticheat.md) §14 reads field by field.
+
+Encoding note that applies to every table below: a part marked **number** is written in the
+base-N digit alphabet and read through the game's own `parseInt`-equivalent; a part marked
+**string** is passed through untouched; **JSON** parts are `JSON.parse`d. A part the handler
+never reads can be anything.
+
+### 16 · AUTHENTICATE — client → lobby
+
+`flash.js:1982-2040`, sent from `MPLobby.js:152-160`.
+
+| Part | Kind | Meaning |
+|---|---|---|
+| 1 | string | login, as in the site's cookie |
+| 2 | string | password (the site's, or an admin's secret on a private server) |
+| 3 | string | game version, `version_h5` |
+| 4 | string | build hash, `hash_h5` |
+| 5 | number | reply id |
+| 6 | string | first uid, or empty |
+| 7 | string | device fingerprint, quoted JSON |
+| 8 | number | build timestamp; missing → `Server: Refresh page to get new version of the game` |
+
+Answer: `["ok", <profile JSON>]` or `["fail", <why>]`. The profile is the object the client
+keeps as its own (`nickname`, `login`, `login_proof`, `uid`, `mdl`, `mdl2`, `is_staff`,
+`is_guest`, `is_vpn`, `is_public_supporter`, `support_months`). Retried at most once every
+3 s (`:2001-2003`), first uid truncated at 60 characters (`:1998`).
+
+### 19 · GET_MATCH_LIST — client → lobby
+
+`flash.js:2497-2660`, sent from `MPLobby.js:210`, `:663-667`.
+
+| Part | Kind | Meaning |
+|---|---|---|
+| 1 | JSON | the filter; `{}` usually, or `{"delete_relation": <since>}` to end a relation |
+| 2 | number | reply id |
+| 3 | string | view: `match_list`, `relations` or `skill_board` |
+
+Answer: `["ok", <rows JSON>, <own JSON>]` or `["fail", "Match listing error: Too fast"]`. Own
+JSON: `reputation`, `reputation_potential`, `skill`, `wins`, `loses`, `online`, `matches`
+(`:2645`). One request per 300 ms per connection (`:2503`); the rows are listed per view in
+[reputation.md](reputation.md#requests-and-replies).
+
+### 15 · CREATE_MATCH — client → lobby
+
+`flash.js:2667-2844`, sent from `MPCreateMatch.js`.
+
+| Part | Kind | Meaning |
+|---|---|---|
+| 1 | JSON | the settings object; `min_reputation` is clamped down to the creator's own (`:2686`), `max_players` to 1..64 (`:2695-2701`) |
+| 2 | number | reply id |
+
+Refusals: `Date.now() > connection.lastCreate + 1000` gives "Too fast" (`:2671`), negative
+reputation "Users with negative reputation can not start new matches" (`:2673`), data over 5000
+characters "Too much data sent" (`:2679`). Answer: `["ok", <match uid>]` or `["fail", <why>]`.
+
+### 20 · JOIN_MATCH — client → lobby
+
+`flash.js:2932-3060`, sent from `MPLobby.js:452`, `:5136`.
+
+| Part | Kind | Meaning |
+|---|---|---|
+| 1 | number | the match uid |
+| 2 | number | reply id |
+| 3 | number | slot asked for, `-1` for any |
+| 4 | string | `"1"` = join as spectator, empty = play |
+| 5 | string | match password |
+
+Refusals, in order: "Match not found", a password cooldown after a wrong attempt
+(`:2965-2974`), "Match is still being created", then everything `$lрTp1` checks —
+[tune here](#where-the-join-check-runs) in [reputation.md](reputation.md#where-the-join-check-runs).
+Answer: `["ok", <match details>, <slot>]` or `["fail", "Match join error: <why>."]`.
+
+### 21 · MATCH_JOIN_RESPONSE — lobby → client
+
+`flash.js:3315-3394`. Parts: 2 = the match details JSON, 3 = the slot you take. The client
+starts the match screen and sets aside the map download before it asks for the first state.
+
+### 23 · CLIENT_READY_FOR_FIRST_SYNC, 24 · FIRST_SYNC_RESPONSE — client → lobby → client
+
+`:3395-3414` and `:3421-3510`. The client says it is ready; the lobby answers once per player
+with part 1 = slot index, part 2 = that player's JSON (empty = the slot is now empty), part 3
+= non-empty when the player is a spectator. The JSON's fields become the player object's
+fields, which is where `login`, `nickname` and `auth_id` come from
+([player-info](../features/player-info.md)). The client logs "X connected" and switches the
+slot's actor into a player if the map had a bot there (`:3455-3460`).
+
+### 22 · MAP_CHUNK — lobby → client
+
+`:3268-3291`. Part 1 = chunk index, part 2 = chunk count, part 3 = the text of that chunk. The
+client reassembles the map, then unpacks it with the game's own function.
+
+### 26 · PING — both ways
+
+`:3066-3078`. From a client: part 1 is the reply id and the answer is an empty list — that is
+what keeps a connection's round trip measured. The anti-tamper report reuses the message: part
+1 is then the literal string `"undefined"`, part 2 the mode, part 3 the detail, and the lobby
+handles it without answering ([scan-gating.md](scan-gating.md)).
+
+### 14 · CHAT — client → lobby → everyone
+
+`:4014-4046` (lobby) and `:4587-4650` (client). Part 1 = destination as a number
+(1 = everyone, other values the game's own), part 2 = the text. The lobby trims at 240
+characters and allows 5 messages a second per connection (`:4016-4024`). Everything after
+that is the match owner's command parser: `-announce`, `-min_reputation`, `-map`, `-endround`,
+`-ping_action`, `-recheck` and the rest, each guarded by owner or staff (`:4029-4033`).
+
+### 27-29, 33 · REPORT_USER, ENDORDSE_USER, KICK_USER, BAN_USER — client → lobby
+
+`flash.js:2845-2930`. Part 1 = the target's auth id (a number, `parseInt`), part 2 = the reply
+id, part 3 = `"1"` for the kick/ban "keep them out" flag, unread by report and endorse. Self is
+refused against the lobby's own record (`:2871`). Answers and effects:
+[reputation.md](reputation.md#what-a-report-or-an-endorsement-may-carry) and
+[reputation-probe.md](reputation-probe.md#observed-so-far).
+
+### 25 · MY_PLAYER_PROPERTIES_CHANGED — client → lobby → everyone
+
+`:3526-3690`. Part 1 = a slot index (the target; it must be yours), then pairs of
+property-index and JSON value. The property index addresses this whitelist and nothing else:
+`team`, `skin_snapshot`, `slot0` … `slot9`, `curwea` (`flash.js:216-221`). Each value is
+checked (a gun you actually hold, a slot that exists) and a bad one is answered by setting the
+old value back on your own player (`:3576-3620`).
+
+### 30 · MATCH_INFO_PARTIAL_UDPATE — lobby → client
+
+`:3292-3301`. Part 1 = the field name (`"coop_state"`, `"team_scores.12"`, …), part 2 = its
+JSON value. One field per message, which is how the match screen stays in sync without
+re-reading the whole match.
+
+### 31 · PLAYER_SCORE_UPDATE — match server → client
+
+`:2060-2080`. Part 1 = the player's auth id, part 2 = kills, part 3 = deaths. The lobby drops
+this from a player (`:2062`); only the match server's copy is applied.
+
+### 18 · SERVICE_MESSAGE, 32 · PLAY_SOUND — server → client
+
+`:2042-2059` and `:3302-3314`. A line shown in chat, and a sound to play. No answers.
+
+### 40, 41 · TASK, TASK_ASNYC — server → client
+
+`:3730-3774`. Part 1 = code, part 2 = reply id. The page runs it with `eval` and answers with
+the value if it is a string, number or boolean (`:3740-3746`). That is why this repository
+guards the message ([lobby_task_guard](../features/lobby-task-guard.md)) and why a private
+server's code never runs here.
+
+### 42 · YOU_ARE_STILL_DEAD — match server → client
+
+The answer to a respawn request that cannot be granted yet: the client shows "you are still
+dead" instead of placing the player (`:3511-3525`). The rest of the handshake is below.
+
+### 4 · HIT_PLAYER — client → match server → every client in the match
+
+The whole combat model in one message. The shooter builds it when a bullet lands
+(`frame2.js:30493-30512`), the match server checks and rewrites it (`flash.js:3866-3931`), and
+every client applies it (`:4314-4383`).
+
+| Part | Read as | Meaning |
+|---|---|---|
+| 1 | number | the **victim's** slot |
+| 2 | number | `limb_type`: which body part was hit (`:4337`) |
+| 3 | number / 100 | `projectile_power` (`:4338`) |
+| 4 | number / 100 | `projectile_knockback_multiplier` (`:4339`) |
+| 5 | number | `projectile_frame`, the animation frame of the hit (`:4340`) |
+| 6, 7 | number | x, y of the hit |
+| 8, 9 | number / 100 | `spx`, `spy`, the projectile's velocity (`:4341-4342`) |
+| 10 | number | `cclass`, the projectile class (`:4343`) |
+| 11 | number | `source`, the weapon (`:4344`) |
+| 12 | number | `local_atom_id`, the shooter's local id for that atom (`:4345`) |
+| 13 | number / 100 | `provided_health_delta`: the damage the shooter claims (`:4346`) |
+| 14 | number | the victim's `respawns` counter — a stale-message guard (`:4349`) |
+| 15 | string, server-written | non-empty means "the victim was left at 0 HP" (`:3929`, `:4330`) |
+
+What the match server does, in order (`:3866-3931`):
+
+1. Reads parts 1, 2, 13, 14 and 11; a `NaN` damage drops the message (`:3881`).
+2. A **negative** damage (a heal sent as a hit) is clamped to `0` and passed to the match's
+   own check (`match.$1eMМеТ`, `:6923`) as a no-damage claim (`$е10еМp`). If the check refuses
+   it, the relayed copy is rewritten with `parts[13] = 0` and the died flag cleared.
+3. Otherwise the check is called with `hea_damage`. That check is the trust boundary: the
+   target's `respawns` counter must match (`:6930`), the shooter must not be shooting a
+   teammate in a mode that cares (`:6944`), and then — on the server's own copy of the victim —
+   `hea -= hea_damage` and, at `0` or below, the victim is killed (`:6979-6982`). A refusal
+   sets `parts[15] = "1"` when the victim is already dead.
+4. The message is relayed to every other client in the match (`:4058-4067`), and in a
+   team-limited mode only to the shooter's own team.
+
+Every client then applies it (`:4314-4383`): the hit animation, then the victim's HP, with two
+clamps — a positive delta can only *lower* the current HP (`Math.min`, `:4375`) and a negative
+one is bounded by `hmax` and the current value (`:4377`) — and, when the died flag is set and
+the victim is the local player, HP is forced to `0` (`:4380-4383`). So the number in part 13 is
+believed, but only inside limits the receiver enforces; nothing about the hit is recomputed.
+
+### 2, 34, 43 · RESPAWN, RESSURECT, ENTER_RESPAWN_QUEUE — the respawn handshake
+
+Three messages, one queue.
+
+- **`ENTER_RESPAWN_QUEUE` (43), client → match server.** `[op, replyId]`. Outside a match, when
+  the player is not allowed, or when already queued, the answer is `["n"]` (`:3775-3796`);
+  otherwise the connection is pushed onto `match.$lOрplр` and its callback list, and the answer
+  carries the success flag **later**, when the match grants the slot (`:3801-3806`).
+- **`RESPAWN` (2) / `RESSURECT` (34), client → match server → clients.** Under
+  `respawn_model: "v2"` the server first insists the sender is at the head of that queue and
+  otherwise announces in chat `"Player X (Y) respawns yet is not at the start of the respawn
+  queue"` or `"... respawns without respawn permission or it has expired"` (`:3833-3849`).
+  Then, on its own copy of the player: HP is taken from **part 3**, the `respawns` counter is
+  incremented, the fire and respawn timers are reset, **part 4 is rewritten** with the new
+  counter, and the message is relayed (`:3851-3863`).
+- **Clients apply it** (`:4095-4140`): part 1 and part 2 are the position, part 3 the HP, part 4
+  the new respawn counter (stored on the player). A player who is not the local one is moved
+  there and every body part's HP is set to that value (`:4113-4136`); the local player's own
+  placement came through its own state instead.
+
+The client sends its own `RESPAWN` on the **state** channel, not the reliable one
+(`frame2.js:42923` calls `Event`), so a lost respawn is corrected by the next state message
+rather than retransmitted.
+
 ### The other gameplay messages
 
 `EXEC_TRIGGER` (1), `DAMAGE_PLAYERS_VIA_EXPLOSION` (5), `HEAL_PLAYER` (6),
