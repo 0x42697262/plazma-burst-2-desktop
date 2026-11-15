@@ -15,6 +15,7 @@
     "server": "node src/server/index.ts",
     "fetch-game": "node src/tools/fetch-game/cli.ts",
     "find-names": "node src/tools/find-names/cli.ts",
+    "protocol": "node src/tools/protocol/cli.ts",
     "fetch-opcodes": "node src/tools/fetch-opcodes/cli.ts",
     "testers": "node src/features/remote_play/testers.ts",
     "check": "tsc --noEmit -p .",

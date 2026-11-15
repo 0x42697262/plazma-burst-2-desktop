@@ -171,3 +171,170 @@ no longer matches, the claim is to be corrected here (see "Reporting fixes" in `
   shipped ([reputation.md](reputation.md)).
 - The private server's side of the same protocol: it runs this very code
   ([private-server](../operations/private-server.md)).
+
+## The messages in detail
+
+Opcode, dispatch line and every send site for all 44 are in
+[protocol-messages.md](protocol-messages.md) (`npm run protocol` regenerates it). What follows
+is what each one carries and what the receiving side does with it, for the messages a client
+actually talks to the lobby with; the gameplay ones point at their handler, which
+[anticheat.md](anticheat.md) §14 reads field by field.
+
+Encoding note that applies to every table below: a part marked **number** is written in the
+base-N digit alphabet and read through the game's own `parseInt`-equivalent; a part marked
+**string** is passed through untouched; **JSON** parts are `JSON.parse`d. A part the handler
+never reads can be anything.
+
+### 16 · AUTHENTICATE — client → lobby
+
+`flash.js:1982-2040`, sent from `MPLobby.js:152-160`.
+
+| Part | Kind | Meaning |
+|---|---|---|
+| 1 | string | login, as in the site's cookie |
+| 2 | string | password (the site's, or an admin's secret on a private server) |
+| 3 | string | game version, `version_h5` |
+| 4 | string | build hash, `hash_h5` |
+| 5 | number | reply id |
+| 6 | string | first uid, or empty |
+| 7 | string | device fingerprint, quoted JSON |
+| 8 | number | build timestamp; missing → `Server: Refresh page to get new version of the game` |
+
+Answer: `["ok", <profile JSON>]` or `["fail", <why>]`. The profile is the object the client
+keeps as its own (`nickname`, `login`, `login_proof`, `uid`, `mdl`, `mdl2`, `is_staff`,
+`is_guest`, `is_vpn`, `is_public_supporter`, `support_months`). Retried at most once every
+3 s (`:2001-2003`), first uid truncated at 60 characters (`:1998`).
+
+### 19 · GET_MATCH_LIST — client → lobby
+
+`flash.js:2497-2660`, sent from `MPLobby.js:210`, `:663-667`.
+
+| Part | Kind | Meaning |
+|---|---|---|
+| 1 | JSON | the filter; `{}` usually, or `{"delete_relation": <since>}` to end a relation |
+| 2 | number | reply id |
+| 3 | string | view: `match_list`, `relations` or `skill_board` |
+
+Answer: `["ok", <rows JSON>, <own JSON>]` or `["fail", "Match listing error: Too fast"]`. Own
+JSON: `reputation`, `reputation_potential`, `skill`, `wins`, `loses`, `online`, `matches`
+(`:2645`). One request per 300 ms per connection (`:2503`); the rows are listed per view in
+[reputation.md](reputation.md#requests-and-replies).
+
+### 15 · CREATE_MATCH — client → lobby
+
+`flash.js:2667-2844`, sent from `MPCreateMatch.js`.
+
+| Part | Kind | Meaning |
+|---|---|---|
+| 1 | JSON | the settings object; `min_reputation` is clamped down to the creator's own (`:2686`), `max_players` to 1..64 (`:2695-2701`) |
+| 2 | number | reply id |
+
+Refusals: `Date.now() > connection.lastCreate + 1000` gives "Too fast" (`:2671`), negative
+reputation "Users with negative reputation can not start new matches" (`:2673`), data over 5000
+characters "Too much data sent" (`:2679`). Answer: `["ok", <match uid>]` or `["fail", <why>]`.
+
+### 20 · JOIN_MATCH — client → lobby
+
+`flash.js:2932-3060`, sent from `MPLobby.js:452`, `:5136`.
+
+| Part | Kind | Meaning |
+|---|---|---|
+| 1 | number | the match uid |
+| 2 | number | reply id |
+| 3 | number | slot asked for, `-1` for any |
+| 4 | string | `"1"` = join as spectator, empty = play |
+| 5 | string | match password |
+
+Refusals, in order: "Match not found", a password cooldown after a wrong attempt
+(`:2965-2974`), "Match is still being created", then everything `$lрTp1` checks —
+[tune here](#where-the-join-check-runs) in [reputation.md](reputation.md#where-the-join-check-runs).
+Answer: `["ok", <match details>, <slot>]` or `["fail", "Match join error: <why>."]`.
+
+### 21 · MATCH_JOIN_RESPONSE — lobby → client
+
+`flash.js:3315-3394`. Parts: 2 = the match details JSON, 3 = the slot you take. The client
+starts the match screen and sets aside the map download before it asks for the first state.
+
+### 23 · CLIENT_READY_FOR_FIRST_SYNC, 24 · FIRST_SYNC_RESPONSE — client → lobby → client
+
+`:3395-3414` and `:3421-3510`. The client says it is ready; the lobby answers once per player
+with part 1 = slot index, part 2 = that player's JSON (empty = the slot is now empty), part 3
+= non-empty when the player is a spectator. The JSON's fields become the player object's
+fields, which is where `login`, `nickname` and `auth_id` come from
+([player-info](../features/player-info.md)). The client logs "X connected" and switches the
+slot's actor into a player if the map had a bot there (`:3455-3460`).
+
+### 22 · MAP_CHUNK — lobby → client
+
+`:3268-3291`. Part 1 = chunk index, part 2 = chunk count, part 3 = the text of that chunk. The
+client reassembles the map, then unpacks it with the game's own function.
+
+### 26 · PING — both ways
+
+`:3066-3078`. From a client: part 1 is the reply id and the answer is an empty list — that is
+what keeps a connection's round trip measured. The anti-tamper report reuses the message: part
+1 is then the literal string `"undefined"`, part 2 the mode, part 3 the detail, and the lobby
+handles it without answering ([scan-gating.md](scan-gating.md)).
+
+### 14 · CHAT — client → lobby → everyone
+
+`:4014-4046` (lobby) and `:4587-4650` (client). Part 1 = destination as a number
+(1 = everyone, other values the game's own), part 2 = the text. The lobby trims at 240
+characters and allows 5 messages a second per connection (`:4016-4024`). Everything after
+that is the match owner's command parser: `-announce`, `-min_reputation`, `-map`, `-endround`,
+`-ping_action`, `-recheck` and the rest, each guarded by owner or staff (`:4029-4033`).
+
+### 27-29, 33 · REPORT_USER, ENDORDSE_USER, KICK_USER, BAN_USER — client → lobby
+
+`flash.js:2845-2930`. Part 1 = the target's auth id (a number, `parseInt`), part 2 = the reply
+id, part 3 = `"1"` for the kick/ban "keep them out" flag, unread by report and endorse. Self is
+refused against the lobby's own record (`:2871`). Answers and effects:
+[reputation.md](reputation.md#what-a-report-or-an-endorsement-may-carry) and
+[reputation-probe.md](reputation-probe.md#observed-so-far).
+
+### 25 · MY_PLAYER_PROPERTIES_CHANGED — client → lobby → everyone
+
+`:3526-3690`. Part 1 = a slot index (the target; it must be yours), then pairs of
+property-index and JSON value. The property index addresses this whitelist and nothing else:
+`team`, `skin_snapshot`, `slot0` … `slot9`, `curwea` (`flash.js:216-221`). Each value is
+checked (a gun you actually hold, a slot that exists) and a bad one is answered by setting the
+old value back on your own player (`:3576-3620`).
+
+### 30 · MATCH_INFO_PARTIAL_UDPATE — lobby → client
+
+`:3292-3301`. Part 1 = the field name (`"coop_state"`, `"team_scores.12"`, …), part 2 = its
+JSON value. One field per message, which is how the match screen stays in sync without
+re-reading the whole match.
+
+### 31 · PLAYER_SCORE_UPDATE — match server → client
+
+`:2060-2080`. Part 1 = the player's auth id, part 2 = kills, part 3 = deaths. The lobby drops
+this from a player (`:2062`); only the match server's copy is applied.
+
+### 18 · SERVICE_MESSAGE, 32 · PLAY_SOUND — server → client
+
+`:2042-2059` and `:3302-3314`. A line shown in chat, and a sound to play. No answers.
+
+### 40, 41 · TASK, TASK_ASNYC — server → client
+
+`:3730-3774`. Part 1 = code, part 2 = reply id. The page runs it with `eval` and answers with
+the value if it is a string, number or boolean (`:3740-3746`). That is why this repository
+guards the message ([lobby_task_guard](../features/lobby-task-guard.md)) and why a private
+server's code never runs here.
+
+### 42 · YOU_ARE_STILL_DEAD, 43 · ENTER_RESPAWN_QUEUE, 2 · RESPAWN, 34 · RESSURECT
+
+Respawn handshake. The client asks (`:3775-3829`), the lobby or match server answers with
+`YOU_ARE_STILL_DEAD` (`:3511`) or moves the player and relays `RESPAWN` / `RESSURECT` with the
+position and view (`:3830-4013`), which every client applies to that slot.
+
+### The gameplay messages
+
+`EXEC_TRIGGER` (1), `HIT_PLAYER` (4), `DAMAGE_PLAYERS_VIA_EXPLOSION` (5), `HEAL_PLAYER` (6),
+`PROJECTILE_CREATE`/`REMOVE` (7, 8), `BARREL` (9), `THROW_GUN` (10), `HIT_GRENADE` (11),
+`PLAYER_DIES` (12), `HIT_SHIELD` (13), `SWORD_ATTACK` (35), `VAR_SYNC` (36), `FLOW_AT` (37),
+`AI_STATE_SYNC` (38), `AI_HEALTH_SYNC` (39): each is relayed by the match server to the other
+players with the sender's slot prepended, and each is read field by field in
+[anticheat.md](anticheat.md) §14, which is where their parts tables already live. `GRENADE_THROW`
+(3) and `LIST_ME_AS_HOST` (17) have no dispatch branch of their own here: the first is written
+by `frame2.js` and relayed, the second only marks the connection as a host.

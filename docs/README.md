@@ -66,4 +66,5 @@
 - [reputation.md](research/reputation.md): reputation points: what the lobby sends and receives, the relations behind them, and what the game cannot tell
 - [reputation-probe.md](research/reputation-probe.md): the console lines that ask the live lobby, one per block, for copying
 - [protocol.md](research/protocol.md): the lobby socket in one place: framing, opcodes, what each message carries, and how to craft or watch one
+- [protocol-messages.md](research/protocol-messages.md): generated: every opcode with its dispatch line and every script that sends it (`npm run protocol`)
 
