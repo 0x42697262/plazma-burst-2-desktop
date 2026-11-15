@@ -34,7 +34,8 @@ the wrapper writes them as readable text, one file per run and game instance:
 ## The protocol, as recorded
 
 The protocol lives in the game's `scripts/connection.js`; see also
-[anticheat](../research/anticheat.md) §13.3. A packet is text, with fields split by
+[protocol](../research/protocol.md) for every message and its parts, and
+[anticheat](../research/anticheat.md) §13.3 for the state message. A packet is text, with fields split by
 `\x01` (written `$.1` inside a field):
 
     ack | latest unreliable state | uid | reliable message | uid | reliable message ...
