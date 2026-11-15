@@ -338,3 +338,47 @@ players with the sender's slot prepended, and each is read field by field in
 [anticheat.md](anticheat.md) §14, which is where their parts tables already live. `GRENADE_THROW`
 (3) and `LIST_ME_AS_HOST` (17) have no dispatch branch of their own here: the first is written
 by `frame2.js` and relayed, the second only marks the connection as a host.
+
+## Who sends what, and who decides
+
+Three roles, one protocol:
+
+| Role | Who runs it | What it is for |
+|---|---|---|
+| **client** | the browser page of a player | simulates the match, sends state, sends its own actions |
+| **lobby** (main server) | `flash.js` with `serverFlag` set — the official lobby, or this repo's `npm run server` | logins, the match list, creating and joining, chat relay, reports, the account module |
+| **match server** | in a TCP match the lobby process itself; in a player-hosted match one player's page (`flash.js` with the p2p flag) | relays gameplay messages between the match's clients, and checks a few things |
+
+The game itself says which side owns the rules — its own anti-tamper block, written as a
+warning to anyone reading it (`frame2.js:27730-27731`):
+
+> "Game is client-sided because too many maps depend on it."
+> "But even then we would not be really able to afford servers that could handle server-side
+> game logic."
+
+So yes: **the simulation is client-sided.** Positions, hits, damage, projectiles, bot state
+and trigger runs are computed by the client that caused them and relayed; the match server's
+job is to pass them on and to reject a handful of specific claims (HP above the normal max,
+zoom, ping, its ban list — [anticheat.md](anticheat.md) §14). Nothing recomputes a hit
+server-side.
+
+The messages split along those lines. Which side *ignores* a message is readable in the code:
+a handler that starts with `if($с0А0О) return;` never runs on the lobby side, and one guarded
+by `$НТАО0е` never runs on the client side for a message that came from the wrong peer.
+
+| Origin | Messages |
+|---|---|
+| **client → lobby** | `AUTHENTICATE`, `GET_MATCH_LIST`, `CREATE_MATCH`, `JOIN_MATCH`, `LIST_ME_AS_HOST`, `PING`, `REPORT_USER`, `ENDORDSE_USER`, `KICK_USER`, `BAN_USER`, `CHAT` |
+| **lobby → client** | `RESPONSE`, `SERVICE_MESSAGE`, `MATCH_JOIN_RESPONSE`, `FIRST_SYNC_RESPONSE`, `MAP_CHUNK`, `MATCH_INFO_PARTIAL_UDPATE`, `TASK`, `TASK_ASNYC`, `YOU_ARE_STILL_DEAD`, `PLAYER_SCORE_UPDATE` |
+| **client → match server → every client in the match** | `EXEC_TRIGGER`, `RESPAWN`, `RESSURECT`, `GRENADE_THROW`, `HIT_PLAYER`, `DAMAGE_PLAYERS_VIA_EXPLOSION`, `HEAL_PLAYER`, `PROJECTILE_CREATE`, `PROJECTILE_REMOVE`, `BARREL`, `THROW_GUN`, `HIT_GRENADE`, `PLAYER_DIES`, `HIT_SHIELD`, `SWORD_ATTACK`, `VAR_SYNC`, `FLOW_AT`, `AI_STATE_SYNC`, `AI_HEALTH_SYNC`, `PLAY_SOUND`, `ENTER_RESPAWN_QUEUE`, `MY_PLAYER_PROPERTIES_CHANGED`, `CHAT` |
+| **both, meaning it exists twice** | `PING` (a client's round trip; the anti-tamper report reuses it), `CLIENT_READY_FOR_FIRST_SYNC` (client says ready, no payload) |
+
+Two consequences worth knowing before scripting anything:
+
+- **A message is only as trustworthy as its sender.** `HIT_PLAYER` carries the damage its
+  sender computed; the match server relays it. Anything the client does not want to be caught
+  lying about is checked elsewhere (HP, zoom) or not at all.
+- **Moving between the roles changes the same file's behaviour, not the code.** This repo's
+  private server sets the very flag that makes `flash.js` the lobby
+  (`src/server/game.ts:119`), which is why the same handlers run there and why its chat
+  commands, join checks and report answers behave like the official server's.
