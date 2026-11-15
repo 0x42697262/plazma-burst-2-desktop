@@ -62,6 +62,7 @@ export const missingNameLabel = (key: string): string => `<${key}>`;
 export const readerSource = (name: string): string => `(() => typeof ${name} === 'undefined' ? undefined : ${name})`;
 export const writerSource = (name: string): string => `((value) => { ${name} = value; })`;
 
+export const TEAM_SUFFIX = / team$/;
 export const FIELD = Object.freeze({ hp: 'hea', maxHp: 'hmax', login: 'login', authId: 'auth_id' });
 export const slotField = (slot: number): string => `slot${slot}`;
 export const PICKED_BY = 'picken_by';

@@ -1,19 +1,10 @@
-import { KIND, KIND_WORDS, TEAM_SUFFIX } from './keys.ts';
+import { teamEntries, teamsMatching } from '#console/kernel/game/teams.ts';
+import { KIND, KIND_WORDS } from './keys.ts';
 import { TEXT } from './text.ts';
 
+export { teamLabel } from '#console/kernel/game/teams.ts';
+
 export type CharFilter = { kind: string | null; teams: ReadonlySet<number> };
-type TeamEntry = { team: number; name: string; key: string };
-
-const teamEntries = (teamNames: readonly unknown[]): TeamEntry[] => teamNames.flatMap((name, team) => (typeof name === 'string' && name
-  ? [{ team, name, key: name.toLowerCase().replace(TEAM_SUFFIX, '') }]
-  : []));
-
-export function teamsMatching(word: string, teamNames: readonly unknown[]): TeamEntry[] {
-  const wanted = word.toLowerCase();
-  const entries = teamEntries(teamNames);
-  const exact = entries.filter((entry) => entry.key === wanted || entry.name.toLowerCase() === wanted);
-  return exact.length ? exact : entries.filter((entry) => entry.key.startsWith(wanted));
-}
 
 export function parseFilters(args: readonly string[], teamNames: readonly unknown[], fixedKind: string | null): CharFilter {
   let kind = fixedKind;
@@ -39,8 +30,3 @@ export function passes(filter: CharFilter, team: unknown, isHuman: boolean): boo
   if (filter.kind === KIND.bots && isHuman) return false;
   return !filter.teams.size || filter.teams.has(Number(team));
 }
-
-export const teamLabel = (team: unknown, teamNames: readonly unknown[]): string => {
-  const name = teamNames[Number(team)];
-  return typeof name === 'string' && name ? name : String(team);
-};
