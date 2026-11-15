@@ -303,6 +303,38 @@ export const MESSAGES: readonly Message[] = Object.freeze([
 
 export const MESSAGE_BY_NAME: ReadonlyMap<string, Message> = new Map(MESSAGES.map((message) => [message.name, message]));
 
+export const DESCRIPTIONS: Readonly<Record<string, string>> = Object.freeze({
+  EXEC_TRIGGER: 'Runs a map trigger on every other client, as if you had activated it.',
+  RESPAWN: 'Announces a respawn: puts you at x, y with that HP on every client.',
+  HIT_PLAYER: 'Reports a projectile hitting a player. The server takes the damage off its own copy of the victim and every other client shows the hit.',
+  DAMAGE_PLAYERS_VIA_EXPLOSION: 'Reports an explosion hurting players: a reply id, then one group of fields per victim.',
+  HEAL_PLAYER: 'Reports a heal gun hitting a player. The healed player\'s own game applies it.',
+  PROJECTILE_CREATE: 'Spawns projectiles from a gun on every other client: the gun, then one group per projectile.',
+  PROJECTILE_REMOVE: 'Ends a projectile, by the number it was created with, on every other client.',
+  BARREL: 'Sets a barrel\'s HP on every other client; 0 blows it up.',
+  THROW_GUN: 'Throws a gun into the world on every other client, with the position and speed of its two ends.',
+  HIT_GRENADE: 'Pushes a grenade that a shot hit, on every other client.',
+  HIT_SHIELD: 'Damages a shield on every other client.',
+  CHAT: 'Sends a chat line to your match: destination 1 is everyone, 2 is your team.',
+  CREATE_MATCH: 'Asks the lobby to create a match from a settings object. The answer is ok or fail.',
+  AUTHENTICATE: 'Logs the connection in. It re-logs you, so it needs --force.',
+  GET_MATCH_LIST: 'Asks the lobby for the match list, your relations or the skill board.',
+  JOIN_MATCH: 'Asks the lobby to join a match by uid, or to leave one with uid -1.',
+  CLIENT_READY_FOR_FIRST_SYNC: 'Tells the match you have loaded the level and want its first state.',
+  MY_PLAYER_PROPERTIES_CHANGED: 'Changes one of your own player fields: team, skin, a gun slot or the held gun. Property 12 is the held gun.',
+  REPORT_USER: 'Reports a player by auth id. The lobby answers with a chat line.',
+  ENDORDSE_USER: 'Endorses a player by auth id. Doing it twice takes it back.',
+  KICK_USER: 'Removes a player from your match. Only the match owner or staff can.',
+  BAN_USER: 'Bans a player. Only staff can.',
+  RESSURECT: 'Revives you at x, y with that HP, on every client including yours.',
+  SWORD_ATTACK: 'Plays a sword swing on every other client.',
+  VAR_SYNC: 'Sets a map variable on every other client. The mode says how they merge it: r replace, d only if unset, x keep the larger, n keep the smaller, l keep the longer text.',
+  FLOW_AT: 'Plays a blood burst at x, y on every other client.',
+  AI_STATE_SYNC: 'Shares a bot\'s state (HP, position, speed, aim, action) with every other client.',
+  AI_HEALTH_SYNC: 'Shares a bot\'s HP and its body-part HP. Receivers only ever lower their own.',
+  ENTER_RESPAWN_QUEUE: 'Asks to join the respawn queue. The answer is k when granted and n when refused.',
+});
+
 export const EXAMPLES: Readonly<Record<string, string>> = Object.freeze({
   EXEC_TRIGGER: 'wire exec_trigger trigger=3',
   RESPAWN: 'wire respawn',

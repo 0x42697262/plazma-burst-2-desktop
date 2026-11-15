@@ -69,6 +69,36 @@ test('wire help lists a message\'s fields with units and defaults', async () => 
   const game = await bootConsole();
   const lines = game.run('wire help hit_player');
   assert.ok(lines.some((line) => /^hit_player/.test(String(line))));
-  assert.match(row(lines, 'power'), /power\s+number x100\s+zero/);
-  assert.match(row(lines, 'victim'), /victim\s+slot\s+aim/);
+  assert.match(row(lines, 'power'), /power\s+number x100\s+0\s+projectile power/);
+  assert.match(row(lines, 'victim'), /victim\s+player\s+aim\s+the victim slot/);
+});
+
+test('wire help says what the message does, has a column header and readable defaults', async () => {
+  const game = await bootConsole();
+  const lines = game.run('wire help hit_player').map(String);
+  assert.ok(lines.some((line) => /Reports a projectile hitting a player/.test(line)), 'a description of the message');
+  const header = lines.findIndex((line) => /^\s+field\s+type\s+default\s+meaning$/.test(line));
+  assert.ok(header > 0, 'a column header');
+  assert.ok(lines.findIndex((line) => /^\s+victim\s/.test(line)) > header, 'the header comes before the fields');
+  const text = lines.join('\n');
+  for (const internal of ['myPosX', 'myPosY', 'myGun', 'targetRespawns', 'replyId', 'zero']) assert.ok(!text.includes(internal), `${internal} is shown as words`);
+  assert.match(text, /x\s+number\s+your x\s+hit x/);
+  assert.match(text, /respawns\s+number\s+target's count/);
+  assert.match(text, /xN: you type game units/);
+});
+
+test('wire help marks a field with no default as required and lists the choices', async () => {
+  const game = await bootConsole();
+  const text = game.run('wire help get_match_list').map(String).join('\n');
+  assert.match(text, /view\s+choice\s+required\s+which list \(match_list, relations, skill_board\)/);
+  assert.match(text, /reply\s+text\s+\(automatic\)/);
+  assert.ok(!/xN:/.test(text), 'no unit line when nothing is scaled');
+});
+
+test('wire help on a message with no fields has no column header, and a receive-only one gives its reason', async () => {
+  const game = await bootConsole();
+  const sword = game.run('wire help sword_attack').map(String).join('\n');
+  assert.ok(!/field\s+type\s+default/.test(sword));
+  assert.match(sword, /Plays a sword swing/);
+  assert.match(game.run('wire help task').map(String).join('\n'), /note: the server sends this to clients/);
 });

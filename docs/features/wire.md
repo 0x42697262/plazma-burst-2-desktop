@@ -27,9 +27,13 @@ player ([protocol.md](../research/protocol.md) §4).
   - `--force` is required for a message that re-logs the connection (`authenticate`).
 - `wire list` lists every message with its direction; the ones the server sends are marked
   `[receive only]` and cannot be sent.
-- `wire help <message>` lists one message's fields, their units and their defaults, an
-  example line, and (for a message relayed to every other client) a note that your own screen
-  will not change.
+- `wire help <message>` says what the message does, then lists its fields under a header
+  (`field`, `type`, `default`, `meaning`): `type` is `player`, `number`, `text`, `JSON`, `flag`
+  or `choice`, with `xN` when you type game units and the wire value is N times larger;
+  `default` is what a field you leave out takes, in words (`your x`, `your gun`, `aim`,
+  `target's count`, `(automatic)`), or `required` when you must give it. It ends with an example
+  line and, for a message relayed to every other client, a note that your own screen will not
+  change.
 
 ## Why your own screen does not change
 

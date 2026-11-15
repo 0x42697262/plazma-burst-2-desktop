@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { MESSAGES, MESSAGE_BY_NAME, EXAMPLES } from './constants.ts';
+import { MESSAGES, MESSAGE_BY_NAME, EXAMPLES, DESCRIPTIONS } from './constants.ts';
 import { CHANNEL, RELIABLE_PREFIX } from '../keys.ts';
 import { parseArgs } from './parse.ts';
 
@@ -35,6 +35,14 @@ test('every sendable message has an example that names it and parses', () => {
     assert.equal(words[0], 'wire', `${message.name} example starts with wire`);
     assert.equal((words[1] ?? '').replace(RELIABLE_PREFIX, ''), message.name.toLowerCase(), `${message.name} example names the message`);
     assert.equal(parseArgs(words.slice(1)).message.name, message.name, `${message.name} example parses to itself`);
+  }
+});
+
+test('every sendable message has a description, and a receive-only one has none', () => {
+  for (const message of MESSAGES) {
+    const description = DESCRIPTIONS[message.name];
+    if (message.sendable) assert.ok(description && description.length > 20, `${message.name} has a description`);
+    else assert.equal(description, undefined, `${message.name} is receive-only and carries a note instead`);
   }
 });
 
