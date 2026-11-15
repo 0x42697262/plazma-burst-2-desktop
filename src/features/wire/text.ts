@@ -26,6 +26,8 @@ export const WIRE_TEXT = Object.freeze({
   sent: (name: string) => `sent ${name}`,
   replyGot: (name: string, reply: string) => `${name} <- ${reply}`,
   turnedOff: (name: string, what: string) => `${name} is turned off (${what})`,
+  exampleLine: (example: string) => `example: ${example}`,
+  otherClientsNote: 'Other clients apply this; your own screen does not change, because the game applies its own copy before sending. Confirm with "net_log on" then "netlog show".',
   matchMessages: 'match messages',
   lobbyMessages: 'lobby messages',
 });

@@ -27,7 +27,18 @@ player ([protocol.md](../research/protocol.md) §4).
   - `--force` is required for a message that re-logs the connection (`authenticate`).
 - `wire list` lists every message with its direction; the ones the server sends are marked
   `[receive only]` and cannot be sent.
-- `wire help <message>` lists one message's fields, their units and their defaults.
+- `wire help <message>` lists one message's fields, their units and their defaults, an
+  example line, and (for a message relayed to every other client) a note that your own screen
+  will not change.
+
+## Why your own screen does not change
+
+A message whose direction ends `every other client` (hit_player, heal_player, var_sync, the
+AI syncs, ...) is relayed by the server to everyone except you, and the game's own client
+already applied its copy the moment it fired. `wire` only sends, so other players see the hit,
+the heal or the effect while your screen stays still. That is the protocol, not a wrong
+parameter. Turn on `net_log`, then `netlog show`, to see the message leave and confirm its
+fields.
 
 ## Picking a target
 

@@ -2,7 +2,7 @@ import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { isCapabilityOn } from '#console/flags.ts';
 import { CAPABILITY } from '#shared/features/keys.ts';
-import { CHANNEL, COMMAND } from '../../keys.ts';
+import { CHANNEL, COMMAND, OTHER_CLIENTS } from '../../keys.ts';
 import { WIRE_TEXT as TEXT } from '../../text.ts';
 import { parseArgs } from '../../domain/parse.ts';
 import { resolve } from '../../services/resolve.ts';
@@ -26,6 +26,7 @@ function wireSend(args: string[]): void {
   if (flags.dry) { for (const line of dryLines(resolution)) print(line, COLOR.muted); return; }
   sendResolved(resolution, (reply) => { print(TEXT.replyGot(message.name, replyText(reply)), COLOR.notice); });
   print(TEXT.sent(message.name), COLOR.ok);
+  if (message.direction.includes(OTHER_CLIENTS)) print(TEXT.otherClientsNote, COLOR.muted);
 }
 
 export const sendCommand = Object.freeze({

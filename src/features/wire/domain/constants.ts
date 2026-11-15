@@ -302,3 +302,35 @@ export const MESSAGES: readonly Message[] = Object.freeze([
 ]);
 
 export const MESSAGE_BY_NAME: ReadonlyMap<string, Message> = new Map(MESSAGES.map((message) => [message.name, message]));
+
+export const EXAMPLES: Readonly<Record<string, string>> = Object.freeze({
+  EXEC_TRIGGER: 'wire exec_trigger trigger=3',
+  RESPAWN: 'wire respawn',
+  HIT_PLAYER: 'wire hit_player victim=bob power=1 knockback=2',
+  DAMAGE_PLAYERS_VIA_EXPLOSION: 'wire damage_players_via_explosion victim=@all damage=10',
+  HEAL_PLAYER: 'wire heal_player target=bob power=5',
+  PROJECTILE_CREATE: 'wire projectile_create gun=0 angle=1.57',
+  PROJECTILE_REMOVE: 'wire projectile_remove number=5',
+  BARREL: 'wire barrel barrel=0 hp=0 byPlayer=1',
+  THROW_GUN: 'wire throw_gun gun=0',
+  HIT_GRENADE: 'wire hit_grenade grenade=1 shot=2 tox=10',
+  HIT_SHIELD: 'wire hit_shield shield=1 hpBefore=100 damage=10 owner=bob',
+  CHAT: 'wire chat destination=1 text=hello',
+  CREATE_MATCH: 'wire create_match settings={"title":"test","game_type":"DM","max_players":8}',
+  AUTHENTICATE: 'wire authenticate login=you password=secret --force',
+  GET_MATCH_LIST: 'wire get_match_list view=match_list',
+  JOIN_MATCH: 'wire join_match uid=52099',
+  CLIENT_READY_FOR_FIRST_SYNC: 'wire client_ready_for_first_sync',
+  MY_PLAYER_PROPERTIES_CHANGED: 'wire my_player_properties_changed property=0 value=1',
+  REPORT_USER: 'wire report_user target=bob',
+  ENDORDSE_USER: 'wire endordse_user target=bob',
+  KICK_USER: 'wire kick_user target=bob allGuests=1',
+  BAN_USER: 'wire ban_user target=bob',
+  RESSURECT: 'wire ressurect',
+  SWORD_ATTACK: 'wire sword_attack',
+  VAR_SYNC: 'wire var_sync r door_1 1',
+  FLOW_AT: 'wire flow_at vx=10 vy=-5 count=3',
+  AI_STATE_SYNC: 'wire ai_state_sync slot=bluebot hp=100 hunt=0',
+  AI_HEALTH_SYNC: 'wire ai_health_sync slot=bluebot hp=100 head=40 body=60 arms=40 legs=50',
+  ENTER_RESPAWN_QUEUE: 'wire enter_respawn_queue',
+});

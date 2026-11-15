@@ -2,8 +2,10 @@ import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { CAPABILITY } from '#shared/features/keys.ts';
 import { FIELD_DEFAULT_WIDTH, FIELD_NAME_WIDTH, FIELD_TYPE_WIDTH } from '../../constants.ts';
-import { COMMAND } from '../../keys.ts';
+import { COMMAND, OTHER_CLIENTS } from '../../keys.ts';
+import { WIRE_TEXT } from '../../text.ts';
 import { resolveMessage } from '../../domain/parse.ts';
+import { EXAMPLES } from '../../domain/constants.ts';
 import type { Field } from '../../domain/types.ts';
 import { HELP_TEXT as TEXT } from './text.ts';
 
@@ -22,6 +24,9 @@ function wireHelp(args: string[]): void {
     print(TEXT.groupHeading, COLOR.muted);
     for (const field of message.group) printField(field);
   }
+  const example = EXAMPLES[message.name];
+  if (example) print(WIRE_TEXT.exampleLine(example), COLOR.ok);
+  if (message.direction.includes(OTHER_CLIENTS)) print(WIRE_TEXT.otherClientsNote, COLOR.muted);
 }
 
 export const helpCommand = Object.freeze({

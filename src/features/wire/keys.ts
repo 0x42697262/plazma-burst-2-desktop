@@ -33,6 +33,7 @@ export const VAR_SYNC_MODE = Object.freeze(['r', 'd', 'x', 'n', 'l'] as const);
 
 export const RELIABLE_PREFIX = 'reliable_';
 export const TYPE_PREFIX = 'RELIABLE_';
+export const OTHER_CLIENTS = 'every other client';
 
 export const TOKEN = Object.freeze({
   flagPrefix: '--', assign: '=', rawPrefix: 'raw:', listSeparator: ',', ruleSeparator: ':', filterPrefix: '@', indexPrefix: '#',

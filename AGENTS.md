@@ -131,6 +131,7 @@ One line per behavior change: what to do, and the result to expect.
   `wire help hit_player` lists its fields; `wire task` is refused as receive-only; `wire
   authenticate` needs `--force`. With `net_log on`, `wire enter_respawn_queue` shows a numeric reply
   id in `netlog show` and its answer in the console; `wire report_user` in the menu asks for an
-  auth id instead of failing. `PB2_FEATURES=-wire` makes `wire` unknown;
+  auth id instead of failing. `wire help <message>` ends with an `example:` line, and a message
+  relayed to every other client prints a note that your own screen does not change. `PB2_FEATURES=-wire` makes `wire` unknown;
   `PB2_FEATURES=-wire.match` refuses match messages but still sends lobby ones. The table
   matches docs/research/protocol.md (src/features/wire/domain/table.test.ts).
