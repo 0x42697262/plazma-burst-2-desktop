@@ -74,17 +74,21 @@ target's numbers.
 
 ## 6. Self, from the target account
 
-Every block above that names `T` without declaring it reads the global set in step 1; a
-block that declares `const T=…` keeps it local, and the later blocks then fail with
-`T is not defined`. Set it here too, then repeat step 5 and the `one` read.
+One line, with the account's own id in `T` (its `auth_id` from `accounts` or from the match's
+`FIRST_SYNC_RESPONSE`), then the read. Nothing changes anywhere: the lobby answers before the
+account module is called (`libs/flash.js:2865-2871`).
 
 ```
-js globalThis.T="322951"
+js globalThis.one=[];(()=>{const N=PB2_NAMES,M=(0,eval)(N.net),c=M[N.lobbyConn],T="322951";c[N.netSend](M[N.netChannel],[M.RELIABLE_ENDORDSE_USER,T,M[N.netReplyTo]],r=>{one.push(Array.from(r))})})()
 ```
 
-Expect `["Error: Can't do this to yourself"]`. That answer is produced by the lobby before the
-account module is called (`libs/flash.js:2865-2871`), and it is the cheapest proof that an id
-is the one the logged-in account holds.
+```
+js JSON.stringify(one)
+```
+
+Expect `["Error: Can't do this to yourself"]`. A block that names `T` without declaring it
+reads the global from step 1; one that declares `const T=…` keeps it local, which is why a
+later block can fail with `T is not defined`.
 
 ## What each reply means
 
@@ -117,6 +121,13 @@ relation held for a month, which matches the `Until` column of the Relations scr
   reader and the round leaves the target where it was.
 - **The toggle is a useful tool:** an odd number of sends flips the relation, an even number
   leaves it, which is how a round can be tested without changing anyone's standing.
+- **Self refusal is free.** A send to the logged-in account's own id answers
+  `Error: Can't do this to yourself` and changes nothing, which also verifies that an id
+  belongs to that account (`libs/flash.js:2865-2871`).
+- **An auth id is per join, not per account.** The same account was `322975` in one
+  `accounts` listing and `322978` after spectating and joining again, and every id seen so far
+  sits in one rising band (322947 … 322978). So a stored id goes stale on the next join, and a
+  target has to be read from `accounts` in the same join it is used.
 
 Still unobserved: the ignored fourth part, the self refusal, a report (the opposite direction
 of the same two calls), and what a reset does to the target's `reputation` number.
