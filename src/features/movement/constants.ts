@@ -8,3 +8,4 @@ export const STEADY_STABILITY = 1;
 export const FULL_LIFT = 1;
 export const FRAMES_PER_TICK_AT_60_FPS = 2;
 export const OUTSIDE_VIEW_AIM_X = 800 + 200;
+export const DIRECTIONAL_DEAD_ZONE = 50;

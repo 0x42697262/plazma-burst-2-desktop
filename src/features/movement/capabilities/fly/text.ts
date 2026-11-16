@@ -1,6 +1,6 @@
 export const TEXT = Object.freeze({
-  usage: 'fly [on | off | free | sweep | sword | reset]  |  fly sweep | sword [--on | --off | --toggle] [--inverse | --default]',
-  usageError: 'usage: fly [on | off | free | sweep | sword | reset]  |  fly sweep | sword [--on | --off | --toggle] [--inverse | --default]',
+  usage: 'fly [on | off | free | sweep | sword | reset]  |  fly sweep | sword [--on | --off | --toggle] [--directional | --inverse | --plain | --default]',
+  usageError: 'usage: fly [on | off | free | sweep | sword | reset]  |  fly sweep | sword [--on | --off | --toggle] [--directional | --inverse | --plain | --default]',
   description: 'Fly: up/down, free glide, or the aim sweep (sweep for guns, sword for swords); --on/--off/--toggle run it',
   clientOnly: 'your own movement and aim',
   about: [
@@ -26,7 +26,9 @@ export const TEXT = Object.freeze({
     ['sweep --toggle', 'start or stop'],
     ['sword --on | --off | --toggle', 'the same, holding the mouse button too (swords)'],
     ['--inverse', 'cursor above you lifts you: your aim height is mirrored through you (fly_sweep_aim)'],
-    ['--default', 'cursor below you lifts you, the plain sweep'],
+    ['--directional', 'fly toward the cursor: inverse, and left or right held toward its side (the default)'],
+    ['--plain', 'cursor below you lifts you, the plain sweep'],
+    ['--default', 'back to the default, directional'],
   ],
   examples: [
     ['fly sweep', 'arm the sweep'],
@@ -39,7 +41,9 @@ export const TEXT = Object.freeze({
   sweeping: (range: number) => `Sweeping ${range} left and right of you`,
   stopped: 'Sweep stopped',
   aimInverse: 'Sweep aim: inverse (cursor above you lifts you)',
-  aimDefault: 'Sweep aim: default (cursor below you lifts you)',
+  aimDefault: 'Sweep aim: back to the default, directional (you fly toward the cursor)',
+  aimPlain: 'Sweep aim: plain (cursor below you lifts you)',
+  aimDirectional: 'Sweep aim: directional (you fly toward the cursor: above lifts you, its side is held)',
   notReady: 'It only sweeps at 60 FPS with high physics: "fps 60 high"',
   heldBack: (range: number, hint: string) => `Approved match: the sweep stays within ${range} of you, because aiming farther is reported to the other players. ${hint}.`,
 });

@@ -8,17 +8,25 @@ export type SweepState = { active: boolean; direction: number; range: number; in
 
 export const sweep: SweepState = { active: false, direction: 1, range: 0, inverse: false, held: null, holdsKeys: false };
 
-const keys = game as unknown as { holdKeys(ragdoll: boolean, mouse: boolean): void };
+type HeldKeys = { ragdoll: boolean; mouse: boolean; left: boolean; right: boolean };
+const keys = game as unknown as { holdKeys(held: HeldKeys): void };
+const NOTHING_HELD: HeldKeys = Object.freeze({ ragdoll: false, mouse: false, left: false, right: false });
 
-export function holdKeys(withMouse: boolean): void {
+export function holdKeys(withMouse: boolean, side: number): void {
   sweep.holdsKeys = true;
-  keys.holdKeys(true, withMouse);
+  keys.holdKeys({ ragdoll: true, mouse: withMouse, left: side < 0, right: side > 0 });
 }
 
 function releaseKeys(): void {
   if (!sweep.holdsKeys) return;
   sweep.holdsKeys = false;
-  keys.holdKeys(false, false);
+  keys.holdKeys(NOTHING_HELD);
+}
+
+export function cursorSide(character: AimHolder, deadZone: number): number {
+  const cursorX = sweep.held?.gameAim.x;
+  if (typeof cursorX !== 'number' || Math.abs(cursorX - character.x) <= deadZone) return 0;
+  return Math.sign(cursorX - character.x);
 }
 
 export function releaseAim(): void {

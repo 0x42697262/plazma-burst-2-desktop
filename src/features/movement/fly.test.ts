@@ -150,7 +150,7 @@ test('"fly sweep" holds ragdoll (X) while sweeping; "fly sword" also holds the m
   assert.ok(game.run('help fly').some((line) => /only fly modes safe in approved and ranked matches/.test(line)), 'help says which modes are safe');
 });
 
-test('--inverse mirrors your aim height through you, so the cursor above you lifts you; --default puts it back; both modes share it', () => {
+test('--inverse mirrors your aim height through you, so the cursor above you lifts you; --plain puts it back; both modes share it', () => {
   const { globals, names, player } = game;
   globals[names.fpsChoice] = 3;
   globals[names.lowPhysics] = false;
@@ -165,10 +165,10 @@ test('--inverse mirrors your aim height through you, so the cursor above you lif
   assert.equal(player.tary, 130, '80 above you reads 80 below');
   player.y = 60;
   assert.equal(player.tary, 150, 'mirrored through where you are now');
-  game.run('fly sweep --default');
-  assert.ok(game.run('get fly_sweep_aim').includes('fly_sweep_aim = default'));
+  game.run('fly sweep --plain');
+  assert.ok(game.run('get fly_sweep_aim').includes('fly_sweep_aim = plain'));
   player.tary = -30;
-  assert.equal(player.tary, -30, 'default: the cursor height as the game set it');
+  assert.equal(player.tary, -30, 'plain: the cursor height as the game set it');
   game.run('fly sweep --off');
   game.run('fly sword --inverse --on');
   game.frame();
@@ -177,8 +177,50 @@ test('--inverse mirrors your aim height through you, so the cursor above you lif
   game.run('fly sword --off');
   player.tary = 5;
   assert.equal(player.tary, 5, 'stopped: a plain value again');
-  assert.match(errorsOf(game.run('fly sweep --inverse --default')).join('\n'), /usage: fly/);
+  assert.match(errorsOf(game.run('fly sweep --inverse --plain')).join('\n'), /usage: fly/);
   assert.match(errorsOf(game.run('fly sweep --on --off')).join('\n'), /usage: fly/);
+  game.run('unset fly_sweep_aim');
+});
+
+test('--directional flies toward the cursor: the cursor above lifts you, and it holds left or right toward the cursor\'s side', () => {
+  const { globals, names, player } = game;
+  globals[names.fpsChoice] = 3;
+  globals[names.lowPhysics] = false;
+  globals[names.keyLeft] = false;
+  globals[names.keyRight] = false;
+  player.x = 100;
+  player.y = 50;
+  player.tarx = 400;
+  player.tary = -30;
+  game.run('unset fly_sweep_aim');
+  assert.ok(game.run('help fly_sweep_aim').some((line) => /"directional" \(the default\)/.test(line)), 'directional is the default');
+  assert.ok(game.run('fly sweep --directional --on').some((line) => /directional/.test(line)));
+  game.frame();
+  player.tarx = 400;
+  player.tary = -30;
+  assert.equal(player.tary, 130, 'the cursor above you lifts you');
+  game.frame();
+  assert.deepEqual([globals[names.keyLeft], globals[names.keyRight]], [false, true], 'cursor on your right: right held');
+  player.tarx = -300;
+  game.frame();
+  assert.deepEqual([globals[names.keyLeft], globals[names.keyRight]], [true, false], 'cursor on your left: left held');
+  player.tarx = 110;
+  game.frame();
+  assert.deepEqual([globals[names.keyLeft], globals[names.keyRight]], [false, false], 'cursor about straight above or below: neither');
+  player.tarx = 400;
+  game.frame();
+  game.run('fly sweep --off');
+  assert.deepEqual([globals[names.keyLeft], globals[names.keyRight]], [false, false], 'stopped: let go');
+  game.run('fly sweep --plain');
+  game.run('fly sweep --on');
+  player.tarx = 400;
+  game.frame();
+  game.frame();
+  assert.deepEqual([globals[names.keyLeft], globals[names.keyRight]], [false, false], 'plain: no keys held');
+  game.run('fly sweep --off');
+  assert.ok(game.run('fly sweep --default').some((line) => /back to the default, directional/.test(line)));
+  assert.ok(game.run('get fly_sweep_aim').some((line) => /fly_sweep_aim = default/.test(line)), '--default unsets it');
+  game.run('fly sweep --off');
   game.run('unset fly_sweep_aim');
 });
 

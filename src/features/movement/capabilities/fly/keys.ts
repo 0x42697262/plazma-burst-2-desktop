@@ -31,8 +31,8 @@ export const SETTINGS: Readonly<Record<string, KeySpec>> = Object.freeze({
     desc: 'How far left and right of you "fly sweep" aims, in game units (above 1000 is held back in approved matches)', example: '900',
   },
   fly_sweep_aim: {
-    capability: FLY, type: SETTING_TYPE.bool, group: GROUP.player, extraValues: [SWEEP_AIM.default, SWEEP_AIM.inverse], default: SWEEP_AIM.default, example: SWEEP_AIM.inverse,
-    desc: 'Aim height while sweeping: "default" follows your cursor (cursor below lifts you), "inverse" mirrors it through you (cursor above lifts you)',
+    capability: FLY, type: SETTING_TYPE.bool, group: GROUP.player, extraValues: [SWEEP_AIM.plain, SWEEP_AIM.inverse, SWEEP_AIM.directional], default: SWEEP_AIM.directional, example: SWEEP_AIM.inverse,
+    desc: 'How the sweep steers: "directional" (the default) flies toward your cursor: above lifts you, and left or right is held toward its side; "inverse" only mirrors the aim height (cursor above lifts you); "plain" is the plain sweep (cursor below lifts you)',
   },
   fly_upright: { capability: FLY, type: SETTING_TYPE.bool, group: GROUP.player, default: true, desc: 'Keep you on your feet in "fly free"' },
 });

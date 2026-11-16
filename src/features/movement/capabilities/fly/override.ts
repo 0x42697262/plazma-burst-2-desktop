@@ -5,10 +5,10 @@ import { game } from '#console/kernel/game/bindings.ts';
 import { GAME_FIELDS } from '#console/kernel/game/fields.ts';
 import { FLY_MODE, SETTING, SWEEP_AIM, SWEEP_MODES } from '#features/movement/keys.ts';
 import { settings } from '#console/kernel/state/store.ts';
-import { FLY_DAMPING, FRAMES_PER_TICK_AT_60_FPS, FULL_LIFT, OUTSIDE_VIEW_AIM_X, STEADY_STABILITY } from '../../constants.ts';
+import { DIRECTIONAL_DEAD_ZONE, FLY_DAMPING, FRAMES_PER_TICK_AT_60_FPS, FULL_LIFT, OUTSIDE_VIEW_AIM_X, STEADY_STABILITY } from '../../constants.ts';
 import { SWEEP_FPS_CHOICE } from '../../keys.ts';
 import { aimWatched } from '#console/kernel/overrides/server-checks.ts';
-import { holdAim, holdKeys, releaseAim, sweep } from './sweep.ts';
+import { cursorSide, holdAim, holdKeys, releaseAim, sweep } from './sweep.ts';
 import { OVERRIDE_NAME } from '../../keys.ts';
 import { isAlive } from '../../services/character.ts';
 
@@ -44,9 +44,11 @@ function flyFree(character: MovingCharacter, tick: number): void {
 type SweepBindings = { fpsChoice(): unknown; lowPhysics(): unknown };
 const sweepGame = game as unknown as SweepBindings;
 
+export const isDirectional = (): boolean => settings.effective(SETTING.flySweepAim) === SWEEP_AIM.directional;
+
 export const isInverse = (): boolean => {
   const aim = settings.effective(SETTING.flySweepAim);
-  return aim === SWEEP_AIM.inverse || aim === true;
+  return aim === SWEEP_AIM.inverse || aim === true || aim === SWEEP_AIM.directional;
 };
 
 export const isSweepReady = (): boolean => sweepGame.fpsChoice() === SWEEP_FPS_CHOICE && sweepGame.lowPhysics() !== true;
@@ -65,7 +67,7 @@ function flySweep(character: MovingCharacter, withMouse: boolean): void {
   sweep.range = sweepRange();
   sweep.inverse = isInverse();
   holdAim(character);
-  holdKeys(withMouse);
+  holdKeys(withMouse, isDirectional() ? cursorSide(character, DIRECTIONAL_DEAD_ZONE) : 0);
 }
 
 function apply({ character, running, tick }: OverrideContext): void {
