@@ -342,6 +342,10 @@ export const RULES: readonly Rule[] = Object.freeze([
 
   { file: 'frame2', keys: ['mapId'], what: ['ID of the map loaded last (campaign "c31a" or a custom map ID)'],
     re: String.raw`⟨_⟩=str;\s*⟨ID⟩=str;\s*⟨_⟩\.visible=true;\s*⟨_⟩\.⟨_⟩\.gotoAndPlay\(1\);\s*if\(⟨_⟩\[⟨_⟩\]!=undefined\)` },
+  { file: 'frame2', keys: ['ragdollKey'], what: ['ragdoll key held (X): your body goes limp while it is true'],
+    re: String.raw`if\(event\.keyCode===88\)\s*⟨ID⟩=true;` },
+  { file: 'frame2', keys: ['mouseHeld'], what: ['left mouse button held over the game: fires your gun or swings your swords'],
+    re: String.raw`mc\["tary"\]=\(⟨_⟩-game\["y"\]\)\/⟨_⟩;\s*if\(⟨ID⟩&&` },
   { file: 'frame2', keys: ['keyUp'], what: ['jump key held'],
     re: String.raw`if\(event\.keyCode===87\|\|event\.keyCode===38\|\|event\.keyCode===32\)\s*\{\s*⟨ID⟩=true;` },
   { file: 'frame2', keys: ['keyDown'], what: ['crouch key held'],

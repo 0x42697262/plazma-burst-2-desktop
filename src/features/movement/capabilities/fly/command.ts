@@ -4,7 +4,7 @@ import { COLOR } from '#console/kernel/core/keys.ts';
 import { takeOptions } from '#console/kernel/core/args.ts';
 import { runKey, setKey } from '#console/kernel/commands/settings.ts';
 import { settings } from '#console/kernel/state/store.ts';
-import { FLY_COMMAND, FLY_MODE, SETTING } from '../../keys.ts';
+import { FLY_COMMAND, SETTING, SWEEP_MODES } from '../../keys.ts';
 import { TEXT } from './text.ts';
 import { protectionHint } from '#console/kernel/ports/protection.ts';
 import { setSweeping, sweep } from './sweep.ts';
@@ -12,14 +12,14 @@ import { isSweepReady, sweepRange } from './override.ts';
 
 const SWEEP_OPTIONS: readonly string[] = Object.freeze([FLY_COMMAND.on, FLY_COMMAND.off, FLY_COMMAND.toggle]);
 
-function runSweep(option: string): void {
+function runSweep(option: string, mode: string): void {
   const shouldSweep = option === FLY_COMMAND.toggle ? !sweep.active : option === FLY_COMMAND.on;
   if (!shouldSweep) {
     setSweeping(false);
     print(TEXT.stopped, COLOR.ok);
     return;
   }
-  if (settings.get(SETTING.fly) !== FLY_MODE.sweep) setKey(SETTING.fly, FLY_MODE.sweep);
+  if (settings.get(SETTING.fly) !== mode) setKey(SETTING.fly, mode);
   setSweeping(true);
   const range = sweepRange();
   print(TEXT.sweeping(range), COLOR.ok);
@@ -30,13 +30,13 @@ function runSweep(option: string): void {
 function run(args: readonly string[]): void {
   const { options, rest } = takeOptions(args, SWEEP_OPTIONS);
   if (!options.size) {
-    if (rest.length && String(rest[0]).toLowerCase() !== FLY_MODE.sweep) setSweeping(false);
+    if (rest.length && !SWEEP_MODES.includes(String(rest[0]).toLowerCase())) setSweeping(false);
     runKey(SETTING.fly, rest);
     return;
   }
-  const isSweepWord = rest.length === 1 && String(rest[0]).toLowerCase() === FLY_MODE.sweep;
-  if (!isSweepWord || options.size > 1) throw new Error(TEXT.usageError);
-  runSweep([...options][0] ?? '');
+  const mode = String(rest[0] ?? '').toLowerCase();
+  if (rest.length !== 1 || !SWEEP_MODES.includes(mode) || options.size > 1) throw new Error(TEXT.usageError);
+  runSweep([...options][0] ?? '', mode);
 }
 
 export const flyCommand = Object.freeze({

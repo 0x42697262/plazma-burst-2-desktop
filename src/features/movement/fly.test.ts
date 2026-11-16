@@ -118,6 +118,37 @@ test('"fly sweep --on" overrides your aim x left and right of you every tick; th
   game.run('unset fly_sweep_range');
 });
 
+test('"fly sweep" holds ragdoll (X) while sweeping; "fly sword" also holds the mouse button; both let go when stopped', () => {
+  const { globals, names, player } = game;
+  globals[names.fpsChoice] = 3;
+  globals[names.lowPhysics] = false;
+  globals[names.ragdollKey] = false;
+  globals[names.mouseHeld] = false;
+  player.x = 100;
+  game.run('fly sweep --on');
+  game.frame();
+  assert.deepEqual([globals[names.ragdollKey], globals[names.mouseHeld]], [true, false], 'sweep: X held, no click');
+  game.run('fly sweep --off');
+  assert.deepEqual([globals[names.ragdollKey], globals[names.mouseHeld]], [false, false], 'stopped: X let go');
+  assert.ok(game.run('fly sword --on').some((line) => line.startsWith('Sweeping')));
+  assert.ok(game.run('get fly').includes('fly = sword'));
+  game.frame();
+  assert.deepEqual([globals[names.ragdollKey], globals[names.mouseHeld]], [true, true], 'sword: X and click held');
+  player.tarx = 0;
+  assert.notEqual(player.tarx, 0, 'sword sweeps too');
+  globals[names.mouseHeld] = false;
+  game.frame();
+  assert.equal(globals[names.mouseHeld], true, 'held again every tick, after the game lets go on a mouse up');
+  game.run('fly sword --toggle');
+  assert.deepEqual([globals[names.ragdollKey], globals[names.mouseHeld]], [false, false], 'toggled off: both let go');
+  game.run('fly sword --on');
+  game.frame();
+  game.run('fly off');
+  game.frame();
+  assert.deepEqual([globals[names.ragdollKey], globals[names.mouseHeld]], [false, false], 'another fly mode lets go');
+  assert.deepEqual(game.run('help fly').filter((line) => /sword/.test(line)).length > 0, true);
+});
+
 test('"fly sweep --on" arms the sweep mode when another one was set', () => {
   game.run('fly free');
   game.run('fly sweep --on');

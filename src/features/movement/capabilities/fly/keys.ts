@@ -7,12 +7,13 @@ const FLY = CAPABILITY.movement.fly;
 
 export const SETTINGS: Readonly<Record<string, KeySpec>> = Object.freeze({
   fly: {
-    capability: FLY, type: SETTING_TYPE.bool, extraValues: [FLY_MODE.free, FLY_MODE.sweep], example: FLY_MODE.free, group: GROUP.player,
-    desc: 'Fly: "on" = up/down with jump/crouch, "free" = glide in every direction (turns gravity off), "sweep" = the game\'s own aim sweep',
+    capability: FLY, type: SETTING_TYPE.bool, extraValues: [FLY_MODE.free, FLY_MODE.sweep, FLY_MODE.sword], example: FLY_MODE.free, group: GROUP.player,
+    desc: 'Fly: "on" = up/down with jump/crouch, "free" = glide in every direction (turns gravity off), "sweep" = the aim sweep holding ragdoll (X), for guns, "sword" = the same holding the mouse button too, for swords',
     about: [
       'on: jump and crouch move you straight up and down at fly_speed; you run left and right as usual.',
       'free: the movement keys push you in all four directions and you glide to a stop, like a spaceship.',
-      'sweep: arms the aim sweep; "fly sweep --on/--off/--toggle" runs it (60 FPS, high physics).',
+      'sweep: arms the aim sweep with ragdoll (X) held, for guns; "fly sweep --on/--off/--toggle" runs it (60 FPS, high physics).',
+      'sword: the same with the mouse button held too, for swords; "fly sword --on/--off/--toggle".',
       'Settings for on: fly_speed. For free: fly_accel_x, fly_accel_y, fly_drag, fly_lift, fly_upright. For sweep: fly_sweep_range.',
     ],
   },

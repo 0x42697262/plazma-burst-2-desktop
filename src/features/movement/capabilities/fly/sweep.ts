@@ -1,13 +1,28 @@
+import { game } from '#console/kernel/game/bindings.ts';
 import { AIM_X_FIELD } from '../../keys.ts';
 
 type AimHolder = Record<string, unknown> & { x: number };
 type HeldAim = { character: AimHolder; gameAim: unknown };
 
-export type SweepState = { active: boolean; direction: number; range: number; held: HeldAim | null };
+export type SweepState = { active: boolean; direction: number; range: number; held: HeldAim | null; holdsKeys: boolean };
 
-export const sweep: SweepState = { active: false, direction: 1, range: 0, held: null };
+export const sweep: SweepState = { active: false, direction: 1, range: 0, held: null, holdsKeys: false };
+
+const keys = game as unknown as { holdKeys(ragdoll: boolean, mouse: boolean): void };
+
+export function holdKeys(withMouse: boolean): void {
+  sweep.holdsKeys = true;
+  keys.holdKeys(true, withMouse);
+}
+
+function releaseKeys(): void {
+  if (!sweep.holdsKeys) return;
+  sweep.holdsKeys = false;
+  keys.holdKeys(false, false);
+}
 
 export function releaseAim(): void {
+  releaseKeys();
   const { held } = sweep;
   if (!held) return;
   sweep.held = null;

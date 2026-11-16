@@ -106,6 +106,7 @@ export const game = {
   },
   teleportFx: (atX: number, atY: number): unknown => call('effect', atX, atY, bagOf(read('effectTypes'))[nameOf('effectTeleport')], 0, 0),
 
+  holdKeys: (ragdoll: boolean, mouse: boolean): void => { write('ragdollKey', ragdoll); write('mouseHeld', mouse); },
   gameCanvas: (): unknown => optionalGlobal(GAME_GLOBAL.canvas),
   camera: (): CameraView | null => {
     const camera = world();

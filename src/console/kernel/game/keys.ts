@@ -27,7 +27,7 @@ export const NAME_KEYS = Object.freeze([
   'serverLocation', 'lobbyHosts', 'lobbyPort', 'lockedArrays', 'mapText', 'mapChunks', 'levelStart', 'charOnDeath',
   'zoom', 'timerTarget', 'varSyncOn', 'mapVars', 'mapId', 'keyUp', 'keyDown', 'mp', 'chatTyping', 'customMap',
   'openChat', 'sayTrigger', 'chatPopups', 'chatPanel', 'chatPanelText', 'uiOverlay', 'levelState', 'failText',
-  'fadeOverlay', 'fpsChoice', 'lowPhysics', 'applyFps', 'syncPointHistory',
+  'fadeOverlay', 'fpsChoice', 'lowPhysics', 'applyFps', 'syncPointHistory', 'ragdollKey', 'mouseHeld',
 ] as const);
 export type NameKey = typeof NAME_KEYS[number] | 'version';
 

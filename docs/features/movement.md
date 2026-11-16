@@ -36,7 +36,14 @@ overrides in `src/console/kernel/overrides/frame.ts`.
     follow the mouse, not `tarx`, so neither moves. It is a getter on your character object
     only: no global changes. Stopping, another fly mode, low physics, death or a pause puts
     the game's own aim back.
-  - With X held (the game's limp key) it lifts you; without it you only turn on the spot.
+  - It holds ragdoll (X, the game's `ragdollKey`, set on key 88 at `frame2.js:27403`) for you
+    every tick while it sweeps: the sweep only lifts you while you are limp. `fly sword` sweeps
+    the same way and also holds the left mouse button (`mouseHeld`, which the tick reads to
+    fire or swing, `frame2.js:33881`), to fly with swords; use `fly sweep` with a gun.
+    `fly sword --on/--off/--toggle` works like the sweep's, and `bind --hold mouse2 "fly sword"`
+    holds it. Both are set again every tick, so a game mouse up does not end them; stopping
+    lets go of both. While limp the game does not turn you to face your aim, so your facing
+    stays put; the aim itself still flips.
   - Other players see your aim flip: it is in your state updates. In an approved match the
     server reports aim more than 1000 to the side (anticheat.md §14.6), so the range is held
     to 1000 there; `bypass checks` lifts that.

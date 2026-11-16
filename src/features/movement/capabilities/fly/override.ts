@@ -3,12 +3,12 @@ import type { MovingCharacter } from '#console/kernel/game/types.ts';
 import { CAPABILITY } from '#shared/features/keys.ts';
 import { game } from '#console/kernel/game/bindings.ts';
 import { GAME_FIELDS } from '#console/kernel/game/fields.ts';
-import { FLY_MODE, SETTING } from '#features/movement/keys.ts';
+import { FLY_MODE, SETTING, SWEEP_MODES } from '#features/movement/keys.ts';
 import { settings } from '#console/kernel/state/store.ts';
 import { FLY_DAMPING, FRAMES_PER_TICK_AT_60_FPS, FULL_LIFT, OUTSIDE_VIEW_AIM_X, STEADY_STABILITY } from '../../constants.ts';
 import { SWEEP_FPS_CHOICE } from '../../keys.ts';
 import { aimWatched } from '#console/kernel/overrides/server-checks.ts';
-import { holdAim, releaseAim, sweep } from './sweep.ts';
+import { holdAim, holdKeys, releaseAim, sweep } from './sweep.ts';
 import { OVERRIDE_NAME } from '../../keys.ts';
 import { isAlive } from '../../services/character.ts';
 
@@ -51,7 +51,7 @@ export const sweepRange = (): number => {
   return aimWatched() ? Math.min(range, OUTSIDE_VIEW_AIM_X) : range;
 };
 
-function flySweep(character: MovingCharacter): void {
+function flySweep(character: MovingCharacter, withMouse: boolean): void {
   if (!sweep.active || !isSweepReady()) {
     releaseAim();
     return;
@@ -59,6 +59,7 @@ function flySweep(character: MovingCharacter): void {
   sweep.direction = -sweep.direction;
   sweep.range = sweepRange();
   holdAim(character);
+  holdKeys(withMouse);
 }
 
 function apply({ character, running, tick }: OverrideContext): void {
@@ -69,8 +70,8 @@ function apply({ character, running, tick }: OverrideContext): void {
   const mode = settings.get(SETTING.fly);
   if (mode === FLY_MODE.vertical) flyVertical(character, tick);
   else if (mode === FLY_MODE.free) flyFree(character, tick);
-  else if (mode === FLY_MODE.sweep) flySweep(character);
-  if (mode !== FLY_MODE.sweep) releaseAim();
+  else if (SWEEP_MODES.includes(mode)) flySweep(character, mode === FLY_MODE.sword);
+  if (!SWEEP_MODES.includes(mode)) releaseAim();
 }
 
 export const flyOverride: FrameOverride = Object.freeze({ name: OVERRIDE_NAME.fly, capability: CAPABILITY.movement.fly, apply, cleanup: releaseAim });

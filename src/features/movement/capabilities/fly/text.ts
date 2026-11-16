@@ -1,7 +1,7 @@
 export const TEXT = Object.freeze({
-  usage: 'fly [on | off | free | sweep | reset]  |  fly sweep --on | --off | --toggle',
-  usageError: 'usage: fly [on | off | free | sweep | reset]  |  fly sweep --on | --off | --toggle',
-  description: 'Fly: up/down, free glide, or the aim sweep; --on/--off/--toggle run the sweep',
+  usage: 'fly [on | off | free | sweep | sword | reset]  |  fly sweep | sword --on | --off | --toggle',
+  usageError: 'usage: fly [on | off | free | sweep | sword | reset]  |  fly sweep | sword --on | --off | --toggle',
+  description: 'Fly: up/down, free glide, or the aim sweep (sweep for guns, sword for swords); --on/--off/--toggle run it',
   clientOnly: 'your own movement and aim',
   about: [
     'Without an option it is the "fly" key: "fly on", "fly free", "fly sweep" arm a mode,',
@@ -9,9 +9,11 @@ export const TEXT = Object.freeze({
     'fly sweep --on starts the sweep (and arms "fly sweep"), --off stops it, --toggle',
     'switches it. Sweeping flips your aim left and right of you every tick, the way the',
     'aim sweep does with the cursor, only at 60 FPS with high physics ("fps 60 high").',
-    'Your cursor stays where it is; other players see your aim flip.',
+    'It holds ragdoll (X) for you while it sweeps, which is what lifts you. "fly sword" does',
+    'the same and also holds the mouse button, to fly with swords; use "fly sweep" with a gun.',
+    'Your cursor and camera stay where they are; other players see your aim flip.',
     'Settings: fly_speed (on); fly_accel_x, fly_accel_y, fly_drag, fly_lift, fly_upright (free);',
-    'fly_sweep_range (sweep).',
+    'fly_sweep_range (sweep, sword).',
     'For a key: "bind g \\"fly sweep --toggle\\"", or hold it with "bind --hold mouse2 \\"fly sweep\\"".',
   ],
   args: [
@@ -19,10 +21,12 @@ export const TEXT = Object.freeze({
     ['sweep --on', 'start sweeping'],
     ['sweep --off', 'stop sweeping'],
     ['sweep --toggle', 'start or stop'],
+    ['sword --on | --off | --toggle', 'the same, holding the mouse button too (swords)'],
   ],
   examples: [
     ['fly sweep', 'arm the sweep'],
     ['fly sweep --toggle', 'start or stop sweeping'],
+    ['bind --hold mouse2 "fly sword"', 'fly with swords while the right button is held'],
     ['fps 60 high', 'what the sweep needs'],
   ],
   see: ['fps', 'bind'],
