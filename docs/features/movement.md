@@ -49,6 +49,14 @@ overrides in `src/console/kernel/overrides/frame.ts`.
     to 1000 there; `bypass checks` lifts that.
   - Any other `fly` mode stops the sweep. Moving, jumping, crouching and commands work as
     usual; shots go where the sweep points.
+  - Safe with the anti-cheat checks on (no `bypass checks`): `fly sweep` and `fly sword` are the
+    only fly modes, and the only movement commands, that are. They change nothing the game
+    does not let a player change: your own aim (`tarx`, which the AHK sweep changes by moving
+    the cursor) and the X and mouse keys. The aim override is a getter on your character
+    object, so the game's anti-tamper scan, which compares globals and classes
+    ([anticheat](../research/anticheat.md) §6), sees nothing new; in an approved match the aim
+    stays within 1000 of you, the server's zoom-hack limit (§14.6). `fly on` and `fly free`
+    move you in ways no input can, and are not safe there.
   - Not yet: aiming at the cursor on the ticks a gun fires.
   - Checked headless: the aim and facing flip every frame and the crosshair stays put. The
     climb was confirmed in a real window, not headless.

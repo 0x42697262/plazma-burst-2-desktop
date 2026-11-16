@@ -147,6 +147,7 @@ test('"fly sweep" holds ragdoll (X) while sweeping; "fly sword" also holds the m
   game.frame();
   assert.deepEqual([globals[names.ragdollKey], globals[names.mouseHeld]], [false, false], 'another fly mode lets go');
   assert.deepEqual(game.run('help fly').filter((line) => /sword/.test(line)).length > 0, true);
+  assert.ok(game.run('help fly').some((line) => /only fly modes safe in approved and ranked matches/.test(line)), 'help says which modes are safe');
 });
 
 test('"fly sweep --on" arms the sweep mode when another one was set', () => {
