@@ -8,7 +8,7 @@ import { settings } from '#console/kernel/state/store.ts';
 import { FLY_DAMPING, FRAMES_PER_TICK_AT_60_FPS, FULL_LIFT, OUTSIDE_VIEW_AIM_X, STEADY_STABILITY } from '../../constants.ts';
 import { SWEEP_FPS_CHOICE } from '../../keys.ts';
 import { aimWatched } from '#console/kernel/overrides/server-checks.ts';
-import { releasePointer, sweep, type StagePoint } from './sweep.ts';
+import { holdAim, releaseAim, sweep } from './sweep.ts';
 import { OVERRIDE_NAME } from '../../keys.ts';
 import { isAlive } from '../../services/character.ts';
 
@@ -41,10 +41,7 @@ function flyFree(character: MovingCharacter, tick: number): void {
   if (settings.effective(SETTING.flyUpright) === true) character[GAME_FIELDS.STABILITY] = STEADY_STABILITY;
 }
 
-type SweepBindings = {
-  fpsChoice(): unknown; lowPhysics(): unknown; zoom(): number; camera(): { x: number } | null;
-  mouse(): StagePoint; setMouse(stageX: number, stageY: number): void; setAimSource(stageX: number, stageY: number): void; placeCursor(stageX: number, stageY: number): void;
-};
+type SweepBindings = { fpsChoice(): unknown; lowPhysics(): unknown };
 const sweepGame = game as unknown as SweepBindings;
 
 export const isSweepReady = (): boolean => sweepGame.fpsChoice() === SWEEP_FPS_CHOICE && sweepGame.lowPhysics() !== true;
@@ -55,34 +52,25 @@ export const sweepRange = (): number => {
 };
 
 function flySweep(character: MovingCharacter): void {
-  const camera = sweepGame.camera();
-  if (!sweep.active || !camera || !isSweepReady()) {
-    releasePointer();
+  if (!sweep.active || !isSweepReady()) {
+    releaseAim();
     return;
   }
-  const mouse = sweepGame.mouse();
-  const hasPointerMoved = mouse.x !== 0 || mouse.y !== 0;
-  if (hasPointerMoved || !sweep.pointer) sweep.pointer = mouse;
-  const pointer = sweep.pointer;
   sweep.direction = -sweep.direction;
-  const stageX = (character.x + sweep.direction * sweepRange()) * sweepGame.zoom() + camera.x;
-  sweepGame.placeCursor(pointer.x, pointer.y);
-  sweepGame.setMouse(0, 0);
-  sweepGame.setAimSource(stageX, pointer.y);
+  sweep.range = sweepRange();
+  holdAim(character);
 }
 
 function apply({ character, running, tick }: OverrideContext): void {
   if (!running || !isAlive(character)) {
-    releasePointer();
+    releaseAim();
     return;
   }
   const mode = settings.get(SETTING.fly);
   if (mode === FLY_MODE.vertical) flyVertical(character, tick);
   else if (mode === FLY_MODE.free) flyFree(character, tick);
   else if (mode === FLY_MODE.sweep) flySweep(character);
-  if (mode !== FLY_MODE.sweep) releasePointer();
+  if (mode !== FLY_MODE.sweep) releaseAim();
 }
 
-const nothingToUndo = (): void => undefined;
-
-export const flyOverride: FrameOverride = Object.freeze({ name: OVERRIDE_NAME.fly, capability: CAPABILITY.movement.fly, apply, cleanup: nothingToUndo });
+export const flyOverride: FrameOverride = Object.freeze({ name: OVERRIDE_NAME.fly, capability: CAPABILITY.movement.fly, apply, cleanup: releaseAim });

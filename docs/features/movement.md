@@ -29,14 +29,13 @@ overrides in `src/console/kernel/overrides/frame.ts`.
   command: `fly sweep --on` starts sweeping (and arms `fly sweep`), `--off` stops, `--toggle`
   switches. It only sweeps at 60 FPS with high physics (`fps 60 high`, [fps](fps.md)).
   `fly_sweep_range` (700 game units) is how far left and right of you it aims.
-  - How: each tick it keeps your real pointer aside, sets the game's `mouseX` and `mouseY`
-    to 0, writes the sweep into the aim source (`aimSourceX`, `aimSourceY`), and puts the
-    game's crosshair (`myCursor`) back on your pointer. With the mouse at 0 the game skips both
-    its copy of the mouse into the aim source and its crosshair update
-    (`if(mouseX!=0||mouseY!=0)`, `frame2.js:38330` and `3863`), so the sweep moves only your
-    aim: the crosshair stays where your pointer is, and moving the pointer still moves it.
-    Aiming height follows your pointer. Stopping, another fly mode, low physics, death or a
-    pause gives the pointer back.
+  - How: it overrides your character's aim x (`tarx`), not the mouse. The game computes `tarx`
+    from the mouse each tick (`frame2.js:33879`) and turns you to face it (`36364`); while
+    sweeping, `tarx` on your character reads your x plus or minus the range, flipping side
+    every tick, and the game's own writes are kept aside. The camera and the drawn crosshair
+    follow the mouse, not `tarx`, so neither moves. It is a getter on your character object
+    only: no global changes. Stopping, another fly mode, low physics, death or a pause puts
+    the game's own aim back.
   - With X held (the game's limp key) it lifts you; without it you only turn on the spot.
   - Other players see your aim flip: it is in your state updates. In an approved match the
     server reports aim more than 1000 to the side (anticheat.md §14.6), so the range is held
