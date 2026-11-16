@@ -8,6 +8,7 @@ import {
 } from './keys.ts';
 import { FILES_TEXT as TEXT } from './text.ts';
 import { textResponse } from './responses.ts';
+import { SERVER_SCRIPT } from '#shared/clients/keys.ts';
 
 export type RequestFetch = (request: Request | string) => Promise<Response>;
 type VersionFile = { version?: string; build?: string };
@@ -68,6 +69,8 @@ export function createGameFiles({ root, log, keepMissing }: { root: string; log:
   async function serveFile(relative: string, url: URL, fetchFromSite: RequestFetch): Promise<Response> {
     const file = path.join(root, path.normalize(relative));
     if (!file.startsWith(root + path.sep)) return textResponse(TEXT.forbidden, FORBIDDEN);
+    const isServerScript = SERVER_SCRIPT.test(file);
+    if (isServerScript) return keepMissing ? fetchFromSite(url.href) : textResponse(TEXT.notFound, NOT_FOUND);
     try {
       const data = await fs.readFile(file);
       return new Response(data, { status: OK, headers: { [CONTENT_TYPE_HEADER]: contentTypeOf(file) || BINARY_TYPE } });

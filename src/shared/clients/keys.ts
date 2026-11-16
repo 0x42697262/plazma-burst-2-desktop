@@ -22,6 +22,7 @@ export type ClientDetails = Readonly<{
   feature: FeatureId | null;
 }>;
 
+export const SERVER_SCRIPT = /\.php$/i;
 export const SADBURST_FLAG = '--sadburst';
 export const SADBURST_ERICH5_FLAG = '--sadburst-erich5';
 export const OFFICIAL_LOBBY = Object.freeze({ host: 'vvvv.plazmaburst2.com', port: 2053 });

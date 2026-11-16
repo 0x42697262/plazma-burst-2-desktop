@@ -59,7 +59,7 @@ test('fetch-game --sadburst knows what the game loads: its lists, its sprite loa
     ],
     strings,
     languages: ['en', 'zh'],
-    kept: ['bitmap_overrides/mmenu.jpg', ''],
+    kept: ['bitmap_overrides/mmenu.jpg', '', 'mimage_cache.php'],
   });
   for (const expected of ['flash_export/guns.png', 'flash_export/guns.js', 'flash_export/sky/frame0001.jpg', 'flash_export/sky/frame0003.jpg',
     'audio_overrides/am_wind.ogg', 'loading_screen.css', 'loading_screen/glow.png', 'flash_export/images/asphalt.png',
@@ -67,4 +67,5 @@ test('fetch-game --sadburst knows what the game loads: its lists, its sprite loa
     'bitmap_overrides/mmenu.jpg']) assert.ok(paths.includes(expected), expected);
   assert.ok(!paths.includes('flash_export/sky/frame0004.jpg'), 'as many frames as the loader says');
   assert.ok(!paths.some((found) => found.includes('cdn')), 'not other sites');
+  assert.ok(!paths.includes('mimage_cache.php'), 'a server script an older run kept by mistake is not downloaded as a file');
 });

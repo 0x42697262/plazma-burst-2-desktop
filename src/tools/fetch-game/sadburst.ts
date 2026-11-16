@@ -11,6 +11,7 @@ import {
   ZERO, campaignLevel, oggOverride, skinFile, spriteFrame, spriteSheet,
 } from './keys.ts';
 import { TEXT } from './text.ts';
+import { SERVER_SCRIPT } from '#shared/clients/keys.ts';
 import { getSitePage, pool } from './download.ts';
 
 export { MANIFEST, VERSION_FILE, KEPT };
@@ -78,7 +79,7 @@ export function assetPaths({ texts, strings, languages = [LANGUAGE_DEFAULT], kep
   if (Array.isArray(skins)) for (const id of skins as string[]) found.add(skinFile(id));
   const campaign = parseJson(listText(CAMPAIGN_LIST) ?? '') as { levels?: string[] } | null;
   for (const level of campaign?.levels ?? []) for (const language of languages) found.add(campaignLevel(language, level));
-  for (const line of kept) if (line && !line.startsWith(COMMENT_LINE)) found.add(line.trim());
+  for (const line of kept) if (line && !line.startsWith(COMMENT_LINE) && !SERVER_SCRIPT.test(line.trim())) found.add(line.trim());
   return [...found].filter((relative) => relative && !OUTSIDE_PATH.test(relative));
 }
 
