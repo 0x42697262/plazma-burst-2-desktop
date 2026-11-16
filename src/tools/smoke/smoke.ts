@@ -53,7 +53,7 @@ function collectConsoleLines(session: CdpSession): string[] {
 export async function runSmoke({ client, level, electronArgs, commands, report }: SmokeOptions): Promise<SmokeResult> {
   const args = [APP_DIR, DEBUG_PORT_SWITCH, ...electronArgs];
   report(TEXT.started(args));
-  const electron: ChildProcess = spawn(path.join(REPO_ROOT, ELECTRON_BIN), args, { cwd: REPO_ROOT, stdio: 'ignore' });
+  const electron: ChildProcess = spawn(path.join(REPO_ROOT, ELECTRON_BIN), args, { cwd: REPO_ROOT, stdio: 'ignore', detached: true });
   const output = new Map<string, string[]>();
   try {
     await waitFor(TEXT.waitingFor.debugger, async () => (await pageTargets()).length ? true : null);
@@ -96,6 +96,6 @@ export async function runSmoke({ client, level, electronArgs, commands, report }
     gameSession.close();
     return { consoleReady: true, output };
   } finally {
-    electron.kill();
+    if (electron.pid !== undefined) process.kill(-electron.pid);
   }
 }

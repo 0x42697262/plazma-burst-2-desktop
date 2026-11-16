@@ -1,4 +1,5 @@
 import { ROUTE } from '#shared/contract/routes.ts';
+import { STATUS } from '#shared/contract/keys.ts';
 import { stringOf } from '#kernel/text/text-of.ts';
 import { FEATURE } from '#shared/features/keys.ts';
 import { isFeatureOn } from '../../flags.ts';
@@ -29,6 +30,9 @@ let problems: string[] = [];
 let mapNow: () => unknown = () => null;
 const lines: string[] = [];
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
+let onRefused: (message: string) => void = () => undefined;
+
+export const onSaveRefused = (listener: (message: string) => void): void => { onRefused = listener; };
 
 export const setMapSource = (source: () => unknown): void => { mapNow = source; };
 
@@ -361,6 +365,12 @@ export function save(): void {
   writeLocal(data);
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    fetch(ROUTE.kv, { method: PUT_METHOD, body: data }).catch(() => undefined);
+    fetch(ROUTE.kv, { method: PUT_METHOD, body: data }).then(async (response) => {
+      if (response.status !== STATUS.forbidden) return;
+      const message = await response.text();
+      const saved: unknown = await fetch(ROUTE.kv, { cache: NO_STORE }).then((answer) => (answer.ok ? answer.json() as Promise<unknown> : null)).catch(() => null);
+      if (saved !== null) reload(saved);
+      onRefused(message);
+    }).catch(() => undefined);
   }, SAVE_DELAY_MS);
 }

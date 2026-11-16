@@ -75,7 +75,8 @@ same plus the game, names and opcodes files). The gate: `src/wrapper/app.ts`.
   [fingerprinting](../research/fingerprinting.md) §4; the lobby task guard stops it only on
   private servers). That code can reach the console's settings, so it could add a bind such
   as `js ...`, which would then run in the official client too, signed in with your official
-  account. A separate file per client prevented that; sharing the file is your choice.
+  account. [settings_guard](settings-guard.md) asks you in a native dialog before such a
+  bind is saved, in every client.
 - Sad Burst 2 (`/gameplay/`): hooks are in the flag's hands like everywhere else, but its
   loader sends a hash of the game scripts, as the page receives them, with the login, so a hook
   that changes a script changes that hash ([hooks](hooks.md),

@@ -11,7 +11,7 @@ import { showReportsIn } from '#page/report.ts';
 import { REPORT_LEVEL, type ReportLevel } from '#page/keys.ts';
 import { namesMissing, CLIENT_TITLE, FIND_NAMES, PAGE_CLIENT } from './kernel/game/names.ts';
 import { currentMapId } from './kernel/game/level.ts';
-import { load, reload as reloadStore, settings, binds, profiles, loadProblems, setMapSource } from './kernel/state/store.ts';
+import { load, reload as reloadStore, settings, binds, profiles, loadProblems, setMapSource, onSaveRefused } from './kernel/state/store.ts';
 import { LOAD_SOURCE, type LoadSource } from './kernel/state/keys.ts';
 import { applyOverrides, onActiveChange, useOverrides } from './kernel/overrides/frame.ts';
 import { registerListSection } from './kernel/list-sections.ts';
@@ -75,6 +75,8 @@ function start(source: LoadSource): void {
   }
   for (const feature of features) feature.start?.();
 }
+
+onSaveRefused((message) => { print(message, COLOR.error); });
 
 async function boot(): Promise<void> {
   setMapSource(currentMapId);

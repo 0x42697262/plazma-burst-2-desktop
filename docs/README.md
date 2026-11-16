@@ -35,6 +35,7 @@
 - [map-editor.md](features/map-editor.md): `map_editor`, the in-game map editor
 - [netlog.md](features/netlog.md): `netlog`, the network recorder
 - [p2p-host.md](features/p2p-host.md): `p2p_host`, the player-hosted dedicated host
+- [settings-guard.md](features/settings-guard.md): `settings_guard`, asking before a risky bind is saved
 - [teleport.md](features/teleport.md): `teleport`, `tp`
 - [player-info.md](features/player-info.md): `player_info`, `pos`, `chars`, `players`, `bots`, `uid` and `accounts`
 - [wire.md](features/wire.md): `wire`, send a protocol message by name

@@ -9,7 +9,7 @@ export function buildWrapper(parts: WrapperParts, deps: WrapperDeps, ports: Wrap
   const mapCache = parts.createMapCacheWrapper?.(deps) ?? null;
   const hooks = parts.createHooksWrapper?.(deps, ports.hooks) ?? null;
   const diagnostics = parts.diagnosticsPart?.create(deps, ports.diagnostics) ?? null;
-  const plainFeatures = [parts.netlogWrapper, parts.fingerprintWrapper, parts.screenshotWrapper].flatMap((make) => (make ? [make(deps)] : []));
+  const plainFeatures = [parts.settingsGuardWrapper, parts.netlogWrapper, parts.fingerprintWrapper, parts.screenshotWrapper].flatMap((make) => (make ? [make(deps)] : []));
   const features: WrapperFeature[] = [...plainFeatures, ...(serverListFeature ? [serverListFeature] : []), ...[mapCache, hooks, diagnostics].flatMap((part) => (part ? [part.feature] : []))];
   return Object.freeze({ features, mapCache, hooks });
 }

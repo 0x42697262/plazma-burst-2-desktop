@@ -13,6 +13,7 @@ export type WrapperParts = Readonly<Partial<{
   netlogWrapper: FeatureFactory;
   fingerprintWrapper: FeatureFactory;
   screenshotWrapper: FeatureFactory;
+  settingsGuardWrapper: FeatureFactory;
   createMapCacheWrapper: typeof createMapCacheWrapper;
   createHooksWrapper: typeof createHooksWrapper;
   serverListPart: ServerListPart;

@@ -28,6 +28,7 @@ export const FEATURE = Object.freeze({
   p2pHost: 'p2p_host',
   clientSadburst: 'client_sadburst',
   clientSadburstErich5: 'client_sadburst_erich5',
+  settingsGuard: 'settings_guard',
   gameSetup: 'game_setup',
   diagnostics: 'diagnostics',
   webClient: 'web_client',

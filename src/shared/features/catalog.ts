@@ -69,6 +69,7 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   define(FEATURE.p2pHost, { availableIn: [MODE.server], unavailableForClients: ONLY_OFFICIAL, capabilities: noNeeds(CAPABILITY.p2pHost) }),
   define(FEATURE.clientSadburst),
   define(FEATURE.clientSadburstErich5),
+  define(FEATURE.settingsGuard, { requires: NEEDS_CONSOLE }),
   define(FEATURE.gameSetup),
   define(FEATURE.diagnostics, { capabilities: noNeeds(CAPABILITY.diagnostics) }),
   define(FEATURE.webClient, { availableIn: LOBBY_SERVER_ONLY }),

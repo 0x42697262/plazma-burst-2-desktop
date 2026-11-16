@@ -9,8 +9,9 @@ const ownArgs = electronArgsStart < 0 ? argv : argv.slice(0, electronArgsStart);
 const electronArgs = electronArgsStart < 0 ? [] : argv.slice(electronArgsStart + 1);
 const commands = ownArgs.flatMap((arg, index) => (ownArgs[index - 1] === COMMAND_FLAG ? [arg] : []));
 
-const client = ownArgs[ownArgs.indexOf(CLIENT_FLAG) + 1] ?? DEFAULT_CLIENT;
-const levelFile = ownArgs.includes(LEVEL_FLAG) ? ownArgs[ownArgs.indexOf(LEVEL_FLAG) + 1] ?? null : null;
+const valueAfter = (flag: string): string | null => (ownArgs.includes(flag) ? ownArgs[ownArgs.indexOf(flag) + 1] ?? null : null);
+const client = valueAfter(CLIENT_FLAG) ?? DEFAULT_CLIENT;
+const levelFile = valueAfter(LEVEL_FLAG);
 if (levelFile && client !== DEFAULT_CLIENT) {
   console.error(TEXT.levelOfficialOnly);
   process.exit(1);
