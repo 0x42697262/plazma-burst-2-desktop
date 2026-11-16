@@ -17,6 +17,14 @@ export function rankedMatch(): boolean {
 
 export const guarding = (): boolean => !protectionOff() && rankedMatch();
 
+export function approvedMatch(): boolean {
+  if (game.isMP() !== true) return false;
+  const details = game.matchDetails();
+  return !!details && Number(details.approved) > 0;
+}
+
+export const aimWatched = (): boolean => !protectionOff() && approvedMatch();
+
 export function heldBack(key: string, value: unknown, gameMax?: number | null): string | null {
   if (!guarding()) return null;
   const hold = specOf(key)?.rankedHold;

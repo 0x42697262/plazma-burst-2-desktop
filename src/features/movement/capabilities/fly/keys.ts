@@ -7,12 +7,13 @@ const FLY = CAPABILITY.movement.fly;
 
 export const SETTINGS: Readonly<Record<string, KeySpec>> = Object.freeze({
   fly: {
-    capability: FLY, type: SETTING_TYPE.bool, extraValues: [FLY_MODE.free], example: FLY_MODE.free, group: GROUP.player,
-    desc: 'Fly: "on" = up/down with jump/crouch, "free" = glide in every direction (turns gravity off)',
+    capability: FLY, type: SETTING_TYPE.bool, extraValues: [FLY_MODE.free, FLY_MODE.sweep], example: FLY_MODE.free, group: GROUP.player,
+    desc: 'Fly: "on" = up/down with jump/crouch, "free" = glide in every direction (turns gravity off), "sweep" = the game\'s own aim sweep',
     about: [
       'on: jump and crouch move you straight up and down at fly_speed; you run left and right as usual.',
       'free: the movement keys push you in all four directions and you glide to a stop, like a spaceship.',
-      'Settings for on: fly_speed. For free: fly_accel_x, fly_accel_y, fly_drag, fly_lift, fly_upright.',
+      'sweep: arms the aim sweep; "fly sweep --on/--off/--toggle" runs it (60 FPS, high physics).',
+      'Settings for on: fly_speed. For free: fly_accel_x, fly_accel_y, fly_drag, fly_lift, fly_upright. For sweep: fly_sweep_range.',
     ],
   },
   fly_speed: { capability: FLY, type: SETTING_TYPE.number, group: GROUP.player, min: 0.5, max: 50, default: 6, desc: 'Up/down speed for "fly on"', example: '10' },
@@ -23,6 +24,10 @@ export const SETTINGS: Readonly<Record<string, KeySpec>> = Object.freeze({
   },
   fly_lift: {
     capability: FLY, type: SETTING_TYPE.number, group: GROUP.player, min: 0, max: 2, default: 0.98, desc: 'Share of gravity canceled in "fly free" (1 = hover still, less = slow sink)', example: '1',
+  },
+  fly_sweep_range: {
+    capability: FLY, type: SETTING_TYPE.number, group: GROUP.player, min: 50, max: 3000, default: 700,
+    desc: 'How far left and right of you "fly sweep" aims, in game units (above 1000 is held back in approved matches)', example: '900',
   },
   fly_upright: { capability: FLY, type: SETTING_TYPE.bool, group: GROUP.player, default: true, desc: 'Keep you on your feet in "fly free"' },
 });

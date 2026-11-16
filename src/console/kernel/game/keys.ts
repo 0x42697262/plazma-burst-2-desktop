@@ -27,7 +27,7 @@ export const NAME_KEYS = Object.freeze([
   'serverLocation', 'lobbyHosts', 'lobbyPort', 'lockedArrays', 'mapText', 'mapChunks', 'levelStart', 'charOnDeath',
   'zoom', 'timerTarget', 'varSyncOn', 'mapVars', 'mapId', 'keyUp', 'keyDown', 'mp', 'chatTyping', 'customMap',
   'openChat', 'sayTrigger', 'chatPopups', 'chatPanel', 'chatPanelText', 'uiOverlay', 'levelState', 'failText',
-  'fadeOverlay', 'fpsChoice', 'lowPhysics', 'applyFps', 'syncPointHistory', 'aimSourceX', 'aimSourceY',
+  'fadeOverlay', 'fpsChoice', 'lowPhysics', 'applyFps', 'syncPointHistory',
 ] as const);
 export type NameKey = typeof NAME_KEYS[number] | 'version';
 
@@ -48,6 +48,8 @@ export const GAME_GLOBAL = Object.freeze({
   loaderInfo: 'loaderInfo',
   unlimitedRefresh: 'UNLIMITED_SCREEN_REFRESH_RATE',
   frameInterpolation: 'FRAME_INTERPOLATION',
+  mouseX: 'mouseX',
+  movieClip: 'MovieClip',
 } as const);
 
 export const LEVEL_FRAME = 'gaming';

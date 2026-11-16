@@ -7,3 +7,5 @@ export const FLY_DAMPING = 0.8;
 export const STEADY_STABILITY = 1;
 export const FULL_LIFT = 1;
 export const FRAMES_PER_TICK_AT_60_FPS = 2;
+export const OUTSIDE_VIEW_AIM_X = 800 + 200;
+export const FIRST_STAGE_X = 1;

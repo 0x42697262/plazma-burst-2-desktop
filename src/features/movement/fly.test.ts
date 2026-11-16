@@ -62,9 +62,56 @@ test('fly takes on, off or free; typing "fly" alone turns free flight off', () =
   assert.ok(game.run('get fly').includes('fly = off'));
 });
 
-test('"help fly" names both modes and their settings', () => {
+test('"help fly" names every mode, the sweep options and the settings', () => {
   const help = game.run('help fly').join('\n');
-  assert.match(help, /on \/ off \/ free/);
+  assert.match(help, /on \| off \| free \| sweep/);
+  assert.match(help, /--on \| --off \| --toggle/);
+  assert.match(help, /fly_sweep_range/);
   assert.match(help, /fly_speed/);
   assert.match(help, /fly_accel_x, fly_accel_y, fly_drag, fly_lift, fly_upright/);
+});
+
+test('"fly" is still the key: on, free, off and plain "fly" behave as before', () => {
+  assert.ok(game.run('fly free').includes('fly = free'));
+  assert.ok(game.run('fly off').includes('fly = off'));
+  assert.ok(game.run('fly').includes('fly = on'));
+  assert.ok(game.run('fly sweep').includes('fly = sweep'));
+});
+
+test('"fly sweep --on" flips the aim source left and right of you every tick, at 60 FPS with high physics only', () => {
+  const { globals, names, player } = game;
+  globals[names.fpsChoice] = 3;
+  globals[names.lowPhysics] = false;
+  globals[names.zoom] = 1;
+  globals.game.x = 0;
+  player.x = 100;
+  game.run('fly_sweep_range 500');
+  assert.ok(game.run('fly sweep --on').some((line) => line.startsWith('Sweeping 500')));
+  game.frame();
+  const first = globals.mouseX as number;
+  game.frame();
+  const second = globals.mouseX as number;
+  assert.deepEqual([first, second].sort((left, right) => left - right), [1, 600], 'one tick each side of x=100, kept on the stage like a real cursor');
+  globals[names.lowPhysics] = true;
+  globals.mouseX = 7;
+  game.frame();
+  assert.equal(globals.mouseX, 7, 'low physics: no sweep');
+  globals[names.lowPhysics] = false;
+  globals.MovieClip = { schedule_mouse_move_event: false };
+  assert.ok(game.run('fly sweep --off').includes('Sweep stopped'));
+  assert.equal(globals.MovieClip.schedule_mouse_move_event, true, 'stopping asks the game to read the real pointer again');
+  game.frame();
+  assert.equal(globals.mouseX, 7, 'stopped');
+  assert.ok(game.run('fly sweep --toggle').some((line) => line.startsWith('Sweeping')));
+  game.run('fly off');
+  game.frame();
+  assert.equal(globals.mouseX, 7, 'another fly mode stops the sweep');
+  assert.match(errorsOf(game.run('fly free --on')).join('\n'), /usage: fly/);
+});
+
+test('"fly sweep --on" arms the sweep mode when another one was set', () => {
+  game.run('fly free');
+  game.run('fly sweep --on');
+  assert.ok(game.run('get fly').includes('fly = sweep'));
+  game.run('fly sweep --off');
 });

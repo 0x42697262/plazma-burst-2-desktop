@@ -1,0 +1,33 @@
+export const TEXT = Object.freeze({
+  usage: 'fly [on | off | free | sweep | reset]  |  fly sweep --on | --off | --toggle',
+  usageError: 'usage: fly [on | off | free | sweep | reset]  |  fly sweep --on | --off | --toggle',
+  description: 'Fly: up/down, free glide, or the aim sweep; --on/--off/--toggle run the sweep',
+  clientOnly: 'your own movement and aim',
+  about: [
+    'Without an option it is the "fly" key: "fly on", "fly free", "fly sweep" arm a mode,',
+    '"fly off" or "fly reset" stop, "fly" alone switches it on and off.',
+    'fly sweep --on starts the sweep (and arms "fly sweep"), --off stops it, --toggle',
+    'switches it. Sweeping flips your aim left and right of you every tick, the way the',
+    'aim sweep does with the cursor, only at 60 FPS with high physics ("fps 60 high").',
+    'Your cursor stays where it is; other players see your aim flip.',
+    'Settings: fly_speed (on); fly_accel_x, fly_accel_y, fly_drag, fly_lift, fly_upright (free);',
+    'fly_sweep_range (sweep).',
+    'For a key: "bind g \\"fly sweep --toggle\\"", or hold it with "bind --hold mouse2 \\"fly sweep\\"".',
+  ],
+  args: [
+    ['on | off | free | sweep | reset', 'the fly mode (the "fly" key)'],
+    ['sweep --on', 'start sweeping'],
+    ['sweep --off', 'stop sweeping'],
+    ['sweep --toggle', 'start or stop'],
+  ],
+  examples: [
+    ['fly sweep', 'arm the sweep'],
+    ['fly sweep --toggle', 'start or stop sweeping'],
+    ['fps 60 high', 'what the sweep needs'],
+  ],
+  see: ['fps', 'bind'],
+  sweeping: (range: number) => `Sweeping ${range} left and right of you`,
+  stopped: 'Sweep stopped',
+  notReady: 'It only sweeps at 60 FPS with high physics: "fps 60 high"',
+  heldBack: (range: number, hint: string) => `Approved match: the sweep stays within ${range} of you, because aiming farther is reported to the other players. ${hint}.`,
+});
