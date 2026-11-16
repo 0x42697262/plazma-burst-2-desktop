@@ -5,7 +5,7 @@ import { LAUNCHER_TEXT } from '../text.ts';
 import { CHECK_STATE, FIELD, LAUNCHER_CLASS, LAUNCHER_ELEMENT, LAUNCHER_EVENT, LAUNCHER_FIELDS, LAUNCHER_KEY, LOGIN_FIELD, CLIENT_ROW_PREFIX, PASSWORD_FIELD, fieldSelector, hostPortOf } from './keys.ts';
 
 type Server = { id: string; name: string; address: string; fingerprint?: string; nickname?: string; hasPassword?: boolean };
-type Official = { id: string; name: string; host: string; port: number; description: string };
+type Official = { id: string; name: string; host: string; port: number; description: string; client?: string };
 type Row = Server & { official?: boolean; description?: string; clientId?: string };
 type Status = { name?: string; description?: string; version?: string; password?: boolean; players?: number; max_players?: number; matches?: number };
 type Check = { ping: number | null; status?: Status; error?: string; pinned?: boolean };
@@ -64,7 +64,7 @@ const clientRows = (clients: readonly ClientChoice[]): Row[] => clients.map((cli
   id: CLIENT_ROW_PREFIX + client.id, name: client.title, address: client.host ?? '', clientId: client.id, description: LAUNCHER_TEXT.clientDescription(client.title, usesOfficialServers(client.id)),
 }));
 const rows = (): Row[] => (data ? [{ ...data.official, official: true, address: hostPortOf(data.official.host, data.official.port) }, ...clientRows(data.otherClients ?? []), ...data.servers] : []);
-const clientOfRow = (row: Row | undefined): string | null => (row?.official ? row.id : row?.clientId ?? null);
+const clientOfRow = (row: Row | undefined): string | null => (row?.official ? data?.official.client ?? row.id : row?.clientId ?? null);
 const isDone = (state: CheckState): state is Check => state !== undefined && state !== CHECKING;
 
 function pingCell(row: Row, state: CheckState): HTMLElement {

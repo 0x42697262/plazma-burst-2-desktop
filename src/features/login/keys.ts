@@ -26,5 +26,6 @@ export const GATE_STORAGE = Object.freeze({ login: 'pb2_saved_login', password: 
 export const SCRIPT_END = /</g;
 export const ESCAPED_SCRIPT_END = '\\u003c';
 export const setGateScript = (loginKeyJson: string, loginJson: string, passwordKeyJson: string, passwordJson: string): string => `<script>try{localStorage.setItem(${loginKeyJson},${loginJson});localStorage.setItem(${passwordKeyJson},${passwordJson})}catch{}</script>`;
+export const removeGateScript = (loginKeyJson: string, passwordKeyJson: string): string => `<script>try{localStorage.removeItem(${loginKeyJson});localStorage.removeItem(${passwordKeyJson})}catch{}</script>`;
 export const setTokenScript = (keyJson: string, tokenJson: string): string => `<script>try{localStorage.setItem(${keyJson},${tokenJson})}catch{}</script>`;
 export const removeTokenScript = (keyJson: string): string => `<script>try{localStorage.removeItem(${keyJson})}catch{}</script>`;

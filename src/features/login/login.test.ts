@@ -341,7 +341,7 @@ test('Sad Burst for the official servers: official accounts, and the entry scree
     assert.equal(script, `<script>try{localStorage.setItem("pb2_saved_login","me");localStorage.setItem("pb2_saved_password","${MD5}")}catch{}</script>`);
     const second = createLogin({ log: quietLog([]), dataDir: folder, host: HOST, fromEnvironment: {}, isOn: true });
     assert.ok(second.gateStartupScript());
-    assert.equal(second.gateStartupScript(), null, 'once per start');
+    assert.ok(second.gateStartupScript(), 'again when the game is loaded again');
     assert.equal(createLogin({ log: quietLog([]), dataDir: folder, host: HOST, fromEnvironment: {}, isOn: false }).gateStartupScript(), null);
     assert.equal(createLogin({ log: quietLog([]), dataDir: folder, host: HOST, fromEnvironment: {}, isOn: true, canUseAccounts: false }).gateStartupScript(), null);
   } finally { fs.rmSync(folder, { recursive: true }); }
@@ -350,4 +350,15 @@ test('Sad Burst for the official servers: official accounts, and the entry scree
 test('the entry screen script is safe to put in a page', async () => {
   const { gateScript } = await import('./domain/gate-script.ts');
   assert.ok(!gateScript('a</script>b', MD5).slice('<script>'.length, -'</script>'.length).includes('</script>'));
+});
+
+test('a private server never gets a Sad Burst login: its token and the entry screen\'s saved login are removed from the page', () => {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-private-'));
+  try {
+    const login = createLogin({ log: quietLog([]), dataDir: folder, host: HOST, fromEnvironment: {}, isOn: true });
+    assert.equal(login.privateServerScript('official'), null);
+    assert.equal(login.privateServerScript('sadburst'), '<script>try{localStorage.removeItem("auth_token")}catch{}</script>');
+    assert.equal(login.privateServerScript('sadburst_erich5'), '<script>try{localStorage.removeItem("pb2_saved_login");localStorage.removeItem("pb2_saved_password")}catch{}</script>');
+    assert.equal(createLogin({ log: quietLog([]), dataDir: folder, host: HOST, fromEnvironment: {}, isOn: false }).privateServerScript('sadburst_erich5') !== null, true, 'also with the login flag off');
+  } finally { fs.rmSync(folder, { recursive: true }); }
 });

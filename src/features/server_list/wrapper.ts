@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { CLIENT_DETAILS } from '#shared/clients/keys.ts';
 import { FEATURE } from '#shared/features/keys.ts';
 import { EDITION_DEFAULTS } from '#shared/editions/defaults.ts';
 import type { WrapperDeps, WrapperFeature } from '#wrapper/feature-types.ts';
@@ -33,6 +34,7 @@ export function createServerListWrapper(deps: WrapperDeps, session: GameSession)
     warn: (message) => deps.log.warn(message),
     later: (action) => { setTimeout(action, 0); },
     relativeServersFile: path.relative(deps.repoRoot, SERVERS_FILE),
+    client: CLIENT_DETAILS[deps.client],
   });
   const feature: WrapperFeature = Object.freeze({ id: FEATURE.serverList, routes: [serverListRoute(service)] });
   return {

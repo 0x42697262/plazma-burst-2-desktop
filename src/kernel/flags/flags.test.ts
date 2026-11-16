@@ -4,12 +4,13 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { CATALOG } from '#shared/features/catalog.ts';
+import type { ClientId } from '#shared/features/keys.ts';
 import type { FeatureToggle, FlagOverrides } from '#shared/features/types.ts';
 import { resolveFlags, explicitlySet, reportLines } from './resolve.ts';
 import { featuresFileStore, splitKnownFeatures } from './features-file.ts';
 
 const resolve = ({ file = {}, unknown = [], env = [], mode = 'local', client = 'official' }: {
-  file?: FlagOverrides; unknown?: string[]; env?: FeatureToggle[]; mode?: 'local' | 'remote' | 'server'; client?: 'official' | 'sadburst';
+  file?: FlagOverrides; unknown?: string[]; env?: FeatureToggle[]; mode?: 'local' | 'remote' | 'server'; client?: ClientId;
 } = {}) => resolveFlags({ catalog: CATALOG, fileOverrides: file, fileUnknownIds: unknown, envToggles: env, mode, client });
 
 test('with nothing set, every flag is its default or ruled out by the mode, and nothing was set explicitly', () => {
@@ -41,7 +42,9 @@ test('modes and clients rule features out', () => {
   assert.deepEqual(resolve({ mode: 'remote' }).states.js_eval, { on: false, source: 'constraint', reason: 'not available in remote mode' });
   assert.equal(resolve({ mode: 'remote' }).states.remote_play.on, true);
   assert.equal(resolve().states.remote_play.on, false);
-  assert.deepEqual(resolve({ client: 'sadburst' }).states.server_list, { on: false, source: 'constraint', reason: 'not available for the sadburst client' });
+  for (const client of ['official', 'sadburst', 'sadburst_erich5'] as const) assert.equal(resolve({ client }).states.server_list.on, true, `the server list is for every client: ${client}`);
+  assert.deepEqual(resolve({ client: 'sadburst', mode: 'remote' }).states.remote_play, { on: false, source: 'constraint', reason: 'not available for the sadburst client' });
+  assert.equal(resolve({ client: 'sadburst_erich5', mode: 'server' }).states.p2p_host.on, false);
   assert.equal(resolve({ mode: 'server' }).states.p2p_host.on, true);
 });
 

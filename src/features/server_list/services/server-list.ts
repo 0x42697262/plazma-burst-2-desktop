@@ -6,6 +6,8 @@ import type { ServerStatus } from '../domain/status.ts';
 import type { ServersStore } from '../adapters/servers-file.ts';
 import type { ServerProbe } from '../adapters/probe.ts';
 import type { DefaultServer } from '#shared/editions/types.ts';
+import { CLIENT_DETAILS, type ClientDetails } from '#shared/clients/keys.ts';
+import { CLIENT } from '#shared/features/keys.ts';
 
 export type ClientChoice = Readonly<{ id: string; title: string; host?: string }>;
 export type AccountsPort = Readonly<{
@@ -39,6 +41,7 @@ export type ServerListDeps = {
   warn: (message: string) => void;
   later: (action: () => void) => void;
   relativeServersFile: string;
+  client?: Pick<ClientDetails, 'id' | 'title' | 'lobby' | 'usesOfficial'>;
 };
 
 export type ServerCheck = { ping: number | null; status?: ServerStatus; error?: string; pinned?: boolean };
@@ -49,12 +52,16 @@ const isNotPinned = (error: unknown): boolean => (error as { pinned?: boolean } 
 
 export function createServerListService(deps: ServerListDeps) {
   const { store, probe, session } = deps;
+  const client = deps.client ?? CLIENT_DETAILS[CLIENT.official];
+  const own = client.usesOfficial
+    ? { ...OFFICIAL_SERVER, description: OFFICIAL_DESCRIPTION, client: client.id }
+    : { id: OFFICIAL_ID, name: client.title, host: client.lobby.host, port: client.lobby.port, description: SERVICE_TEXT.ownDescription(client.title), client: client.id };
   let joinTarget: ServerEntry | null = null;
 
   function list() {
     const { servers, last, problems } = store.load();
     for (const problem of problems) deps.warn(SERVICE_TEXT.serversFileProblem(problem));
-    return { official: { ...OFFICIAL_SERVER, description: OFFICIAL_DESCRIPTION }, servers: servers.map(shownServer), last, gameVersion: deps.gameVersion, problems, otherClients: session.otherClients() };
+    return { official: own, servers: servers.map(shownServer), last, gameVersion: deps.gameVersion, problems, otherClients: session.otherClients() };
   }
 
   function save(request: SaveRequest | null | undefined): { errors: string[] } | { server: ShownServer } {
@@ -79,7 +86,7 @@ export function createServerListService(deps: ServerListDeps) {
   }
 
   async function check(id: unknown): Promise<ServerCheck | { error: string }> {
-    if (id === OFFICIAL_ID) return { ping: await probe.ping(OFFICIAL_SERVER.host, OFFICIAL_SERVER.port) };
+    if (id === OFFICIAL_ID) return { ping: await probe.ping(own.host, own.port) };
     const server = store.load().servers.find((saved) => saved.id === id);
     if (!server) return { error: SERVICE_TEXT.notSavedShort };
     const [ping, status] = await Promise.all([
@@ -106,11 +113,11 @@ export function createServerListService(deps: ServerListDeps) {
       await session.startLoggedOut();
       joinTarget = target;
       deps.info(SERVICE_TEXT.playing(target.name, target.hostPort, target.nickname));
-      session.setTitle(SERVICE_TEXT.titlePrivate(target.name));
+      session.setTitle(SERVICE_TEXT.titlePrivate(client.title, target.name));
     } else {
       joinTarget = null;
       await session.applyCredentials();
-      session.setTitle(SERVICE_TEXT.titleOfficial);
+      session.setTitle(client.title);
     }
     deps.later(() => session.loadGame());
     return true;
@@ -118,7 +125,7 @@ export function createServerListService(deps: ServerListDeps) {
 
   function showList(): void {
     joinTarget = null;
-    session.setTitle(SERVICE_TEXT.titleOfficial);
+    session.setTitle(client.title);
     session.showList();
   }
 

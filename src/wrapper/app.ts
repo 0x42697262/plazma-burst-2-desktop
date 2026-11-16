@@ -72,7 +72,7 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
     if (chosen) relaunchAs(chosen.id);
   };
 
-  const login = createLogin({ log, dataDir: DATA_DIR, host, fromEnvironment: environment.credentials, isOn: flags.login.on, keychain: electronKeychain(safeStorage),
+  const login = createLogin({ log, dataDir: DATA_DIR, host: CLIENTS[CLIENT.official].host, fromEnvironment: environment.credentials, isOn: flags.login.on, keychain: electronKeychain(safeStorage),
     canUseAccounts: capabilities[CAPABILITY.login.accounts]?.on ?? false,
     canUseSite: capabilities[CAPABILITY.login.site]?.on ?? false,
     openSiteWindow: siteWindowOpener({ BrowserWindow, session, parent: () => liveWindow() }),
@@ -208,7 +208,7 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
       remoteNotMarked: remotePlayPart?.notMarked ?? '',
       verbose: log.on(DEBUG_LEVEL) && !isBundled,
       isServer: !!context.server,
-      accountScript: usesSadburstAccounts ? login.sadburstStartupScript() : usesOfficialGate ? login.gateStartupScript() : null,
+      accountScript: joinTarget() ? login.privateServerScript(client.id) : usesSadburstAccounts ? login.sadburstStartupScript() : usesOfficialGate ? login.gateStartupScript() : null,
     });
     for (const error of prepared.errors) log.error(error);
     for (const warning of prepared.warnings) log.warn(warning);
@@ -293,9 +293,7 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
       height: MAIN_WINDOW.height,
       autoHideMenuBar: true,
       title: client.title,
-      webPreferences: isBundled
-        ? { backgroundThrottling: false, partition: client.partition ?? undefined }
-        : { backgroundThrottling: false, preload: serverListPart?.launcherPreload },
+      webPreferences: { backgroundThrottling: false, partition: client.partition ?? undefined, preload: serverListPart?.launcherPreload },
     });
     mainWindow = window;
     logPage(window, '', log);
@@ -329,7 +327,7 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
       checkPageBundle({ pageDir: PAGE_BUNDLE_DIR, entries: devConsoleOn ? [PAGE_CORE_FILE, CONSOLE_BUNDLE_FILE] : [PAGE_CORE_FILE], log });
     }
     if (isRemoteHost || isDedicatedHost) await applyCredentials();
-    else if (flags.cert_pinning.on) pinCertificates(session.defaultSession, joinTarget, log);
+    else if (flags.cert_pinning.on) pinCertificates(gameSession(), joinTarget, log);
     await refreshSessionCookies();
     session.defaultSession.cookies.on(COOKIES_CHANGED, () => { void refreshSessionCookies(); });
 

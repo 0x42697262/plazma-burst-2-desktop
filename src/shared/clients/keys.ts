@@ -17,12 +17,14 @@ export type ClientDetails = Readonly<{
   versionPrefix: string;
   bundled: boolean;
   usesOfficial: boolean;
+  lobby: Readonly<{ host: string; port: number }>;
   feature: FeatureId | null;
 }>;
 
 export const SADBURST_FLAG = '--sadburst';
 export const SADBURST_ERICH5_FLAG = '--sadburst-erich5';
 export const OFFICIAL_LOBBY = Object.freeze({ host: 'vvvv.plazmaburst2.com', port: 2053 });
+export const SADBURST_LOBBY = Object.freeze({ host: 'ca.sadburst2.com', port: 2053 });
 
 const SADBURST_SITE = 'https://sadburst2.com';
 const SADBURST_EDITOR_SCRIPT = SADBURST_SITE + '/map_editor/scripts/ale/ale-all.js';
@@ -47,6 +49,7 @@ export const CLIENT_DETAILS: Readonly<Record<ClientId, ClientDetails>> = Object.
     versionPrefix: 'v',
     bundled: false,
     usesOfficial: true,
+    lobby: OFFICIAL_LOBBY,
     feature: null,
   }),
   [CLIENT.sadburst]: Object.freeze({
@@ -66,6 +69,7 @@ export const CLIENT_DETAILS: Readonly<Record<ClientId, ClientDetails>> = Object.
     versionPrefix: 'sadburst-',
     bundled: true,
     usesOfficial: false,
+    lobby: SADBURST_LOBBY,
     feature: FEATURE.clientSadburst,
   }),
   [CLIENT.sadburstErich5]: Object.freeze({
@@ -85,6 +89,7 @@ export const CLIENT_DETAILS: Readonly<Record<ClientId, ClientDetails>> = Object.
     versionPrefix: 'erich5-',
     bundled: true,
     usesOfficial: true,
+    lobby: OFFICIAL_LOBBY,
     feature: FEATURE.clientSadburstErich5,
   }),
 });
