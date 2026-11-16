@@ -1667,6 +1667,9 @@ constants at `frame2.js:4788-4795`, and the game names them at `:8346-8352`:
 | -16 | `nothing` | "died", plus the killer's part in it (`:2249-2266`, `:2461-2476`) |
 | -17 | — | "flew out of bounds" (`:2269-2272`) |
 
+One function turns a source into its name (`frame2.js:8344-8360`): the names above for those
+codes, the gun's model name for a gun index, and "Unknown source" for anything else.
+
 On the state path the server takes the cause from the victim's state, part 16
 (`flash.js:184`, `:1082`), which the victim writes from its last damage cause (`:540`). The
 recorded 9007199254740991 is `Number.MAX_SAFE_INTEGER`. Inferred: the victim's cause was
