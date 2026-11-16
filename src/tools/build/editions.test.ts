@@ -130,3 +130,13 @@ test('every capability builds alone, without the code of its siblings', async ()
     await assertHoldsOnly({ ...edition, name: capability.id });
   }
 });
+
+test('an edition that saves binds or profiles also has settings_guard, so a page cannot save a risky one unasked', async () => {
+  for (const name of editionNames()) {
+    const { edition } = await readyEdition(readEdition(name), async () => { throw new Error('no fetch in this test'); });
+    const features: readonly string[] | null = edition.features;
+    if (features === null) continue;
+    const savesCommands = features.includes('binds') || features.includes('profiles');
+    if (savesCommands) assert.ok(features.includes('settings_guard'), `${name} has binds or profiles but no settings_guard`);
+  }
+});
