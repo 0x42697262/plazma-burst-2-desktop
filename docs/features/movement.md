@@ -42,8 +42,10 @@ overrides in `src/console/kernel/overrides/frame.ts`.
     fire or swing, `frame2.js:33881`), to fly with swords; use `fly sweep` with a gun.
     `fly sword --on/--off/--toggle` works like the sweep's, and `bind --hold mouse2 "fly sword"`
     holds it. Both are set again every tick, so a game mouse up does not end them; stopping
-    lets go of both. While limp the game does not turn you to face your aim, so your facing
-    stays put; the aim itself still flips.
+    lets go of both. While limp the game does not turn you to face your aim
+    (`frame2.js:36362`); it takes your facing from your body's layout (`36934`), which the
+    sweep's first tick sets. So the sweep starts toward the cursor's side, and you face your
+    cursor for the whole flight.
   - Other players see your aim flip: it is in your state updates. In an approved match the
     server reports aim more than 1000 to the side (anticheat.md §14.6), so the range is held
     to 1000 there; `bypass checks` lifts that.

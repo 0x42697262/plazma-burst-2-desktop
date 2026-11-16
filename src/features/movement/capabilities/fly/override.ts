@@ -63,6 +63,8 @@ function flySweep(character: MovingCharacter, withMouse: boolean): void {
     releaseAim();
     return;
   }
+  const isStarting = sweep.held?.character !== character;
+  if (isStarting) sweep.direction = -(Math.sign(Number(character.tarx) - character.x) || 1);
   sweep.direction = -sweep.direction;
   sweep.range = sweepRange();
   sweep.inverse = isInverse();

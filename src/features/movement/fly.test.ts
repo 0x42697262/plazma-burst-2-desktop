@@ -224,6 +224,20 @@ test('--directional flies toward the cursor: the cursor above lifts you, and it 
   game.run('unset fly_sweep_aim');
 });
 
+test('the sweep starts toward your cursor\'s side, so you face your cursor: while limp the game keeps the facing of that first tick', () => {
+  const { globals, names, player } = game;
+  globals[names.fpsChoice] = 3;
+  globals[names.lowPhysics] = false;
+  player.x = 100;
+  for (const [cursorX, side] of [[400, 1], [-300, -1], [400, 1]] as const) {
+    player.tarx = cursorX;
+    game.run('fly sword --on');
+    game.frame();
+    assert.equal(Math.sign(player.tarx - player.x), side, `cursor at ${cursorX}: first aim on that side`);
+    game.run('fly sword --off');
+  }
+});
+
 test('"fly sweep --on" arms the sweep mode when another one was set', () => {
   game.run('fly free');
   game.run('fly sweep --on');
