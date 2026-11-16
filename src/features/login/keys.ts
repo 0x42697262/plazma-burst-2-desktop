@@ -22,10 +22,14 @@ export const SADBURST_API = Object.freeze({ login: '/api/game/client-login', ses
 export const JSON_HEADERS = Object.freeze({ 'Content-Type': 'application/json', Accept: 'application/json' });
 export const bearerHeaders = (token: string): Readonly<Record<string, string>> => ({ Authorization: `Bearer ${token}`, Accept: 'application/json' });
 export const SADBURST_TOKEN_KEY = 'auth_token';
-export const GATE_STORAGE = Object.freeze({ login: 'pb2_saved_login', password: 'pb2_saved_password' });
+export const GATE_STORAGE = Object.freeze({ login: 'pb2_saved_login', password: 'pb2_saved_password', byApp: 'pb2_saved_by_app' });
+export const BY_APP_MARK = '1';
 export const SCRIPT_END = /</g;
 export const ESCAPED_SCRIPT_END = '\\u003c';
-export const setGateScript = (loginKeyJson: string, loginJson: string, passwordKeyJson: string, passwordJson: string): string => `<script>try{localStorage.setItem(${loginKeyJson},${loginJson});localStorage.setItem(${passwordKeyJson},${passwordJson})}catch{}</script>`;
-export const removeGateScript = (loginKeyJson: string, passwordKeyJson: string): string => `<script>try{localStorage.removeItem(${loginKeyJson});localStorage.removeItem(${passwordKeyJson})}catch{}</script>`;
+type GateKeysJson = Readonly<{ login: string; password: string; byApp: string; mark: string }>;
+export const setGateScript = (keys: GateKeysJson, loginJson: string, passwordJson: string): string => `<script>try{localStorage.setItem(${keys.login},${loginJson});localStorage.setItem(${keys.password},${passwordJson});localStorage.setItem(${keys.byApp},${keys.mark})}catch{}</script>`;
+const removeAll = (keys: GateKeysJson): string => `localStorage.removeItem(${keys.login});localStorage.removeItem(${keys.password});localStorage.removeItem(${keys.byApp})`;
+export const removeGateScript = (keys: GateKeysJson): string => `<script>try{${removeAll(keys)}}catch{}</script>`;
+export const removeOwnGateScript = (keys: GateKeysJson): string => `<script>try{if(localStorage.getItem(${keys.byApp})===${keys.mark}){${removeAll(keys)}}}catch{}</script>`;
 export const setTokenScript = (keyJson: string, tokenJson: string): string => `<script>try{localStorage.setItem(${keyJson},${tokenJson})}catch{}</script>`;
 export const removeTokenScript = (keyJson: string): string => `<script>try{localStorage.removeItem(${keyJson})}catch{}</script>`;

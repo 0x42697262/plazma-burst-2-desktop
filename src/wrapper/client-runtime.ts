@@ -191,7 +191,7 @@ export function createClientRuntime(shared: SharedServices, client: GameClient) 
   async function serveLocal(url: URL, pageContext: PageContext): Promise<Response> {
     let relative = decodeURIComponent(url.pathname.slice(prefix.length));
     if (relative === '' || relative.endsWith(FOLDER_END)) relative += INDEX_FILE;
-    const preparesIndex = pageCoreOn || hooksOn || pageContext.remote || !!pageContext.server || !!joinTarget() || ((usesSadburstAccounts || usesOfficialGate) && flags.login.on);
+    const preparesIndex = pageCoreOn || hooksOn || pageContext.remote || !!pageContext.server || !!joinTarget() || (usesSadburstAccounts && flags.login.on) || usesOfficialGate;
     if (preparesIndex && relative === INDEX_FILE) return serveIndex(pageContext);
     const hooked = hooksOn && wrapper.hooks ? wrapper.hooks.changedScript(relative) : null;
     if (hooked !== null) return typedResponse(hooked, SCRIPT_TYPE, false);

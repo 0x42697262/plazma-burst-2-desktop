@@ -9,7 +9,7 @@ import { mergeCredentials, withPasswordCookie, type Credentials } from './domain
 import { createAccountBook, type AccountBook } from './services/account-book.ts';
 import { officialSiteLogin, sadburstLogin, type Fetcher, type OpenSiteWindow } from './services/new-login.ts';
 import { tokenScript } from './domain/token-script.ts';
-import { clearGateScript, gateScript } from './domain/gate-script.ts';
+import { clearGateScript, clearOwnGateScript, gateScript } from './domain/gate-script.ts';
 import { PLAIN_KEYCHAIN, type Keychain } from './adapters/keychain.ts';
 import { applyLogin, type CookieStore } from './adapters/cookies.ts';
 
@@ -115,9 +115,8 @@ export function createLogin({ log, dataDir, host, fromEnvironment, isOn, keychai
   }
 
   function gateStartupScript(): string | null {
-    if (!isOn || !canUseAccounts) return null;
-    const { login, password } = credentials();
-    return login && password ? gateScript(login, password) : null;
+    const { login, password } = isOn && canUseAccounts ? credentials() : {};
+    return login && password ? gateScript(login, password) : clearOwnGateScript();
   }
 
   function privateServerScript(client: ClientId): string | null {

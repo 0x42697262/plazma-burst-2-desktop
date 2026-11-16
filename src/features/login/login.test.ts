@@ -323,6 +323,8 @@ test('the account port: new accounts by client, the sign-out, the start-up scrip
   } finally { fs.rmSync(folder, { recursive: true }); }
 });
 
+const CLEAR_OURS = '<script>try{if(localStorage.getItem("pb2_saved_by_app")==="1"){localStorage.removeItem("pb2_saved_login");localStorage.removeItem("pb2_saved_password");localStorage.removeItem("pb2_saved_by_app")}}catch{}</script>';
+
 test('Sad Burst for the official servers: official accounts, and the entry screen starts filled in with the md5 once', async () => {
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-erich5-'));
   try {
@@ -330,7 +332,7 @@ test('Sad Burst for the official servers: official accounts, and the entry scree
     const login = createLogin({ log: quietLog([]), dataDir: folder, host: HOST, fromEnvironment: {}, isOn: true, openSiteWindow: () => site });
     const accounts = login.accounts;
     assert.ok(accounts);
-    assert.equal(login.gateStartupScript(), null, 'with no account, the entry screen is left alone');
+    assert.equal(login.gateStartupScript(), CLEAR_OURS, 'with no account, what the app put there is taken back; what you typed is left alone');
     const pending = accounts.logIn('sadburst_erich5');
     await Promise.resolve();
     site.set(signedIn);
@@ -338,12 +340,14 @@ test('Sad Burst for the official servers: official accounts, and the entry scree
     assert.deepEqual((accounts.list('official') as any).accounts.map((account: any) => account.login), ['me'], 'the same book as the official client');
     assert.deepEqual(login.identity('sadburst_erich5'), login.identity('official'));
     const script = createLogin({ log: quietLog([]), dataDir: folder, host: HOST, fromEnvironment: {}, isOn: true, openSiteWindow: () => site }).gateStartupScript();
-    assert.equal(script, `<script>try{localStorage.setItem("pb2_saved_login","me");localStorage.setItem("pb2_saved_password","${MD5}")}catch{}</script>`);
+    assert.equal(script, `<script>try{localStorage.setItem("pb2_saved_login","me");localStorage.setItem("pb2_saved_password","${MD5}");localStorage.setItem("pb2_saved_by_app","1")}catch{}</script>`);
     const second = createLogin({ log: quietLog([]), dataDir: folder, host: HOST, fromEnvironment: {}, isOn: true });
     assert.ok(second.gateStartupScript());
     assert.ok(second.gateStartupScript(), 'again when the game is loaded again');
-    assert.equal(createLogin({ log: quietLog([]), dataDir: folder, host: HOST, fromEnvironment: {}, isOn: false }).gateStartupScript(), null);
-    assert.equal(createLogin({ log: quietLog([]), dataDir: folder, host: HOST, fromEnvironment: {}, isOn: true, canUseAccounts: false }).gateStartupScript(), null);
+    assert.equal(createLogin({ log: quietLog([]), dataDir: folder, host: HOST, fromEnvironment: {}, isOn: false }).gateStartupScript(), CLEAR_OURS, 'login off: the account the app put there is taken back');
+    assert.equal(createLogin({ log: quietLog([]), dataDir: folder, host: HOST, fromEnvironment: {}, isOn: true, canUseAccounts: false }).gateStartupScript(), CLEAR_OURS);
+    await accounts.remove('sadburst_erich5', 'me');
+    assert.equal(createLogin({ log: quietLog([]), dataDir: folder, host: HOST, fromEnvironment: {}, isOn: true }).gateStartupScript(), CLEAR_OURS, 'signed out: taken back at the next start');
   } finally { fs.rmSync(folder, { recursive: true }); }
 });
 
@@ -358,7 +362,7 @@ test('a private server never gets a Sad Burst login: its token and the entry scr
     const login = createLogin({ log: quietLog([]), dataDir: folder, host: HOST, fromEnvironment: {}, isOn: true });
     assert.equal(login.privateServerScript('official'), null);
     assert.equal(login.privateServerScript('sadburst'), '<script>try{localStorage.removeItem("auth_token")}catch{}</script>');
-    assert.equal(login.privateServerScript('sadburst_erich5'), '<script>try{localStorage.removeItem("pb2_saved_login");localStorage.removeItem("pb2_saved_password")}catch{}</script>');
+    assert.equal(login.privateServerScript('sadburst_erich5'), '<script>try{localStorage.removeItem("pb2_saved_login");localStorage.removeItem("pb2_saved_password");localStorage.removeItem("pb2_saved_by_app")}catch{}</script>');
     assert.equal(createLogin({ log: quietLog([]), dataDir: folder, host: HOST, fromEnvironment: {}, isOn: false }).privateServerScript('sadburst_erich5') !== null, true, 'also with the login flag off');
   } finally { fs.rmSync(folder, { recursive: true }); }
 });

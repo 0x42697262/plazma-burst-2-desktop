@@ -48,7 +48,10 @@ used the next time that game starts.
   the official site window. Its entry screen takes the login and password from localStorage
   (`pb2_saved_login`, `pb2_saved_password`), so before the game's own scripts the app sets
   them to the active account's login and its md5 password cookie, each time the game is
-  loaded; you press Start Game. On a private server the two keys are removed instead.
+  loaded, with a third key `pb2_saved_by_app` marking them as the app's; you press Start
+  Game. With no active account (signed out), the login flag or `login.accounts` off, a
+  value the app put there is taken back at the next load; one you typed yourself (no mark)
+  is left alone. On a private server all three keys are removed.
 
 ## Saved accounts
 Capability `login.accounts`. `data/credentials.json` (official) and
