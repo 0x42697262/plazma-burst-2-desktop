@@ -19,7 +19,7 @@
 - [hooks-reference.md](features/hooks-reference.md): the hooks API
 - [binds.md](features/binds.md): `binds`, key binds and keyname
 - [cert-pinning.md](features/cert-pinning.md): `cert_pinning`
-- [client-sadburst.md](features/client-sadburst.md): `client_sadburst`, the Sad Burst 2 client and how the clients are kept apart
+- [client-sadburst.md](features/client-sadburst.md): `client_sadburst`, `client_sadburst_erich5`, the Sad Burst 2 clients and how the clients are kept apart
 - [dev-console.md](features/dev-console.md): `dev_console` and `console_core`, the console itself
 - [fingerprint.md](features/fingerprint.md): `fingerprint`, keeping and running the main server's fingerprinter
 - [game-setup.md](features/game-setup.md): `game_setup`, downloading and updating the game

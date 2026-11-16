@@ -77,6 +77,10 @@ Each fact says where it was verified.
 - Once a lobby server has connected, it broadcasts RELIABLE_VAR_SYNC to every client.
   Verified live; this cannot be derived from `game/`.
 
+- `sadburst2.com/gameplay_erich5/` plays the official lobby (`https://vvvv.` + `plazmaburst2.com`) with
+  official accounts, and its scripts hold no `PB2_CLIENT_BUILD`, so it sends no build hash.
+  Verified 2026-11-16 in `game.sadburst-erich5/gamelogic/` ([client-sadburst](docs/features/client-sadburst.md)).
+
 - Node 26 and Electron 45 (Node 24.22) run `.ts` ES modules directly, including
   `require()` from CommonJS. Verified 2026-11-02 ([ADR 0001](docs/adr/0001-typescript-esbuild.md)).
 
@@ -105,6 +109,8 @@ One line per behavior change: what to do, and the result to expect.
 - Free flight: `npm test` (src/features/movement/fly.test.ts). In a level, `fly free` and the movement keys glide you in all four directions; letting go slows you down; `fly on` still moves you only up and down.
 - Tools: `npm run find-names -- --check` finds every name (234 of 234 for v1769098419); `npm run fetch-game -- --help` and `npm run fetch-opcodes -- --help` print their usage; `npm run protocol` prints every reliable message with its opcode line, dispatch line and send sites.
 - client_sadburst: `npm test` (src/kernel/config/clients.test.ts). `npm run sadburst` starts Sad Burst 2 as before (its own session and settings file). `PB2_FEATURES=-client_sadburst npm run sadburst` logs "Sad Burst 2 is off" and quits. In a release AppImage, selecting the Sad Burst 2 row and pressing Play starts the app again as Sad Burst 2 instead of closing it (src/wrapper/platform/relaunch-options.test.ts).
+- client_sadburst_erich5: `npm test` (src/kernel/config/clients.test.ts, src/features/login, src/features/server_list). `npm run fetch-game -- --sadburst-erich5` ends with "Found 233 of 233 names" (build 20261108195354). `npm run sadburst-erich5` opens the server list, its first row is PlazmaBurst2.com and the other rows are Plazma Burst 2 and Sad Burst 2; with an official account active, Play on the first row loads Sad Burst's entry screen with that login and the password filled in. `PB2_FEATURES=-client_sadburst_erich5 npm run sadburst-erich5` logs "is off" and quits.
+- Server list in every client: `npm test` (src/features/server_list, src/kernel/flags). `npm run sadburst` opens the list with Sad Burst 2 as its first row; joining a private server there removes `auth_token` from the page first, and in erich5 `pb2_saved_login` and `pb2_saved_password` (src/features/login/login.test.ts).
 - Editions: `npm test` (src/tools/build/editions.test.ts, src/kernel/editions). `npm run build -- --edition player` lists the added `lobby_task_guard` and `cert_pinning` and builds `dist/page/page.js` without `console.js`; `npm run build` builds everything again.
 - Edition defaults: `npm test` (src/tools/build/edition-defaults.test.ts, src/features/server_list, src/wrapper/platform/kv-file.test.ts). `npm run build -- --edition <name>` with a server whose fingerprint is `"fetch"` stops and prints the fingerprint. A built edition with defaults, started with no `data/servers.json` and no settings file, logs that it added them; the server says "needs a nickname (Edit)".
 - Releases: `npm test` (src/tools/release, src/features/game_setup). `npm run release -- --edition player --linux` writes `release/player/*.AppImage`; at its first start it downloads the game into `~/.config/<title>/game`, finds 231 names and opens the server list; playing the official server serves `__dev/page/page.js` and no console.

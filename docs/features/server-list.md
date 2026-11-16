@@ -18,6 +18,9 @@ private servers and the `__dev/servers` route are the feature's own.
 
 The console's `servers` command does everything the page does.
 
+Every client has the list ([client-sadburst](client-sadburst.md#the-server-list)): the first
+row is the running client's own servers, the other clients are rows after it.
+
 On a private server:
 - the game's lobby connection goes to that server instead, and trusts only its pinned
   certificate;
@@ -25,8 +28,7 @@ On a private server:
   official server again; [login](login.md)), so the server gets a nickname and its own
   password, never your PB2 account.
 
-With the flag off (and always for Sad Burst 2, which has its own servers and accounts),
-the window goes straight to the game, there is no Servers menu, and the console has no
+With the flag off, the window goes straight to the game, there is no Servers menu, and the console has no
 `servers`.
 
 ## The saved file
@@ -109,4 +111,4 @@ The join runs in the page core, not in the dev console, so joining a private ser
 works with `dev_console` off.
 
 ## Accounts
-Selecting the official server or the Sad Burst 2 row shows the account panel ([login](login.md#choosing-an-account)). The operations are only on the launcher's IPC, not on the `__dev/servers` route, so a game page cannot reach them.
+Selecting the first row (the running client's own servers) or another client's row shows the account panel ([login](login.md#choosing-an-account)). The operations are only on the launcher's IPC, not on the `__dev/servers` route, so a game page cannot reach them.

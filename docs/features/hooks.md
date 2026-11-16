@@ -7,7 +7,7 @@ Hooks are small scripts in this folder that change or watch what the game does,
 - Your hooks: `hooks/<name>.js`. Not in git (only this guide and `*.example.js` are).
 - Templates: `hooks/*.example.js`. Never loaded. Copy one to `<name>.js` to use it.
 - Turn all hooks off: `PB2_HOOKS=0 npm start`.
-- Sad Burst 2 (`npm run sadburst`) has no hooks: its loader sends a hash of its scripts with the login, so a patched script would show its server a changed client ([README.md §9](../../README.md#9-sad-burst-2-community-client)).
+- Sad Burst 2 (`npm run sadburst`): hooks follow the `hooks` flag, but its loader sends a hash of its scripts, as the page receives them, with the login, so a hook that patches a script changes that hash; Sad Burst 2 for the official servers (`npm run sadburst-erich5`) sends no hash ([README.md §9](../../README.md#9-sad-burst-2-community-client)).
 - Every call, rule, order and message in detail: [REFERENCE.md](hooks-reference.md).
 
 ## Quick start (2 minutes)

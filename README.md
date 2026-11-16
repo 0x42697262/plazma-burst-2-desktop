@@ -73,8 +73,8 @@ Everything kept on this computer is in `data/`; files from before `data/` are mo
 | `src/tools/find-names/` | Generates `data/names.js` (`npm run find-names`; how: `docs/operations/find-names.md`) | yes |
 | `src/tools/fetch-opcodes/` | Generates `data/opcodes.js` from the editor's public `lib_params.js` | yes |
 | `game/` | The downloaded game | no |
-| `src/shared/clients/`, `src/kernel/config/clients.ts` | The game clients (official, Sad Burst 2) and which one a command is for | yes |
-| `game.sadburst/`, `data/names.sadburst.js`, `data/opcodes.sadburst.js` | Sad Burst 2: its game page, names and editor action names ([section 9](#9-sad-burst-2-community-client)) | no |
+| `src/shared/clients/`, `src/kernel/config/clients.ts` | The game clients (official, Sad Burst 2, Sad Burst 2 for the official servers) and which one a command is for | yes |
+| `game.sadburst/`, `game.sadburst-erich5/`, `data/names.sadburst*.js`, `data/opcodes.sadburst*.js` | Sad Burst 2: its game page, names and editor action names ([section 9](#9-sad-burst-2-community-client)) | no |
 | `src/tools/fetch-game/sadburst.ts`, `src/tools/find-names/sadburst.ts` | Sad Burst 2: its download and its names (called by `fetch-game` and `find-names` with `--sadburst`) | yes |
 | `game.previous/` | The copy before the last update | no |
 | `src/**/*.test.ts`, `src/**/*.fixture.ts` | Tests next to the code they test, and the fixtures they share, such as the fake game in `src/console/testing/` (`npm test`) | yes |
@@ -310,11 +310,13 @@ The `--` is needed: npm 12 refuses `npm run fetch-game --sadburst` as an unknown
 | Obfuscated names | Found by pattern | **The same names as the official client**, in minified code (`!0` for `true`, constants folded, local variables renamed) |
 | Download | Every file, through the site's directory listings | The site has no listings, and answers any unknown path under `/gameplay/` with its game page. So the files are found from the game's own lists (sounds and bitmaps, sprite sheets and frame sequences, skins, campaign maps) and from every file path in its code. Anything still missing is fetched once while you play, kept, and listed in `game.sadburst/kept.txt`, which the next fetch reads |
 | Login | `data/credentials.json`, cookies cleared at start | Its own entry screen: log in with a Sad Burst account, or play as a guest. The session stays in the app between starts |
-| Server list | `npm start` opens it | None: straight to its game page |
-| Hooks | Yes | **Off.** Its loader hashes every game script (SHA-256) and sends the hash with the lobby login (`PB2_CLIENT_BUILD`: client version, hash, size), so a patched script shows the server a changed client |
+| Server list | `npm start` opens it | The same list, its first row is Sad Burst 2's own servers |
+| Hooks | Yes | Yes, but its loader hashes every game script (SHA-256) as the page receives it and sends the hash with the lobby login (`PB2_CLIENT_BUILD`: client version, hash, size), so a hook that patches a script shows the server a changed client |
 | Remote play, player-hosted host | Yes | No |
 | Network log instance | `local` | `sadburst` (`data/netlogs/<date>_<time>_sadburst.log`) |
 | Kept apart | — | Its own browser session (cookies, storage), console settings (`data/dev-overrides.sadburst.json`), maps folder (`data/maps.sadburst/`) and fingerprinter folder (`data/fingerprint.sadburst/`), and no server-list bridge. Its lobby can run code in its page (`RELIABLE_TASK`, [docs/research/fingerprinting.md §4](docs/research/fingerprinting.md#4-the-task-primitive)); nothing that code writes reaches the official client |
+
+**Sad Burst 2 for the official servers.** `sadburst2.com/gameplay_erich5/` is built from the same code but plays the official lobby with official accounts, and sends no build hash. It is a third client: `npm run fetch-game -- --sadburst-erich5`, `npm run find-names -- --sadburst-erich5`, `npm run sadburst-erich5`, feature flag `client_sadburst_erich5`, folder `game.sadburst-erich5/` (build `20261108195354`: 233 of 233 names). Its entry screen starts filled in with the active official account. Details: [client-sadburst](docs/features/client-sadburst.md).
 
 **Names.** Patterns written for the official code rarely match minified code. `find-names -- --sadburst` takes a name by pattern where one still matches, and otherwise the **official client's name for it, if that name appears in the Sad Burst code** (how: `src/tools/find-names/sadburst.ts`). The official names come from `game/` (run `npm run fetch-game` too), from `data/names.js`, or from the previous `names.sadburst.js`. Build `20261030020533`: all 222 names it has. Three official names are not in this client and are left out on purpose (the run lists them as "not in this client (fine)", the file says why): `authReport` and `authEndorse` are only for the own lobby server (`src/server/`), and `lockedArrays` is block-scoped in its minified code, so the anti-cheat scan report shows no array names there. If Sad Burst 2 ever renames its identifiers, the run finds almost nothing and says so: new patterns for its minified code are needed then.
 

@@ -22,7 +22,7 @@ Feature flag `game_setup` (on by default; all modes). Code: `src/features/game_s
 - The download's own warnings (for example `index.html references missing l.origin`,
   JavaScript in the page that its link scanner reads as a file) are logged as warnings
   when the game is ready anyway.
-- It does not run with `PB2_GAME_DIR` (a game copy you chose), or for Sad Burst 2 when
-  `client_sadburst` is off.
+- It does not run with `PB2_GAME_DIR` (a game copy you chose), or for a Sad Burst client
+  when its flag (`client_sadburst`, `client_sadburst_erich5`) is off.
 - The map editor's action names (`opcodes.js`) are not fetched here; the dev console
   works without them, and `npm run fetch-game` gets them.

@@ -22,7 +22,7 @@ Feature flag `login` (on by default; all modes). Code: `src/features/login/`.
   otherwise. A report carries that raw string; the app hashes nothing for it.
 
 ## Choosing an account
-In the server list, selecting the official server or Sad Burst 2 shows the account panel:
+In the server list, selecting the first row or another client's row shows the account panel:
 pick a saved account, forget one, or "Log in to a new account" (capability `login.site`).
 A private server shows no panel: there you have a nickname and that server's own password.
 Logging in appears nowhere else, not in the app menu and not in the console. The choice is
@@ -44,6 +44,11 @@ used the next time that game starts.
   `prepareIndex`). With no active account it leaves the storage alone, so the game's own login
   keeps working. Forgetting the active account removes the token at the next start.
 - Forgetting the active official account clears the site's cookies at once.
+- **Sad Burst 2 for the official servers** (`sadburst_erich5`) uses the official accounts and
+  the official site window. Its entry screen takes the login and password from localStorage
+  (`pb2_saved_login`, `pb2_saved_password`), so before the game's own scripts the app sets
+  them to the active account's login and its md5 password cookie, each time the game is
+  loaded; you press Start Game. On a private server the two keys are removed instead.
 
 ## Saved accounts
 Capability `login.accounts`. `data/credentials.json` (official) and

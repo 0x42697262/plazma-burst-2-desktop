@@ -10,6 +10,7 @@
     "start": "npm run build && electron .",
     "start:verbose": "npm run build && electron . --verbose",
     "sadburst": "npm run build && electron . --sadburst",
+    "sadburst-erich5": "npm run build && electron . --sadburst-erich5",
     "host": "npm run build && electron . --host",
     "p2p-host": "npm run build && electron . --p2p-host",
     "server": "node src/server/index.ts",
