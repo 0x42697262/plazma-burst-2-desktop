@@ -41,6 +41,7 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
   const client = CLIENTS[environment.client];
   const isBundled = client.bundled;
   const usesSadburstAccounts = client.id === CLIENT.sadburst;
+  const usesOfficialGate = client.id === CLIENT.sadburstErich5;
   const isRemoteHost = environment.mode === MODE.remote;
   const isDedicatedHost = environment.mode === MODE.server;
   const { remotePlayPart, p2pHostPart, serverListPart } = WRAPPER_PARTS;
@@ -207,7 +208,7 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
       remoteNotMarked: remotePlayPart?.notMarked ?? '',
       verbose: log.on(DEBUG_LEVEL) && !isBundled,
       isServer: !!context.server,
-      accountScript: usesSadburstAccounts ? login.sadburstStartupScript() : null,
+      accountScript: usesSadburstAccounts ? login.sadburstStartupScript() : usesOfficialGate ? login.gateStartupScript() : null,
     });
     for (const error of prepared.errors) log.error(error);
     for (const warning of prepared.warnings) log.warn(warning);
@@ -217,7 +218,7 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
   async function serveLocal(url: URL, context: PageContext): Promise<Response> {
     let relative = decodeURIComponent(url.pathname.slice(prefix.length));
     if (relative === '' || relative.endsWith(FOLDER_END)) relative += INDEX_FILE;
-    const preparesIndex = pageCoreOn || hooksOn || context.remote || !!context.server || !!joinTarget() || (usesSadburstAccounts && flags.login.on);
+    const preparesIndex = pageCoreOn || hooksOn || context.remote || !!context.server || !!joinTarget() || ((usesSadburstAccounts || usesOfficialGate) && flags.login.on);
     if (preparesIndex && relative === INDEX_FILE) return serveIndex(context);
     const hooked = hooksOn && wrapper.hooks ? wrapper.hooks.changedScript(relative) : null;
     if (hooked !== null) return typedResponse(hooked, SCRIPT_TYPE, false);

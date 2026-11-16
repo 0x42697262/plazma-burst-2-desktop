@@ -22,7 +22,9 @@ export const SADBURST_API = Object.freeze({ login: '/api/game/client-login', ses
 export const JSON_HEADERS = Object.freeze({ 'Content-Type': 'application/json', Accept: 'application/json' });
 export const bearerHeaders = (token: string): Readonly<Record<string, string>> => ({ Authorization: `Bearer ${token}`, Accept: 'application/json' });
 export const SADBURST_TOKEN_KEY = 'auth_token';
+export const GATE_STORAGE = Object.freeze({ login: 'pb2_saved_login', password: 'pb2_saved_password' });
 export const SCRIPT_END = /</g;
 export const ESCAPED_SCRIPT_END = '\\u003c';
+export const setGateScript = (loginKeyJson: string, loginJson: string, passwordKeyJson: string, passwordJson: string): string => `<script>try{localStorage.setItem(${loginKeyJson},${loginJson});localStorage.setItem(${passwordKeyJson},${passwordJson})}catch{}</script>`;
 export const setTokenScript = (keyJson: string, tokenJson: string): string => `<script>try{localStorage.setItem(${keyJson},${tokenJson})}catch{}</script>`;
 export const removeTokenScript = (keyJson: string): string => `<script>try{localStorage.removeItem(${keyJson})}catch{}</script>`;

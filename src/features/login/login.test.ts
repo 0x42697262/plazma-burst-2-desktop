@@ -322,3 +322,32 @@ test('the account port: new accounts by client, the sign-out, the start-up scrip
     await assert.rejects(createLogin({ ...deps, canUseSite: false }).accounts?.logIn('official') as Promise<unknown>, /not in this app/);
   } finally { fs.rmSync(folder, { recursive: true }); }
 });
+
+test('Sad Burst for the official servers: official accounts, and the entry screen starts filled in with the md5 once', async () => {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-erich5-'));
+  try {
+    const site = fakeSite();
+    const login = createLogin({ log: quietLog([]), dataDir: folder, host: HOST, fromEnvironment: {}, isOn: true, openSiteWindow: () => site });
+    const accounts = login.accounts;
+    assert.ok(accounts);
+    assert.equal(login.gateStartupScript(), null, 'with no account, the entry screen is left alone');
+    const pending = accounts.logIn('sadburst_erich5');
+    await Promise.resolve();
+    site.set(signedIn);
+    assert.equal(await pending, 'me');
+    assert.deepEqual((accounts.list('official') as any).accounts.map((account: any) => account.login), ['me'], 'the same book as the official client');
+    assert.deepEqual(login.identity('sadburst_erich5'), login.identity('official'));
+    const script = createLogin({ log: quietLog([]), dataDir: folder, host: HOST, fromEnvironment: {}, isOn: true, openSiteWindow: () => site }).gateStartupScript();
+    assert.equal(script, `<script>try{localStorage.setItem("pb2_saved_login","me");localStorage.setItem("pb2_saved_password","${MD5}")}catch{}</script>`);
+    const second = createLogin({ log: quietLog([]), dataDir: folder, host: HOST, fromEnvironment: {}, isOn: true });
+    assert.ok(second.gateStartupScript());
+    assert.equal(second.gateStartupScript(), null, 'once per start');
+    assert.equal(createLogin({ log: quietLog([]), dataDir: folder, host: HOST, fromEnvironment: {}, isOn: false }).gateStartupScript(), null);
+    assert.equal(createLogin({ log: quietLog([]), dataDir: folder, host: HOST, fromEnvironment: {}, isOn: true, canUseAccounts: false }).gateStartupScript(), null);
+  } finally { fs.rmSync(folder, { recursive: true }); }
+});
+
+test('the entry screen script is safe to put in a page', async () => {
+  const { gateScript } = await import('./domain/gate-script.ts');
+  assert.ok(!gateScript('a</script>b', MD5).slice('<script>'.length, -'</script>'.length).includes('</script>'));
+});

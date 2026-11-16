@@ -9,6 +9,7 @@ import { mergeCredentials, withPasswordCookie, type Credentials } from './domain
 import { createAccountBook, type AccountBook } from './services/account-book.ts';
 import { officialSiteLogin, sadburstLogin, type Fetcher, type OpenSiteWindow } from './services/new-login.ts';
 import { tokenScript } from './domain/token-script.ts';
+import { gateScript } from './domain/gate-script.ts';
 import { PLAIN_KEYCHAIN, type Keychain } from './adapters/keychain.ts';
 import { applyLogin, type CookieStore } from './adapters/cookies.ts';
 
@@ -30,9 +31,10 @@ export function createLogin({ log, dataDir, host, fromEnvironment, isOn, keychai
   const sadburstBook = bookFor(SADBURST_CREDENTIALS_FILE_NAME);
   let loggingIn = false;
   let startupDone = false;
+  let gateDone = false;
 
   function bookOf(client: unknown): AccountBook {
-    if (client === CLIENT.official) return officialBook;
+    if (client === CLIENT.official || client === CLIENT.sadburstErich5) return officialBook;
     if (client === CLIENT.sadburst) return sadburstBook;
     throw new Error(TEXT.unknownClient(String(client)));
   }
@@ -62,8 +64,10 @@ export function createLogin({ log, dataDir, host, fromEnvironment, isOn, keychai
     return { login: merged.login ?? null, cookies: { login: merged.login ?? null, password: merged.password ?? null, pb2uid: merged.pb2uid ?? null } };
   }
 
+  const usesOfficialAccounts = (client: unknown): boolean => client === CLIENT.official || client === CLIENT.sadburstErich5;
+
   async function logInNew(client: ClientId, typed: TypedLogin): Promise<string | null> {
-    if (client === CLIENT.official) {
+    if (usesOfficialAccounts(client)) {
       if (!openSiteWindow) throw new Error(TEXT.noSite);
       const found = await officialSiteLogin(openSiteWindow, OFFICIAL_LOGIN_URL);
       if (!found) return null;
@@ -81,12 +85,12 @@ export function createLogin({ log, dataDir, host, fromEnvironment, isOn, keychai
     list: (client: unknown) => ({
       accounts: bookOf(client).list(),
       canLogIn: canUseSite,
-      overridden: client === CLIENT.official && Object.keys(fromEnvironment).length > 0,
+      overridden: usesOfficialAccounts(client) && Object.keys(fromEnvironment).length > 0,
     }),
     use(client: unknown, login: string): void { bookOf(client).use(login); },
     async remove(client: unknown, login: string): Promise<void> {
       bookOf(client).remove(login);
-      if (client === CLIENT.official && officialBook.takeSignOut()) await onOfficialSignOut?.();
+      if (usesOfficialAccounts(client) && officialBook.takeSignOut()) await onOfficialSignOut?.();
     },
     async logIn(client: unknown, typed: TypedLogin = {}): Promise<string | null> {
       bookOf(client);
@@ -111,5 +115,12 @@ export function createLogin({ log, dataDir, host, fromEnvironment, isOn, keychai
     return sadburstBook.takeSignOut() ? tokenScript(null) : null;
   }
 
-  return Object.freeze({ applyCredentials, applyQuietly, hasCredentials, identity, accounts, sadburstStartupScript });
+  function gateStartupScript(): string | null {
+    if (!isOn || !canUseAccounts || gateDone) return null;
+    gateDone = true;
+    const { login, password } = credentials();
+    return login && password ? gateScript(login, password) : null;
+  }
+
+  return Object.freeze({ applyCredentials, applyQuietly, hasCredentials, identity, accounts, sadburstStartupScript, gateStartupScript });
 }
