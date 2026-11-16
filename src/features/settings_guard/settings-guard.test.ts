@@ -2,8 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { newRiskyCommands } from './domain/risky.ts';
 import { settingsGuardInterceptor } from './entry/interceptor.ts';
+import { shownCommand } from './domain/risky.ts';
 
-const PUT = (body: unknown): Request => new Request('https://www.plazmaburst2.com/h5/versions/v1/__dev/kv', { method: 'PUT', body: JSON.stringify(body) });
+const ROUTE = { host: 'www.plazmaburst2.com', path: '/h5/versions/v1/__dev/kv' };
+const PUT = (body: unknown, url = 'https://www.plazmaburst2.com/h5/versions/v1/__dev/kv'): Request => new Request(url, { method: 'PUT', body: JSON.stringify(body) });
 
 test('a bind, a profile bind or a profile onload that runs js, wire, game, servers or diagnostics is new and risky', () => {
   const previous = { binds: { f: 'tp', g: 'js 1' } };
@@ -41,7 +43,7 @@ test('nothing new, a changed harmless command, a removed one, or a broken file i
 
 function guardWith(answer: boolean, file: Record<string, unknown> = {}, remote = false) {
   const asked: string[][] = [];
-  const intercept = settingsGuardInterceptor({ confirm: async (commands) => { asked.push(commands.map((entry) => `${entry.where}: ${entry.command}`)); return answer; } });
+  const intercept = settingsGuardInterceptor({ route: ROUTE, confirm: async (commands) => { asked.push(commands.map((entry) => `${entry.where}: ${entry.command}`)); return answer; } });
   const context = { remote, kvFile: { peek: async () => JSON.stringify(file), read: async () => { throw new Error('read takes the file as seen; the guard must peek'); } } };
   const call = (request: Request) => intercept(request, new URL(request.url), context);
   return { asked, call };
@@ -69,4 +71,27 @@ test('a remote tester\'s page cannot add one: refused without asking the host', 
   const guard = guardWith(true, {}, true);
   assert.equal((await guard.call(PUT({ binds: { f: 'js 1' } })))?.status, 403);
   assert.deepEqual(guard.asked, []);
+});
+
+test('only the settings route of this game counts: another host or path is not asked about', async () => {
+  const guard = guardWith(false);
+  assert.equal(await guard.call(PUT({ binds: { f: 'js 1' } }, 'https://evil.test/h5/versions/v1/__dev/kv')), null);
+  assert.equal(await guard.call(PUT({ binds: { f: 'js 1' } }, 'https://www.plazmaburst2.com/other/__dev/kv')), null);
+  assert.equal((await guard.call(PUT({ binds: { f: 'js 1' } }, 'https://www.plazmaburst2.com/h5/versions/v1/__dev/k%76')))?.status, 403, 'an encoded path is the same route');
+  assert.deepEqual(guard.asked, [['bind f: js 1']]);
+});
+
+test('one question at a time: a save that comes while one is asked waits for its answer', async () => {
+  let open = 0;
+  let most = 0;
+  const intercept = settingsGuardInterceptor({ route: ROUTE, confirm: async () => { open++; most = Math.max(most, open); await new Promise((resolve) => { setTimeout(resolve, 20); }); open--; return false; } });
+  const context = { kvFile: { peek: async () => '{}' } };
+  const call = (body: unknown) => { const request = PUT(body); return intercept(request, new URL(request.url), context); };
+  await Promise.all([call({ binds: { f: 'js 1' } }), call({ binds: { f: 'js 2' } }), call({ binds: { f: 'js 3' } })]);
+  assert.equal(most, 1);
+});
+
+test('a command is shown on one line and cut short, so it cannot push the warning out of view', () => {
+  assert.equal(shownCommand('js a\n\n\nb\u2028c\td'), 'js a b c d');
+  assert.equal(shownCommand('js ' + 'x'.repeat(500)).length, 200);
 });

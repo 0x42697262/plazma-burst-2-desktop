@@ -1,5 +1,6 @@
 import { CHAIN_JOIN } from '#console/kernel/state/keys.ts';
-import { CHAIN_SEPARATOR, RISKY_COMMANDS, SECTION, WORDS } from '../keys.ts';
+import { CHAIN_SEPARATOR, LINE_BREAKS_AND_TABS, RISKY_COMMANDS, SECTION, SPACE, WORDS } from '../keys.ts';
+import { SHOWN_COMMAND_MAX } from '../constants.ts';
 import { TEXT } from '../text.ts';
 
 export type RiskyCommand = Readonly<{ where: string; command: string }>;
@@ -40,3 +41,5 @@ export function newRiskyCommands(previous: unknown, next: unknown): RiskyCommand
   const after = isObject(next) ? commandsOf(next) : new Map<string, string>();
   return [...after].filter(([where, command]) => isRisky(command) && before.get(where) !== command).map(([where, command]) => ({ where, command }));
 }
+
+export const shownCommand = (command: string): string => command.replace(LINE_BREAKS_AND_TABS, SPACE).trim().slice(0, SHOWN_COMMAND_MAX);

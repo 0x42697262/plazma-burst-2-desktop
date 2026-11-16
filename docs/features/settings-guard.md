@@ -16,7 +16,10 @@ bind that runs JavaScript in your next game, in any client, logged in as you.
   list of commands, read the way the console joins it) with a risky command anywhere in a
   `;` chain, any letter case, the wrapper asks in a native dialog, outside the page: **Refuse**
   (the default, also on Esc) or **Keep**. The dialog lists each command and where it goes.
-  Page code cannot answer it.
+  Page code cannot answer it. One dialog at a time: a save that comes while one is open
+  waits for its answer. Each command is shown on one line and cut at 200 characters.
+- Only this game's settings route counts: its host and `<game path>/__dev/kv`, compared
+  after decoding, the way the wrapper serves it.
 - Refused: nothing is written, the console prints "Settings not saved …" and reloads what
   the file holds, so the bind is gone from the page too. Kept: saved as usual.
 - A command already in the file is not asked about again. The same command on another key

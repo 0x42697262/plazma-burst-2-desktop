@@ -189,7 +189,7 @@ export function startApp(context: WrapperContext): void {
   const clientVersion = (id: string): string | null => gameFolderOf(clientById(id), environment).version || null;
 
   serverList = serverListPart?.create(
-    { log, isCapabilityOn: (id: string) => context.capabilities[id]?.on ?? false, gameVersion: '', client: chosen.id, repoRoot: USER_ROOT, gameDir: '', devKvFile: '', host: chosen.host },
+    { log, isCapabilityOn: (id: string) => context.capabilities[id]?.on ?? false, gameVersion: '', client: chosen.id, repoRoot: USER_ROOT, gameDir: '', devKvFile: '', host: chosen.host, devPrefix: '' },
     {
       clients: () => availableClients().map((client) => Object.freeze({ id: client.id, title: client.title, host: client.host })),
       prepare: prepareClient,

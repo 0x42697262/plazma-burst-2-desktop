@@ -25,4 +25,5 @@ export type WrapperDeps = Readonly<{
   gameDir: string;
   devKvFile: string;
   host: string;
+  devPrefix: string;
 }>;

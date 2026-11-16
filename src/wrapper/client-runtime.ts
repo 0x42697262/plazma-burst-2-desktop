@@ -101,7 +101,7 @@ export function createClientRuntime(shared: SharedServices, client: GameClient) 
 
   const wrapper = buildWrapper(
     WRAPPER_PARTS,
-    { log, isCapabilityOn: (id: string) => capabilities[id]?.on ?? false, gameVersion: version || '', client: client.id, repoRoot: USER_ROOT, gameDir: root, devKvFile: devSettingsFile, host },
+    { log, isCapabilityOn: (id: string) => capabilities[id]?.on ?? false, gameVersion: version || '', client: client.id, repoRoot: USER_ROOT, gameDir: root, devKvFile: devSettingsFile, host, devPrefix },
     {
       hooks: { namesFile: client.names, gamePrefix: prefix },
       diagnostics: {
