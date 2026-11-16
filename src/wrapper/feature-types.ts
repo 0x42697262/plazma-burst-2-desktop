@@ -1,4 +1,4 @@
-import type { FeatureId } from '#shared/features/keys.ts';
+import type { ClientId, FeatureId } from '#shared/features/keys.ts';
 import type { Logger } from '#kernel/log/logger.ts';
 
 export type RequestContext = Readonly<{ remote?: boolean; server?: boolean; [field: string]: unknown }>;
@@ -20,7 +20,7 @@ export type WrapperDeps = Readonly<{
   log: Logger;
   isCapabilityOn(id: string): boolean;
   gameVersion: string;
-  isSadburst: boolean;
+  client: ClientId;
   repoRoot: string;
   gameDir: string;
   devKvFile: string;

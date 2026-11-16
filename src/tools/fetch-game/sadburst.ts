@@ -93,7 +93,7 @@ function readKept(out: string): string[] {
 export async function fetchSadburst(client: GameClient, { out = client.gameDir, jobs = JOBS, say = (line: string) => { console.log(line); } }: { out?: string; jobs?: number; say?: (line: string) => void } = {}): Promise<FetchedSadburst> {
   const base = client.site + client.gamePrefix(null);
   const staging = out + DOWNLOAD_SUFFIX;
-  say(TEXT.sadburstHeader(base, out));
+  say(TEXT.sadburstHeader(base, out, client.title));
   fs.rmSync(staging, { recursive: true, force: true });
   fs.mkdirSync(staging, { recursive: true });
   const saved = new Map<string, Buffer | null>();
@@ -164,7 +164,7 @@ export async function fetchSadburst(client: GameClient, { out = client.gameDir, 
   for (const file of scripts) if (!saved.get(file)) problems.push(TEXT.manifestListsMissing(file));
   for (const link of links) if (missing.has(normalize(link))) problems.push(TEXT.indexLinksMissing(link));
   const build = versionText[0] || null;
-  const version = SADBURST_VERSION(build);
+  const version = SADBURST_VERSION(client.versionPrefix, build);
   fs.writeFileSync(path.join(staging, VERSION_JSON), JSON.stringify({
     client: client.id,
     version,

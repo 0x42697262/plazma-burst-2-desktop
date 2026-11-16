@@ -32,6 +32,8 @@ test('the client: --sadburst, or npm_config_sadburst unless it is "false" or "0"
   assert.equal(parseEnvironment(['.'], { npm_config_sadburst: 'true' }).environment.client, 'sadburst');
   assert.equal(parseEnvironment(['.'], { npm_config_sadburst: 'false' }).environment.client, 'official');
   assert.equal(parseEnvironment(['.'], { npm_config_sadburst: '0' }).environment.client, 'official');
+  assert.equal(parseEnvironment(['.', '--sadburst-erich5'], {}).environment.client, 'sadburst_erich5');
+  assert.equal(parseEnvironment(['.'], { npm_config_sadburst_erich5: 'true' }).environment.client, 'sadburst_erich5');
 });
 
 test('the mode: --host is remote play, --p2p-host the dedicated host, --host wins', () => {

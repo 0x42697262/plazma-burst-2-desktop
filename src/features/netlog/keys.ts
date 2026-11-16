@@ -42,7 +42,7 @@ export const OTHER_MARKS: ReadonlySet<string> = new Set(['2', '3']);
 
 export const LOG_FILE_EXTENSION = '.log';
 export const LOG_FILE_HEADER_MARK = '#';
-export const INSTANCE = Object.freeze({ local: 'local', server: 'server', sadburst: 'sadburst', testerPrefix: 'tester-' });
+export const INSTANCE = Object.freeze({ local: 'local', server: 'server', testerPrefix: 'tester-' });
 export const RUN_QUERY = Object.freeze({ run: 'run', lines: 'lines', kind: 'kind' });
 export const RUN_NAME = /^[A-Za-z0-9_-]{1,120}$/;
 export const RUN_INSTANCE = /^\d{4}-\d\d-\d\d_\d\d-\d\d-\d\d_(.+?)(?:-\d+)?$/;

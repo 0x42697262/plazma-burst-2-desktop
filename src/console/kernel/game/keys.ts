@@ -49,9 +49,8 @@ export const GAME_GLOBAL = Object.freeze({
 } as const);
 
 export const LEVEL_FRAME = 'gaming';
-export const SADBURST_VERSION_PREFIX = 'sadburst-';
 export const NAMES_NOT_LOADED = '(names.js not loaded)';
-export const NAMES_FILE = Object.freeze({ official: 'data/names.js', sadburst: 'data/names.sadburst.js' });
+export const NAMES_FILE_FOLDER = 'data/';
 export const NON_ASCII = /[\u0080-\uffff]/g;
 export const FIND_NAMES_COMMAND = 'npm run find-names';
 export const UNICODE_ESCAPE_PREFIX = '\\u';

@@ -10,7 +10,7 @@ type FeatureSpec = Partial<Omit<FeatureDefinition, 'id' | 'owner' | 'description
 const LOCAL_AND_SERVER: readonly Mode[] = Object.freeze([MODE.local, MODE.server]);
 const LOCAL_ONLY: readonly Mode[] = Object.freeze([MODE.local]);
 const LOBBY_SERVER_ONLY: readonly Mode[] = Object.freeze([MODE.lobby]);
-const ONLY_OFFICIAL: readonly ClientId[] = Object.freeze([CLIENT.sadburst]);
+const ONLY_OFFICIAL: readonly ClientId[] = Object.freeze([CLIENT.sadburst, CLIENT.sadburstErich5]);
 const NEEDS_CONSOLE: readonly FeatureId[] = Object.freeze([FEATURE.devConsole]);
 
 const capabilitiesOf = (feature: FeatureId, needs: Readonly<Record<string, readonly string[]>>, modules: Readonly<Record<string, string>>): CapabilityDefinition[] =>
@@ -68,6 +68,7 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   define(FEATURE.remotePlay, { availableIn: [MODE.remote], unavailableForClients: ONLY_OFFICIAL }),
   define(FEATURE.p2pHost, { availableIn: [MODE.server], unavailableForClients: ONLY_OFFICIAL, capabilities: noNeeds(CAPABILITY.p2pHost) }),
   define(FEATURE.clientSadburst),
+  define(FEATURE.clientSadburstErich5),
   define(FEATURE.gameSetup),
   define(FEATURE.diagnostics, { capabilities: noNeeds(CAPABILITY.diagnostics) }),
   define(FEATURE.webClient, { availableIn: LOBBY_SERVER_ONLY }),

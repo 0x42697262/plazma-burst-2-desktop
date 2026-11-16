@@ -1,6 +1,4 @@
 import './kernel/commands/register-all.ts';
-import { CLIENT_DETAILS } from '#shared/clients/keys.ts';
-import { CLIENT } from '#shared/features/keys.ts';
 import { print, TAG } from './kernel/ui/log.ts';
 import { buildPanel, updateStatus, updateStatusIfOpen, openPanel, closePanel, onKeyDownCapture, onKeyUpCapture } from './kernel/ui/panel.ts';
 import { COLOR } from './kernel/core/keys.ts';
@@ -11,7 +9,7 @@ import { game } from './kernel/game/bindings.ts';
 import { whenGameReady } from '#page/ready.ts';
 import { showReportsIn } from '#page/report.ts';
 import { REPORT_LEVEL, type ReportLevel } from '#page/keys.ts';
-import { namesMissing, CLIENT_TITLE, FIND_NAMES, SADBURST } from './kernel/game/names.ts';
+import { namesMissing, CLIENT_TITLE, FIND_NAMES, PAGE_CLIENT } from './kernel/game/names.ts';
 import { currentMapId } from './kernel/game/level.ts';
 import { load, reload as reloadStore, settings, binds, profiles, loadProblems, setMapSource } from './kernel/state/store.ts';
 import { LOAD_SOURCE, type LoadSource } from './kernel/state/keys.ts';
@@ -23,7 +21,7 @@ import { FRAME_ERRORS_SHOWN, STATUS_EVERY_MS } from './constants.ts';
 import { DATA_FOLDER, FRAME_GUARD_LABEL, KEY_DOWN_EVENT, KEY_UP_EVENT, LOCAL_STORAGE_NAME, PAGE_API_GLOBAL } from './keys.ts';
 import { TEXT } from './text.ts';
 
-const SETTINGS_FILE = CLIENT_DETAILS[SADBURST ? CLIENT.sadburst : CLIENT.official].settingsFileName;
+const SETTINGS_FILE = PAGE_CLIENT.settingsFileName;
 
 const reportError = (message: string): void => { print(message, COLOR.error); };
 

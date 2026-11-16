@@ -21,7 +21,7 @@ export const UNKNOWN_VERSION = 'unknown';
 export const LINE_END = '\n';
 export const ARG = Object.freeze({ out: '--out', check: '--check', decode: '--decode', help: '--help', helpShort: '-h' });
 export const NAMES_FILE_RUN = 'run "npm run find-names"';
-export const NAMES_FILE_RUN_SADBURST = 'run "npm run find-names -- --sadburst"';
+export const namesFileRunFor = (flag: string): string => `run "npm run find-names -- ${flag}"`;
 export const NAMES_OBJECT_START = 'globalThis.PB2_NAMES = {';
 export const MINIFIED_BOOLEAN = /!([01])(?![\w.])/g;
 export const MINIFIED_TRUE = '0';

@@ -19,7 +19,7 @@ export const FILES_TEXT = Object.freeze({
   editedElsewhere: 'dev-overrides.json was edited; the console reloads it instead',
   kept: (file: string, bytes: number) => `[sadburst] kept ${file} (${bytes} bytes)`,
   notKept: (file: string, message: string) => `Sad Burst 2: could not keep ${file}: ${message}`,
-  newerBuild: (live: string, local: string) => `Sad Burst 2: the site has build ${live}, game.sadburst/ is ${local}. Run "npm run fetch-game -- --sadburst".`,
+  newerBuild: (title: string, live: string, local: string, folder: string, fetchFlag: string) => `${title}: the site has build ${live}, ${folder}/ is ${local}. Run "npm run fetch-game --${fetchFlag}".`,
   namesMissing: (file: string, findNames: string) => `Dev console: ${file} is missing. Run "${findNames}".`,
   namesOtherVersion: (namesVersion: string, gameVersion: string, findNames: string) => `Dev console: names.js is for game ${namesVersion} but the game is ${gameVersion}. Run "${findNames}".`,
   namesIncomplete: 'Dev console: names.js has names that were not found; some commands will fail.',

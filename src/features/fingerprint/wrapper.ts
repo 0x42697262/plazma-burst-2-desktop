@@ -6,7 +6,7 @@ import { fingerprintRoutes } from './entry/routes.ts';
 import { fingerprintDir } from './paths.ts';
 
 export function fingerprintWrapper(deps: WrapperDeps): WrapperFeature {
-  const dir = fingerprintDir(deps.isSadburst);
+  const dir = fingerprintDir(deps.client);
   const store = createFingerprintStore({ dir });
   return Object.freeze({
     id: FEATURE.fingerprint,

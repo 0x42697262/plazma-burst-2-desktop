@@ -27,6 +27,7 @@ export const FEATURE = Object.freeze({
   remotePlay: 'remote_play',
   p2pHost: 'p2p_host',
   clientSadburst: 'client_sadburst',
+  clientSadburstErich5: 'client_sadburst_erich5',
   gameSetup: 'game_setup',
   diagnostics: 'diagnostics',
   webClient: 'web_client',
@@ -39,7 +40,7 @@ export const MODE = Object.freeze({ local: 'local', remote: 'remote', server: 's
 export type Mode = typeof MODE[keyof typeof MODE];
 export const ALL_MODES: readonly Mode[] = Object.freeze([MODE.local, MODE.remote, MODE.server]);
 
-export const CLIENT = Object.freeze({ official: 'official', sadburst: 'sadburst' });
+export const CLIENT = Object.freeze({ official: 'official', sadburst: 'sadburst', sadburstErich5: 'sadburst_erich5' });
 export type ClientId = typeof CLIENT[keyof typeof CLIENT];
 
 export const FLAG_SOURCE = Object.freeze({ default: 'default', file: 'file', env: 'env', constraint: 'constraint', edition: 'edition' });

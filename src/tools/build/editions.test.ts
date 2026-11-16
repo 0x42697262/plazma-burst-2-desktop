@@ -11,7 +11,7 @@ import { editionNames, oneOffEdition, readEdition, readyEdition } from './editio
 import { withRequirements } from '#kernel/editions/resolve.ts';
 import { onlyEditionFeatures } from './edition-plugin.ts';
 
-const ALWAYS_IN_THE_MAIN_PROCESS = ['login', 'cert_pinning', 'client_sadburst'];
+const ALWAYS_IN_THE_MAIN_PROCESS = ['login', 'cert_pinning', 'client_sadburst', 'client_sadburst_erich5'];
 const CONSOLE_ONLY = /^src\/console\/(index|features)\.ts$|^src\/console\/kernel\/(ui|commands|state)\//;
 
 async function buildInMemory(edition: Edition) {

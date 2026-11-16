@@ -1,9 +1,10 @@
 import { CAPABILITY_BY_ID, CATALOG } from '#shared/features/catalog.ts';
 import { EDITION } from '#shared/editions/constants.ts';
-import { CLIENT, MODE, PAGE_CAPABILITIES_GLOBAL, PAGE_FLAGS_GLOBAL, type ClientId, type FeatureId, type Mode } from '#shared/features/keys.ts';
+import { MODE, PAGE_CAPABILITIES_GLOBAL, PAGE_FLAGS_GLOBAL, type ClientId, type FeatureId, type Mode } from '#shared/features/keys.ts';
 import type { CapabilityStates, FlagStates } from '#shared/features/types.ts';
 import { resolveFlags } from '#kernel/flags/resolve.ts';
-import { PAGE_GLOBAL, SADBURST_NAMES_VERSION_PREFIX } from './keys.ts';
+import { clientOfVersion } from '#shared/clients/keys.ts';
+import { PAGE_GLOBAL } from './keys.ts';
 
 type NamesGlobal = { version?: unknown } | null | undefined;
 
@@ -16,9 +17,7 @@ function pageMode(): Mode {
 }
 
 function pageClient(): ClientId {
-  const version = (pageGlobal(PAGE_GLOBAL.names) as NamesGlobal)?.version;
-  const isSadburstNames = typeof version === 'string' && version.startsWith(SADBURST_NAMES_VERSION_PREFIX);
-  return isSadburstNames ? CLIENT.sadburst : CLIENT.official;
+  return clientOfVersion((pageGlobal(PAGE_GLOBAL.names) as NamesGlobal)?.version);
 }
 
 const defaultsForThisPage = () => resolveFlags({

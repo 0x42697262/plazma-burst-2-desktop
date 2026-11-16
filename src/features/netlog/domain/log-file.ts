@@ -1,3 +1,4 @@
+import { CLIENT, type ClientId } from '#shared/features/keys.ts';
 import { INSTANCE_NAME_MAX, LINE_CHARS_MAX } from '../constants.ts';
 export { stampOf } from '#kernel/time/stamp.ts';
 import {
@@ -24,8 +25,8 @@ export const fileHeader = (startedText: string, instance: string, version: strin
 
 export type InstanceContext = { remote?: boolean; server?: boolean; name?: string };
 
-export function instanceFor(context: InstanceContext, isSadburst: boolean): string {
+export function instanceFor(context: InstanceContext, client: ClientId): string {
   if (context.remote) return INSTANCE.testerPrefix + (context.name ?? '');
   if (context.server) return INSTANCE.server;
-  return isSadburst ? INSTANCE.sadburst : INSTANCE.local;
+  return client === CLIENT.official ? INSTANCE.local : client;
 }

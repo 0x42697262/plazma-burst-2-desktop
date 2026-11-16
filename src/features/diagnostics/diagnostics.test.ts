@@ -187,7 +187,7 @@ test('login, cookies and IPs are included by default and gated by their capabili
   assert.deepEqual(localIps({ lo: [{ address: '127.0.0.1', internal: true } as any], eth0: [{ address: '192.0.2.10', internal: false } as any, { address: '2001:db8::1', internal: false } as any] }), ['192.0.2.10', '2001:db8::1']);
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-diagnostics-'));
   const make = (enabled: readonly string[]) => createDiagnosticsWrapper(
-    { log: { info: () => undefined, warn: () => undefined, error: () => undefined }, isCapabilityOn: (id: string) => enabled.includes(id), gameVersion: 'v1', isSadburst: false, repoRoot: folder, gameDir: folder, devKvFile: '', host: '' } as never,
+    { log: { info: () => undefined, warn: () => undefined, error: () => undefined }, isCapabilityOn: (id: string) => enabled.includes(id), gameVersion: 'v1', client: 'official', repoRoot: folder, gameDir: folder, devKvFile: '', host: '' } as never,
     {
       client: 'official',
       appVersion: '1.0.0',

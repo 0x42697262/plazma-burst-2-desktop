@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { FETCH_OPCODES } from './paths.ts';
-import { FLAG, clientFor, withoutClientFlag, type GameClient } from '#kernel/config/clients.ts';
+import { clientFor, withoutClientFlag, type GameClient } from '#kernel/config/clients.ts';
 import { CLIENT } from '#shared/features/keys.ts';
 import { run as findNames } from '../find-names/run.ts';
 import { run as findSadburstNames } from '../find-names/sadburst.ts';
@@ -54,12 +54,12 @@ async function mainSadburst(client: GameClient, options: Options): Promise<void>
   printProblems(fetched.problems);
   if (!options.names) return;
   console.log(TEXT.findingNames);
-  const names = findSadburstNames({ gameDir: options.out });
+  const names = findSadburstNames({ gameDir: options.out, client });
   if (names.missing.length || names.problems.length) {
     console.log(TEXT.sadburstNamesMissing);
     process.exitCode = PROBLEM_EXIT_CODE;
   }
-  fetchOpcodes([FLAG], TEXT.sadburstOpcodesNotUpdated);
+  fetchOpcodes([client.flag], TEXT.sadburstOpcodesNotUpdated(client.fetchFlag));
 }
 
 async function main(): Promise<void> {
@@ -69,7 +69,7 @@ async function main(): Promise<void> {
     console.log(TEXT.usage);
     return;
   }
-  if (client.id === CLIENT.sadburst) {
+  if (client.bundled) {
     await mainSadburst(client, options);
     return;
   }

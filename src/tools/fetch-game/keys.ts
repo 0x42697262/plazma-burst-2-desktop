@@ -37,7 +37,7 @@ export const spriteFrame = (name: string, frame: string): string => `${name}/fra
 export const LANGUAGE_DEFAULT = 'en';
 export const INDEX_FILE = 'index.html';
 export const VERSION_JSON = 'pb2-version.json';
-export const SADBURST_VERSION = (build: string | null): string => `sadburst-${build || 'unknown'}`;
+export const SADBURST_VERSION = (prefix: string, build: string | null): string => `${prefix}${build || 'unknown'}`;
 export const DOWNLOAD_SUFFIX = '.download';
 export const PREVIOUS_SUFFIX = '.previous';
 export const CURRENT_FOLDER = /^\.\//;

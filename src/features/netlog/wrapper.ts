@@ -8,6 +8,6 @@ export function netlogWrapper(deps: WrapperDeps): WrapperFeature {
   const files = createNetLogFiles({ dir: NETLOG_DIR, version: deps.gameVersion });
   return Object.freeze({
     id: FEATURE.netlog,
-    routes: netlogRoutes({ files, repoRoot: deps.repoRoot, isSadburst: deps.isSadburst, log: deps.log }),
+    routes: netlogRoutes({ files, repoRoot: deps.repoRoot, client: deps.client, log: deps.log }),
   });
 }

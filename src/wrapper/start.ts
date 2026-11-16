@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { app } from 'electron';
 import { CLIENTS } from '#kernel/config/clients.ts';
-import { CLIENT, MODE } from '#shared/features/keys.ts';
+import { MODE } from '#shared/features/keys.ts';
 import type { WrapperContext } from './context.ts';
 import { WRAPPER_PARTS } from './features.ts';
 import { startApp } from './app.ts';
@@ -14,7 +14,7 @@ export function start(context: WrapperContext): void {
   const { remotePlayPart, gameSetupPart } = WRAPPER_PARTS;
   const client = CLIENTS[environment.client];
   if (environment.mode === MODE.remote && remotePlayPart) app.commandLine.appendSwitch(remotePlayPart.scaleFactorSwitch, remotePlayPart.scaleFactorOne);
-  const isRefusedClient = client.id === CLIENT.sadburst && !flags.client_sadburst.on;
+  const isRefusedClient = client.feature !== null && !flags[client.feature].on;
   const preparesGame = gameSetupPart !== undefined && flags.game_setup.on && !environment.gameDir && !isRefusedClient;
   app.on(WINDOW_ALL_CLOSED, keepRunningWhileTheGameIsPrepared);
   app.whenReady()

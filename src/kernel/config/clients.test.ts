@@ -1,5 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import path from 'node:path';
+import { clientOfVersion } from '#shared/clients/keys.ts';
 import { CLIENTS, clientFor, wantsSadburst, withoutClientFlag } from './clients.ts';
 
 test('every command is for the official client unless --sadburst is asked for', () => {
@@ -10,6 +12,14 @@ test('every command is for the official client unless --sadburst is asked for', 
   assert.equal(wantsSadburst([], { npm_config_sadburst: 'false' }), false);
   assert.equal(wantsSadburst([], { npm_config_sadburst: '0' }), false);
   assert.deepEqual(withoutClientFlag(['--sadburst', 'v1', '--out', 'x']), ['v1', '--out', 'x']);
+});
+
+test('--sadburst-erich5 is its own client, and does not count as --sadburst', () => {
+  assert.equal(clientFor(['node', 'x', '--sadburst-erich5'], {}).id, 'sadburst_erich5');
+  assert.equal(clientFor([], { npm_config_sadburst_erich5: 'true' }).id, 'sadburst_erich5');
+  assert.equal(clientFor([], { npm_config_sadburst_erich5: 'false' }).id, 'official');
+  assert.equal(wantsSadburst(['--sadburst-erich5'], {}), false);
+  assert.deepEqual(withoutClientFlag(['--sadburst-erich5', 'v1', '--sadburst']), ['v1']);
 });
 
 test('each client keeps its own files, settings, session and page', () => {
@@ -26,8 +36,29 @@ test('each client keeps its own files, settings, session and page', () => {
   assert.equal(sadburst.runFlag, ' -- --sadburst');
 });
 
+test('Sad Burst 2 for the official servers keeps its own files, settings, session and page', () => {
+  const { sadburst, sadburst_erich5: erich5 } = CLIENTS;
+  for (const field of ['gameDir', 'names', 'opcodes', 'settingsFileName', 'partition'] as const) assert.notEqual(erich5[field], sadburst[field], field);
+  assert.equal(erich5.partition, 'persist:sadburst-erich5');
+  assert.equal(erich5.gamePrefix('v123'), '/gameplay_erich5/');
+  assert.equal(erich5.host, sadburst.host);
+  assert.equal(erich5.runFlag, ' -- --sadburst-erich5');
+  assert.equal(erich5.feature, 'client_sadburst_erich5');
+  assert.equal(erich5.bundled, true);
+  assert.equal(path.basename(erich5.names), erich5.namesFileName);
+});
+
+test('a game version tells the page which client it is', () => {
+  assert.equal(clientOfVersion('v1769098419'), 'official');
+  assert.equal(clientOfVersion('sadburst-20261030020533'), 'sadburst');
+  assert.equal(clientOfVersion('erich5-20261108195354'), 'sadburst_erich5');
+  assert.equal(clientOfVersion(undefined), 'official');
+});
+
 test('switching clients changes only the client flag, so the app starts again as the other one', async () => {
   const { argsForClient } = await import('./clients.ts');
   assert.deepEqual(argsForClient(['.', '--verbose'], 'sadburst'), ['.', '--verbose', '--sadburst']);
   assert.deepEqual(argsForClient(['.', '--sadburst', '--verbose'], 'official'), ['.', '--verbose']);
+  assert.deepEqual(argsForClient(['.', '--sadburst'], 'sadburst_erich5'), ['.', '--sadburst-erich5']);
+  assert.deepEqual(argsForClient(['.', '--sadburst-erich5'], 'sadburst'), ['.', '--sadburst']);
 });

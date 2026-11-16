@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { CLIENTS, clientFor, withoutClientFlag } from '#kernel/config/clients.ts';
-import { CLIENT } from '#shared/features/keys.ts';
+import { clientFor, withoutClientFlag } from '#kernel/config/clients.ts';
 import { ARG, TEXT_ENCODING } from './keys.ts';
 import { TEXT } from './text.ts';
 import { decode, loadStrings } from './find-names.ts';
@@ -32,21 +31,21 @@ function parseArgs(args: readonly string[]): Options | null {
 }
 
 function main(): void {
-  const isSadburst = clientFor().id === CLIENT.sadburst;
+  const client = clientFor();
+  const isSadburst = client.bundled;
   const options = parseArgs(withoutClientFlag(process.argv.slice(FIRST_USER_ARGUMENT)));
   if (!options) {
     console.log(TEXT.usage);
     return;
   }
   if (options.decode) {
-    const client = isSadburst ? CLIENTS.sadburst : CLIENTS.official;
     const gameDir = path.resolve(options.gameDir || client.gameDir);
     const source = fs.readFileSync(path.join(gameDir, options.decode), TEXT_ENCODING);
     const strings = isSadburst ? loadCode(gameDir).strings : loadStrings(gameDir);
     process.stdout.write(decode(source, strings));
     return;
   }
-  const result = isSadburst ? runSadburst(options) : run(options);
+  const result = isSadburst ? runSadburst({ ...options, client }) : run(options);
   process.exitCode = result.missing.length || result.problems.length ? PROBLEM_EXIT_CODE : 0;
 }
 

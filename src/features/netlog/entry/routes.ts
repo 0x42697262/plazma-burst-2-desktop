@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { ROUTE_NAME } from '#shared/contract/keys.ts';
+import type { ClientId } from '#shared/features/keys.ts';
 import { HTTP_METHOD, STATUS } from '#wrapper/http/keys.ts';
 import { errorResponse, jsonResponse, notFound, textResponse } from '#wrapper/http/responses.ts';
 import type { DevRoute, RequestContext } from '#wrapper/feature-types.ts';
@@ -11,7 +12,7 @@ import { ROUTE_TEXT } from '../text.ts';
 import { instanceFor, type InstanceContext } from '../domain/log-file.ts';
 import { StatusError, type NetLogFiles } from '../adapters/log-files.ts';
 
-export type NetlogRouteDeps = { files: NetLogFiles; repoRoot: string; isSadburst: boolean; log: Logger };
+export type NetlogRouteDeps = { files: NetLogFiles; repoRoot: string; client: ClientId; log: Logger };
 
 const instanceContextOf = (context: RequestContext): InstanceContext => ({
   remote: context.remote === true,
@@ -19,8 +20,8 @@ const instanceContextOf = (context: RequestContext): InstanceContext => ({
   name: typeof context.name === 'string' ? context.name : '',
 });
 
-export function netlogRoutes({ files, repoRoot, isSadburst, log }: NetlogRouteDeps): DevRoute[] {
-  const instanceOf = (context: RequestContext): string => instanceFor(instanceContextOf(context), isSadburst);
+export function netlogRoutes({ files, repoRoot, client, log }: NetlogRouteDeps): DevRoute[] {
+  const instanceOf = (context: RequestContext): string => instanceFor(instanceContextOf(context), client);
   const fileOf = (run: string): string => path.relative(repoRoot, path.join(files.dir, run + LOG_FILE_EXTENSION));
 
   async function append(request: Request, _url: URL, context: RequestContext): Promise<Response> {

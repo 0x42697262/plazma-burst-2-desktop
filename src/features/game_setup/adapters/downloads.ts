@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import { CLIENT } from '#shared/features/keys.ts';
 import type { GameClient } from '#kernel/config/clients.ts';
 import { readGameVersion } from '#wrapper/platform/game-files.ts';
 import { NAMES_VERSION } from '#wrapper/platform/keys.ts';
@@ -22,7 +21,7 @@ function namesVersion(file: string): string | null {
 export type Lines = Readonly<{ say(line: string): void; note(line: string): void }>;
 
 export function downloadsFor(client: GameClient, gameDir: string, checksForUpdates: boolean, { say, note }: Lines): GameSetupDeps {
-  const isSadburst = client.id === CLIENT.sadburst;
+  const isSadburst = client.bundled;
   const localVersion = (): string | null => readGameVersion(gameDir, null);
   return Object.freeze({
     localVersion,
@@ -32,7 +31,7 @@ export function downloadsFor(client: GameClient, gameDir: string, checksForUpdat
       ? (await fetchSadburst(client, { out: gameDir, say })).problems
       : fetchOfficial({ version: version ?? await latestVersion(), out: gameDir, jobs: JOBS, say })),
     namesMatchGame: () => namesVersion(client.names) !== null && namesVersion(client.names) === localVersion(),
-    findNames: () => (isSadburst ? findSadburstNames({ gameDir, say }) : findOfficialNames({ gameDir, out: client.names, say })),
+    findNames: () => (isSadburst ? findSadburstNames({ gameDir, client, say }) : findOfficialNames({ gameDir, out: client.names, say })),
     say,
     note,
   });

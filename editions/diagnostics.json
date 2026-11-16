@@ -8,6 +8,7 @@
     "lobby_task_guard",
     "cert_pinning",
     "client_sadburst",
+    "client_sadburst_erich5",
     "game_setup",
     "dev_console",
     "console_core"

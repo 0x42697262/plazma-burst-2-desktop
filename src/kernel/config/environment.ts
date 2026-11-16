@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { OTHER_CLIENT_LIST } from '#shared/clients/keys.ts';
 import { CLIENT, FEATURE, MODE, type ClientId, type Mode } from '#shared/features/keys.ts';
 import type { FeatureToggle } from '#shared/features/types.ts';
 import { DEFAULT_LOG_FORMAT, LOG_FORMATS, type LogFormat, type LogLevel } from '#kernel/log/constants.ts';
@@ -39,14 +40,16 @@ const environmentSchema = z.object({
   [ENV.uid]: optionalText,
   [ENV.diagnosticsUrl]: optionalText,
   [ENV.diagnosticsKey]: optionalText,
-  [ENV.npmSadburst]: optionalText,
 });
 
 const isLogFormat = (value: string): value is LogFormat => (LOG_FORMATS as readonly string[]).includes(value);
 
-export function clientOf(argv: readonly string[], npmSadburst: string | undefined): ClientId {
-  const npmAskedForSadburst = npmSadburst !== undefined && npmSadburst !== FALSE_VALUE && npmSadburst !== DISABLED_VALUE;
-  return argv.includes(ARG.sadburst) || npmAskedForSadburst ? CLIENT.sadburst : CLIENT.official;
+export function clientOf(argv: readonly string[], variables: EnvironmentVariables): ClientId {
+  const asked = OTHER_CLIENT_LIST.find((details) => {
+    const fromNpm = variables[details.npmVariable];
+    return argv.includes(details.flag) || (fromNpm !== undefined && fromNpm !== FALSE_VALUE && fromNpm !== DISABLED_VALUE);
+  });
+  return asked?.id ?? CLIENT.official;
 }
 
 function modeOf(argv: readonly string[]): Mode {
@@ -90,7 +93,7 @@ export function parseEnvironment(argv: readonly string[], env: EnvironmentVariab
   const logLevel = parseLogLevel(argv, env);
   if (logLevel.problem) problems.push(logLevel.problem);
   const environment: Environment = Object.freeze({
-    client: clientOf(argv, variables[ENV.npmSadburst]),
+    client: clientOf(argv, env),
     mode: modeOf(argv),
     gameDir: nonEmpty(variables[ENV.gameDir]),
     gameVersion: nonEmpty(variables[ENV.gameVersion]),

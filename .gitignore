@@ -8,6 +8,10 @@ node_modules/
 /game.sadburst/
 /game.sadburst.previous/
 /game.sadburst.download/
+# Sad Burst 2 for the official servers ("npm run fetch-game -- --sadburst-erich5").
+/game.sadburst-erich5/
+/game.sadburst-erich5.previous/
+/game.sadburst-erich5.download/
 
 # Local data (docs/operations/running.md, "Local data"): settings, logins, saved maps,
 # servers, testers, network logs, fingerprinters, screenshots, the generated names.js and

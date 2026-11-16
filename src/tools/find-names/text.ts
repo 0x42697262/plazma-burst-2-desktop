@@ -21,8 +21,8 @@ export const TEXT = Object.freeze({
   found: (count: number, total: number, folder: string, version: string) => `Found ${count} of ${total} names in ${folder} (version ${version}).`,
   problem: (problem: string) => `  problem: ${problem}`,
   wrote: (file: string) => `Wrote ${file}`,
-  usage: 'Usage: npm run find-names -- [--sadburst] [gameDir] [--out file] [--check] [--decode file]',
-  sadburstMissing: (folder: string) => `No Sad Burst 2 files in ${folder}. Run "npm run fetch-game -- --sadburst" first.`,
+  usage: 'Usage: npm run find-names -- [--sadburst | --sadburst-erich5] [gameDir] [--out file] [--check] [--decode file]',
+  sadburstMissing: (folder: string, title: string, flag: string) => `No ${title} files in ${folder}. Run "npm run fetch-game -- ${flag}" first.`,
   sadburstFound: (count: number, total: number, folder: string, version: string, byPattern: number, same: number) =>
     `Found ${count} of ${total} names in ${folder} (${version}): ${byPattern} by pattern, ${same} the same as the official client's.`,
   notFoundList: (keys: readonly string[]) => `  not found: ${keys.join(', ')}`,

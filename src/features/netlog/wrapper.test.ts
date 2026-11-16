@@ -75,7 +75,7 @@ test('the routes: append, list and read; a tester sees only their own file; brok
   const context = setup();
   try {
     const files = createNetLogFiles({ dir: context.dir, now: () => T0 });
-    const router = createDevRouter([{ id: 'netlog', routes: netlogRoutes({ files, repoRoot: path.dirname(context.dir), isSadburst: false, log: createLogger('error', quiet) }) }], () => true);
+    const router = createDevRouter([{ id: 'netlog', routes: netlogRoutes({ files, repoRoot: path.dirname(context.dir), client: 'official', log: createLogger('error', quiet) }) }], () => true);
     const url = (route: string) => new URL(`https://example.test/__dev/${route}`);
     const post = (body: string) => new Request(url('netlog'), { method: 'POST', body });
     const call = async (route: string, request: Request, requestContext = {}) => router(route, request, new URL(request.url), requestContext);
@@ -103,7 +103,7 @@ test('with the netlog flag off, its routes are not served', async () => {
   const context = setup();
   try {
     const files = createNetLogFiles({ dir: context.dir, now: () => T0 });
-    const router = createDevRouter([{ id: 'netlog', routes: netlogRoutes({ files, repoRoot: context.dir, isSadburst: false, log: createLogger('error', quiet) }) }], (id) => id !== 'netlog');
+    const router = createDevRouter([{ id: 'netlog', routes: netlogRoutes({ files, repoRoot: context.dir, client: 'official', log: createLogger('error', quiet) }) }], (id) => id !== 'netlog');
     const request = new Request('https://example.test/__dev/netlog', { method: 'POST', body: '["x"]' });
     assert.equal(await router('netlog', request, new URL(request.url), {}), null);
     assert.deepEqual(fs.readdirSync(context.dir), [], 'nothing written');

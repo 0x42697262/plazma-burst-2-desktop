@@ -79,12 +79,12 @@ export function createGameFiles({ root, log, keepMissing }: { root: string; log:
   return { serveFile };
 }
 
-export async function checkSadburstBuild({ root, site, prefix, log, fetchLive }: { root: string; site: string; prefix: string; log: Logger; fetchLive: (url: string) => Promise<Response> }): Promise<void> {
+export async function checkSadburstBuild({ root, site, prefix, title, folder, fetchFlag, log, fetchLive }: { root: string; site: string; prefix: string; title: string; folder: string; fetchFlag: string; log: Logger; fetchLive: (url: string) => Promise<Response> }): Promise<void> {
   try {
     const local = readVersionFile(root).build;
     const response = await fetchLive(site + prefix + ASSET_VERSION_FILE);
     const live = response.ok ? (await response.text()).trim().split(LINES)[0] : null;
-    if (live && local && live !== local) log.warn(TEXT.newerBuild(live, local));
+    if (live && local && live !== local) log.warn(TEXT.newerBuild(title, live, local, folder, fetchFlag));
   } catch {
     return;
   }

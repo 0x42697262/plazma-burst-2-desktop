@@ -3,7 +3,6 @@ export const PAGE_GLOBAL = Object.freeze({
   server: 'PB2_SERVER',
   names: 'PB2_NAMES',
 });
-export const SADBURST_NAMES_VERSION_PREFIX = 'sadburst-';
 export const PAGE_API_GLOBAL = 'pb2dev';
 export const FRAME_GUARD_LABEL = 'Frame';
 export const KEY_DOWN_EVENT = 'keydown';

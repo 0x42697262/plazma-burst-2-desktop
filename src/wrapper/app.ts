@@ -39,7 +39,8 @@ const ignore = (): void => undefined;
 
 export function startApp({ environment, flags, capabilities, log }: WrapperContext): void {
   const client = CLIENTS[environment.client];
-  const isSadburst = client.id === CLIENT.sadburst;
+  const isBundled = client.bundled;
+  const usesSadburstAccounts = client.id === CLIENT.sadburst;
   const isRemoteHost = environment.mode === MODE.remote;
   const isDedicatedHost = environment.mode === MODE.server;
   const { remotePlayPart, p2pHostPart, serverListPart } = WRAPPER_PARTS;
@@ -63,7 +64,7 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
   const gameSession = (): Session => (client.partition ? session.fromPartition(client.partition) : session.defaultSession);
 
   const otherClients = Object.values(CLIENTS)
-    .filter((other) => other.id !== client.id && (other.id !== CLIENT.sadburst || flags.client_sadburst.on))
+    .filter((other) => other.id !== client.id && (other.feature === null || flags[other.feature].on))
     .map((other) => Object.freeze({ id: other.id, title: other.title, host: other.host }));
   const switchClient = (id: string): void => {
     const chosen = Object.values(CLIENTS).find((other) => other.id === id);
@@ -82,7 +83,7 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
   });
   let sessionCookies: { login: string | null; password: string | null; pb2uid: string | null } = { login: null, password: null, pb2uid: null };
   async function refreshSessionCookies(): Promise<void> {
-    if (!flags.login.on || isSadburst) {
+    if (!flags.login.on || isBundled) {
       sessionCookies = { login: null, password: null, pb2uid: null };
       return;
     }
@@ -114,7 +115,7 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
 
   const wrapper = buildWrapper(
     WRAPPER_PARTS,
-    { log, isCapabilityOn: (id: string) => capabilities[id]?.on ?? false, gameVersion: version || '', isSadburst, repoRoot: USER_ROOT, gameDir: root, devKvFile: devSettingsFile, host },
+    { log, isCapabilityOn: (id: string) => capabilities[id]?.on ?? false, gameVersion: version || '', client: client.id, repoRoot: USER_ROOT, gameDir: root, devKvFile: devSettingsFile, host },
     {
       hooks: { namesFile: client.names, gamePrefix: prefix },
       gameSession: {
@@ -159,7 +160,7 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
     consoleOn: devConsoleOn,
     router: createDevRouter(wrapper.features, isOn),
   });
-  const gameFiles = createGameFiles({ root, log, keepMissing: isSadburst });
+  const gameFiles = createGameFiles({ root, log, keepMissing: isBundled });
 
   const callConsole = (method: string, argument: unknown): void => {
     mainWindow?.webContents.executeJavaScript(callConsoleScript(method, argument)).catch(ignore);
@@ -182,7 +183,7 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
   const localContext: PageContext = {
     remote: false,
     name: '',
-    fetch: (request) => (isSadburst ? gameSession().fetch(request, { bypassCustomProtocolHandlers: true }) : net.fetch(request, { bypassCustomProtocolHandlers: true })),
+    fetch: (request) => (isBundled ? gameSession().fetch(request, { bypassCustomProtocolHandlers: true }) : net.fetch(request, { bypassCustomProtocolHandlers: true })),
     kvFile: devSettings,
     get window() { return mainWindow; },
   };
@@ -204,9 +205,9 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
       serverPage,
       remoteScript: context.remote ? remotePlayPart?.pageScript ?? null : null,
       remoteNotMarked: remotePlayPart?.notMarked ?? '',
-      verbose: log.on(DEBUG_LEVEL) && !isSadburst,
+      verbose: log.on(DEBUG_LEVEL) && !isBundled,
       isServer: !!context.server,
-      accountScript: isSadburst ? login.sadburstStartupScript() : null,
+      accountScript: usesSadburstAccounts ? login.sadburstStartupScript() : null,
     });
     for (const error of prepared.errors) log.error(error);
     for (const warning of prepared.warnings) log.warn(warning);
@@ -216,7 +217,7 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
   async function serveLocal(url: URL, context: PageContext): Promise<Response> {
     let relative = decodeURIComponent(url.pathname.slice(prefix.length));
     if (relative === '' || relative.endsWith(FOLDER_END)) relative += INDEX_FILE;
-    const preparesIndex = pageCoreOn || hooksOn || context.remote || !!context.server || !!joinTarget() || (isSadburst && flags.login.on);
+    const preparesIndex = pageCoreOn || hooksOn || context.remote || !!context.server || !!joinTarget() || (usesSadburstAccounts && flags.login.on);
     if (preparesIndex && relative === INDEX_FILE) return serveIndex(context);
     const hooked = hooksOn && wrapper.hooks ? wrapper.hooks.changedScript(relative) : null;
     if (hooked !== null) return typedResponse(hooked, SCRIPT_TYPE, false);
@@ -253,12 +254,12 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
 
   function refuseToStart(): boolean {
     const isMissingGame = !version || !fsSync.existsSync(path.join(root, INDEX_FILE));
-    if (isSadburst && !flags.client_sadburst.on) log.error(SADBURST_TEXT.flagOff);
+    if (client.feature && !flags[client.feature].on) log.error(SADBURST_TEXT.flagOff(client.title, client.feature));
     else if (isMissingGame) {
       const message = TEXT.gameMissing(root, client.runFlag);
       log.error(message);
       dialog.showErrorBox(TEXT.gameMissingTitle(client.title), message);
-    } else if (isSadburst && (isRemoteHost || isDedicatedHost)) log.error(TEXT.sadburstHostModes);
+    } else if (isBundled && (isRemoteHost || isDedicatedHost)) log.error(TEXT.sadburstHostModes(client.title));
     else if (isRemoteHost && !flags.remote_play.on) log.error(remotePlayPart?.flagOff ?? TEXT.modeOff(FEATURE.remotePlay, flags.remote_play.reason));
     else if (isDedicatedHost && !flags.p2p_host.on) log.error(p2pHostPart?.flagOff ?? TEXT.modeOff(FEATURE.p2pHost, flags.p2p_host.reason));
     else return false;
@@ -291,7 +292,7 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
       height: MAIN_WINDOW.height,
       autoHideMenuBar: true,
       title: client.title,
-      webPreferences: isSadburst
+      webPreferences: isBundled
         ? { backgroundThrottling: false, partition: client.partition ?? undefined }
         : { backgroundThrottling: false, preload: serverListPart?.launcherPreload },
     });
@@ -316,10 +317,10 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
   async function onReady(): Promise<void> {
     if (refuseToStart()) return;
     if (devConsoleOn && seedKvFile(devSettingsFile, EDITION_DEFAULTS.settings)) log.info(TEXT.settingsSeeded(path.relative(USER_ROOT, devSettingsFile)));
-    log.info(TEXT.gameFrom(isSadburst ? TEXT.clientPrefix(client.title) : '', version ?? '', root));
-    if (isSadburst) {
-      if (flags.hooks.source === CONSTRAINT_SOURCE) log.info(TEXT.sadburstHooksOff);
-      void checkSadburstBuild({ root, site: client.site, prefix, log, fetchLive: (url) => net.fetch(url, { bypassCustomProtocolHandlers: true, cache: NO_STORE }) });
+    log.info(TEXT.gameFrom(isBundled ? TEXT.clientPrefix(client.title) : '', version ?? '', root));
+    if (isBundled) {
+      if (flags.hooks.source === CONSTRAINT_SOURCE) log.info(TEXT.sadburstHooksOff(client.title));
+      void checkSadburstBuild({ root, site: client.site, prefix, title: client.title, folder: path.basename(client.gameDir), fetchFlag: client.fetchFlag, log, fetchLive: (url) => net.fetch(url, { bypassCustomProtocolHandlers: true, cache: NO_STORE }) });
     }
     log.debug(TEXT.debugLevel);
     if (pageCoreOn) {
@@ -333,7 +334,7 @@ export function startApp({ environment, flags, capabilities, log }: WrapperConte
 
     const pageContext = isDedicatedHost ? serverContext : localContext;
     const handler = (request: Request): Promise<Response> => handleRequestLogged(request, pageContext);
-    if (isSadburst) gameSession().protocol.handle(HTTPS_SCHEME, handler);
+    if (isBundled) gameSession().protocol.handle(HTTPS_SCHEME, handler);
     else protocol.handle(HTTPS_SCHEME, handler);
     buildMenu();
 
