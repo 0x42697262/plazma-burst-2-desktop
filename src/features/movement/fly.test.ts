@@ -78,34 +78,45 @@ test('"fly" is still the key: on, free, off and plain "fly" behave as before', (
   assert.ok(game.run('fly sweep').includes('fly = sweep'));
 });
 
-test('"fly sweep --on" flips the aim source left and right of you every tick, at 60 FPS with high physics only', () => {
+test('"fly sweep --on" flips your aim left and right of you every tick, and the game\'s crosshair stays on your pointer', () => {
   const { globals, names, player } = game;
   globals[names.fpsChoice] = 3;
   globals[names.lowPhysics] = false;
   globals[names.zoom] = 1;
   globals.game.x = 0;
+  globals.myCursor = { x: 0, y: 0 };
+  globals.mouseX = 300;
+  globals.mouseY = 150;
   player.x = 100;
   game.run('fly_sweep_range 500');
   assert.ok(game.run('fly sweep --on').some((line) => line.startsWith('Sweeping 500')));
+  const aims: number[] = [];
+  for (let frame = 0; frame < 2; frame++) {
+    game.frame();
+    aims.push(globals[names.aimSourceX] as number);
+    assert.deepEqual([globals.mouseX, globals.mouseY], [0, 0], 'the mouse is held at 0, so the game neither copies it into your aim nor moves its crosshair');
+    assert.deepEqual([globals.myCursor.x, globals.myCursor.y], [300, 150], 'the crosshair stays on your pointer');
+    assert.equal(globals[names.aimSourceY], 150, 'aiming height still follows your pointer');
+  }
+  assert.deepEqual(aims.sort((left, right) => left - right), [-400, 600], 'one tick each side of x=100');
+  globals.mouseX = 320;
+  globals.mouseY = 160;
   game.frame();
-  const first = globals.mouseX as number;
-  game.frame();
-  const second = globals.mouseX as number;
-  assert.deepEqual([first, second].sort((left, right) => left - right), [1, 600], 'one tick each side of x=100, kept on the stage like a real cursor');
+  assert.deepEqual([globals.myCursor.x, globals.myCursor.y], [320, 160], 'moving the pointer still moves the crosshair');
   globals[names.lowPhysics] = true;
-  globals.mouseX = 7;
   game.frame();
-  assert.equal(globals.mouseX, 7, 'low physics: no sweep');
+  assert.deepEqual([globals.mouseX, globals.mouseY], [320, 160], 'low physics: no sweep, your pointer is given back');
   globals[names.lowPhysics] = false;
-  globals.MovieClip = { schedule_mouse_move_event: false };
+  game.frame();
   assert.ok(game.run('fly sweep --off').includes('Sweep stopped'));
-  assert.equal(globals.MovieClip.schedule_mouse_move_event, true, 'stopping asks the game to read the real pointer again');
+  assert.deepEqual([globals.mouseX, globals.mouseY], [320, 160], 'stopped: your pointer is given back');
+  globals[names.aimSourceX] = 7;
   game.frame();
-  assert.equal(globals.mouseX, 7, 'stopped');
+  assert.equal(globals[names.aimSourceX], 7, 'stopped');
   assert.ok(game.run('fly sweep --toggle').some((line) => line.startsWith('Sweeping')));
-  game.run('fly off');
   game.frame();
-  assert.equal(globals.mouseX, 7, 'another fly mode stops the sweep');
+  game.run('fly off');
+  assert.deepEqual([globals.mouseX, globals.mouseY], [320, 160], 'another fly mode stops it and gives the pointer back');
   assert.match(errorsOf(game.run('fly free --on')).join('\n'), /usage: fly/);
 });
 

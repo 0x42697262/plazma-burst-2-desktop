@@ -135,10 +135,14 @@ export const game = {
     if (name !== null) writeGlobal(name, isUnlimited);
     return name !== null;
   },
-  setMouseX: (stageX: number): void => { writeGlobal(GAME_GLOBAL.mouseX, stageX); },
-  rereadMouse: (): void => {
-    const movieClip = readGlobal(GAME_GLOBAL.movieClip) as { schedule_mouse_move_event?: boolean } | undefined;
-    if (movieClip) movieClip.schedule_mouse_move_event = true;
+  mouse: (): { x: number; y: number } => ({ x: Number(readGlobal(GAME_GLOBAL.mouseX)) || 0, y: Number(readGlobal(GAME_GLOBAL.mouseY)) || 0 }),
+  setMouse: (stageX: number, stageY: number): void => { writeGlobal(GAME_GLOBAL.mouseX, stageX); writeGlobal(GAME_GLOBAL.mouseY, stageY); },
+  setAimSource: (stageX: number, stageY: number): void => { write('aimSourceX', stageX); write('aimSourceY', stageY); },
+  placeCursor: (stageX: number, stageY: number): void => {
+    const cursor = readGlobal(GAME_GLOBAL.cursor) as { x?: number; y?: number } | undefined;
+    if (!cursor) return;
+    cursor.x = stageX;
+    cursor.y = stageY;
   },
   getGravity: (): unknown => readGlobal(GAME_GLOBAL.gravity),
   setGravity: (gravity: unknown): void => { writeGlobal(GAME_GLOBAL.gravity, gravity); },

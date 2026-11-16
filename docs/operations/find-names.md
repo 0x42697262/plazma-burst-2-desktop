@@ -76,6 +76,7 @@ String constants are matched as literals: the game keeps them in `_strings.js` a
 
 - `fpsChoice`, `lowPhysics`: The game saves its options in a table that names each one (`"framerate"`, `"lite_phys"`) next to the global that holds it, in backticks; the pattern reads the global from there.
 - `applyFps`: The function the Esc menu's FPS buttons call after setting `fpsChoice`: it sets the stage frame rate to 20, 30 or 60.
+- `aimSourceX, aimSourceY`: Each tick the game copies the mouse into these two (`if(mouseX!=0||mouseY!=0)`); the same tick turns them into the character's aim. The other `mouseX` copy (the drawn cursor) writes `myCursor`, so the pattern does not match it. `fly sweep` writes them.
 - `syncPointHistory`: Copies every physics point's position to its previous one: a loop over `ptCount` that copies `ptX` and `ptY`. Sad Burst's Esc menu calls it when the physics quality changes.
 
 ### Input, chat, multiplayer, map

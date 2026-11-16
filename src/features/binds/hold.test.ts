@@ -16,14 +16,14 @@ test('a held bind runs --on while the key is down and --off when it comes up, ev
   assert.ok(game.run('bind').some((line) => line.includes('ctrl+t (hold)')));
   game.dispatch(null, 'keydown', { ...key('KeyT'), ctrlKey: true });
   assert.ok(game.run('get fly').includes('fly = sweep'), 'pressed: --on armed it');
-  globals.mouseX = 0;
+  globals[names.aimSourceX] = 7;
   game.frame();
-  assert.notEqual(globals.mouseX, 0, 'sweeping while held');
+  assert.notEqual(globals[names.aimSourceX], 7, 'sweeping while held');
   game.dispatch(null, 'keydown', { ...key('KeyT'), ctrlKey: true, repeat: true });
   game.dispatch(null, 'keyup', { ...key('KeyT'), ctrlKey: false });
-  globals.mouseX = 0;
+  globals[names.aimSourceX] = 7;
   game.frame();
-  assert.equal(globals.mouseX, 0, 'let go: stopped, though ctrl came up first');
+  assert.equal(globals[names.aimSourceX], 7, 'let go: stopped, though ctrl came up first');
   game.run('unbind ctrl+t; fly off');
 });
 
