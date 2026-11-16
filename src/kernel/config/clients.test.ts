@@ -2,15 +2,15 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { clientOfVersion } from '#shared/clients/keys.ts';
-import { CLIENTS, clientFor, wantsSadburst, withoutClientFlag } from './clients.ts';
+import { CLIENTS, clientFor, withoutClientFlag } from './clients.ts';
 
 test('every command is for the official client unless --sadburst is asked for', () => {
   assert.equal(clientFor(['node', 'x'], {}).id, 'official');
   assert.equal(clientFor(['node', 'x', '--sadburst'], {}).id, 'sadburst');
-  assert.equal(wantsSadburst([], { npm_config_sadburst: 'true' }), true);
-  assert.equal(wantsSadburst([], { npm_config_sadburst: '' }), true);
-  assert.equal(wantsSadburst([], { npm_config_sadburst: 'false' }), false);
-  assert.equal(wantsSadburst([], { npm_config_sadburst: '0' }), false);
+  assert.equal(clientFor([], { npm_config_sadburst: 'true' }).id, 'sadburst');
+  assert.equal(clientFor([], { npm_config_sadburst: '' }).id, 'sadburst');
+  assert.equal(clientFor([], { npm_config_sadburst: 'false' }).id, 'official');
+  assert.equal(clientFor([], { npm_config_sadburst: '0' }).id, 'official');
   assert.deepEqual(withoutClientFlag(['--sadburst', 'v1', '--out', 'x']), ['v1', '--out', 'x']);
 });
 
@@ -18,7 +18,7 @@ test('--sadburst-erich5 is its own client, and does not count as --sadburst', ()
   assert.equal(clientFor(['node', 'x', '--sadburst-erich5'], {}).id, 'sadburst_erich5');
   assert.equal(clientFor([], { npm_config_sadburst_erich5: 'true' }).id, 'sadburst_erich5');
   assert.equal(clientFor([], { npm_config_sadburst_erich5: 'false' }).id, 'official');
-  assert.equal(wantsSadburst(['--sadburst-erich5'], {}), false);
+  assert.equal(clientFor(['--sadburst-erich5'], {}).id, 'sadburst_erich5');
   assert.deepEqual(withoutClientFlag(['--sadburst-erich5', 'v1', '--sadburst']), ['v1']);
 });
 

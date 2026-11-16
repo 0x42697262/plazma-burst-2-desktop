@@ -66,7 +66,7 @@ export function createClientRuntime(shared: SharedServices, client: GameClient) 
   const usesOfficialGate = client.id === CLIENT.sadburstErich5;
   const isRemoteHost = environment.mode === MODE.remote;
   const isDedicatedHost = environment.mode === MODE.server;
-  const { remotePlayPart, p2pHostPart, serverListPart } = WRAPPER_PARTS;
+  const { remotePlayPart, p2pHostPart } = WRAPPER_PARTS;
   const { root, version } = gameFolderOf(client, environment);
   const host = client.host;
   const prefix = client.gamePrefix(version);
@@ -81,7 +81,6 @@ export function createClientRuntime(shared: SharedServices, client: GameClient) 
 
   let mainWindow: BrowserWindow | null = null;
   let serverPage: ServerPage | null = null;
-  const liveWindow = (): BrowserWindow | null => (mainWindow && !mainWindow.isDestroyed() ? mainWindow : null);
   const gameSession = (): Session => (client.partition ? session.fromPartition(client.partition) : session.defaultSession);
 
   let sessionCookies: { login: string | null; password: string | null; pb2uid: string | null } = { login: null, password: null, pb2uid: null };
@@ -298,14 +297,11 @@ export function createClientRuntime(shared: SharedServices, client: GameClient) 
     client,
     flags,
     root,
-    version,
     startUrl,
     isMissing,
     install,
     openWindow,
     startRemoteHost,
     startDedicatedHost,
-    hasServerListPart: serverListPart !== undefined,
-    window: liveWindow,
   });
 }

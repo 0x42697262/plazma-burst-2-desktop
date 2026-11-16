@@ -1,7 +1,7 @@
 import path from 'node:path';
 import type { Logger } from '#kernel/log/logger.ts';
 import type { Credentials as EnvironmentCredentials } from '#kernel/config/environment.ts';
-import { CLIENT_DETAILS } from '#shared/clients/keys.ts';
+import { CLIENT_DETAILS, usesOfficialServers } from '#shared/clients/keys.ts';
 import { CLIENT, type ClientId } from '#shared/features/keys.ts';
 import { CREDENTIALS_FILE_NAME, OFFICIAL_LOGIN_URL, SADBURST_CREDENTIALS_FILE_NAME } from './keys.ts';
 import { TEXT } from './text.ts';
@@ -33,7 +33,7 @@ export function createLogin({ log, dataDir, host, fromEnvironment, isOn, keychai
   let startupDone = false;
 
   function bookOf(client: unknown): AccountBook {
-    if (client === CLIENT.official || client === CLIENT.sadburstErich5) return officialBook;
+    if (usesOfficialAccounts(client)) return officialBook;
     if (client === CLIENT.sadburst) return sadburstBook;
     throw new Error(TEXT.unknownClient(String(client)));
   }
@@ -63,7 +63,7 @@ export function createLogin({ log, dataDir, host, fromEnvironment, isOn, keychai
     return { login: merged.login ?? null, cookies: { login: merged.login ?? null, password: merged.password ?? null, pb2uid: merged.pb2uid ?? null } };
   }
 
-  const usesOfficialAccounts = (client: unknown): boolean => client === CLIENT.official || client === CLIENT.sadburstErich5;
+  const usesOfficialAccounts = (client: unknown): boolean => typeof client === 'string' && usesOfficialServers(client);
 
   async function logInNew(client: ClientId, typed: TypedLogin): Promise<string | null> {
     if (usesOfficialAccounts(client)) {

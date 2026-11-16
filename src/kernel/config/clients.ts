@@ -13,9 +13,6 @@ export const CLIENTS: Readonly<Record<ClientId, GameClient>> = Object.freeze({
 
 type Variables = Readonly<Record<string, string | undefined>>;
 
-export const wantsSadburst = (argv: readonly string[] = process.argv, variables: Variables = process.env): boolean =>
-  clientOf(argv, variables) === CLIENT.sadburst;
-
 export const clientFor = (argv: readonly string[] = process.argv, variables: Variables = process.env): GameClient =>
   CLIENTS[clientOf(argv, variables)];
 

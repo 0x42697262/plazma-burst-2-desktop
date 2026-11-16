@@ -6,7 +6,7 @@ import { CLIENT } from '#shared/features/keys.ts';
 import { run as findNames } from '../find-names/run.ts';
 import { run as findSadburstNames } from '../find-names/sadburst.ts';
 import { FAILED_EXIT_CODE, FIRST_USER_ARGUMENT, JOBS } from './constants.ts';
-import { ARG, INHERIT_OUTPUT, VERSION_ARGUMENT, VERSION_PREFIX } from './keys.ts';
+import { ARG, INHERIT_OUTPUT, VERSION_ARGUMENT } from './keys.ts';
 import { TEXT } from './text.ts';
 import { fetchOfficial, latestVersion } from './fetch-game.ts';
 import { fetchSadburst } from './sadburst.ts';
@@ -27,7 +27,7 @@ function parseArgs(args: readonly string[], client: GameClient): Options | null 
     else if (arg === ARG.noNames) options.names = false;
     else if (arg === ARG.jobs) options.jobs = Math.max(1, Number(args[++index]) || JOBS);
     else if (arg === ARG.help || arg === ARG.helpShort) return null;
-    else if (VERSION_ARGUMENT.test(arg) && client.id === CLIENT.official) options.version = arg.startsWith(VERSION_PREFIX) ? arg : VERSION_PREFIX + arg;
+    else if (VERSION_ARGUMENT.test(arg) && client.id === CLIENT.official) options.version = arg.startsWith(client.versionPrefix) ? arg : client.versionPrefix + arg;
     else throw new Error(TEXT.unknownArgument(arg));
   }
   return options;

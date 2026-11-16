@@ -60,7 +60,6 @@ export const URL_MARK = '://';
 export const PARENT_LINK = '../';
 export const REDIRECT_MANUAL = 'manual';
 export const VERSION_ARGUMENT = /^v?\d+$/;
-export const VERSION_PREFIX = 'v';
 export const REQUIRED_FILES: readonly string[] = Object.freeze(['_strings.js', 'scripts/frame2.js', 'scripts/main.js']);
 export const SOUNDS_MANIFEST_ENTRY = /src:\s*"([^"]+)"/g;
 export const SOUNDS_FOLDER = '/sounds/';

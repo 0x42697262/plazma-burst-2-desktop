@@ -37,7 +37,6 @@ export function createServerListWrapper(deps: WrapperDeps, session: GameSession,
   });
   const featureFor = (client: string): WrapperFeature => Object.freeze({ id: FEATURE.serverList, routes: [serverListRoute(serverListFor(service, client))] });
   return {
-    feature: featureFor(deps.client),
     featureFor,
     playOwn: (client: string) => service.operations.play(OFFICIAL_ID, client),
     service,

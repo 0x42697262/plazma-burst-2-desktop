@@ -15,10 +15,10 @@ export const LIST_TEXT = Object.freeze({
   fileProblem: (problem: string) => `data/servers.json: ${problem}`,
   unknownSubcommand: (word: string) => `unknown "servers ${word}". Type "help servers".`,
   usage: 'servers',
-  description: 'The server list: official and private servers, with ping',
+  description: 'The server list: this game\'s own servers and your private ones, with ping',
   about: [
     'The same list "npm start" opens before the game (data/servers.json), from here:',
-    'the official server and your private servers ("npm run server"), each checked for',
+    'this game\'s own servers and your private servers ("npm run server"), each checked for',
     'ping, players and description. A server is named by "official", its number in the',
     'list, or the start of its name or address.',
   ],
