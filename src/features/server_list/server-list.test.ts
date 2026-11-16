@@ -1,4 +1,6 @@
-import { OPERATIONS } from './keys.ts';
+import { IPC_CHANNEL, OPERATIONS } from './keys.ts';
+import { serverListFor, serverListRoute } from './entry/route.ts';
+import { registerServerListIpc } from './entry/ipc.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -10,7 +12,6 @@ import { parseStatusResponse } from './domain/status.ts';
 import { createServersStore, type ServersStore } from './adapters/servers-file.ts';
 import type { DefaultServer } from '#shared/editions/types.ts';
 import { createServerListService, type GameSession, type ServerListDeps } from './services/server-list.ts';
-import { serverListRoute } from './entry/route.ts';
 import type { ServerProbe } from './adapters/probe.ts';
 
 const FP = Array.from({ length: 32 }, (_, index) => index.toString(16).padStart(2, '0').toUpperCase()).join(':');
@@ -257,5 +258,35 @@ test('the list opens on the last client played; until one is played it is settle
     assert.equal(fresh.operations.list().client, 'sadburst');
     const started = serviceWith(context.store, [], 'sadburst_erich5').service;
     assert.deepEqual([started.operations.list().client, started.operations.list().isClientSettled], ['sadburst_erich5', true]);
+  } finally { context.cleanup(); }
+});
+
+test('the route a game page uses is bound to that page\'s client: the page cannot choose another one', async () => {
+  const context = tempStore();
+  try {
+    const { service, events } = serviceWith(context.store);
+    const route = serverListRoute(serverListFor(service, 'sadburst'));
+    const post = (body: unknown) => new Request('https://sadburst2.com/gameplay/__dev/servers', { method: 'POST', body: JSON.stringify(body) });
+    const url = new URL('https://sadburst2.com/gameplay/__dev/servers');
+    const listed = await (await route.handle(post({ op: 'list', arg: 'official' }), url, {})).json() as { value: { client: string } };
+    assert.equal(listed.value.client, 'sadburst', 'the arg is not a client');
+    await route.handle(post({ op: 'play', arg: 'official' }), url, {});
+    assert.ok(events.includes('prepare sadburst'));
+    assert.ok(!events.includes('prepare official'));
+  } finally { context.cleanup(); }
+});
+
+test('the launcher IPC passes the client on, and answers only the launcher page', async () => {
+  const context = tempStore();
+  try {
+    const { service, events } = serviceWith(context.store);
+    const handlers = new Map<string, (event: { senderFrame?: { url: string } | null }, ...args: unknown[]) => unknown>();
+    registerServerListIpc({ handle: (channel, listener) => { handlers.set(channel, listener); } }, 'file:///app/launcher/index.html', service);
+    const launcher = { senderFrame: { url: 'file:///app/launcher/index.html#x' } };
+    const listed = await handlers.get(IPC_CHANNEL.list)?.(launcher, 'sadburst_erich5') as { client: string };
+    assert.equal(listed.client, 'sadburst_erich5');
+    await handlers.get(IPC_CHANNEL.play)?.(launcher, 'official', 'sadburst');
+    assert.ok(events.includes('prepare sadburst'));
+    await assert.rejects(Promise.resolve(handlers.get(IPC_CHANNEL.list)?.({ senderFrame: { url: 'https://evil.test/' } }, 'official')), /not allowed|Not allowed/i);
   } finally { context.cleanup(); }
 });
