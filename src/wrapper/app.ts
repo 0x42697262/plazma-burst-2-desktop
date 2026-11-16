@@ -16,13 +16,16 @@ import { WRAPPER_PARTS } from './features.ts';
 import { isLauncherMode } from './mode.ts';
 import { createClientRuntime, gameFolderOf, type ClientRuntime } from './client-runtime.ts';
 import { MAIN_WINDOW } from './platform/constants.ts';
-import { OFFICIAL_LOGIN_FILE } from './platform/keys.ts';
+import { OFFICIAL_LOGIN_FILE, callConsoleScript } from './platform/keys.ts';
+import { createKvFile, type KvFile } from './platform/kv-file.ts';
 import { createSiteCookies } from './platform/site-cookies.ts';
 import { oncePerKeyAtATime } from './platform/single-flight.ts';
 import type { JoinPage } from './platform/index-page.ts';
-import { MENU_ROLE, RENDER_PROCESS_GONE, UNCAUGHT_MONITOR, WINDOW_ALL_CLOSED } from './keys.ts';
+import { FILE_ERROR_METHOD, MENU_ROLE, RELOAD_METHOD, RENDER_PROCESS_GONE, UNCAUGHT_MONITOR, WINDOW_ALL_CLOSED } from './keys.ts';
 import { createCrashHub } from './platform/crash-hub.ts';
 import { APP_TEXT as TEXT } from './text.ts';
+
+const ignore = (): void => undefined;
 
 const clientById = (id: string): GameClient => {
   const client = (CLIENTS as Readonly<Record<string, GameClient | undefined>>)[id];
@@ -94,10 +97,26 @@ export function startApp(context: WrapperContext): void {
     activeClient: () => gameWindow?.client ?? lastClient,
   });
 
+  const settingsFiles = new Map<string, KvFile>();
+  const callGameConsole = (method: string, argument: unknown): void => {
+    const window = gameWindow?.window;
+    if (window && !window.isDestroyed()) window.webContents.executeJavaScript(callConsoleScript(method, argument)).catch(ignore);
+  };
+  const settingsFile = (file: string): KvFile => {
+    const known = settingsFiles.get(file);
+    if (known) return known;
+    const made = createKvFile(file, {
+      onChange: (saved) => { callGameConsole(RELOAD_METHOD, saved); },
+      onError: (message) => { callGameConsole(FILE_ERROR_METHOD, message); },
+    });
+    settingsFiles.set(file, made);
+    return made;
+  };
+
   const runtimeFor = (id: ClientId): ClientRuntime => {
     const known = runtimes.get(id);
     if (known) return known;
-    const made = createClientRuntime({ context, login, joinTarget, watchCookies, crashPorts: crashHub.portsFor, serverListFeature: (client) => serverList?.featureFor(client) ?? null }, CLIENTS[id]);
+    const made = createClientRuntime({ context, login, joinTarget, watchCookies, crashPorts: crashHub.portsFor, settingsFile, serverListFeature: (client) => serverList?.featureFor(client) ?? null }, CLIENTS[id]);
     runtimes.set(id, made);
     return made;
   };

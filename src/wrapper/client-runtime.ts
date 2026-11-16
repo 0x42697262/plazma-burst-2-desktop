@@ -18,7 +18,7 @@ import { createDevRouter, createInterceptor } from './http/router.ts';
 import { MAIN_WINDOW, FORBIDDEN, UNAVAILABLE } from './platform/constants.ts';
 import { FOLDER_END, HTML_TYPE, HTTPS_SCHEME, INDEX_FILE, NO_STORE, SCRIPT_TYPE, TEXT_ENCODING, callConsoleScript, moduleScriptTag, scriptTag } from './platform/keys.ts';
 import { FILES_TEXT, PAGE_TEXT } from './platform/text.ts';
-import { createKvFile, seedKvFile } from './platform/kv-file.ts';
+import { createKvFile, seedKvFile, type KvFile } from './platform/kv-file.ts';
 import { EDITION_DEFAULTS } from '#shared/editions/defaults.ts';
 import { EDITION } from '#shared/editions/constants.ts';
 import { isHiddenFeature } from '#shared/editions/hidden.ts';
@@ -42,6 +42,7 @@ export type SharedServices = Readonly<{
   joinTarget: () => (JoinPage & PinnedTarget) | null;
   watchCookies: (refresh: () => Promise<void>) => void;
   crashPorts: (client: string) => CrashPorts;
+  settingsFile: (file: string) => KvFile;
 }>;
 
 export type ClientRuntime = ReturnType<typeof createClientRuntime>;
@@ -143,7 +144,7 @@ export function createClientRuntime(shared: SharedServices, client: GameClient) 
     onChange: (saved: unknown) => { callConsole(RELOAD_METHOD, saved); },
     onError: (message: string) => { callConsole(FILE_ERROR_METHOD, message); },
   };
-  const devSettings = createKvFile(devSettingsFile, settingsEvents);
+  const devSettings = shared.settingsFile(devSettingsFile);
   const serverSettings = serverSettingsFile ? createKvFile(serverSettingsFile, settingsEvents) : null;
 
   const pageCoreScripts = pageGlobalScript(PAGE_FLAGS_GLOBAL, flags)

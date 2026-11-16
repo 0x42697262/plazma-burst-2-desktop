@@ -85,6 +85,26 @@ test('a broken file is reported once and not written over until it is fixed', as
   } finally { fixture.cleanup(); }
 });
 
+test('watching twice keeps one folder watch; stopping it lets the next watch start a new one', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-kv-'));
+  let opened = 0;
+  let closed = 0;
+  const kv = createKvFile(path.join(dir, 'dev-overrides.json'), {
+    onChange: () => undefined,
+    onError: () => undefined,
+    watchFolder: () => { opened++; return { close: () => { closed++; } }; },
+  });
+  try {
+    const stop = kv.watch();
+    kv.watch();
+    assert.equal(opened, 1);
+    stop();
+    assert.equal(closed, 1);
+    kv.watch();
+    assert.equal(opened, 2);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test('the folder watch sees a save, also one that replaces the file', async () => {
   const fixture = setup('{}');
   const stop = fixture.kv.watch();
