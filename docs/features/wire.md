@@ -56,8 +56,11 @@ fields.
 
 `respawn` and `ressurect` are relayed to every client, you included, but your client applies
 only the respawn counter from its own copy; the position and HP are applied by everyone else
-(`flash.js:4103-4107`). Sent while dead, the server and the other players see you alive, and
-your own screen stays dead until the game respawns you itself.
+(`flash.js:4103-4107`). Sent while you are dead, it does not keep you alive: your client still
+reports 0 HP in its next state, and the server, which now holds you alive, counts that as a
+death (`flash.js:930`, `:1056-1065`), cause -16 and no killer. Observed live: the echo came
+back with the new counter, and `PLAYER_DIES` followed 233 ms later. Only the game's own
+respawn, or a round restart or map trigger that revives your client, brings you back.
 
 ## What a message can do
 

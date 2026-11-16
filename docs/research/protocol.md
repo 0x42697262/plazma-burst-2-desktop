@@ -3954,6 +3954,12 @@ already added 1 itself (`frame2.js:16071`, `actions.js:1604`), and the echo sets
 - **For a map author.** Action 59 on a dead local player revives them through this message. On a
   living player it sends nothing (`actions.js:1601`). With forced player health in the match
   settings the action does nothing (`:1561`).
+- **A hand-made one while dead does not last.** The sender's own client does not apply its echo
+  beyond the respawn counter (`flash.js:4103-4107`), so it is still dead and its next state
+  reports 0 HP. The counter now matches, so the server accepts that state, and since its copy is
+  alive it counts a death (`:930`, `:1056-1065`), with the state's part 16 as the cause and no
+  killer unless someone hit the player within 7 s. Observed live: `RESSURECT(0, 7472, -2075,
+  99999999, 5)` came back, then `PLAYER_DIES(0, -1, 0, -16, …, 0, 2)` 233 ms later.
 - **Who may send it.** A spectator's client does not send it (`flash.js:1784`), the round
   restart skips spectators (`frame2.js:15985`), and the server refuses one (`flash.js:1930-1934`).
 - **For the local server's maintainer.** Unlike `RESPAWN` with the v2 queue, this path logs

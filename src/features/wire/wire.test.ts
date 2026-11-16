@@ -135,6 +135,7 @@ test('wire help respawn and ressurect say your own screen does not change, and w
   for (const text of [respawn, ressurect]) {
     assert.match(text, /Your own screen does not change/);
     assert.ok(!/including yours/.test(text), 'no claim that your own client applies it');
+    assert.match(text, /server counts a death again/, 'says a revive while dead does not last');
   }
   assert.match(respawn, /warning to the match chat/);
   assert.match(ressurect, /skips the respawn queue/);
