@@ -6,12 +6,14 @@ import { createMapFiles } from './adapters/map-files.ts';
 import { mapDownloadInterceptor, mapRoutes } from './entry/routes.ts';
 import { mapsDir } from './paths.ts';
 
+export const mapHostsOf = (clientHost: string): string[] => [...new Set([clientHost, CLIENT_DETAILS[CLIENT.official].host])];
+
 export function createMapCacheWrapper(deps: WrapperDeps) {
   const files = createMapFiles({ dir: mapsDir(deps.client), gameDir: deps.gameDir, kvFile: deps.devKvFile, repoRoot: deps.repoRoot, info: (message) => deps.log.info(message), isCapabilityOn: deps.isCapabilityOn });
   const feature: WrapperFeature = Object.freeze({
     id: FEATURE.mapCache,
     routes: mapRoutes({ files }),
-    interceptors: [mapDownloadInterceptor({ files, hosts: [...new Set([deps.host, CLIENT_DETAILS[CLIENT.official].host])], info: (message) => deps.log.info(message), error: (message) => deps.log.error(message) })],
+    interceptors: [mapDownloadInterceptor({ files, hosts: mapHostsOf(deps.host), info: (message) => deps.log.info(message), error: (message) => deps.log.error(message) })],
   });
   return { feature, findLocalMap: (name: string) => files.findLocal(name), mapsDir: files.dir, relativeMapsDir: path.relative(deps.repoRoot, files.dir) };
 }

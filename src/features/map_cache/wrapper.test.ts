@@ -5,6 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { createMapFiles } from './adapters/map-files.ts';
 import { mapDownloadInterceptor, mapRoutes } from './entry/routes.ts';
+import { mapHostsOf } from './wrapper.ts';
+import { CLIENT_DETAILS } from '#shared/clients/keys.ts';
 
 const HOST = 'www.plazmaburst2.com';
 const MAP = '<player x="1" y="2" /><door x="3" />';
@@ -81,4 +83,12 @@ test('the map download: a local ID is served from disk; with fast_maps a saved m
     assert.equal(await (await call(fromSadBurst))?.text(), MAP, 'a Sad Burst client\'s own host is served too, and the official map server is whichever client asks');
     assert.equal(await intercept(new Request('https://example.test/pb2/server.php', { method: 'POST' }), new URL('https://example.test/pb2/server.php'), {}), null);
   } finally { context.cleanup(); }
+});
+
+test('every client\'s map downloads are caught: the official map service, which the Sad Burst clients use too, and the client\'s own site', () => {
+  for (const details of Object.values(CLIENT_DETAILS)) {
+    assert.ok(mapHostsOf(details.host).includes('www.plazmaburst2.com'), details.id);
+    assert.ok(mapHostsOf(details.host).includes(details.host), details.id);
+  }
+  assert.deepEqual(mapHostsOf('www.plazmaburst2.com'), ['www.plazmaburst2.com'], 'no repeat');
 });
