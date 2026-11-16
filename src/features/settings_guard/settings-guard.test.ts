@@ -25,6 +25,12 @@ test('an onload given as a list of commands is checked like the console reads it
   assert.deepEqual(newRiskyCommands({}, { profiles: { x: { onload: ['god on', 3] } } }), [], 'a list the console refuses is not run, so not asked about');
 });
 
+test('aliases and the other commands that run code or act as you are risky too', () => {
+  for (const command of ['diag send', 'server-list connect 1', 'fp', 'fingerprint --raw', 'triggers exec 3', 'trig run 1', 'bypass checks off']) {
+    assert.deepEqual(newRiskyCommands({}, { binds: { f: command } }), [{ where: 'bind f', command }], command);
+  }
+});
+
 test('nothing new, a changed harmless command, a removed one, or a broken file is not risky', () => {
   assert.deepEqual(newRiskyCommands({ binds: { g: 'js 1' } }, { binds: { g: 'js 1' } }), []);
   assert.deepEqual(newRiskyCommands({ binds: { g: 'js 1' } }, { binds: {} }), []);

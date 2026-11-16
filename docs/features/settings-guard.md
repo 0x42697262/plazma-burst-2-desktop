@@ -12,9 +12,9 @@ official lobby, Sad Burst 2's, or a private one. Without a guard, such code coul
 bind that runs JavaScript in your next game, in any client, logged in as you.
 
 ## What it does
-- When a save adds or changes a bind, a profile bind or a profile's `onload` whose command
-  starts with `js`, `wire`, `game`, `servers` or `diagnostics` (anywhere in a `;` chain,
-  any letter case), the wrapper asks in a native dialog, outside the page: **Refuse**
+- When a save adds or changes a bind, a profile bind or a profile's `onload` (a text or a
+  list of commands, read the way the console joins it) with a risky command anywhere in a
+  `;` chain, any letter case, the wrapper asks in a native dialog, outside the page: **Refuse**
   (the default, also on Esc) or **Keep**. The dialog lists each command and where it goes.
   Page code cannot answer it.
 - Refused: nothing is written, the console prints "Settings not saved …" and reloads what
@@ -26,7 +26,12 @@ bind that runs JavaScript in your next game, in any client, logged in as you.
 - Other settings (keys, harmless binds, history) are saved without a question.
 
 ## Where
-- Which commands count: `RISKY_COMMANDS` in `src/features/settings_guard/keys.ts`.
+- Which commands count: `RISKY_COMMANDS` in `src/features/settings_guard/keys.ts`, aliases
+  included: commands that run code (`js`, `fingerprint`), act as you on a server (`wire`,
+  `game`, `servers`, `diagnostics`, `triggers`, `regions`, `vars`) or turn a protection off
+  (`bypass`). Every other command word is in `SAFE_COMMANDS`; `classified.test.ts` boots the
+  console and fails when a command word is in neither list, so a new command is classified
+  before it ships.
 - The check: `newRiskyCommands` in `domain/risky.ts`; the route check:
   `entry/interceptor.ts`; the dialog: `adapters/dialog.ts`.
 - The console side: `onSaveRefused` in `src/console/kernel/state/store.ts`.
