@@ -2,4 +2,6 @@ export const COMMAND = Object.freeze({ bind: 'bind', bindAliases: ['binds'], unb
 export const ALL_WORDS: readonly string[] = Object.freeze(['all', '--all']);
 export const LIST_SECTION = 'binds';
 export const KEY_ARGUMENT = 1;
+export const HOLD_OPTION = '--hold';
+export const KEY_ARGUMENT_AFTER_HOLD = 2;
 export const SINGLE_CHARACTER = 1;

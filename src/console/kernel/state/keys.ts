@@ -32,7 +32,7 @@ export const GAME_KEYS: Readonly<Record<string, string>> = Object.freeze({
   pagedown: 'zoom', c: 'game key', r: 'game key', t: 'game key', p: 'game key', tab: 'score table', end: 'score table',
   backquote: 'swords', 0: 'swords', 1: 'weapon 1', 2: 'weapon 2', 3: 'weapon 3', 4: 'weapon 4', 5: 'weapon 5',
   6: 'weapon 6', 7: 'weapon 7', 8: 'weapon 8', 9: 'weapon 9', f1: 'game key', f2: 'game key', f3: 'game key',
-  f4: 'game key', f5: 'quick save', f9: 'quick load',
+  f4: 'game key', f5: 'quick save', f9: 'quick load', mouse1: 'shoot',
 });
 
 export const SETTING_TYPE = Object.freeze({ bool: 'bool', number: 'number', int: 'int', key: 'key' } as const);
@@ -47,7 +47,7 @@ export const FALSE_WORDS: readonly string[] = Object.freeze(['0', 'off', 'false'
 export const NO_KEY_WORD = 'none';
 
 export const STORAGE_KEY = 'pb2dev_kv';
-export const FILE_SECTION = Object.freeze({ binds: 'binds', history: 'history', profiles: 'profiles', maps: 'maps', oldTeleportKey: 'tp_key' } as const);
+export const FILE_SECTION = Object.freeze({ binds: 'binds', heldBinds: 'held_binds', history: 'history', profiles: 'profiles', maps: 'maps', oldTeleportKey: 'tp_key' } as const);
 export const FILE_SECTIONS: readonly string[] = Object.freeze(Object.values(FILE_SECTION));
 export const PROFILE_SECTION = Object.freeze({ binds: 'binds', onload: 'onload' } as const);
 export const PROFILE_SECTIONS: readonly string[] = Object.freeze(Object.values(PROFILE_SECTION));

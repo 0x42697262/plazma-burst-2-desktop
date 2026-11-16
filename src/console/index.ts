@@ -1,6 +1,6 @@
 import './kernel/commands/register-all.ts';
 import { print, TAG } from './kernel/ui/log.ts';
-import { buildPanel, updateStatus, updateStatusIfOpen, openPanel, closePanel, onKeyDownCapture, onKeyUpCapture } from './kernel/ui/panel.ts';
+import { buildPanel, updateStatus, updateStatusIfOpen, openPanel, closePanel, onKeyDownCapture, onKeyUpCapture, onMouseDownCapture, onMouseUpCapture, releaseHolds } from './kernel/ui/panel.ts';
 import { COLOR } from './kernel/core/keys.ts';
 import { errorBudget } from './kernel/core/guard.ts';
 import { plural } from './kernel/core/words.ts';
@@ -18,7 +18,7 @@ import { registerListSection } from './kernel/list-sections.ts';
 import { run } from './kernel/dispatch.ts';
 import { enabledConsoleFeatures, featureFrameHooks, featureOverrides, featureTicks, featureListSections } from './features.ts';
 import { FRAME_ERRORS_SHOWN, STATUS_EVERY_MS } from './constants.ts';
-import { DATA_FOLDER, FRAME_GUARD_LABEL, KEY_DOWN_EVENT, KEY_UP_EVENT, LOCAL_STORAGE_NAME, PAGE_API_GLOBAL } from './keys.ts';
+import { DATA_FOLDER, FRAME_GUARD_LABEL, KEY_DOWN_EVENT, KEY_UP_EVENT, MOUSE_DOWN_EVENT, MOUSE_UP_EVENT, BLUR_EVENT, LOCAL_STORAGE_NAME, PAGE_API_GLOBAL } from './keys.ts';
 import { TEXT } from './text.ts';
 
 const SETTINGS_FILE = PAGE_CLIENT.settingsFileName;
@@ -59,6 +59,9 @@ function start(source: LoadSource): void {
   game.onEnterFrame(onFrame);
   document.addEventListener(KEY_DOWN_EVENT, onKeyDownCapture, true);
   document.addEventListener(KEY_UP_EVENT, onKeyUpCapture, true);
+  document.addEventListener(MOUSE_DOWN_EVENT, onMouseDownCapture, true);
+  document.addEventListener(MOUSE_UP_EVENT, onMouseUpCapture, true);
+  globalThis.addEventListener(BLUR_EVENT, releaseHolds);
   updateStatus();
   if (!SERVER) print(TEXT.banner(CLIENT_TITLE), COLOR.bright);
   if (namesMissing.length) {

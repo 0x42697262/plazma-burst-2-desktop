@@ -45,6 +45,7 @@ export const flyCommand = Object.freeze({
   usage: TEXT.usage,
   desc: TEXT.description,
   clientOnly: TEXT.clientOnly,
+  holds: true,
   help: { about: TEXT.about, args: TEXT.args, examples: TEXT.examples, see: TEXT.see },
   run,
 });

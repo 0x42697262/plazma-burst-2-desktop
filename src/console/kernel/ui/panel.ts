@@ -8,6 +8,7 @@ import { binds, history } from '../state/store.ts';
 import { hotkeyOf } from '../state/hotkeys.ts';
 import { levelWasActive } from '../overrides/frame.ts';
 import { run, maskLine } from '../dispatch.ts';
+import { holdCommands, mouseButtonName, type MouseButtonEvent } from '../commands/hold.ts';
 import { commandForPaste, handledByAFeature } from '../ports/input.ts';
 import { el } from './dom.ts';
 import { THEME, IN_OVERLAY, swallow, markUi } from './theme.ts';
@@ -30,6 +31,7 @@ let isOpen = false;
 let historyPosition = 0;
 let toggleKeyHeld = false;
 const heldBoundKeys = new Set<string>();
+const heldReleases = new Map<string, string>();
 let keyCatcher: CaughtKey | null = null;
 
 export function catchNextKey(report: CaughtKey): () => void {
@@ -52,8 +54,33 @@ export const updateStatusIfOpen = (): void => {
   if (isOpen) updateStatus();
 };
 
+export function releaseHolds(): void {
+  const releases = [...heldReleases.values()];
+  heldReleases.clear();
+  for (const command of releases) run(command, TEXT.releasedSource);
+}
+
+function runBound(command: string, isHeld: boolean, hold: string, source: string, isRepeat: boolean): void {
+  if (isRepeat) return;
+  const held = isHeld ? holdCommands(command) : null;
+  if (!held) {
+    run(command, source);
+    return;
+  }
+  heldReleases.set(hold, held.release);
+  run(held.press, source);
+}
+
+function releaseBound(hold: string, source: string): void {
+  const release = heldReleases.get(hold);
+  if (release === undefined) return;
+  heldReleases.delete(hold);
+  run(release, source);
+}
+
 export function openPanel(): void {
   if (isOpen || !root) return;
+  releaseHolds();
   isOpen = true;
   if (document.pointerLockElement) document.exitPointerLock();
   root.style.display = PANEL.shown;
@@ -229,7 +256,7 @@ export function onKeyDownCapture(event: KeyboardEvent): void {
     if (bound && !isTyping && isActive()) {
       swallowEvent(event);
       heldBoundKeys.add(event.code);
-      if (!event.repeat) run(bound.command, TEXT.bindSource(bound.profile, showKey(keyName)));
+      runBound(bound.command, !bound.profile && binds.isHeld(keyName), event.code, TEXT.bindSource(bound.profile, showKey(keyName)), event.repeat);
       return;
     }
   }
@@ -252,5 +279,29 @@ export function onKeyUpCapture(event: KeyboardEvent): void {
     event.stopImmediatePropagation();
   } else if (heldBoundKeys.delete(event.code)) {
     event.stopImmediatePropagation();
+    releaseBound(event.code, TEXT.bindSource(null, showKey(eventKeyName(event))));
   }
+}
+
+const heldBoundButtons = new Set<string>();
+
+export function onMouseDownCapture(event: MouseEvent & MouseButtonEvent): void {
+  const name = mouseButtonName(event);
+  const isTyping = isTextInput(event.target) || !!game.chatTyping();
+  if (!name || isOpen || isTyping || !isCapabilityOn(CAPABILITY.binds.bind) || !isActive()) return;
+  const bound = binds.active(name);
+  if (!bound) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  const button = baseKey(name);
+  heldBoundButtons.add(button);
+  runBound(bound.command, !bound.profile && binds.isHeld(name), button, TEXT.bindSource(bound.profile, showKey(name)), false);
+}
+
+export function onMouseUpCapture(event: MouseEvent & MouseButtonEvent): void {
+  const button = baseKey(mouseButtonName(event));
+  if (!heldBoundButtons.delete(button)) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  releaseBound(button, TEXT.bindSource(null, showKey(button)));
 }

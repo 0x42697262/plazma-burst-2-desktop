@@ -10,6 +10,19 @@ Capabilities: `binds.bind` (`bind`, `unbind`, and running bound keys) and
 - `bind <key> <command>` runs a console command with a key in levels, while the
   console and the game chat are both closed. The game never sees a bound key: not the
   press, its repeats, or its release.
+- Mouse buttons bind too: `mouse1` (left) to `mouse5`, with modifiers (`ctrl+mouse2`). A bound
+  button never reaches the game: the console stops it in the capture phase on `document`,
+  before the game's `window.onmousedown` (`main.js:1482`). So binding `mouse1` means it no
+  longer shoots; the console says so.
+- `bind --hold <key> <command>` runs the command while the key or button is held:
+  `<command> --on` when it goes down, `<command> --off` when it comes up. An on/off key (like
+  `god`) gets `on` and `off` instead. Only one command can be held, and only one that takes
+  `--on`/`--off` (a command marked `holds`, today `fly`) or an on/off key; anything else is
+  refused when you bind it. The release is matched by the physical key, so letting go of a
+  modifier first still ends the hold. Opening the console or leaving the window lets go of
+  every held bind. Held keys are saved in `dev-overrides.json` under `held_binds`; one key
+  holds one bind, so binding it again replaces it, held or not. `bind` and `list binds` mark
+  them `(hold)`. Profile binds are not held.
 - A quoted `;` chain is one bind (`bind f "heal; pos"`). Every command in it is checked
   the way it will run: split at `;`, phrases turned into keys
   (`src/console/kernel/commands/command-text.ts`, shared with profiles' `onload`).

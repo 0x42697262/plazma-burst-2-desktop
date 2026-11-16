@@ -24,6 +24,7 @@ type Raw = Record<string, unknown>;
 
 let values: Values = {};
 let bindMap: Binds = {};
+let heldKeys = new Set<string>();
 let profileMap: Record<string, Profile> = {};
 let mapProfiles: Record<string, string> = {};
 let problems: string[] = [];
@@ -164,20 +165,25 @@ export const binds = {
     const command = bindMap[key];
     return command ? { command, profile: null } : null;
   },
-  set(key: string, command: string): void {
+  set(key: string, command: string, isHeld = false): void {
     bindMap[key] = command;
+    if (isHeld) heldKeys.add(key);
+    else heldKeys.delete(key);
     save();
   },
   remove(key: string): void {
     delete bindMap[key];
+    heldKeys.delete(key);
     save();
   },
   clear(): number {
     const count = Object.keys(bindMap).length;
     bindMap = {};
+    heldKeys = new Set();
     save();
     return count;
   },
+  isHeld: (key: string): boolean => heldKeys.has(key),
   keys: (): string[] => Object.keys(bindMap).sort(),
   boundTo: (command: string): string[] => Object.keys(bindMap).filter((key) => bindMap[key]?.toLowerCase() === command),
 };
@@ -288,11 +294,26 @@ function sanitizeMapProfiles(raw: unknown, known: Record<string, Profile>): Reco
   return sanitized;
 }
 
+function sanitizeHeldKeys(raw: unknown, bound: Binds): Set<string> {
+  const held = new Set<string>();
+  if (!Array.isArray(raw)) return held;
+  for (const key of raw) {
+    try {
+      const name = parseKeyName(key);
+      if (bound[name]) held.add(name);
+    } catch {
+      continue;
+    }
+  }
+  return held;
+}
+
 function apply(raw: unknown): void {
   problems = [];
   const file = isObject(raw) ? raw : null;
   values = sanitizeValues(file, '', false);
   bindMap = sanitizeBinds(file?.[FILE_SECTION.binds]);
+  heldKeys = sanitizeHeldKeys(file?.[FILE_SECTION.heldBinds], bindMap);
   profileMap = sanitizeProfiles(file?.[FILE_SECTION.profiles]);
   mapProfiles = sanitizeMapProfiles(file?.[FILE_SECTION.maps], profileMap);
   const savedHistory = file?.[FILE_SECTION.history];
@@ -314,6 +335,7 @@ function apply(raw: unknown): void {
 function clearAll(): void {
   values = {};
   bindMap = {};
+  heldKeys = new Set();
   profileMap = {};
   mapProfiles = {};
 }
@@ -358,6 +380,7 @@ export function save(): void {
   const data = JSON.stringify({
     ...values,
     ...(Object.keys(bindMap).length ? { [FILE_SECTION.binds]: bindMap } : {}),
+    ...(heldKeys.size ? { [FILE_SECTION.heldBinds]: [...heldKeys].sort() } : {}),
     ...(Object.keys(profileMap).length ? { [FILE_SECTION.profiles]: Object.fromEntries(Object.entries(profileMap).map(([name, profile]) => [name, profileJson(profile)])) } : {}),
     ...(Object.keys(mapProfiles).length ? { [FILE_SECTION.maps]: mapProfiles } : {}),
     ...(lines.length ? { [FILE_SECTION.history]: lines } : {}),

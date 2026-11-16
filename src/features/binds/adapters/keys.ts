@@ -6,7 +6,7 @@ import { catchNextKey } from '#console/kernel/ui/panel.ts';
 export type ActiveBind = { command: string; profile: string | null } | null;
 export type KeyEvent = { key?: string; code?: string };
 type BindStore = {
-  keys(): string[]; get(key: string): string | undefined; set(key: string, command: string): void;
+  keys(): string[]; get(key: string): string | undefined; set(key: string, command: string, isHeld?: boolean): void; isHeld(key: string): boolean;
   remove(key: string): void; clear(): number; active(key: string): ActiveBind; boundTo(command: string): string[];
 };
 

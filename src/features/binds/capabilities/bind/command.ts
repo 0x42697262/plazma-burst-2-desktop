@@ -2,11 +2,14 @@ import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { commandText, warnKeyUses } from '#console/kernel/commands/command-text.ts';
 import { BIND_ARGUMENTS_MIN, KEY_WIDTH } from '../../constants.ts';
-import { ALL_WORDS, COMMAND, KEY_ARGUMENT } from '../../keys.ts';
+import { ALL_WORDS, COMMAND, HOLD_OPTION, KEY_ARGUMENT, KEY_ARGUMENT_AFTER_HOLD } from '../../keys.ts';
+import { holdCommands } from '#console/kernel/commands/hold.ts';
 import { TEXT } from './text.ts';
 import { bindStore, keyNames } from '../../adapters/keys.ts';
 
 type Args = readonly string[];
+
+const shownKey = (key: string): string => (bindStore.isHeld(key) ? TEXT.held(keyNames.show(key)) : keyNames.show(key));
 
 function listBinds(): void {
   const keys = bindStore.keys();
@@ -18,7 +21,7 @@ function listBinds(): void {
   }
   if (keys.length) {
     print(TEXT.yoursTitle(keys.length), COLOR.title);
-    for (const key of keys) print(TEXT.row(keyNames.show(key).padEnd(KEY_WIDTH), bindStore.get(key) ?? '', mapKeys.includes(key)));
+    for (const key of keys) print(TEXT.row(shownKey(key).padEnd(KEY_WIDTH), bindStore.get(key) ?? '', mapKeys.includes(key)));
   }
   if (profile && mapKeys.length) {
     print(TEXT.profileTitle(profile.name, mapKeys.length), COLOR.title);
@@ -26,8 +29,11 @@ function listBinds(): void {
   }
 }
 
-export function bindKey(args: Args): void {
+export function bindKey(allArgs: Args): void {
+  const isHold = allArgs[0]?.toLowerCase() === HOLD_OPTION;
+  const args = isHold ? allArgs.slice(1) : allArgs;
   const [word] = args;
+  if (isHold && args.length < BIND_ARGUMENTS_MIN) throw new Error(TEXT.holdUsage);
   if (word === undefined) {
     listBinds();
     return;
@@ -39,8 +45,11 @@ export function bindKey(args: Args): void {
     return;
   }
   const command = commandText(args.slice(1), TEXT.bindUsage);
-  bindStore.set(key, command);
-  print(TEXT.bound(keyNames.show(key), command, old), COLOR.ok);
+  const held = isHold ? holdCommands(command) : null;
+  if (isHold && !held) throw new Error(TEXT.notHoldable(command));
+  bindStore.set(key, command, isHold);
+  print(TEXT.bound(isHold ? TEXT.held(keyNames.show(key)) : keyNames.show(key), command, old), COLOR.ok);
+  if (held) print(TEXT.boundHeld(keyNames.show(key), held.press, held.release), COLOR.hint);
   const now = bindStore.active(key);
   if (now?.profile) print(TEXT.profileWins(now.profile, keyNames.show(key)), COLOR.warn);
   warnKeyUses(key);
@@ -68,7 +77,7 @@ export const bindCommands = Object.freeze([
     name: COMMAND.bind,
     aliases: COMMAND.bindAliases,
     usage: TEXT.bind.usage,
-    keyArg: KEY_ARGUMENT,
+    keyArg: (words: readonly string[]): number => (words[1]?.toLowerCase() === HOLD_OPTION ? KEY_ARGUMENT_AFTER_HOLD : KEY_ARGUMENT),
     desc: TEXT.bind.desc,
     help: { about: TEXT.bind.about, args: TEXT.bind.args, examples: TEXT.bind.examples, notes: TEXT.bind.notes, see: TEXT.bind.see },
     run: bindKey,

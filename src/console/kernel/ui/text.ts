@@ -18,5 +18,6 @@ export const PANEL_TEXT = Object.freeze({
   idle: 'IDLE: start a level to apply',
   buttons: Object.freeze({ close: 'Close', clear: 'Clear', list: 'List values', help: 'Help' }),
   keySource: (key: string) => `key ${key}`,
+  releasedSource: 'held bind let go',
   bindSource: (profile: string | null, key: string) => `${profile ? `profile ${profile} ` : ''}bind ${key}`,
 });

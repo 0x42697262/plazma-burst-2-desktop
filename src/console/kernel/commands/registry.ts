@@ -25,6 +25,7 @@ export type CommandDefinition = Availability & {
   rawLine?: boolean;
   keyArg?: number | ((words: readonly string[]) => number | undefined);
   topicOnly?: boolean;
+  holds?: boolean;
   reportsReach?: boolean;
   mask?: (line: string) => string;
   complete?: (argument: number) => readonly string[] | null | undefined;

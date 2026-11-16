@@ -22,3 +22,7 @@ export const CONSOLE_COMMAND = Object.freeze({
   more: 'more', moreAliases: Object.freeze(['next', 'page', 'pg']), chain: 'chain', chainAlso: ';',
   clear: 'clear', clearAlias: 'cls', close: 'close', closeAlias: 'exit',
 });
+export const HOLD_OPTION = Object.freeze({ on: '--on', off: '--off' });
+export const HOLD_WORD = Object.freeze({ on: 'on', off: 'off' });
+export const withWord = (command: string, word: string): string => `${command} ${word}`;
+export const MOUSE_BUTTON_NAMES: Readonly<Record<number, string>> = Object.freeze({ 0: 'mouse1', 1: 'mouse3', 2: 'mouse2', 3: 'mouse4', 4: 'mouse5' });
