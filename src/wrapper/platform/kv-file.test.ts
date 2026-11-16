@@ -52,6 +52,17 @@ test('your edit goes to the console, and a console write never replaces it', asy
   } finally { fixture.cleanup(); }
 });
 
+test('peek reads the file without taking it as seen, so an edit made meanwhile is still not written over', async () => {
+  const fixture = setup('{"god": true}');
+  try {
+    await fixture.kv.read();
+    fs.writeFileSync(fixture.file, '{"god": "yours"}');
+    assert.equal(await fixture.kv.peek(), '{"god": "yours"}');
+    assert.equal(await fixture.kv.write({ god: false }), false, 'the console write is refused');
+    assert.equal(fixture.disk(), '{"god": "yours"}');
+  } finally { fixture.cleanup(); }
+});
+
 test('a broken file is reported once and not written over until it is fixed', async () => {
   const fixture = setup('{"god": true}');
   try {

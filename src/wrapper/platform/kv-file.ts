@@ -8,6 +8,7 @@ import { TEXT } from './text.ts';
 export type KvFileEvents = { onChange: (saved: Record<string, unknown>) => void; onError: (message: string) => void; watchDelayMs?: number };
 export type KvFile = {
   read(): Promise<string>;
+  peek(): Promise<string>;
   write(saved: unknown): Promise<boolean>;
   check(): Promise<void>;
   watch(): () => void;
@@ -51,6 +52,9 @@ export function createKvFile(file: string, { onChange, onError, watchDelayMs = W
       if (text === null) return EMPTY_OBJECT_TEXT;
       known = text;
       return text;
+    },
+    async peek() {
+      return (await readText()) ?? EMPTY_OBJECT_TEXT;
     },
     async write(saved) {
       const disk = await readText();

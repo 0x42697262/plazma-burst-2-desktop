@@ -9,7 +9,7 @@ export type SettingsGuardDeps = Readonly<{
   log?: (message: string) => void;
 }>;
 
-type ReadableFile = { read(): Promise<string> };
+type PeekableFile = { peek(): Promise<string> };
 
 const parsed = (text: string): unknown => {
   try {
@@ -25,8 +25,8 @@ export function settingsGuardInterceptor({ confirm, log = () => undefined }: Set
   return async (request, url, context) => {
     const isSettingsSave = request.method === PUT_METHOD && url.pathname.endsWith(SETTINGS_ROUTE_END);
     if (!isSettingsSave) return null;
-    const file = context.kvFile as ReadableFile | null | undefined;
-    const previous = file ? parsed(await file.read()) : null;
+    const file = context.kvFile as PeekableFile | null | undefined;
+    const previous = file ? parsed(await file.peek()) : null;
     const risky = newRiskyCommands(previous, parsed(await request.clone().text()));
     if (!risky.length) return null;
     const isKept = !context.remote && await confirm(risky, context);

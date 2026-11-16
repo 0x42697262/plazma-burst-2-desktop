@@ -42,7 +42,7 @@ test('nothing new, a changed harmless command, a removed one, or a broken file i
 function guardWith(answer: boolean, file: Record<string, unknown> = {}, remote = false) {
   const asked: string[][] = [];
   const intercept = settingsGuardInterceptor({ confirm: async (commands) => { asked.push(commands.map((entry) => `${entry.where}: ${entry.command}`)); return answer; } });
-  const context = { remote, kvFile: { read: async () => JSON.stringify(file) } };
+  const context = { remote, kvFile: { peek: async () => JSON.stringify(file), read: async () => { throw new Error('read takes the file as seen; the guard must peek'); } } };
   const call = (request: Request) => intercept(request, new URL(request.url), context);
   return { asked, call };
 }
