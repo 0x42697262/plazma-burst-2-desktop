@@ -86,6 +86,27 @@ test('the map download: a local ID is served from disk; with fast_maps a saved m
   } finally { context.cleanup(); }
 });
 
+test('erich5 asks for maps under its game folder (the game rewrites the map URL by where it was loaded from): saved, and served by fast_maps', async () => {
+  const context = setup();
+  try {
+    fs.mkdirSync(context.dir, { recursive: true });
+    const intercept = mapDownloadInterceptor({ files: context.files, hosts: ['sadburst2.com', HOST], info: () => undefined, error: () => undefined });
+    let fetched = 0;
+    const fetchContext = { fetch: async () => { fetched++; return new Response(MAP); } };
+    const erichDownload = (id: string) => new Request('https://sadburst2.com/gameplay_erich5/pb2/server.php', { method: 'POST', body: new URLSearchParams({ rq: 'cmap', cmap: id }) });
+    const call = (request: Request) => intercept(request, new URL(request.url), fetchContext);
+    assert.equal(await (await call(erichDownload('author-y')))?.text(), MAP);
+    const savedFile = path.join(context.dir, 'author-y.xml');
+    for (let waited = 0; waited < 2000 && !fs.existsSync(savedFile); waited += 10) await new Promise((resolve) => setTimeout(resolve, 10));
+    assert.ok(fs.existsSync(savedFile), 'saved into the maps folder');
+    fs.writeFileSync(context.kvFile, JSON.stringify({ fast_maps: true }));
+    assert.match(await (await call(erichDownload('author-y')))?.text() ?? '', /<door/);
+    assert.equal(fetched, 1, 'fast load: not downloaded again');
+    const notTheScript = new Request('https://sadburst2.com/gameplay_erich5/pb2/server.php.bak', { method: 'POST', body: new URLSearchParams({ rq: 'cmap', cmap: 'author-y' }) });
+    assert.equal(await call(notTheScript), null);
+  } finally { context.cleanup(); }
+});
+
 test('every client\'s map downloads are caught: the official map service, which the Sad Burst clients use too, and the client\'s own site', () => {
   for (const details of Object.values(CLIENT_DETAILS)) {
     assert.ok(mapHostsOf(details.host).includes('www.plazmaburst2.com'), details.id);

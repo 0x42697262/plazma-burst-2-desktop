@@ -25,6 +25,10 @@ official map service: their strings set the map address to
 `game.sadburst-erich5/gamelogic/8bc5a6f03c2b6c9c.js`, build of 2026-11-08). So every client
 catches downloads on that host as well as on its own site (`mapHostsOf`); the maps it saves
 are the same official maps, under the same IDs.
+The game can rewrite that address by where it was loaded from (it checks
+`root.loaderInfo.url` and replaces the site part), so Sad Burst 2 for the official servers
+asks for `https://sadburst2.com/gameplay_erich5/pb2/server.php`. The wrapper therefore
+catches any path ending in `/pb2/server.php` on those hosts, not only the site root.
 
 ## The cache
 

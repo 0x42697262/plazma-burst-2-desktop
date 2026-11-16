@@ -76,7 +76,7 @@ export function mapDownloadInterceptor({ files, hosts, info, error }: MapRouteDe
   }
 
   return async (request, url, context) => {
-    const isMapDownload = hosts.includes(url.hostname) && url.pathname === SERVER_SCRIPT_PATH && request.method === HTTP_METHOD.post;
+    const isMapDownload = hosts.includes(url.hostname) && url.pathname.endsWith(SERVER_SCRIPT_PATH) && request.method === HTTP_METHOD.post;
     if (!isMapDownload) return null;
     const body = new URLSearchParams(await request.clone().text());
     if (body.get(MAP_REQUEST.field) !== MAP_REQUEST.value) return null;
