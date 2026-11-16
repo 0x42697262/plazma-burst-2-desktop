@@ -52,6 +52,8 @@ export const isInverse = (): boolean => {
   return aim === SWEEP_AIM.inverse || aim === true || aim === SWEEP_AIM.directional;
 };
 
+const holdsRagdoll = (): boolean => settings.effective(SETTING.flySweepRagdoll) !== false;
+
 const isEdge = (): boolean => settings.effective(SETTING.flySweepThrottle) !== SWEEP_THROTTLE.near;
 
 function shaped(share: number): number {
@@ -95,12 +97,12 @@ function flySweep(character: MovingCharacter, withMouse: boolean): void {
   const cursor = sweep.held?.gameAim ?? { x: character.x, y: character.y };
   if (isEdge()) {
     const side = steerByEdge(character, cursor, isStarting);
-    holdKeys(withMouse, isDirectional() ? side : 0);
+    holdKeys({ ragdoll: holdsRagdoll(), mouse: withMouse, side: isDirectional() ? side : null });
     return;
   }
   sweep.sideReach = sweep.range;
   sweep.height = null;
-  holdKeys(withMouse, isDirectional() ? cursorSide(character, DIRECTIONAL_DEAD_ZONE) : 0);
+  holdKeys({ ragdoll: holdsRagdoll(), mouse: withMouse, side: isDirectional() ? cursorSide(character, DIRECTIONAL_DEAD_ZONE) : null });
 }
 
 function apply({ character, running, tick }: OverrideContext): void {

@@ -295,6 +295,29 @@ test('edge throttle: the farther your cursor toward the screen edge, the bigger 
   game.run('fly sweep --off; unset fly_sweep_range');
 });
 
+test('fly_sweep_ragdoll off: the sweep leaves X alone (you press it yourself); sword still holds the mouse button', () => {
+  const { globals, names, player } = game;
+  globals[names.fpsChoice] = 3;
+  globals[names.lowPhysics] = false;
+  player.x = 100;
+  assert.ok(game.run('help fly_sweep_ragdoll').some((line) => /default: on/i.test(line) || /\(on\)/.test(line) || /on by default/i.test(line)));
+  game.run('fly_sweep_ragdoll off');
+  globals[names.ragdollKey] = false;
+  game.run('fly sword --on');
+  game.frame();
+  assert.deepEqual([globals[names.ragdollKey], globals[names.mouseHeld]], [false, true], 'no X, the click still held');
+  globals[names.ragdollKey] = true;
+  game.frame();
+  game.run('fly sword --off');
+  assert.equal(globals[names.ragdollKey], true, 'your own X is not let go when it stops');
+  globals[names.ragdollKey] = false;
+  game.run('unset fly_sweep_ragdoll');
+  game.run('fly sweep --on');
+  game.frame();
+  assert.equal(globals[names.ragdollKey], true, 'on again by default');
+  game.run('fly sweep --off');
+});
+
 test('"fly sweep --on" arms the sweep mode when another one was set', () => {
   game.run('fly free');
   game.run('fly sweep --on');

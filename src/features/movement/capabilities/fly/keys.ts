@@ -42,5 +42,9 @@ export const SETTINGS: Readonly<Record<string, KeySpec>> = Object.freeze({
     capability: FLY, type: SETTING_TYPE.number, group: GROUP.player, min: 0.25, max: 4, default: 1, example: '2',
     desc: 'Speed curve for the "edge" throttle: 1 is a straight line, above 1 is gentler near you and faster near the edge',
   },
+  fly_sweep_ragdoll: {
+    capability: FLY, type: SETTING_TYPE.bool, group: GROUP.player, default: true,
+    desc: 'Hold ragdoll (X) for you while sweeping, on by default: the lift only comes while you are limp. Off: you press X yourself',
+  },
   fly_upright: { capability: FLY, type: SETTING_TYPE.bool, group: GROUP.player, default: true, desc: 'Keep you on your feet in "fly free"' },
 });

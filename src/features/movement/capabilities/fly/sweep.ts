@@ -11,19 +11,31 @@ export type SweepState = {
 
 export const sweep: SweepState = { active: false, direction: 1, range: 0, inverse: false, sideReach: 0, height: null, sideCarry: 0, held: null, holdsKeys: false };
 
-type HeldKeys = { ragdoll: boolean; mouse: boolean; left: boolean; right: boolean };
+type KeyName = 'ragdoll' | 'mouse' | 'left' | 'right';
+type HeldKeys = Partial<Record<KeyName, boolean>>;
 const keys = game as unknown as { holdKeys(held: HeldKeys): void };
-const NOTHING_HELD: HeldKeys = Object.freeze({ ragdoll: false, mouse: false, left: false, right: false });
+const keysHeld = new Set<KeyName>();
 
-export function holdKeys(withMouse: boolean, side: number): void {
-  sweep.holdsKeys = true;
-  keys.holdKeys({ ragdoll: true, mouse: withMouse, left: side < 0, right: side > 0 });
+export function holdKeys(wanted: Readonly<{ ragdoll: boolean; mouse: boolean; side: number | null }>): void {
+  const held: HeldKeys = {};
+  if (wanted.ragdoll) held.ragdoll = true;
+  if (wanted.mouse) held.mouse = true;
+  if (wanted.side !== null) {
+    held.left = wanted.side < 0;
+    held.right = wanted.side > 0;
+  }
+  for (const name of Object.keys(held) as KeyName[]) keysHeld.add(name);
+  sweep.holdsKeys = keysHeld.size > 0;
+  keys.holdKeys(held);
 }
 
 function releaseKeys(): void {
-  if (!sweep.holdsKeys) return;
+  if (!keysHeld.size) return;
+  const released: HeldKeys = {};
+  for (const name of keysHeld) released[name] = false;
+  keysHeld.clear();
   sweep.holdsKeys = false;
-  keys.holdKeys(NOTHING_HELD);
+  keys.holdKeys(released);
 }
 
 export function cursorSide(character: AimHolder, deadZone: number): number {

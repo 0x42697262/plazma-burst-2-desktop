@@ -106,11 +106,11 @@ export const game = {
   },
   teleportFx: (atX: number, atY: number): unknown => call('effect', atX, atY, bagOf(read('effectTypes'))[nameOf('effectTeleport')], 0, 0),
 
-  holdKeys: (held: { ragdoll: boolean; mouse: boolean; left: boolean; right: boolean }): void => {
-    write('ragdollKey', held.ragdoll);
-    write('mouseHeld', held.mouse);
-    write('keyLeft', held.left);
-    write('keyRight', held.right);
+  holdKeys: (held: Partial<Record<'ragdoll' | 'mouse' | 'left' | 'right', boolean>>): void => {
+    if (held.ragdoll !== undefined) write('ragdollKey', held.ragdoll);
+    if (held.mouse !== undefined) write('mouseHeld', held.mouse);
+    if (held.left !== undefined) write('keyLeft', held.left);
+    if (held.right !== undefined) write('keyRight', held.right);
   },
   gameCanvas: (): unknown => optionalGlobal(GAME_GLOBAL.canvas),
   camera: (): CameraView | null => {
