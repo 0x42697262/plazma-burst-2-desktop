@@ -33,7 +33,7 @@ by their `RELIABLE_…` field. With v1769098419, counting from 0:
 `RELIABLE_JOIN_MATCH` 20, `RELIABLE_REPORT_USER` 27, `RELIABLE_ENDORDSE_USER` 28.
 
 A message that wants an answer carries the shared placeholder object
-(`Multiplayer.$p1еeс`, `scripts/libs/flash.js:77`) in the slot where the
+(`scripts/libs/flash.js:77`, `PB2_NAMES.netReplyTo` in the console) in the slot where the
 reply id goes. The sender swaps it for its own counter and files the callback under it
 (`scripts/connection.js:693`). The answer is a `RELIABLE_RESPONSE` whose first value is that
 id (`scripts/libs/flash.js:1868`, `:1888`), so a reply is

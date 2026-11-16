@@ -12,10 +12,10 @@ against build v1769098419.
 
 | | |
 |---|---|
-| Built by the client | `$ТеeАp`, `flash.js:421-783`, for the local player |
+| Built by the client | the per-tick sender, `flash.js:421-783`, for the local player |
 | Built by the match server | the same function, `flash.js:790-847`, once per client |
-| Handled | `$pOeрМ`, `flash.js:869`: the server branch to `:1199`, the client branch from `:1200` |
-| Slot on the connection | the unreliable message, channel `$ММ.$ОAA0р` = 0 (`flash.js:74`) |
+| Handled | the state handler, `flash.js:869`: the server branch to `:1199`, the client branch from `:1200` |
+| Slot on the connection | the unreliable message, channel 0 (`flash.js:74`) |
 | Cadence | every network tick: 16 ms on a socket, 4 ms peer to peer (`connection.js:19-20`, `:1059`) |
 
 ## Unreliable, newest only
@@ -28,7 +28,7 @@ replaces it. On the receiving side the connection also keeps only the newest
 packet (`connection.js:982`). So a `RESPAWN` and a state that arrive together are applied in
 that order.
 
-Numbers go through the game's encoder `$Oоolр` (`flash.js:5249-5261`): clamped to the safe
+Numbers go through the game's number encoder (`flash.js:5249-5261`): clamped to the safe
 integer range, rounded to a whole number, and written in base-N digits. With its second
 argument set, 0 is written as `""`. Parts are joined with `\x02`, as in a reliable message.
 
@@ -39,17 +39,17 @@ The client builds it only for a local character that is in play, never while spe
 
 | Part | Value | Built at |
 |---|---|---|
-| 0 | body control × 100 (`$eoОpА`); `""` at 100, standing | `flash.js:448`, `:452` |
+| 0 | body control × 100; `""` at 100, standing | `flash.js:448`, `:452` |
 | 1, 2 | `x`, `y`: position | `:453-454` |
-| 3, 4 | `tox`, `toy`: velocity × 5 (`$ММ.$MеМMА`, `:178`), `""` for 0 | `:455-456` |
+| 3, 4 | `tox`, `toy`: velocity × 5 (`:178`), `""` for 0 | `:455-456` |
 | 5 | the ragdoll, only when part 0 is under 100 | `:460-478` |
 | 6 | HP, `Math.ceil(hea)` | `:480` |
 | 7, 8 | the cursor: `tarx - x`, `tary - y` | `:482-483` |
 | 9 | packed flags: guns not ready, fire, the movement keys | `:486-527` |
-| 10 | the held gun's animation frame (`$OАMco`), `""` with no gun | `:529` |
-| 11 | the vehicle's index (`$ОMррe`), `""` on foot | `:530` |
-| 12-15 | body part HP, rounded up: head `$ААНММ`, body `$НТcep`, arms `$lMIсo`, legs `$HAрH1` | `:532-535` |
-| 16 | alive: crouch, `sit × 35`, `""` standing; dead: the last damage source (`$1МI0р`) | `:537-540` |
+| 10 | the held gun's animation frame, `""` with no gun | `:529` |
+| 11 | the vehicle's index, `""` on foot | `:530` |
+| 12-15 | body part HP, rounded up: head, body, arms, legs | `:532-535` |
+| 16 | alive: crouch, `sit × 35`, `""` standing; dead: the last damage source | `:537-540` |
 | 17 | two flags as one character: `"3"`, `"2"`, `"1"` or `""` | `:542-555` |
 | 18 | your projectiles in flight, 7 values each, joined with `~` | `:558-591` |
 | 19 | the client clock: `performance.now()` minus the page's start | `:593` |
@@ -73,11 +73,11 @@ to the player's, × 5 (`:470-473`). The receiver writes them onto its copy of th
 
 **Parts 7 and 8, the cursor.** See [The cursor](#the-cursor).
 
-**Part 9, the flags.** One packed string (`$IooорO.$oеМ0рe`). In order (`flash.js:487-524`):
+**Part 9, the flags.** One string of packed booleans. In order (`flash.js:487-524`):
 - one per gun slot, `slot0` to `slot9`: the gun in it is not ready (its `ready` is false);
-- fire held (`$рoeсl`);
-- right held (`$AМIМ1 === 1`, D or →), left held (`−1`, A or ←; keys at `frame2.js:27189-27192`);
-- crouch held (`$TНесe === 1`, S or ↓), jump held (`−1`, W, ↑ or Space; keys at `:27214-27215`,
+- fire held;
+- right held (D or →), left held (A or ←; keys at `frame2.js:27189-27192`);
+- crouch held (S or ↓), jump held (W, ↑ or Space; keys at `:27214-27215`,
   `:27396-27397`).
 
 The receiver clears the movement keys first and sets those that are on (`flash.js:1489-1554`),
@@ -101,14 +101,14 @@ a negative code such as −15 for a wall (`frame2.js:4788-4795`). Each hit write
 (`flash.js:1080-1083`), and `PLAYER_DIES` reports it ([protocol.md](protocol.md#12--player_dies--match-server--every-client)).
 
 **Part 17, two flags.** `"3"` both, `"2"` the first only, `"1"` the second only, `""` neither:
-- the first is `$ОeНIpo`, X held (`frame2.js:37376`), which lets the body go limp;
-- the second is `$loАoM`. It is set when the character dies (`frame2.js:35390`) or its body
-  breaks at 0 body HP, which also kills it (`:16452-16527`). Set through `$Нес1p`, it plays a voice
-  line from the character's voice set (`:16656-16692`). The code holds no name for it.
+- the first is X held (`frame2.js:37376`), which lets the body go limp;
+- the second is set when the character dies (`frame2.js:35390`) or its body breaks at 0 body HP,
+  which also kills it (`:16452-16527`). Setting it plays a voice line from the character's voice
+  set (`:16656-16692`). The code holds no name for it.
 
-**Part 18, projectiles.** Up to 16 (`$ММ.$0ТoНHp`, `flash.js:252`) of your own visible
+**Part 18, projectiles.** Up to 16 (`flash.js:252`) of your own visible
 projectiles that carry a network id (`:558-591`). For each: its id, x, y, speed x and y × 5,
-rotation, and `$МecHM × 10`. A projectile tied to a physics node sends that node's position and
+rotation, and one more value × 10 whose meaning the code does not show. A projectile tied to a physics node sends that node's position and
 speed instead. The receiver finds the projectile by owner and id and moves it there
 (`:1656-1711`). This is how a thrown grenade moves on other screens after its
 `PROJECTILE_CREATE`.
@@ -121,7 +121,7 @@ clock runs too fast ([anticheat.md](anticheat.md) §14.7).
 
 ## On the server
 
-`$pOeрМ`, server branch (`flash.js:884-1199`), for a player in a match who has sent
+The state handler's server branch (`flash.js:884-1199`), for a player in a match who has sent
 `CLIENT_READY_FOR_FIRST_SYNC`:
 
 1. **A spectator's state is dropped** (`flash.js:891`).
@@ -132,7 +132,7 @@ clock runs too fast ([anticheat.md](anticheat.md) §14.7).
    HP and handles a death or a revival ([anticheat.md](anticheat.md) §14.4-§14.6). It then blanks
    part 6 (`:1119`), notes whether the player moved more than 10 units (the inactivity timer,
    `:1121-1131`), and runs the clock check (`:1134-1189`).
-4. **It keeps the parts** as the player's latest state (`$OeeНl`, `:1192`) and empties the list
+4. **It keeps the parts** as the player's latest state (`:1192`) and empties the list
    of who has received it (`:1193`).
 
 The server does not change any other part. Position, velocity, cursor, flags and projectiles reach
@@ -151,9 +151,8 @@ for its guests.
 **The header** (`flash.js:817`) is the time until the round state next changes, in ms, or `""`
 when nothing is pending. In front of it:
 - `~~`: you are not shown the others. In a ranked match this is a spectator who is not staff, or
-  a player who has been dead for more than 3 s (`$0Melеo`, `:5426-5454`, `$ММ.$еAТМрА = 3000`,
-  `:16`). No player groups follow, and the client covers the view (`:1213-1235`).
-- `~`: the match is paused (`$оАНеAT`, a ping pause, or `$се1ссo`, `-pause`, `:815`). The
+  a player who has been dead for more than 3 s (`:5426-5454`, the 3 s at `:16`). No player groups follow, and the client covers the view (`:1213-1235`).
+- `~`: the match is paused, by a ping pause or by `-pause` (`:815`). The
   client stops its game loop (`system_non_stop = false`, `:1238-1247`).
 
 **One group per player** in a slot (`flash.js:819-845`):
@@ -166,7 +165,7 @@ when nothing is pending. In front of it:
 | count | how many parts follow: the length of that player's kept state, or 0 |
 | parts | that player's kept state, as they sent it, part 6 blank |
 
-A group is sent to each client once per new state: the set `$рO0IНI` records who has had it
+A group is sent to each client once per new state: a set on each player records who has had it
 (`:827-829`). Your own group, and a player who has not sent a state the server kept, carry
 count 0 (`:838-845`).
 
@@ -191,9 +190,9 @@ minus the player's position.
 
 | | |
 |---|---|
-| Read from the mouse | `frame2.js:38330-38333`, every frame, into `$еT0рTр`, `$оTО10T` (stage pixels) |
+| Read from the mouse | `frame2.js:38330-38333`, every frame, in stage pixels |
 | Turned into the aim point | `frame2.js:33879-33880`, for the local player; `:34956-34957` in `bot 1` mode |
-| Sent | `flash.js:482-483`, parts 7 and 8 (`$ММ.$OlОplр` = 7, `$ММ.$рI1lрA` = 8, `:182-183`) |
+| Sent | `flash.js:482-483`, parts 7 and 8 (named constants at `:182-183`) |
 | Read by the server | `flash.js:952-953`, the zoom check only |
 | Applied by every receiver | `flash.js:1486-1487` |
 | Used | `frame2.js:36379`, `:36383`, the gun's angle |
@@ -209,11 +208,11 @@ minus the player's position.
    tary = (mouseY - game.y) / zoom
    ```
 
-   `game.x`, `game.y` are the camera offset, and `zoom` is `$оМMОО`. The `gamescale` engine mark,
+   `game.x`, `game.y` are the camera offset, and `zoom` is the view's zoom. The `gamescale` engine mark,
    some vehicles and the `zoom 25` … `zoom 200` chat commands change it (`frame2.js:12024-12033`,
    `:14760-14765`, `:26756-26768`). A wider view lets the cursor reach farther.
 3. **No limit in normal play.** Only in `bot 1` mode (the chat command that lets the AI play the
-   local player, `$OM0TM`, `frame2.js:26833-26847`) does a multiplayer match clamp the aim to
+   local player, `frame2.js:26833-26847`) does a multiplayer match clamp the aim to
    ±800 by ±400 around the player (`:34983-34984`). The normal path at `:33879` has no clamp.
 
 ### On the wire

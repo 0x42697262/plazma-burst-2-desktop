@@ -46,7 +46,7 @@ the first id is `h`). A part is only a number if the receiving side reads it as 
 ## Requests and replies
 
 A message that wants an answer carries the shared placeholder object
-(`Multiplayer.$p1еeс`, `flash.js:77`; `PB2_NAMES.netReplyTo` names it) in the slot where the reply id goes.
+(`flash.js:77`; the console reaches it as `PB2_NAMES.netReplyTo`) in the slot where the reply id goes.
 The sender swaps it for its own counter and files the callback under it
 (`connection.js:693`); the answer is a `RELIABLE_RESPONSE` whose first value is that id
 (`flash.js:1868`, `:1888`):
@@ -180,7 +180,7 @@ The ids start at 100 on every connection, so the same id shows up again and agai
 #### How it works
 
 1. **The asker files a callback.** `connection.js:693-709` finds the placeholder object
-   (`Multiplayer.$p1еeс`, `flash.js:77`) in the message, replaces it with
+   (`flash.js:77`) in the message, replaces it with
    the connection's counter, and stores the callback under that number. The counter starts at
    100 (`connection.js:414`). Over 1000 pending callbacks logs a warning (`:706-707`).
 2. **The answering side runs the request's handler.** The handler calls the answer function

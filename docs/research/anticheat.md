@@ -1454,16 +1454,16 @@ So the same function runs in three places:
 | 1 | `$ММ.$ТOlOep` = 1 | `:453` | `x` |
 | 2 | `$ММ.$1ТIHТр` = 2 | `:454` | `y` |
 | 3, 4 | | `:455–456` | Velocity `tox`, `toy`, times `$ММ.$MеМMА` = 5 |
-| 5 | | `:458–478` | Only when part 0 is under 100: the limp body's points, 8 or 10 of them (10 when body HP ≤ 0, `$НТcep`, `:462`), 4 numbers each relative to `x`/`y`, joined with `~` |
+| 5 | | `:458–478` | Only when part 0 is under 100: the limp body's points, 8 or 10 of them (10 when body HP ≤ 0, `:462`), 4 numbers each relative to `x`/`y`, joined with `~` |
 | 6 | `$ММ.$сoТрIН` = 6 | `:480` | **HP**: `Math.ceil(char.hea)` |
 | 7 | `$ММ.$OlОplр` = 7 | `:482` | **Aim dx**: `tarx - x` (crosshair minus position, game units) |
 | 8 | `$ММ.$рI1lрA` = 8 | `:483` | **Aim dy**: `tary - y` |
 | 9 | | `:486–527` | Packed booleans (`$IooорO.$oеМ0рe`): per weapon slot "not ready", then 5 action flags |
-| 10 | | `:529` | The held gun's animation frame (`$OАMco`), `""` for none; receivers jump to it when more than 10 frames off (`:1560-1580`) |
+| 10 | | `:529` | The held gun's animation frame, `""` for none; receivers jump to it when more than 10 frames off (`:1560-1580`) |
 | 11 | | `:530` | Vehicle index (`$ОMррe`), `""` when on foot |
-| 12–15 | `$ММ.$НсеMep` = 12, `$ММ.$lIHрHТ` = 13 | `:532–535` | Body part HP: head, body, arms, legs (`ceil`; `$ААНММ`, `$НТcep`, `$lMIсo`, `$HAрH1`) |
+| 12–15 | `$ММ.$НсеMep` = 12, `$ММ.$lIHрHТ` = 13 | `:532–535` | Body part HP: head, body, arms, legs (`ceil`) |
 | 16 | `$ММ.$MHOeе0` = 16 | `:537–540` | Alive: crouch amount (`sit * 35`, `""` standing). Dead: **the last damage source** (`$1МI0р`: a gun index or a negative cause code, written by each hit, e.g. `frame2.js:30804`); the server uses it as the cause of death (`:1080-1083`) |
-| 17 | | `:542–555` | `"3"`, `"2"`, `"1"` or `""`: two flags: `$ОeНIpo` (X held, `frame2.js:37376`) and `$loАoM` (set on death or when the body breaks, `frame2.js:35390`, `:16452-16527`) |
+| 17 | | `:542–555` | `"3"`, `"2"`, `"1"` or `""`: two flags: X held (`frame2.js:37376`) and `$loАoM` (set on death or when the body breaks, `frame2.js:35390`, `:16452-16527`) |
 | 18 | | `:558–591` | Your projectiles in flight, 7 numbers each (id, x, y, speed x, speed y, rotation, one more), joined with `~` |
 | 19 | `$ММ.$ОHIАAA` = 19 | `:593` | **Client clock**: `performance.now() - $ММ.$1МАTMH` |
 | 20 | `$ММ.$TТoМоА` = 20 | `:595` | **Respawn count**: `char["respawns"]` |
