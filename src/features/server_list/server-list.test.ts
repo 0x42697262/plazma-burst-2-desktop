@@ -9,7 +9,6 @@ import { checkServer, passwordForSave, passwordSurvivesEdit, type ServerEntry } 
 import { parseStatusResponse } from './domain/status.ts';
 import { createServersStore, type ServersStore } from './adapters/servers-file.ts';
 import type { DefaultServer } from '#shared/editions/types.ts';
-import { CLIENT_DETAILS } from '#shared/clients/keys.ts';
 import { createServerListService, type GameSession, type ServerListDeps } from './services/server-list.ts';
 import { serverListRoute } from './entry/route.ts';
 import type { ServerProbe } from './adapters/probe.ts';
@@ -82,13 +81,12 @@ test('servers.json is versioned, written for the owner only, and a broken entry 
 function serviceWith(store: ServersStore, defaultServers: readonly DefaultServer[] = [], client?: ServerListDeps['client']) {
   const events: string[] = [];
   const session: GameSession = {
-    otherClients: () => [{ id: 'sadburst', title: 'Sad Burst 2' }],
-    switchClient: (id: string) => { events.push(`switch ${id}`); },
+    clients: () => [{ id: 'official', title: 'Plazma Burst 2' }, { id: 'sadburst', title: 'Sad Burst 2' }, { id: 'sadburst_erich5', title: 'Sad Burst 2 (official servers)' }],
+    prepare: async (id: string) => { events.push(`prepare ${id}`); },
+    open: (id: string, title: string) => { events.push(`open ${id} ${title}`); },
     startLoggedOut: async () => { events.push('logged out'); },
     applyCredentials: async () => { events.push('credentials'); },
-    loadGame: () => events.push('game'),
     showList: () => events.push('list'),
-    setTitle: (title) => events.push(`title ${title}`),
   };
   const probe: ServerProbe = {
     ping: async () => 12,
@@ -97,8 +95,8 @@ function serviceWith(store: ServersStore, defaultServers: readonly DefaultServer
   };
   const warnings: string[] = [];
   const service = createServerListService({
-    store, probe, session, gameVersion: 'v1', newId, readOldJoin: () => null, defaultServers,
-    info: (message) => events.push(message), warn: (message) => warnings.push(message), later: (action) => action(), relativeServersFile: 'data/servers.json', client,
+    store, probe, session, gameVersion: 'v1', newId, readOldJoin: () => null, defaultServers, client,
+    info: (message) => events.push(message), warn: (message) => warnings.push(message), later: (action) => action(), relativeServersFile: 'data/servers.json',
   });
   return { service, events, warnings };
 }
@@ -128,7 +126,7 @@ test('playing a private server logs out, sets the join target and loads the game
     const id = 'server' in added ? added.server.id : '';
     await service.operations.play(id);
     assert.equal(service.joinTarget()?.hostPort, '1.2.3.4:2053');
-    assert.deepEqual(events.filter((event) => !event.startsWith('Private')), ['logged out', 'title Plazma Burst 2 (Home)', 'game']);
+    assert.deepEqual(events.filter((event) => !event.startsWith('Private')), ['prepare official', 'logged out', 'open official Plazma Burst 2 (Home)']);
     assert.equal(context.store.load().last, id);
     await service.operations.play('official');
     assert.equal(service.joinTarget(), null);
@@ -177,14 +175,37 @@ test('the servers route: only for the local window, POST { op, arg }, known oper
   } finally { context.cleanup(); }
 });
 
-test('the list offers the other game clients, and switching asks the session to start as one of them', () => {
+test('the list offers every game client; a play or a check names the client, and an unknown one is an error', async () => {
   const context = tempStore();
   try {
     const { service, events } = serviceWith(context.store);
-    assert.deepEqual(service.operations.list().otherClients, [{ id: 'sadburst', title: 'Sad Burst 2' }]);
-    assert.equal(service.operations.switchClient('sadburst'), true);
-    assert.ok(events.includes('switch sadburst'));
-    assert.throws(() => service.operations.switchClient('flash'), /no game client "flash" in this app/);
+    const listed = service.operations.list();
+    assert.deepEqual(listed.clients.map((choice) => choice.id), ['official', 'sadburst', 'sadburst_erich5']);
+    assert.equal(listed.client, 'official');
+    assert.equal(service.operations.list('sadburst').client, 'sadburst');
+    await service.operations.play('official', 'sadburst');
+    assert.ok(events.includes('prepare sadburst') && events.includes('open sadburst Sad Burst 2'));
+    assert.deepEqual(await service.operations.check('official', 'sadburst'), { ping: 12 });
+    assert.throws(() => service.operations.list('flash'), /no game client "flash" in this app/);
+    await assert.rejects(service.operations.play('official', 'flash'), /no game client "flash" in this app/);
+  } finally { context.cleanup(); }
+});
+
+test('a client that cannot be prepared is not played: nothing is logged out and nothing opens', async () => {
+  const context = tempStore();
+  try {
+    const events: string[] = [];
+    const session: GameSession = {
+      clients: () => [{ id: 'official', title: 'Plazma Burst 2' }],
+      prepare: async () => { throw new Error('its game files are not ready'); },
+      open: () => { events.push('open'); },
+      startLoggedOut: async () => { events.push('logged out'); },
+      applyCredentials: async () => { events.push('credentials'); },
+      showList: () => undefined,
+    };
+    const service = createServerListService({ store: context.store, probe: {} as ServerProbe, session, gameVersion: 'v1', newId, readOldJoin: () => null, defaultServers: [], info: () => undefined, warn: () => undefined, later: (action) => action(), relativeServersFile: 'x' });
+    await assert.rejects(service.operations.play('official'), /not ready/);
+    assert.deepEqual(events, []);
   } finally { context.cleanup(); }
 });
 
@@ -197,13 +218,13 @@ test('the account operations reach the port, are not on the page\'s route, and s
     logIn: async (client: unknown, typed: unknown) => { calls.push(['logIn', client, typed]); return 'me'; },
   };
   const base: any = { store: { load: () => ({ servers: [], last: null, problems: [] }), save() {}, exists: () => true }, probe: {}, gameVersion: null, newId: () => 'id', readOldJoin: () => null, defaultServers: [], info() {}, warn() {}, later() {}, relativeServersFile: 'x' };
-  const { accountOperations } = createServerListService({ ...base, session: { accounts, otherClients: () => [] } });
+  const { accountOperations } = createServerListService({ ...base, session: { accounts, clients: () => [] } });
   assert.deepEqual(accountOperations.accountsOf('official'), { accounts: [] });
   accountOperations.useAccount({ client: 'official', login: 'me' });
   await accountOperations.removeAccount({ client: 'sadburst', login: 'me' });
   assert.equal(await accountOperations.logIn({ client: 'sadburst', login: 'me', password: 'pw' }), 'me');
   assert.deepEqual(calls.at(-1), ['logIn', 'sadburst', { login: 'me', password: 'pw' }]);
-  const none = createServerListService({ ...base, session: { otherClients: () => [] } }).accountOperations;
+  const none = createServerListService({ ...base, session: { clients: () => [] } }).accountOperations;
   assert.equal(none.accountsOf('official'), null, 'no panel');
   assert.throws(() => none.useAccount({ client: 'official', login: 'me' }), /not in this app/);
   for (const operation of ['accounts', 'useAccount', 'removeAccount', 'logIn']) assert.ok(!OPERATIONS.includes(operation));
@@ -212,14 +233,14 @@ test('the account operations reach the port, are not on the page\'s route, and s
 test('the first row is the running client\'s own servers, and playing it titles the window with that client', async () => {
   const context = tempStore();
   try {
-    const sadburst = serviceWith(context.store, [], CLIENT_DETAILS.sadburst).service;
+    const sadburst = serviceWith(context.store, [], 'sadburst').service;
     const own = sadburst.operations.list().official;
     assert.deepEqual([own.id, own.name, own.host, own.client], ['official', 'Sad Burst 2', 'ca.sadburst2.com', 'sadburst']);
-    const erich5 = serviceWith(context.store, [], CLIENT_DETAILS.sadburst_erich5);
+    const erich5 = serviceWith(context.store, [], 'sadburst_erich5');
     const official = erich5.service.operations.list().official;
     assert.deepEqual([official.name, official.host, official.client], ['PlazmaBurst2.com', 'vvvv.plazmaburst2.com', 'sadburst_erich5']);
     await erich5.service.operations.play('official');
-    assert.ok(erich5.events.includes('title Sad Burst 2 (official servers)'));
+    assert.ok(erich5.events.includes('open sadburst_erich5 Sad Burst 2 (official servers)'));
     assert.ok(erich5.events.includes('credentials'));
     assert.equal(serviceWith(context.store).service.operations.list().official.client, 'official');
   } finally { context.cleanup(); }

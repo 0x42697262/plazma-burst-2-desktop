@@ -1,28 +1,28 @@
 import { usesOfficialServers } from '#shared/clients/keys.ts';
+import { CLIENT } from '#shared/features/keys.ts';
 import { PING_GOOD_MS, PING_OK_MS } from '../constants.ts';
 import { LAUNCHER_BRIDGE } from '../keys.ts';
 import { LAUNCHER_TEXT } from '../text.ts';
-import { CHECK_STATE, FIELD, LAUNCHER_CLASS, LAUNCHER_ELEMENT, LAUNCHER_EVENT, LAUNCHER_FIELDS, LAUNCHER_KEY, LOGIN_FIELD, CLIENT_ROW_PREFIX, PASSWORD_FIELD, fieldSelector, hostPortOf } from './keys.ts';
+import { CHECK_STATE, FIELD, LAUNCHER_CLASS, LAUNCHER_ELEMENT, LAUNCHER_EVENT, LAUNCHER_FIELDS, LAUNCHER_KEY, LAUNCHER_STORAGE, LOGIN_FIELD, PASSWORD_FIELD, fieldSelector, hostPortOf } from './keys.ts';
 
 type Server = { id: string; name: string; address: string; fingerprint?: string; nickname?: string; hasPassword?: boolean };
 type Official = { id: string; name: string; host: string; port: number; description: string; client?: string };
-type Row = Server & { official?: boolean; description?: string; clientId?: string };
+type Row = Server & { official?: boolean; description?: string };
 type Status = { name?: string; description?: string; version?: string; password?: boolean; players?: number; max_players?: number; matches?: number };
 type Check = { ping: number | null; status?: Status; error?: string; pinned?: boolean };
 type CheckState = Check | typeof CHECKING | undefined;
 type ClientChoice = { id: string; title: string; host?: string };
 type Account = { login: string; active: boolean; updatedAt: string };
 type Accounts = { accounts: Account[]; canLogIn: boolean; overridden: boolean };
-type ListData = { official: Official; servers: Server[]; last: string | null; gameVersion: string | null; problems: string[]; otherClients?: ClientChoice[] };
+type ListData = { official: Official; servers: Server[]; last: string | null; gameVersion: string | null; problems: string[]; clients: ClientChoice[]; client: string };
 type SaveResult = { errors?: string[]; server?: Server };
 type Bridge = {
-  list(): Promise<ListData>;
+  list(client?: string): Promise<ListData>;
   save(entry: Record<string, unknown>): Promise<SaveResult>;
   remove(id: string): Promise<boolean>;
-  check(id: string): Promise<Check>;
+  check(id: string, client?: string): Promise<Check>;
   fingerprint(address: string): Promise<string>;
-  play(id: string): Promise<boolean>;
-  switchClient(id: string): Promise<boolean>;
+  play(id: string, client?: string): Promise<boolean>;
   accounts(client: string): Promise<Accounts | null>;
   useAccount(client: string, login: string): Promise<boolean>;
   removeAccount(client: string, login: string): Promise<boolean>;
@@ -36,9 +36,26 @@ const query = <Found extends Element>(selector: string): Found => document.query
 
 let data: ListData | null = null;
 let selected: string | null = null;
+let chosenClient: string | undefined;
 const checks = new Map<string, CheckState>();
 let editing: Server | null = null;
 let accountsDrawnFor: string | null = null;
+
+function savedClient(): string | undefined {
+  try {
+    return localStorage.getItem(LAUNCHER_STORAGE.client) ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function saveClient(id: string): void {
+  try {
+    localStorage.setItem(LAUNCHER_STORAGE.client, id);
+  } catch {
+    return;
+  }
+}
 
 function flatten(children: readonly Child[]): (Node | string)[] {
   const flat: (Node | string)[] = [];
@@ -60,15 +77,11 @@ function element(tag: keyof HTMLElementTagNameMap, attributes: Record<string, st
   return node;
 }
 
-const clientRows = (clients: readonly ClientChoice[]): Row[] => clients.map((client) => ({
-  id: CLIENT_ROW_PREFIX + client.id, name: client.title, address: client.host ?? '', clientId: client.id, description: LAUNCHER_TEXT.clientDescription(client.title, usesOfficialServers(client.id)),
-}));
-const rows = (): Row[] => (data ? [{ ...data.official, official: true, address: hostPortOf(data.official.host, data.official.port) }, ...clientRows(data.otherClients ?? []), ...data.servers] : []);
-const clientOfRow = (row: Row | undefined): string | null => (row?.official ? data?.official.client ?? row.id : row?.clientId ?? null);
+const rows = (): Row[] => (data ? [{ ...data.official, official: true, address: hostPortOf(data.official.host, data.official.port) }, ...data.servers] : []);
+const clientOfRow = (row: Row | undefined): string | null => (row?.official ? data?.client ?? null : null);
 const isDone = (state: CheckState): state is Check => state !== undefined && state !== CHECKING;
 
 function pingCell(row: Row, state: CheckState): HTMLElement {
-  if (row.clientId) return element('span', { class: LAUNCHER_CLASS.muted }, LAUNCHER_TEXT.noPlayers);
   if (!isDone(state)) return element('span', { class: LAUNCHER_CLASS.muted }, LAUNCHER_TEXT.checking);
   if (state.ping === null) return element('span', { class: LAUNCHER_CLASS.bad }, LAUNCHER_TEXT.offline);
   const milliseconds = Math.round(state.ping);
@@ -77,13 +90,13 @@ function pingCell(row: Row, state: CheckState): HTMLElement {
 }
 
 function playersCell(row: Row, state: CheckState): string {
-  if (row.official || row.clientId || !isDone(state) || !state.status) return LAUNCHER_TEXT.noPlayers;
+  if (row.official || !isDone(state) || !state.status) return LAUNCHER_TEXT.noPlayers;
   const { players = 0, max_players: maxPlayers = 0, matches = 0 } = state.status;
   return LAUNCHER_TEXT.players(players, maxPlayers, matches);
 }
 
 function descriptionCell(row: Row, state: CheckState): Child {
-  if (row.official || row.clientId) return row.description ?? '';
+  if (row.official) return row.description ?? '';
   const nickname = row.nickname ?? '';
   if (!isDone(state)) return nickname ? LAUNCHER_TEXT.asNickname(nickname) : LAUNCHER_TEXT.needsNickname;
   if (state.pinned === false) return element('span', { class: LAUNCHER_CLASS.bad }, LAUNCHER_TEXT.certificateChanged);
@@ -109,7 +122,7 @@ function draw(): void {
       [LAUNCHER_EVENT.click]: () => { selected = row.id; draw(); },
       [LAUNCHER_EVENT.doubleClick]: () => { void play(row.id); },
     },
-    element('td', { class: LAUNCHER_CLASS.name }, name, element('span', { class: LAUNCHER_CLASS.tag }, row.official ? LAUNCHER_TEXT.officialTag : row.clientId ? LAUNCHER_TEXT.clientTag : LAUNCHER_TEXT.privateTag)),
+    element('td', { class: LAUNCHER_CLASS.name }, name, element('span', { class: LAUNCHER_CLASS.tag }, row.official ? (usesOfficialServers(data.client) ? LAUNCHER_TEXT.officialTag : LAUNCHER_TEXT.clientTag) : LAUNCHER_TEXT.privateTag)),
     element('td', { class: LAUNCHER_CLASS.address }, row.address),
     element('td', { class: LAUNCHER_CLASS.number }, pingCell(row, state)),
     element('td', { class: LAUNCHER_CLASS.number }, playersCell(row, state)),
@@ -157,33 +170,45 @@ async function check(bridge: Bridge, id: string): Promise<void> {
   checks.set(id, CHECKING);
   draw();
   try {
-    checks.set(id, await bridge.check(id));
+    checks.set(id, await bridge.check(id, chosenClient));
   } catch (error) {
     checks.set(id, { ping: null, error: (error as Error).message });
   }
   draw();
 }
 
+function drawClients(): void {
+  const list = query<HTMLSelectElement>(LAUNCHER_ELEMENT.client);
+  list.replaceChildren(...(data?.clients ?? []).map((choice) => {
+    const option = element('option', { value: choice.id }, choice.title) as HTMLOptionElement;
+    option.selected = choice.id === data?.client;
+    return option;
+  }));
+}
+
 async function load(bridge: Bridge): Promise<void> {
-  const loaded = await bridge.list();
+  let loaded = await bridge.list(chosenClient);
+  const saved = savedClient();
+  const isFirstLoad = chosenClient === undefined;
+  if (isFirstLoad && loaded.client === CLIENT.official && saved && saved !== loaded.client && loaded.clients.some((choice) => choice.id === saved)) loaded = await bridge.list(saved);
   data = loaded;
+  chosenClient = loaded.client;
+  drawClients();
   const isSelectedListed = rows().some((row) => row.id === selected);
   if (!selected || !isSelectedListed) selected = rows().some((row) => row.id === loaded.last) ? loaded.last : loaded.official.id;
   const note = query<HTMLParagraphElement>(LAUNCHER_ELEMENT.note);
   note.hidden = !loaded.problems.length;
   note.textContent = loaded.problems.length ? LAUNCHER_TEXT.fileProblems(loaded.problems) : '';
   draw();
-  for (const row of rows()) if (!row.clientId) void check(bridge, row.id);
+  for (const row of rows()) void check(bridge, row.id);
 }
 
 async function play(id: string | null): Promise<void> {
   if (!id || !api) return;
   const button = query<HTMLButtonElement>(LAUNCHER_ELEMENT.play);
   button.disabled = true;
-  const clientRow = rows().find((row) => row.id === id && row.clientId);
   try {
-    if (clientRow?.clientId) await api.switchClient(clientRow.clientId);
-    else await api.play(id);
+    await api.play(id, chosenClient);
   } catch (error) {
     alert((error as Error).message);
     button.disabled = false;
@@ -273,6 +298,14 @@ function wireAccounts(bridge: Bridge): void {
 
 function wire(bridge: Bridge): void {
   wireAccounts(bridge);
+  query<HTMLSelectElement>(LAUNCHER_ELEMENT.client).addEventListener(LAUNCHER_EVENT.change, (event) => {
+    chosenClient = (event.target as HTMLSelectElement).value;
+    saveClient(chosenClient);
+    checks.clear();
+    selected = null;
+    accountsDrawnFor = null;
+    void load(bridge);
+  });
   query<HTMLButtonElement>(LAUNCHER_ELEMENT.getFingerprint).addEventListener(LAUNCHER_EVENT.click, () => {
     const button = query<HTMLButtonElement>(LAUNCHER_ELEMENT.getFingerprint);
     button.disabled = true;
@@ -313,7 +346,7 @@ function wire(bridge: Bridge): void {
       return load(bridge);
     });
   });
-  query<HTMLButtonElement>(LAUNCHER_ELEMENT.refresh).addEventListener(LAUNCHER_EVENT.click, () => { for (const row of rows()) if (!row.clientId) void check(bridge, row.id); });
+  query<HTMLButtonElement>(LAUNCHER_ELEMENT.refresh).addEventListener(LAUNCHER_EVENT.click, () => { for (const row of rows()) void check(bridge, row.id); });
   query<HTMLButtonElement>(LAUNCHER_ELEMENT.play).addEventListener(LAUNCHER_EVENT.click, () => { void play(selected); });
   document.addEventListener(LAUNCHER_EVENT.keyDown, (event) => {
     if (form.open || loginForm.open) return;

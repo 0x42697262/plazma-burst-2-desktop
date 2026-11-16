@@ -12,14 +12,16 @@ private servers and the `__dev/servers` route are the feature's own.
 
 `npm start` opens the server list before the game. The page is
 `src/features/server_list/launcher/`, built to `dist/launcher/`. The list holds:
-- the official server;
+- the chosen client's own servers (the official server for the official client);
 - private servers (`npm run server`, [private-server](../operations/private-server.md)),
   saved in `data/servers.json`.
 
 The console's `servers` command does everything the page does.
 
-Every client has the list ([client-sadburst](client-sadburst.md#the-server-list)): the first
-row is the running client's own servers, the other clients are rows after it.
+The launcher is not tied to a client: it opens with nothing of any game loaded, and a "Game"
+list at the top picks which client the first row and the Play button are for
+([client-sadburst](client-sadburst.md#the-server-list)). Play prepares and loads that client
+in the same process; the Game menu does the same for a client's own servers.
 
 On a private server:
 - the game's lobby connection goes to that server instead, and trusts only its pinned
@@ -111,4 +113,4 @@ The join runs in the page core, not in the dev console, so joining a private ser
 works with `dev_console` off.
 
 ## Accounts
-Selecting the first row (the running client's own servers) or another client's row shows the account panel ([login](login.md#choosing-an-account)). The operations are only on the launcher's IPC, not on the `__dev/servers` route, so a game page cannot reach them.
+Selecting the first row (the chosen client's own servers) shows that client's account panel ([login](login.md#choosing-an-account)). The operations are only on the launcher's IPC, not on the `__dev/servers` route, so a game page cannot reach them.

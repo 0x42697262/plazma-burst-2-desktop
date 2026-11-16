@@ -42,14 +42,22 @@ same plus the game, names and opcodes files). The gate: `src/wrapper/app.ts`.
   `npm run sadburst` (`electron . --sadburst`); for the third client
   `npm run fetch-game -- --sadburst-erich5`, `npm run find-names -- --sadburst-erich5`,
   `npm run sadburst-erich5`. Running the usual commands never touches the Sad Burst files.
-- Inside the app: the server list has a row for every other client (select it to choose an
-  account; Play starts it), and the Game menu (Alt) lists all of them. Choosing one starts the
-  app again with its flag (`src/wrapper/platform/relaunch.ts`, `argsForClient` in
-  `src/kernel/config/clients.ts`), which is how an installed app switches. An AppImage
-  starts again from the file in `APPIMAGE` (`src/wrapper/platform/relaunch-options.ts`):
-  its running binary sits in a mount that closes when the app quits. With
-  `client_sadburst` off (or left out of the edition), only the official client is
-  offered; each client has its own flag (`feature` in `src/shared/clients/keys.ts`).
+- Inside the app: the launcher starts with no client loaded (no game files read, nothing
+  downloaded, no network request to a game site). A "Game" list at its top picks the client;
+  its first row is that client's own servers, the private servers follow, and Play loads the
+  chosen client's game in a window of its own session. Nothing restarts: the Game menu (Alt)
+  and the launcher's list start any client in the same process
+  (`src/wrapper/app.ts`, `src/wrapper/client-runtime.ts`). A client's game is prepared
+  (downloaded, names found) the first time you play it. Its flags are resolved then
+  (`flagsFor` in `src/wrapper/context.ts`). With a client's flag off (or left out of the
+  edition) it is not in the list; each client has its own flag (`feature` in
+  `src/shared/clients/keys.ts`).
+- The launcher remembers the last game you chose. A client flag on the command line
+  (`npm run sadburst`) is chosen at start instead.
+- Closing the game window quits the app; "Servers > Server list" (or `servers page` in the
+  console) closes the game window and shows the launcher again. With `server_list` off, or
+  in remote play and the player-hosted host, there is no launcher: the app loads the client
+  of the command line straight away, as before, and there is no Game menu.
 - The `--` passes the flag to the script: npm 12 refuses
   `npm run fetch-game --sadburst` as an unknown npm option, and older npm turns it into
   `npm_config_sadburst` ("true", or "" on some versions), which is read too ("false" and
@@ -77,9 +85,9 @@ same plus the game, names and opcodes files). The gate: `src/wrapper/app.ts`.
 - Remote play and the player-hosted host are for the official client only.
 
 ## The server list
-Every client has the server list (`server_list`). Its first row is the running client's own
+Every client has the server list (`server_list`). Its first row is the chosen client's own
 servers: Sad Burst 2's lobby for Sad Burst 2, the official ones for the official client and
-for erich5. The other clients follow as rows. A private server is joined the same way in
+for erich5. A private server is joined the same way in
 every client (`lobbyHosts`, `lobbyPort` and the login parameters, [server-list](server-list.md));
 whether a match then plays depends on the client: the lobby connection is made, a client
 whose game code differs may fail later, when the match starts.

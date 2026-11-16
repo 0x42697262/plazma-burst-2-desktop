@@ -20,8 +20,3 @@ export const clientFor = (argv: readonly string[] = process.argv, variables: Var
   CLIENTS[clientOf(argv, variables)];
 
 export const withoutClientFlag = (args: readonly string[]): string[] => args.filter((arg) => !CLIENT_FLAGS.includes(arg));
-
-export const argsForClient = (args: readonly string[], id: ClientId): string[] => {
-  const flag = CLIENT_DETAILS[id].flag;
-  return flag ? [...withoutClientFlag(args), flag] : withoutClientFlag(args);
-};

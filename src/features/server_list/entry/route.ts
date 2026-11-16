@@ -10,7 +10,18 @@ type RouteBody = { op?: unknown; arg?: unknown };
 
 const isOperation = (value: unknown): value is Operation => typeof value === 'string' && OPERATIONS.includes(value);
 
-export function serverListRoute(service: ServerListService): DevRoute {
+export type RoutedService = Pick<ServerListService, 'operations'>;
+
+export const serverListFor = (service: ServerListService, client: string): RoutedService => ({
+  operations: {
+    ...service.operations,
+    list: () => service.operations.list(client),
+    check: (id: unknown) => service.operations.check(id, client),
+    play: (id: unknown) => service.operations.play(id, client),
+  },
+});
+
+export function serverListRoute(service: RoutedService): DevRoute {
   async function handle(request: Request, _url: URL, context: RequestContext): Promise<Response> {
     if (context.remote || context.server) return errorResponse(ROUTE_TEXT.notAvailable, STATUS.forbidden);
     if (request.method !== HTTP_METHOD.post) return errorResponse(ROUTE_TEXT.postOnly, STATUS.methodNotAllowed);

@@ -3,14 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'">
-<title>Plazma Burst 2: servers</title>
+<title>Servers</title>
 <link rel="stylesheet" href="launcher.css">
 </head>
 <body>
 <main>
   <header>
     <h1>Plazma Burst 2</h1>
-    <p class="sub">Choose a server. Double-click a row or press Enter to play.</p>
+    <p class="sub">Choose a game and a server. Double-click a row or press Enter to play. Nothing of a game is loaded until you do.</p>
+    <label class="client-choice">Game <select id="client" aria-label="Game"></select></label>
   </header>
 
   <table id="servers">
@@ -38,7 +39,7 @@
     </div>
     <p id="accounts-note" class="small-line muted" hidden></p>
   </section>
-  <p class="hint">Private servers run with <code>npm run server</code> (docs/operations/private-server.md). Back here from the game: <code>servers page</code> in the dev console (or Servers &gt; Server list in the menu, Alt). The console's <code>servers</code> manages the same list.</p>
+  <p class="hint">Private servers run with <code>npm run server</code> (docs/operations/private-server.md). Back here from the game: <code>servers page</code> in the dev console (or Servers &gt; Server list in the menu, Alt). Another game: choose it above. The console's <code>servers</code> manages the same list.</p>
 </main>
 
 <dialog id="form">

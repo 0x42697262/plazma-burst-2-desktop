@@ -22,7 +22,7 @@ Feature flag `login` (on by default; all modes). Code: `src/features/login/`.
   otherwise. A report carries that raw string; the app hashes nothing for it.
 
 ## Choosing an account
-In the server list, selecting the first row or another client's row shows the account panel:
+In the server list, selecting the first row (the chosen client's own servers) shows the account panel:
 pick a saved account, forget one, or "Log in to a new account" (capability `login.site`).
 A private server shows no panel: there you have a nickname and that server's own password.
 Logging in appears nowhere else, not in the app menu and not in the console. The choice is

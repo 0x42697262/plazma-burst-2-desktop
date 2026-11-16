@@ -7,7 +7,7 @@ import type { ServersStore } from '../adapters/servers-file.ts';
 import type { ServerProbe } from '../adapters/probe.ts';
 import type { DefaultServer } from '#shared/editions/types.ts';
 import { CLIENT_DETAILS, type ClientDetails } from '#shared/clients/keys.ts';
-import { CLIENT } from '#shared/features/keys.ts';
+import { CLIENT, type ClientId } from '#shared/features/keys.ts';
 
 export type ClientChoice = Readonly<{ id: string; title: string; host?: string }>;
 export type AccountsPort = Readonly<{
@@ -19,13 +19,12 @@ export type AccountsPort = Readonly<{
 export type AccountRequest = Readonly<{ client?: unknown; login?: unknown; password?: unknown }>;
 
 export type GameSession = {
-  otherClients(): readonly ClientChoice[];
-  switchClient(id: string): void;
+  clients(): readonly ClientChoice[];
+  prepare(client: string): Promise<void>;
+  open(client: string, title: string): void;
   startLoggedOut(): Promise<void>;
   applyCredentials(): Promise<void>;
-  loadGame(): void;
   showList(): void;
-  setTitle(title: string): void;
   accounts?: AccountsPort | null;
 };
 
@@ -33,7 +32,7 @@ export type ServerListDeps = {
   store: ServersStore;
   probe: ServerProbe;
   session: GameSession;
-  gameVersion: string | null;
+  gameVersion: string | null | ((client: string) => string | null);
   newId: () => string;
   readOldJoin: () => unknown;
   defaultServers: readonly DefaultServer[];
@@ -41,7 +40,7 @@ export type ServerListDeps = {
   warn: (message: string) => void;
   later: (action: () => void) => void;
   relativeServersFile: string;
-  client?: Pick<ClientDetails, 'id' | 'title' | 'lobby' | 'usesOfficial'>;
+  client?: ClientId;
 };
 
 export type ServerCheck = { ping: number | null; status?: ServerStatus; error?: string; pinned?: boolean };
@@ -52,16 +51,29 @@ const isNotPinned = (error: unknown): boolean => (error as { pinned?: boolean } 
 
 export function createServerListService(deps: ServerListDeps) {
   const { store, probe, session } = deps;
-  const client = deps.client ?? CLIENT_DETAILS[CLIENT.official];
-  const own = client.usesOfficial
-    ? { ...OFFICIAL_SERVER, description: OFFICIAL_DESCRIPTION, client: client.id }
-    : { id: OFFICIAL_ID, name: client.title, host: client.lobby.host, port: client.lobby.port, description: SERVICE_TEXT.ownDescription(client.title), client: client.id };
   let joinTarget: ServerEntry | null = null;
+  const defaultClient: ClientId = deps.client ?? CLIENT.official;
+  const gameVersionOf = (client: string): string | null => (typeof deps.gameVersion === 'function' ? deps.gameVersion(client) : deps.gameVersion);
 
-  function list() {
+  function clientOf(asked: unknown): Pick<ClientDetails, 'id' | 'title' | 'lobby' | 'usesOfficial'> {
+    const id = typeof asked === 'string' && asked ? asked : defaultClient;
+    const isAvailable = session.clients().some((choice) => choice.id === id);
+    const details = isAvailable ? CLIENT_DETAILS[id as ClientId] : undefined;
+    if (!details) throw new Error(SERVICE_TEXT.unknownClient(id));
+    return details;
+  }
+
+  function ownOf(client: Pick<ClientDetails, 'id' | 'title' | 'lobby' | 'usesOfficial'>) {
+    return client.usesOfficial
+      ? { ...OFFICIAL_SERVER, description: OFFICIAL_DESCRIPTION, client: client.id }
+      : { id: OFFICIAL_ID, name: client.title, host: client.lobby.host, port: client.lobby.port, description: SERVICE_TEXT.ownDescription(client.title), client: client.id };
+  }
+
+  function list(asked?: unknown) {
+    const client = clientOf(asked);
     const { servers, last, problems } = store.load();
     for (const problem of problems) deps.warn(SERVICE_TEXT.serversFileProblem(problem));
-    return { official: own, servers: servers.map(shownServer), last, gameVersion: deps.gameVersion, problems, otherClients: session.otherClients() };
+    return { official: ownOf(client), servers: servers.map(shownServer), last, gameVersion: gameVersionOf(client.id), problems, clients: session.clients(), client: client.id };
   }
 
   function save(request: SaveRequest | null | undefined): { errors: string[] } | { server: ShownServer } {
@@ -85,8 +97,11 @@ export function createServerListService(deps: ServerListDeps) {
     return true;
   }
 
-  async function check(id: unknown): Promise<ServerCheck | { error: string }> {
-    if (id === OFFICIAL_ID) return { ping: await probe.ping(own.host, own.port) };
+  async function check(id: unknown, asked?: unknown): Promise<ServerCheck | { error: string }> {
+    if (id === OFFICIAL_ID) {
+      const own = ownOf(clientOf(asked));
+      return { ping: await probe.ping(own.host, own.port) };
+    }
     const server = store.load().servers.find((saved) => saved.id === id);
     if (!server) return { error: SERVICE_TEXT.notSavedShort };
     const [ping, status] = await Promise.all([
@@ -102,38 +117,32 @@ export function createServerListService(deps: ServerListDeps) {
     return probe.fingerprint(parsed.host, parsed.port);
   }
 
-  async function play(id: unknown): Promise<boolean> {
+  async function play(id: unknown, asked?: unknown): Promise<boolean> {
+    const client = clientOf(asked);
     const { servers } = store.load();
     const isOfficial = id === OFFICIAL_ID;
     const target = isOfficial ? null : servers.find((server) => server.id === id) ?? null;
     if (!isOfficial && !target) throw new Error(SERVICE_TEXT.notSaved);
     if (target && !target.nickname) throw new Error(SERVICE_TEXT.needsNickname(target.name));
+    await session.prepare(client.id);
     store.save(servers, typeof id === 'string' ? id : null);
+    let title = client.title;
     if (target) {
       await session.startLoggedOut();
       joinTarget = target;
       deps.info(SERVICE_TEXT.playing(target.name, target.hostPort, target.nickname));
-      session.setTitle(SERVICE_TEXT.titlePrivate(client.title, target.name));
+      title = SERVICE_TEXT.titlePrivate(client.title, target.name);
     } else {
       joinTarget = null;
       await session.applyCredentials();
-      session.setTitle(client.title);
     }
-    deps.later(() => session.loadGame());
+    deps.later(() => session.open(client.id, title));
     return true;
   }
 
   function showList(): void {
     joinTarget = null;
-    session.setTitle(client.title);
     session.showList();
-  }
-
-  function switchClient(id: unknown): boolean {
-    const choice = session.otherClients().find((client) => client.id === id);
-    if (!choice) throw new Error(SERVICE_TEXT.unknownClient(String(id)));
-    deps.later(() => session.switchClient(choice.id));
-    return true;
   }
 
   function accountsPort(): AccountsPort {
@@ -182,7 +191,7 @@ export function createServerListService(deps: ServerListDeps) {
   }
 
   return {
-    operations: { list, save, remove, check, fingerprint, play, openList, switchClient },
+    operations: { list, save, remove, check, fingerprint, play, openList },
     accountOperations: { accountsOf, useAccount, removeAccount, logIn },
     showList,
     createFirstList,

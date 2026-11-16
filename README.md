@@ -310,7 +310,7 @@ The `--` is needed: npm 12 refuses `npm run fetch-game --sadburst` as an unknown
 | Obfuscated names | Found by pattern | **The same names as the official client**, in minified code (`!0` for `true`, constants folded, local variables renamed) |
 | Download | Every file, through the site's directory listings | The site has no listings, and answers any unknown path under `/gameplay/` with its game page. So the files are found from the game's own lists (sounds and bitmaps, sprite sheets and frame sequences, skins, campaign maps) and from every file path in its code. Anything still missing is fetched once while you play, kept, and listed in `game.sadburst/kept.txt`, which the next fetch reads |
 | Login | `data/credentials.json`, cookies cleared at start | Its own entry screen: log in with a Sad Burst account, or play as a guest. The session stays in the app between starts |
-| Server list | `npm start` opens it | The same list, its first row is Sad Burst 2's own servers |
+| Server list | `npm start` opens it | The same launcher: choose the game in its Game list, no restart |
 | Hooks | Yes | Yes, but its loader hashes every game script (SHA-256) as the page receives it and sends the hash with the lobby login (`PB2_CLIENT_BUILD`: client version, hash, size), so a hook that patches a script shows the server a changed client |
 | Remote play, player-hosted host | Yes | No |
 | Network log instance | `local` | `sadburst` (`data/netlogs/<date>_<time>_sadburst.log`) |

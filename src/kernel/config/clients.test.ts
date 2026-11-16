@@ -55,14 +55,6 @@ test('a game version tells the page which client it is', () => {
   assert.equal(clientOfVersion(undefined), 'official');
 });
 
-test('switching clients changes only the client flag, so the app starts again as the other one', async () => {
-  const { argsForClient } = await import('./clients.ts');
-  assert.deepEqual(argsForClient(['.', '--verbose'], 'sadburst'), ['.', '--verbose', '--sadburst']);
-  assert.deepEqual(argsForClient(['.', '--sadburst', '--verbose'], 'official'), ['.', '--verbose']);
-  assert.deepEqual(argsForClient(['.', '--sadburst'], 'sadburst_erich5'), ['.', '--sadburst-erich5']);
-  assert.deepEqual(argsForClient(['.', '--sadburst-erich5'], 'sadburst'), ['.', '--sadburst']);
-});
-
 test('which clients play the official servers with the official accounts', async () => {
   const { usesOfficialServers } = await import('#shared/clients/keys.ts');
   assert.equal(usesOfficialServers('official'), true);
