@@ -327,6 +327,8 @@ export const RULES: readonly Rule[] = Object.freeze([
     re: String.raw`⟨_⟩\("lite_phys",false,\x60⟨ID⟩\x60\);` },
   { file: 'frame2', keys: ['applyFps'], what: ['function(): sets the stage frame rate from the FPS setting'],
     re: String.raw`function ⟨ID⟩\(\)\s*\{\s*stage\.⟨_⟩=⟨fpsChoice⟩==1\?20:\(⟨fpsChoice⟩==2\?30:60\);` },
+  { file: 'frame2', keys: ['syncPointHistory'], what: ['function(): copies every physics point to its previous position (Sad Burst calls it when physics quality changes)'],
+    re: String.raw`function ⟨ID⟩\(\)\s*\{\s*for\(let i=0;i<⟨ptCount⟩;i\+\+\)\s*\{\s*⟨_⟩\[i\]=⟨ptX⟩\[i\];\s*⟨_⟩\[i\]=⟨ptY⟩\[i\];\s*\}\s*\}` },
   { file: 'frame2', keys: ['aimSourceX', 'aimSourceY'], what: ['global: the mouse x your aim is made from in the next tick', 'global: the mouse y your aim is made from in the next tick'],
     re: String.raw`if\(mouseX!=0\|\|mouseY!=0\)\s*\{\s*⟨ID⟩=mouseX;\s*⟨ID⟩=mouseY;` },
   { file: 'frame2', keys: ['charOnDeath'], what: ['character property: trigger run when it dies (-1 = none)'],

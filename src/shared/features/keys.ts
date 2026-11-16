@@ -14,6 +14,7 @@ export const FEATURE = Object.freeze({
   mapCache: 'map_cache',
   gameChat: 'game_chat',
   zoom: 'zoom',
+  fps: 'fps',
   screenshot: 'screenshot',
   netlog: 'netlog',
   fingerprint: 'fingerprint',

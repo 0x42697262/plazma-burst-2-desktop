@@ -43,6 +43,8 @@ const field = (target: unknown, key: NameKey): unknown => bagOf(target)[nameOf(k
 const invoke = (target: unknown, key: NameKey, ...args: unknown[]): unknown => (field(target, key) as Callable).apply(target, args);
 const network = (): Network | null => (read('net') as Network | null | undefined) ?? null;
 const requireNetwork = (): Network => read('net') as Network;
+const unlimitedLogicGlobal = (): string | null => [GAME_GLOBAL.unlimitedRefresh, GAME_GLOBAL.frameInterpolation].find((name) => readGlobal(name) !== undefined) ?? null;
+
 const stageOrNull = (): Stage | null => (readGlobal(GAME_GLOBAL.stage) as Stage | null | undefined) || null;
 const world = (): Camera | null => (Reflect.get(globalThis, GAME_GLOBAL.world) as Camera | null | undefined) ?? null;
 const optionalGlobal = <Found>(name: string): Found | null => (readGlobal(name) as Found | undefined) ?? null;
@@ -118,6 +120,23 @@ export const game = {
 
   zoom: (): number => read('zoom') as number,
   setZoom: (zoom: number): void => { write('zoom', zoom); },
+  fpsChoice: (): unknown => read('fpsChoice'),
+  setFpsChoice: (choice: number): void => { write('fpsChoice', choice); },
+  applyFps: (): void => { call('applyFps'); },
+  lowPhysics: (): unknown => read('lowPhysics'),
+  setLowPhysics: (isLow: boolean): void => { write('lowPhysics', isLow); },
+  syncPointHistory: (): void => { call('syncPointHistory'); },
+  unlimitedLogic: (): boolean | null => {
+    const name = unlimitedLogicGlobal();
+    return name === null ? null : readGlobal(name) === true;
+  },
+  setUnlimitedLogic: (isUnlimited: boolean): boolean => {
+    const name = unlimitedLogicGlobal();
+    if (name !== null) writeGlobal(name, isUnlimited);
+    return name !== null;
+  },
+  aimSource: (): { x: unknown; y: unknown } => ({ x: read('aimSourceX'), y: read('aimSourceY') }),
+  setAimSourceX: (aimX: number): void => { write('aimSourceX', aimX); },
   getGravity: (): unknown => readGlobal(GAME_GLOBAL.gravity),
   setGravity: (gravity: unknown): void => { writeGlobal(GAME_GLOBAL.gravity, gravity); },
 

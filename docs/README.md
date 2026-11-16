@@ -25,6 +25,7 @@
 - [game-setup.md](features/game-setup.md): `game_setup`, downloading and updating the game
 - [map-bot.md](features/map-bot.md): `map_bot`, the lobby server's maps from the official lobby
 - [web-client.md](features/web-client.md): `web_client`, the game in a browser for this server only
+- [fps.md](features/fps.md): `fps`, the game's FPS, physics quality and logic
 - [game-chat.md](features/game-chat.md): `game_chat`, the game's own chat commands
 - [guns.md](features/guns.md): `guns`, the gun list, give and drop
 - [js-eval.md](features/js-eval.md): `js_eval`, running JavaScript in the page
