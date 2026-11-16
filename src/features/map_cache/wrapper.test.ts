@@ -72,8 +72,9 @@ test('the map download: a local ID is served from disk; with fast_maps a saved m
     assert.match(errors[0] ?? '', /Local map not found: local-missing/);
     assert.equal(await (await call(mapDownload('author-x')))?.text(), MAP);
     assert.equal(fetched, 1);
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    assert.ok(fs.existsSync(path.join(context.dir, 'author-x.xml')), 'saved after the download');
+    const savedFile = path.join(context.dir, 'author-x.xml');
+    for (let waited = 0; waited < 2000 && !fs.existsSync(savedFile); waited += 10) await new Promise((resolve) => setTimeout(resolve, 10));
+    assert.ok(fs.existsSync(savedFile), 'saved after the download');
     fs.writeFileSync(context.kvFile, JSON.stringify({ fast_maps: true }));
     assert.match(await (await call(mapDownload('author-x')))?.text() ?? '', /<door/);
     assert.equal(fetched, 1, 'fast load: not downloaded again');
