@@ -52,7 +52,7 @@ test('hidden: no log lines, and reports are still saved', () => {
     const { service } = createDiagnosticsWrapper(
       { log: { info: say, warn: say, error: say }, isCapabilityOn: () => false, gameVersion: 'v1', client: 'official', repoRoot: folder, gameDir: folder, devKvFile: '', host: '' } as never,
       { client: 'official', appVersion: '1', flags: {} as never, capabilities: {}, urlFromEnvironment: null,
-        keyFromEnvironment: null, fetch: async () => new Response(), onRendererGone: () => undefined },
+        keyFromEnvironment: null, fetch: async () => new Response(), onRendererGone: () => undefined, onMainError: () => undefined },
       path.join(folder, `${edition.name}.json`),
       path.join(folder, 'none.json'),
       edition,

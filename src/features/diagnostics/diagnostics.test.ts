@@ -200,6 +200,7 @@ test('login, cookies and IPs are included by default and gated by their capabili
       keyFromEnvironment: null,
       fetch: async () => new Response(),
       onRendererGone: () => undefined,
+      onMainError: () => undefined,
     },
     path.join(folder, `${enabled.length}.json`),
     path.join(folder, 'none.json'),
@@ -292,4 +293,29 @@ test('the key comes from the environment first, then the file, then the edition'
   assert.deepEqual(resolveConfig('https://s.test', {}, edition).keys.map((key) => key.kid), ['edition']);
   assert.deepEqual(resolveConfig(null, {}, {}, base64(environmentPair)).keys.map((key) => key.kid), ['default']);
   assert.deepEqual(resolveConfig(null, {}, {}, base64(environmentPair)).keys[0]?.key, environmentPair.publicKey);
+});
+
+test('capture listens through its ports, not on the process, so the app can route a crash to one client', () => {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-diagnostics-'));
+  const before = process.listenerCount('uncaughtExceptionMonitor');
+  let mainError: ((error: Error) => void) | null = null;
+  let rendererGone: ((reason: string, exitCode: number) => void) | null = null;
+  try {
+    const { service } = createDiagnosticsWrapper(
+      { log: { info: () => undefined, warn: () => undefined, error: () => undefined }, isCapabilityOn: (id: string) => id === CAPABILITY.diagnostics.capture, gameVersion: 'v1', client: 'sadburst', repoRoot: folder, gameDir: folder, devKvFile: '', host: '' } as never,
+      {
+        client: 'sadburst', appVersion: '1.0.0', flags: {} as never, capabilities: {}, urlFromEnvironment: null, keyFromEnvironment: null, fetch: async () => new Response(),
+        onMainError: (listener) => { mainError = listener; },
+        onRendererGone: (listener) => { rendererGone = listener; },
+      },
+      path.join(folder, 'reports.json'),
+      path.join(folder, 'none.json'),
+    );
+    assert.equal(process.listenerCount('uncaughtExceptionMonitor'), before);
+    (mainError as ((error: Error) => void) | null)?.(new Error('boom'));
+    (rendererGone as ((reason: string, exitCode: number) => void) | null)?.('crashed', 1);
+    assert.deepEqual(service.reports().map((report) => [report.kind, report.client]), [['main_error', 'sadburst'], ['renderer_crash', 'sadburst']]);
+  } finally {
+    fs.rmSync(folder, { recursive: true, force: true });
+  }
 });

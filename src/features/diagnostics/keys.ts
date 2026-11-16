@@ -24,7 +24,6 @@ export const SECURE_PROTOCOL = 'https:';
 export const LOOPBACK_PROTOCOL = 'http:';
 export const LOOPBACK_HOSTS: readonly string[] = Object.freeze(['localhost', '127.0.0.1', '[::1]']);
 export const CLEAN_EXIT = 'clean-exit';
-export const UNCAUGHT_MONITOR = 'uncaughtExceptionMonitor';
 export const PAGE_EVENT = Object.freeze({ error: 'error', rejection: 'unhandledrejection' });
 export const NUMBER_WORD = /^\d+$/;
 

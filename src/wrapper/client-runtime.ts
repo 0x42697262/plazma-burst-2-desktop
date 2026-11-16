@@ -27,9 +27,10 @@ import { createGameFiles, readGameVersion, checkSadburstBuild } from './platform
 import { createDevFiles, checkNamesFile, checkPageBundle } from './platform/dev-files.ts';
 import { textResponse, typedResponse } from './platform/responses.ts';
 import { onceUntilItFails } from './platform/single-flight.ts';
+import type { CrashPorts } from './platform/crash-hub.ts';
 import { logPage } from './platform/page-log.ts';
 import type { PageContext } from './platform/context.ts';
-import { CONSTRAINT_SOURCE, DEBUG_LEVEL, FETCH_DEST, FILE_ERROR_METHOD, HTTPS_PREFIX, RELOAD_METHOD, RENDER_PROCESS_GONE } from './keys.ts';
+import { CONSTRAINT_SOURCE, DEBUG_LEVEL, FETCH_DEST, FILE_ERROR_METHOD, HTTPS_PREFIX, RELOAD_METHOD } from './keys.ts';
 import { APP_TEXT as TEXT } from './text.ts';
 
 const ignore = (): void => undefined;
@@ -40,9 +41,20 @@ export type SharedServices = Readonly<{
   serverListFeature: (client: string) => WrapperFeature | null;
   joinTarget: () => (JoinPage & PinnedTarget) | null;
   watchCookies: (refresh: () => Promise<void>) => void;
+  crashPorts: (client: string) => CrashPorts;
 }>;
 
 export type ClientRuntime = ReturnType<typeof createClientRuntime>;
+
+type GameFolderEnvironment = Readonly<{ client: string; gameDir: string | null; gameVersion: string | null }>;
+
+export function gameFolderOf(client: GameClient, environment: GameFolderEnvironment) {
+  const isChosen = client.id === environment.client;
+  const root = path.resolve((isChosen && environment.gameDir) || client.gameDir);
+  const version = readGameVersion(root, isChosen ? environment.gameVersion : null);
+  const isMissing = !version || !fsSync.existsSync(path.join(root, INDEX_FILE));
+  return Object.freeze({ root, version, isMissing });
+}
 
 export function createClientRuntime(shared: SharedServices, client: GameClient) {
   const { context, login, joinTarget } = shared;
@@ -54,11 +66,8 @@ export function createClientRuntime(shared: SharedServices, client: GameClient) 
   const isRemoteHost = environment.mode === MODE.remote;
   const isDedicatedHost = environment.mode === MODE.server;
   const { remotePlayPart, p2pHostPart, serverListPart } = WRAPPER_PARTS;
-  const isChosen = client.id === environment.client;
-
-  const root = path.resolve((isChosen && environment.gameDir) || client.gameDir);
+  const { root, version } = gameFolderOf(client, environment);
   const host = client.host;
-  const version = readGameVersion(root, isChosen ? environment.gameVersion : null);
   const prefix = client.gamePrefix(version);
   const startUrl = HTTPS_PREFIX + host + prefix;
   const devPrefix = prefix + DEV_DIR;
@@ -111,7 +120,7 @@ export function createClientRuntime(shared: SharedServices, client: GameClient) 
         urlFromEnvironment: environment.diagnosticsUrl,
         keyFromEnvironment: environment.diagnosticsKey,
         fetch: (url, init) => net.fetch(url, { ...init, bypassCustomProtocolHandlers: true }),
-        onRendererGone: (listener) => { app.on(RENDER_PROCESS_GONE, (_event, _contents, details) => { listener(details.reason, details.exitCode); }); },
+        ...shared.crashPorts(client.id),
       },
     },
     shared.serverListFeature(client.id),
@@ -212,7 +221,7 @@ export function createClientRuntime(shared: SharedServices, client: GameClient) 
     return response;
   }
 
-  const isMissing = (): boolean => !version || !fsSync.existsSync(path.join(root, INDEX_FILE));
+  const isMissing = (): boolean => gameFolderOf(client, environment).isMissing;
 
   async function installOnce(): Promise<void> {
     if (devConsoleOn && seedKvFile(devSettingsFile, EDITION_DEFAULTS.settings)) log.info(TEXT.settingsSeeded(path.relative(USER_ROOT, devSettingsFile)));

@@ -14,14 +14,14 @@ import type { ServerListWrapper } from '#features/server_list/wrapper.ts';
 import type { WrapperContext } from './context.ts';
 import { WRAPPER_PARTS } from './features.ts';
 import { isLauncherMode } from './mode.ts';
-import { createClientRuntime, type ClientRuntime } from './client-runtime.ts';
+import { createClientRuntime, gameFolderOf, type ClientRuntime } from './client-runtime.ts';
 import { MAIN_WINDOW } from './platform/constants.ts';
 import { OFFICIAL_LOGIN_FILE } from './platform/keys.ts';
 import { createSiteCookies } from './platform/site-cookies.ts';
-import { readGameVersion } from './platform/game-files.ts';
 import { oncePerKeyAtATime } from './platform/single-flight.ts';
 import type { JoinPage } from './platform/index-page.ts';
-import { MENU_ROLE, WINDOW_ALL_CLOSED } from './keys.ts';
+import { MENU_ROLE, RENDER_PROCESS_GONE, UNCAUGHT_MONITOR, WINDOW_ALL_CLOSED } from './keys.ts';
+import { createCrashHub } from './platform/crash-hub.ts';
 import { APP_TEXT as TEXT } from './text.ts';
 
 const clientById = (id: string): GameClient => {
@@ -88,10 +88,16 @@ export function startApp(context: WrapperContext): void {
 
   const availableClients = (): GameClient[] => Object.values(CLIENTS).filter((client) => client.feature === null || context.flagsFor(client.id).flags[client.feature].on);
 
+  const crashHub = createCrashHub({
+    onMainError: (listener) => { process.on(UNCAUGHT_MONITOR, listener); },
+    onRendererGone: (listener) => { app.on(RENDER_PROCESS_GONE, (_event, _contents, details) => { listener(details.reason, details.exitCode); }); },
+    activeClient: () => gameWindow?.client ?? lastClient,
+  });
+
   const runtimeFor = (id: ClientId): ClientRuntime => {
     const known = runtimes.get(id);
     if (known) return known;
-    const made = createClientRuntime({ context, login, joinTarget, watchCookies, serverListFeature: (client) => serverList?.featureFor(client) ?? null }, CLIENTS[id]);
+    const made = createClientRuntime({ context, login, joinTarget, watchCookies, crashPorts: crashHub.portsFor, serverListFeature: (client) => serverList?.featureFor(client) ?? null }, CLIENTS[id]);
     runtimes.set(id, made);
     return made;
   };
@@ -108,12 +114,9 @@ export function startApp(context: WrapperContext): void {
       const ready = await gameSetupPart.prepare({ client, gameDir: path.resolve(client.gameDir), checksForUpdates: app.isPackaged, log });
       if (!ready) throw new Error(TEXT.notPrepared(client.title));
     }
-    const runtime = runtimeFor(client.id);
-    if (runtime.isMissing()) {
-      runtimes.delete(client.id);
-      throw new Error(TEXT.gameMissing(runtime.root, client.runFlag));
-    }
-    await runtime.install();
+    const folder = gameFolderOf(client, environment);
+    if (folder.isMissing) throw new Error(TEXT.gameMissing(folder.root, client.runFlag));
+    await runtimeFor(client.id).install();
   }
 
   function closeGameWindow(): void {
@@ -164,11 +167,7 @@ export function startApp(context: WrapperContext): void {
     buildMenu();
   }
 
-  const clientVersion = (id: string): string | null => {
-    const client = clientById(id);
-    const isOwn = client.id === environment.client;
-    return readGameVersion(path.resolve((isOwn && environment.gameDir) || client.gameDir), isOwn ? environment.gameVersion : null) || null;
-  };
+  const clientVersion = (id: string): string | null => gameFolderOf(clientById(id), environment).version || null;
 
   serverList = serverListPart?.create(
     { log, isCapabilityOn: (id: string) => context.capabilities[id]?.on ?? false, gameVersion: '', client: chosen.id, repoRoot: USER_ROOT, gameDir: '', devKvFile: '', host: chosen.host },

@@ -9,7 +9,7 @@ import type { Edition } from '#shared/editions/types.ts';
 import type { WrapperDeps, WrapperFeature } from '#wrapper/feature-types.ts';
 import { ID_BYTES } from './constants.ts';
 import { createSealer } from './adapters/seal.ts';
-import { CLEAN_EXIT, REPORT_KIND, UNCAUGHT_MONITOR } from './keys.ts';
+import { CLEAN_EXIT, REPORT_KIND } from './keys.ts';
 import { CONFIG_PATH, REPORTS_PATH } from './paths.ts';
 import { CONFIG_TEXT, WRAPPER_TEXT as TEXT } from './text.ts';
 import { resolveConfig } from './domain/config.ts';
@@ -32,6 +32,7 @@ export type DiagnosticsPorts = Readonly<{
   keyFromEnvironment: string | null;
   fetch: Fetcher;
   onRendererGone(listener: (reason: string, exitCode: number) => void): void;
+  onMainError(listener: (error: Error) => void): void;
 }>;
 
 export function localIps(interfaces: ReturnType<typeof os.networkInterfaces> = os.networkInterfaces()): string[] {
@@ -97,7 +98,7 @@ export function createDiagnosticsWrapper(deps: WrapperDeps, ports: DiagnosticsPo
   });
   const capture = deps.isCapabilityOn(CAPABILITY.diagnostics.capture);
   if (capture) {
-    process.on(UNCAUGHT_MONITOR, (error) => { service.capture(REPORT_KIND.mainError, { name: error.name, message: error.message, stack: error.stack ?? '' }); });
+    ports.onMainError((error) => { service.capture(REPORT_KIND.mainError, { name: error.name, message: error.message, stack: error.stack ?? '' }); });
     ports.onRendererGone((reason, exitCode) => {
       if (reason !== CLEAN_EXIT) service.capture(REPORT_KIND.rendererCrash, { name: TEXT.rendererName, message: TEXT.rendererGone(reason, exitCode) });
     });
