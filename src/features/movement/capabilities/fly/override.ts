@@ -3,7 +3,7 @@ import type { MovingCharacter } from '#console/kernel/game/types.ts';
 import { CAPABILITY } from '#shared/features/keys.ts';
 import { game } from '#console/kernel/game/bindings.ts';
 import { GAME_FIELDS } from '#console/kernel/game/fields.ts';
-import { FLY_MODE, SETTING, SWEEP_MODES } from '#features/movement/keys.ts';
+import { FLY_MODE, SETTING, SWEEP_AIM, SWEEP_MODES } from '#features/movement/keys.ts';
 import { settings } from '#console/kernel/state/store.ts';
 import { FLY_DAMPING, FRAMES_PER_TICK_AT_60_FPS, FULL_LIFT, OUTSIDE_VIEW_AIM_X, STEADY_STABILITY } from '../../constants.ts';
 import { SWEEP_FPS_CHOICE } from '../../keys.ts';
@@ -44,6 +44,11 @@ function flyFree(character: MovingCharacter, tick: number): void {
 type SweepBindings = { fpsChoice(): unknown; lowPhysics(): unknown };
 const sweepGame = game as unknown as SweepBindings;
 
+export const isInverse = (): boolean => {
+  const aim = settings.effective(SETTING.flySweepAim);
+  return aim === SWEEP_AIM.inverse || aim === true;
+};
+
 export const isSweepReady = (): boolean => sweepGame.fpsChoice() === SWEEP_FPS_CHOICE && sweepGame.lowPhysics() !== true;
 
 export const sweepRange = (): number => {
@@ -58,6 +63,7 @@ function flySweep(character: MovingCharacter, withMouse: boolean): void {
   }
   sweep.direction = -sweep.direction;
   sweep.range = sweepRange();
+  sweep.inverse = isInverse();
   holdAim(character);
   holdKeys(withMouse);
 }

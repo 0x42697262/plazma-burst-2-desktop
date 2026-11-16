@@ -150,6 +150,38 @@ test('"fly sweep" holds ragdoll (X) while sweeping; "fly sword" also holds the m
   assert.ok(game.run('help fly').some((line) => /only fly modes safe in approved and ranked matches/.test(line)), 'help says which modes are safe');
 });
 
+test('--inverse mirrors your aim height through you, so the cursor above you lifts you; --default puts it back; both modes share it', () => {
+  const { globals, names, player } = game;
+  globals[names.fpsChoice] = 3;
+  globals[names.lowPhysics] = false;
+  player.x = 100;
+  player.y = 50;
+  player.tary = -30;
+  assert.ok(game.run('fly sweep --inverse').some((line) => /inverse/.test(line)));
+  assert.ok(game.run('get fly_sweep_aim').includes('fly_sweep_aim = inverse'));
+  game.run('fly sweep --on');
+  game.frame();
+  player.tary = -30;
+  assert.equal(player.tary, 130, '80 above you reads 80 below');
+  player.y = 60;
+  assert.equal(player.tary, 150, 'mirrored through where you are now');
+  game.run('fly sweep --default');
+  assert.ok(game.run('get fly_sweep_aim').includes('fly_sweep_aim = default'));
+  player.tary = -30;
+  assert.equal(player.tary, -30, 'default: the cursor height as the game set it');
+  game.run('fly sweep --off');
+  game.run('fly sword --inverse --on');
+  game.frame();
+  player.tary = 0;
+  assert.equal(player.tary, 120, 'sword uses it too, set and started in one line');
+  game.run('fly sword --off');
+  player.tary = 5;
+  assert.equal(player.tary, 5, 'stopped: a plain value again');
+  assert.match(errorsOf(game.run('fly sweep --inverse --default')).join('\n'), /usage: fly/);
+  assert.match(errorsOf(game.run('fly sweep --on --off')).join('\n'), /usage: fly/);
+  game.run('unset fly_sweep_aim');
+});
+
 test('"fly sweep --on" arms the sweep mode when another one was set', () => {
   game.run('fly free');
   game.run('fly sweep --on');

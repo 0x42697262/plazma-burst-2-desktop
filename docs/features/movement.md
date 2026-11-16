@@ -49,6 +49,10 @@ overrides in `src/console/kernel/overrides/frame.ts`.
     to 1000 there; `bypass checks` lifts that.
   - Any other `fly` mode stops the sweep. Moving, jumping, crouching and commands work as
     usual; shots go where the sweep points.
+  - `--inverse` mirrors your aim height through you (`tary`, a getter like `tarx`), so the
+    cursor above you lifts you instead of below; `--default` goes back. It is the
+    `fly_sweep_aim` setting (`default` or `inverse`), shared by sweep and sword, and can go
+    with a run option: `fly sword --inverse --on`, or `bind --hold mouse2 "fly sword --inverse"`.
   - Safe with the anti-cheat checks on (no `bypass checks`): `fly sweep` and `fly sword` are the
     only fly modes, and the only movement commands, that are. They change nothing the game
     does not let a player change: your own aim (`tarx`, which the AHK sweep changes by moving
