@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { OTHER_CLIENT_LIST } from '#shared/clients/keys.ts';
+import { OTHER_CLIENT_LIST, type ClientDetails } from '#shared/clients/keys.ts';
 import { CLIENT, FEATURE, MODE, type ClientId, type Mode } from '#shared/features/keys.ts';
 import type { FeatureToggle } from '#shared/features/types.ts';
 import { DEFAULT_LOG_FORMAT, LOG_FORMATS, type LogFormat, type LogLevel } from '#kernel/log/constants.ts';
@@ -44,12 +44,25 @@ const environmentSchema = z.object({
 
 const isLogFormat = (value: string): value is LogFormat => (LOG_FORMATS as readonly string[]).includes(value);
 
-export function clientOf(argv: readonly string[], variables: EnvironmentVariables): ClientId {
-  const asked = OTHER_CLIENT_LIST.find((details) => {
+type AskedClients = Readonly<{ fromFlags: readonly ClientDetails[]; fromNpm: readonly ClientDetails[] }>;
+
+function askedClients(argv: readonly string[], variables: EnvironmentVariables): AskedClients {
+  const isAskedByNpm = (details: ClientDetails): boolean => {
     const fromNpm = variables[details.npmVariable];
-    return argv.includes(details.flag) || (fromNpm !== undefined && fromNpm !== FALSE_VALUE && fromNpm !== DISABLED_VALUE);
-  });
-  return asked?.id ?? CLIENT.official;
+    return fromNpm !== undefined && fromNpm !== FALSE_VALUE && fromNpm !== DISABLED_VALUE;
+  };
+  return { fromFlags: OTHER_CLIENT_LIST.filter((details) => argv.includes(details.flag)), fromNpm: OTHER_CLIENT_LIST.filter(isAskedByNpm) };
+}
+
+const strongestAsk = ({ fromFlags, fromNpm }: AskedClients): readonly ClientDetails[] => (fromFlags.length ? fromFlags : fromNpm);
+
+export function clientOf(argv: readonly string[], variables: EnvironmentVariables): ClientId {
+  return strongestAsk(askedClients(argv, variables))[0]?.id ?? CLIENT.official;
+}
+
+function clientProblem(argv: readonly string[], variables: EnvironmentVariables): string | null {
+  const asked = strongestAsk(askedClients(argv, variables));
+  return asked.length > 1 ? TEXT.severalClients(asked.map((details) => details.flag)) : null;
 }
 
 function modeOf(argv: readonly string[]): Mode {
@@ -92,6 +105,8 @@ export function parseEnvironment(argv: readonly string[], env: EnvironmentVariab
   const variables = environmentSchema.parse(env);
   const logLevel = parseLogLevel(argv, env);
   if (logLevel.problem) problems.push(logLevel.problem);
+  const severalClients = clientProblem(argv, env);
+  if (severalClients) problems.push(severalClients);
   const environment: Environment = Object.freeze({
     client: clientOf(argv, env),
     mode: modeOf(argv),

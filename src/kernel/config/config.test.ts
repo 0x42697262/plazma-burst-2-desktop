@@ -36,6 +36,16 @@ test('the client: --sadburst, or npm_config_sadburst unless it is "false" or "0"
   assert.equal(parseEnvironment(['.'], { npm_config_sadburst_erich5: 'true' }).environment.client, 'sadburst_erich5');
 });
 
+test('a client flag on the command line wins over an npm variable; two flags are a problem', () => {
+  assert.equal(parseEnvironment(['.', '--sadburst-erich5'], { npm_config_sadburst: 'true' }).environment.client, 'sadburst_erich5');
+  assert.equal(parseEnvironment(['.', '--sadburst-erich5'], { npm_config_sadburst: '' }).environment.client, 'sadburst_erich5');
+  assert.deepEqual(parseEnvironment(['.', '--sadburst-erich5'], { npm_config_sadburst: 'true' }).problems, []);
+  const both = parseEnvironment(['.', '--sadburst', '--sadburst-erich5'], {});
+  assert.match(both.problems.join('\n'), /--sadburst and --sadburst-erich5: choose one client/);
+  const bothFromNpm = parseEnvironment(['.'], { npm_config_sadburst: 'true', npm_config_sadburst_erich5: 'true' });
+  assert.match(bothFromNpm.problems.join('\n'), /choose one client/);
+});
+
 test('the mode: --host is remote play, --p2p-host the dedicated host, --host wins', () => {
   assert.equal(parseEnvironment(['.', '--host'], {}).environment.mode, 'remote');
   assert.equal(parseEnvironment(['.', '--p2p-host'], {}).environment.mode, 'server');
