@@ -46,7 +46,8 @@ export function settingsGuardInterceptor({ route, confirm, log = () => undefined
     const previous = file ? parsed(await file.peek()) : null;
     const risky = newRiskyCommands(previous, parsed(await request.clone().text()));
     if (!risky.length) return null;
-    const isKept = !context.remote && await oneAtATime(() => confirm(risky, context));
+    const canAsk = !context.remote && !context.server;
+    const isKept = canAsk && await oneAtATime(() => confirm(risky, context));
     log(isKept ? TEXT.keptLog(risky.length) : TEXT.refusedLog(risky.length));
     return isKept ? null : refused();
   };

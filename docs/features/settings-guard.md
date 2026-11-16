@@ -25,6 +25,8 @@ bind that runs JavaScript in your next game, in any client, logged in as you.
 - A command already in the file is not asked about again. The same command on another key
   is asked about.
 - A remote tester's page (remote play) cannot add one: refused without asking the host.
+- The player-hosted host's page cannot either: its window is hidden, so a dialog would wait
+  for an answer nobody can give. Edit its settings file by hand instead.
 - Editing `data/dev-overrides.json` by hand is not checked: that is you.
 - Other settings (keys, harmless binds, history) are saved without a question.
 

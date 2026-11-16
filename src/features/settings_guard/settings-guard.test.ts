@@ -41,10 +41,10 @@ test('nothing new, a changed harmless command, a removed one, or a broken file i
   assert.deepEqual(newRiskyCommands({ binds: { g: 'js 1' } }, { binds: { h: 'js 1' } }), [{ where: 'bind h', command: 'js 1' }], 'moved to another key: asked again');
 });
 
-function guardWith(answer: boolean, file: Record<string, unknown> = {}, remote = false) {
+function guardWith(answer: boolean, file: Record<string, unknown> = {}, remote = false, server = false) {
   const asked: string[][] = [];
   const intercept = settingsGuardInterceptor({ route: ROUTE, confirm: async (commands) => { asked.push(commands.map((entry) => `${entry.where}: ${entry.command}`)); return answer; } });
-  const context = { remote, kvFile: { peek: async () => JSON.stringify(file), read: async () => { throw new Error('read takes the file as seen; the guard must peek'); } } };
+  const context = { remote, server, kvFile: { peek: async () => JSON.stringify(file), read: async () => { throw new Error('read takes the file as seen; the guard must peek'); } } };
   const call = (request: Request) => intercept(request, new URL(request.url), context);
   return { asked, call };
 }
@@ -94,4 +94,10 @@ test('one question at a time: a save that comes while one is asked waits for its
 test('a command is shown on one line and cut short, so it cannot push the warning out of view', () => {
   assert.equal(shownCommand('js a\n\n\nb\u2028c\td'), 'js a b c d');
   assert.equal(shownCommand('js ' + 'x'.repeat(500)).length, 200);
+});
+
+test('the player-hosted host\'s page, whose window is hidden, is refused without a dialog that nobody would see', async () => {
+  const guard = guardWith(true, {}, false, true);
+  assert.equal((await guard.call(PUT({ binds: { f: 'js 1' } })))?.status, 403);
+  assert.deepEqual(guard.asked, []);
 });
