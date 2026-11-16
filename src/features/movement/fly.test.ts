@@ -342,6 +342,45 @@ test('fly_sweep_ragdoll between 0 and 1 holds X for that share of the ticks, spr
   game.run('unset fly_sweep_ragdoll');
 });
 
+test('directional tilts the swing toward the cursor: it circles the point opposite the cursor, always at the radius', () => {
+  const { globals, names, player } = game;
+  globals[names.fpsChoice] = 3;
+  globals[names.lowPhysics] = false;
+  globals[names.zoom] = 1;
+  game.run('unset fly_sweep_aim; unset fly_sweep_throttle; fly_sweep_curve 1; fly_sweep_range 500');
+  player.x = 100;
+  player.y = 50;
+  const aims = (cursorX: number, cursorY: number): Array<[number, number]> => {
+    const seen: Array<[number, number]> = [];
+    for (let frame = 0; frame < 3; frame++) {
+      game.frame();
+      player.tarx = cursorX;
+      player.tary = cursorY;
+      seen.push([player.tarx - player.x, player.tary - player.y]);
+    }
+    return seen.slice(1);
+  };
+  player.tarx = 500;
+  player.tary = 50;
+  game.run('fly sweep --on');
+  const halfAngle = (((0.5 - 0.05) / 0.95) * Math.PI) / 2;
+  const right = aims(100 + 400, 50);
+  for (const [offsetX, offsetY] of right) {
+    assert.equal(Math.round(offsetX), -Math.round(500 * Math.cos(halfAngle)), 'cursor half way to the right: the swing circles a point to your left');
+    assert.equal(Math.round(Math.abs(offsetY)), Math.round(500 * Math.sin(halfAngle)), 'and swings below and above it');
+    assert.equal(Math.round(Math.hypot(offsetX, offsetY)), 500, 'always at the radius');
+  }
+  assert.notEqual(Math.sign(right[0]?.[1] ?? 0), Math.sign(right[1]?.[1] ?? 0), 'one tick each side');
+  const diagonal = aims(100 + 400, 50 - 200);
+  for (const [offsetX, offsetY] of diagonal) assert.equal(Math.round(Math.hypot(offsetX, offsetY)), 500);
+  const middleX = diagonal.reduce((sum, [offsetX]) => sum + offsetX, 0);
+  const middleY = diagonal.reduce((sum, [, offsetY]) => sum + offsetY, 0);
+  assert.ok(middleX < 0 && middleY > 0, 'cursor up and right: the swing circles a point down and left');
+  game.run('fly sweep --inverse');
+  for (const [offsetX] of aims(100 + 400, 50 - 400)) assert.equal(Math.round(Math.abs(offsetX)), 500, 'inverse does not tilt: the cursor at the top is the full level swing');
+  game.run('fly sweep --off; unset fly_sweep_aim; unset fly_sweep_curve; unset fly_sweep_range');
+});
+
 test('"fly sweep --on" arms the sweep mode when another one was set', () => {
   game.run('fly free');
   game.run('fly sweep --on');

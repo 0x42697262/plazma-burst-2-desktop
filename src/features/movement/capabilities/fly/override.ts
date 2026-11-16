@@ -9,7 +9,7 @@ import { settings } from '#console/kernel/state/store.ts';
 import { DIRECTIONAL_DEAD_ZONE, EDGE_DEAD_ZONE, HALF_TURN_RADIANS, FLY_DAMPING, FRAMES_PER_TICK_AT_60_FPS, FULL_LIFT, OUTSIDE_VIEW_AIM_X, STEADY_STABILITY } from '../../constants.ts';
 import { SWEEP_FPS_CHOICE } from '../../keys.ts';
 import { aimWatched } from '#console/kernel/overrides/server-checks.ts';
-import { cursorSide, holdAim, holdKeys, releaseAim, sweep } from './sweep.ts';
+import { LEVEL_SWING, cursorSide, holdAim, holdKeys, releaseAim, sweep } from './sweep.ts';
 import { OVERRIDE_NAME } from '../../keys.ts';
 import { isAlive } from '../../services/character.ts';
 
@@ -73,10 +73,14 @@ function steerByEdge(character: MovingCharacter, cursor: { x: unknown; y: unknow
   const zoom = Number(sweepGame.zoom()) || 1;
   const towardX = ((Number(cursor.x) - character.x) * zoom) / GAME_WIDTH;
   const towardY = ((Number(cursor.y) - character.y) * zoom) / GAME_HEIGHT;
-  const halfSwing = shaped(towardY) * HALF_TURN_RADIANS;
-  const below = (Math.sign(towardY) || -1) * (sweep.inverse ? -1 : 1);
-  sweep.sideReach = isStarting ? sweep.range : sweep.range * Math.sin(halfSwing);
-  sweep.height = isStarting ? 0 : below * sweep.range * Math.cos(halfSwing);
+  const offsetX = Number(cursor.x) - character.x;
+  const offsetY = Number(cursor.y) - character.y;
+  const distance = Math.hypot(offsetX, offsetY);
+  const isTilted = isDirectional() && distance > 0;
+  const axisX = isTilted ? -offsetX / distance : 0;
+  const axisY = isTilted ? -offsetY / distance : (Math.sign(towardY) || -1) * (sweep.inverse ? -1 : 1);
+  const halfSwing = shaped(isTilted ? Math.hypot(towardX, towardY) : towardY) * HALF_TURN_RADIANS;
+  sweep.swing = isStarting ? LEVEL_SWING : { axisX, axisY, along: Math.cos(halfSwing), across: Math.sin(halfSwing) };
   sweep.sideCarry += shaped(towardX);
   if (sweep.sideCarry < 1) return 0;
   sweep.sideCarry -= 1;
@@ -107,8 +111,7 @@ function flySweep(character: MovingCharacter, withMouse: boolean): void {
     holdKeys({ ragdoll: holdsRagdoll(), mouse: withMouse, side: isDirectional() ? side : null });
     return;
   }
-  sweep.sideReach = sweep.range;
-  sweep.height = null;
+  sweep.swing = null;
   holdKeys({ ragdoll: holdsRagdoll(), mouse: withMouse, side: isDirectional() ? cursorSide(character, DIRECTIONAL_DEAD_ZONE) : null });
 }
 

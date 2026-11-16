@@ -80,6 +80,14 @@ overrides in `src/console/kernel/overrides/frame.ts`.
       approved-match hold back never cuts in below 1000. Left and right (directional): A or D
       is held for that share of the ticks, spread evenly. The first tick aims fully toward
       the cursor's side, so the facing rule above still holds.
+      With `--directional` the swing is tilted toward the cursor: it circles the point
+      opposite the cursor, not the point below you, by an angle from the cursor's share of
+      the screen (left and right over 800, up and down over 400, combined), so the push that
+      lifts you points at the cursor in any direction. The aim stays on the radius, so it is
+      as safe in approved matches as the plain swing; A or D is still held as before.
+      `--inverse` and `--plain` keep the swing around the point below or above you. Checked
+      headless: the cursor to your right aimed `-210, -668` then `-172, 679`; up and right
+      `-441, -544` then `356, 603`. Whether the push follows the tilt is felt in a real window.
     - `near`: the earlier sweep, left and right at `fly_sweep_range`, at your cursor's height;
       the closer the cursor, the bigger the swing, and the side is held whole.
     - Checked headless: with the cursor at the screen center the aim was `0, 700` (no swing),
