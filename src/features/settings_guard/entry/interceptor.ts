@@ -2,7 +2,7 @@ import type { Interceptor, RequestContext } from '#wrapper/feature-types.ts';
 import { REFUSED_STATUS } from '../constants.ts';
 import { CONTENT_TYPE_HEADER, PUT_METHOD, TEXT_TYPE } from '../keys.ts';
 import { TEXT } from '../text.ts';
-import { newRiskyCommands, type RiskyCommand } from '../domain/risky.ts';
+import { newRiskyCommands, withoutNewRisky, type RiskyCommand } from '../domain/risky.ts';
 
 export type SettingsRoute = Readonly<{ host: string; path: string }>;
 
@@ -12,7 +12,7 @@ export type SettingsGuardDeps = Readonly<{
   log?: (message: string) => void;
 }>;
 
-type PeekableFile = { peek(): Promise<string> };
+type SettingsFile = { peek(): Promise<string>; write?(saved: unknown): Promise<boolean> };
 
 const parsed = (text: string): unknown => {
   try {
@@ -42,13 +42,16 @@ export function settingsGuardInterceptor({ route, confirm, log = () => undefined
   return async (request, url, context) => {
     const isSettingsSave = request.method === PUT_METHOD && url.hostname === route.host && decodedPath(url.pathname) === route.path;
     if (!isSettingsSave) return null;
-    const file = context.kvFile as PeekableFile | null | undefined;
+    const file = context.kvFile as SettingsFile | null | undefined;
     const previous = file ? parsed(await file.peek()) : null;
-    const risky = newRiskyCommands(previous, parsed(await request.clone().text()));
+    const next = parsed(await request.clone().text());
+    const risky = newRiskyCommands(previous, next);
     if (!risky.length) return null;
     const canAsk = !context.remote && !context.server;
     const isKept = canAsk && await oneAtATime(() => confirm(risky, context));
     log(isKept ? TEXT.keptLog(risky.length) : TEXT.refusedLog(risky.length));
-    return isKept ? null : refused();
+    if (isKept) return null;
+    await file?.write?.(withoutNewRisky(previous, next));
+    return refused();
   };
 }

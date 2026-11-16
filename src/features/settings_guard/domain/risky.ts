@@ -18,28 +18,49 @@ function onloadText(onload: unknown): string | null {
   return typeof joined === 'string' ? joined.trim() : null;
 }
 
-function commandsOf(settings: Settings): Map<string, string> {
-  const found = new Map<string, string>();
-  const addBinds = (binds: unknown, place: (key: string) => string): void => {
+type Place = Readonly<{ where: string; path: readonly string[]; command: string }>;
+
+function placesOf(settings: Settings): Place[] {
+  const found: Place[] = [];
+  const addBinds = (binds: unknown, path: readonly string[], where: (key: string) => string): void => {
     if (!isObject(binds)) return;
-    for (const [key, command] of Object.entries(binds)) if (typeof command === 'string') found.set(place(key), command.trim());
+    for (const [key, command] of Object.entries(binds)) if (typeof command === 'string') found.push({ where: where(key), path: [...path, key], command: command.trim() });
   };
-  addBinds(settings[SECTION.binds], TEXT.bind);
+  addBinds(settings[SECTION.binds], [SECTION.binds], TEXT.bind);
   const profiles = settings[SECTION.profiles];
   if (!isObject(profiles)) return found;
   for (const [name, profile] of Object.entries(profiles)) {
     if (!isObject(profile)) continue;
-    addBinds(profile[SECTION.binds], (key) => TEXT.profileBind(name, key));
+    addBinds(profile[SECTION.binds], [SECTION.profiles, name, SECTION.binds], (key) => TEXT.profileBind(name, key));
     const onload = onloadText(profile[SECTION.onload]);
-    if (onload !== null) found.set(TEXT.profileOnload(name), onload);
+    if (onload !== null) found.push({ where: TEXT.profileOnload(name), path: [SECTION.profiles, name, SECTION.onload], command: onload });
   }
   return found;
 }
 
-export function newRiskyCommands(previous: unknown, next: unknown): RiskyCommand[] {
-  const before = isObject(previous) ? commandsOf(previous) : new Map<string, string>();
-  const after = isObject(next) ? commandsOf(next) : new Map<string, string>();
-  return [...after].filter(([where, command]) => isRisky(command) && before.get(where) !== command).map(([where, command]) => ({ where, command }));
+function newRiskyPlaces(previous: unknown, next: unknown): Place[] {
+  const before = new Map((isObject(previous) ? placesOf(previous) : []).map((place) => [place.where, place.command]));
+  return (isObject(next) ? placesOf(next) : []).filter((place) => isRisky(place.command) && before.get(place.where) !== place.command);
+}
+
+export const newRiskyCommands = (previous: unknown, next: unknown): RiskyCommand[] => newRiskyPlaces(previous, next).map(({ where, command }) => ({ where, command }));
+
+const valueAt = (settings: unknown, path: readonly string[]): unknown => path.reduce<unknown>((value, key) => (isObject(value) ? value[key] : undefined), settings);
+
+function putBack(copy: Record<string, unknown>, path: readonly string[], previousValue: unknown): void {
+  const parentPath = path.slice(0, -1);
+  const key = path.at(-1) ?? '';
+  const parent = valueAt(copy, parentPath);
+  if (!isObject(parent)) return;
+  const writable = parent as Record<string, unknown>;
+  if (previousValue === undefined) Reflect.deleteProperty(writable, key);
+  else writable[key] = previousValue;
+}
+
+export function withoutNewRisky(previous: unknown, next: unknown): Record<string, unknown> {
+  const copy = JSON.parse(JSON.stringify(next ?? {})) as Record<string, unknown>;
+  for (const place of newRiskyPlaces(previous, next)) putBack(copy, place.path, valueAt(previous, place.path));
+  return copy;
 }
 
 export const shownCommand = (command: string): string => command.replace(LINE_BREAKS_AND_TABS, SPACE).trim().slice(0, SHOWN_COMMAND_MAX);

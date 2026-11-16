@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { newRiskyCommands } from './domain/risky.ts';
 import { settingsGuardInterceptor } from './entry/interceptor.ts';
-import { shownCommand } from './domain/risky.ts';
+import { shownCommand, withoutNewRisky } from './domain/risky.ts';
 
 const ROUTE = { host: 'www.plazmaburst2.com', path: '/h5/versions/v1/__dev/kv' };
 const PUT = (body: unknown, url = 'https://www.plazmaburst2.com/h5/versions/v1/__dev/kv'): Request => new Request(url, { method: 'PUT', body: JSON.stringify(body) });
@@ -56,7 +56,7 @@ test('a save that adds a risky command waits for your answer: yes lets it throug
   const no = guardWith(false);
   const refused = await no.call(PUT({ binds: { f: 'js 1' } }));
   assert.equal(refused?.status, 403);
-  assert.match(await refused?.text() ?? '', /not saved/);
+  assert.match(await refused?.text() ?? '', /Not saved: .*the rest of your settings were saved/);
 });
 
 test('harmless saves, reads and other routes are left alone, and nobody is asked', async () => {
@@ -100,4 +100,23 @@ test('the player-hosted host\'s page, whose window is hidden, is refused without
   const guard = guardWith(true, {}, false, true);
   assert.equal((await guard.call(PUT({ binds: { f: 'js 1' } })))?.status, 403);
   assert.deepEqual(guard.asked, []);
+});
+
+test('without the refused commands: each one goes back to what the file held, and everything else in the save stays', () => {
+  const previous = { binds: { g: 'js 1' }, profiles: { pvp: { onload: 'god on', speed: 2 } } };
+  const next = { god: true, binds: { g: 'js 2', h: 'heal', k: 'js 3' }, profiles: { pvp: { onload: ['js 4'], speed: 3, binds: { x: 'wire hit_player' } }, calm: { onload: 'js 5' } } };
+  assert.deepEqual(withoutNewRisky(previous, next), {
+    god: true,
+    binds: { g: 'js 1', h: 'heal' },
+    profiles: { pvp: { onload: 'god on', speed: 3, binds: {} }, calm: {} },
+  });
+});
+
+test('a refused save keeps its harmless changes in the file, and the page is told to reload it', async () => {
+  let file = JSON.stringify({ binds: { g: 'tp' } });
+  const intercept = settingsGuardInterceptor({ route: ROUTE, confirm: async () => false });
+  const context = { kvFile: { peek: async () => file, write: async (saved: unknown) => { file = JSON.stringify(saved); return true; } } };
+  const request = PUT({ god: true, binds: { g: 'tp', f: 'js 1' } });
+  assert.equal((await intercept(request, new URL(request.url), context))?.status, 403);
+  assert.deepEqual(JSON.parse(file), { god: true, binds: { g: 'tp' } });
 });

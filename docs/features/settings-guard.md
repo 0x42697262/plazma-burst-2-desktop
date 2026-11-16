@@ -20,8 +20,9 @@ bind that runs JavaScript in your next game, in any client, logged in as you.
   waits for its answer. Each command is shown on one line and cut at 200 characters.
 - Only this game's settings route counts: its host and `<game path>/__dev/kv`, compared
   after decoding, the way the wrapper serves it.
-- Refused: nothing is written, the console prints "Settings not saved …" and reloads what
-  the file holds, so the bind is gone from the page too. Kept: saved as usual.
+- Refused: the refused commands go back to what the file held (or are left out when they
+  are new), everything else in that save is written, the console prints "Not saved: …" and
+  reloads the file, so the bind is gone from the page too. Kept: saved as usual.
 - A command already in the file is not asked about again. The same command on another key
   is asked about.
 - A remote tester's page (remote play) cannot add one: refused without asking the host.
