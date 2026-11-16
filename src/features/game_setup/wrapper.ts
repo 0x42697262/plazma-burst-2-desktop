@@ -7,9 +7,10 @@ import { openProgressWindow, type ProgressWindow } from './adapters/progress-win
 import { TEXT } from './text.ts';
 import { LINE_JOIN } from './keys.ts';
 
-export type PrepareGame = Readonly<{ client: GameClient; gameDir: string; checksForUpdates: boolean; log: Logger }>;
+export type PrepareGame = Readonly<{ client: GameClient; gameDir: string; checksForUpdates: boolean; log: Logger; showsProblems?: boolean }>;
+export type PreparedGame = Readonly<{ ready: boolean; problems: readonly string[] }>;
 
-async function prepareGame({ client, gameDir, checksForUpdates, log }: PrepareGame): Promise<boolean> {
+async function prepareGame({ client, gameDir, checksForUpdates, log, showsProblems = true }: PrepareGame): Promise<PreparedGame> {
   const progress: { window: ProgressWindow | null } = { window: null };
   const say = (line: string): void => {
     log.info(line);
@@ -23,8 +24,8 @@ async function prepareGame({ client, gameDir, checksForUpdates, log }: PrepareGa
     if (result.ready) log.warn(problem);
     else log.error(problem);
   }
-  if (!result.ready) dialog.showErrorBox(TEXT.failedTitle(client.title), result.problems.join(LINE_JOIN));
-  return result.ready;
+  if (!result.ready && showsProblems) dialog.showErrorBox(TEXT.failedTitle(client.title), result.problems.join(LINE_JOIN));
+  return { ready: result.ready, problems: result.problems };
 }
 
 export const gameSetupPart = Object.freeze({ prepare: prepareGame });

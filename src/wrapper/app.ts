@@ -130,8 +130,8 @@ export function startApp(context: WrapperContext): void {
     if (runtimes.has(client.id)) return;
     const isOwnFolder = client.id === environment.client && environment.gameDir;
     if (gameSetupPart && flags.game_setup.on && !isOwnFolder) {
-      const ready = await gameSetupPart.prepare({ client, gameDir: path.resolve(client.gameDir), checksForUpdates: app.isPackaged, log });
-      if (!ready) throw new Error(TEXT.notPrepared(client.title));
+      const prepared = await gameSetupPart.prepare({ client, gameDir: path.resolve(client.gameDir), checksForUpdates: app.isPackaged, log, showsProblems: false });
+      if (!prepared.ready) throw new Error(TEXT.notPrepared(client.title, prepared.problems));
     }
     const folder = gameFolderOf(client, environment);
     if (folder.isMissing) throw new Error(TEXT.gameMissing(folder.root, client.runFlag));

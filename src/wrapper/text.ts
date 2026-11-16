@@ -9,7 +9,7 @@ export const APP_TEXT = Object.freeze({
   loginRestored: (names: readonly string[]) => `Official server: your login is back (${names.join(', ')})`,
   gameMenu: 'Game',
   unknownClient: (id: string) => `no game client "${id}" in this app`,
-  notPrepared: (title: string) => `${title}: its game files are not ready`,
+  notPrepared: (title: string, problems: readonly string[]) => [`${title}: its game files are not ready`, ...problems].join('\n'),
   cannotStart: 'Cannot start the game',
   modeOff: (id: string, reason: string | null) => `"${id}" is off${reason ? ` (${reason})` : ''}; not starting it.`,
   sadburstHostModes: (title: string) => `${title}: remote play and the player-hosted host are for the official client only.`,
