@@ -19,6 +19,12 @@ test('a bind, a profile bind or a profile onload that runs js, wire, game, serve
   ]);
 });
 
+test('an onload given as a list of commands is checked like the console reads it, joined', () => {
+  assert.deepEqual(newRiskyCommands({}, { profiles: { x: { onload: ['god on', 'js alert(1)'] } } }), [{ where: 'profile x onload', command: 'god on; js alert(1)' }]);
+  assert.deepEqual(newRiskyCommands({ profiles: { x: { onload: 'god on; js alert(1)' } } }, { profiles: { x: { onload: ['god on', 'js alert(1)'] } } }), [], 'the same commands, written as a list: not new');
+  assert.deepEqual(newRiskyCommands({}, { profiles: { x: { onload: ['god on', 3] } } }), [], 'a list the console refuses is not run, so not asked about');
+});
+
 test('nothing new, a changed harmless command, a removed one, or a broken file is not risky', () => {
   assert.deepEqual(newRiskyCommands({ binds: { g: 'js 1' } }, { binds: { g: 'js 1' } }), []);
   assert.deepEqual(newRiskyCommands({ binds: { g: 'js 1' } }, { binds: {} }), []);
