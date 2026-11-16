@@ -61,6 +61,22 @@ overrides in `src/console/kernel/overrides/frame.ts`.
       above you lifts you.
     - `--plain`: the plain sweep; the cursor below you lifts you.
     - `--default`: back to the default (unsets `fly_sweep_aim`).
+  - How fast is `fly_sweep_throttle`:
+    - `edge` (the default): by how far your cursor is toward the screen edge. The share is
+      measured on screen, per axis (the cursor's distance from you times the zoom, over the
+      game's width, 800, left and right, and its height, 400, up and down), so zoom does not
+      change it; the camera keeps you opposite the cursor, so the edge is 100%. Under 5% counts
+      as nothing; `fly_sweep_curve` shapes the rest (1 a straight line, 2 gentler near you).
+      Up and down: the aim swings on a circle of radius `fly_sweep_range` around you, by an
+      angle from none (both aims straight below or above you: no lift) to half a turn (level
+      left, then level right: full lift); the aim is never farther than the radius, so the
+      approved-match hold back never cuts in below 1000. Left and right (directional): A or D
+      is held for that share of the ticks, spread evenly. The first tick aims fully toward
+      the cursor's side, so the facing rule above still holds.
+    - `near`: the earlier sweep, left and right at `fly_sweep_range`, at your cursor's height;
+      the closer the cursor, the bigger the swing, and the side is held whole.
+    - Checked headless: with the cursor at the screen center the aim was `0, 700` (no swing),
+      half way up `-455, 532`, at the top `-699, 38`. Lift itself is felt in a real window.
   - Safe with the anti-cheat checks on (no `bypass checks`): `fly sweep` and `fly sword` are the
     only fly modes, and the only movement commands, that are. They change nothing the game
     does not let a player change: your own aim (`tarx`, which the AHK sweep changes by moving

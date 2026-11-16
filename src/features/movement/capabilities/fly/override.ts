@@ -3,9 +3,10 @@ import type { MovingCharacter } from '#console/kernel/game/types.ts';
 import { CAPABILITY } from '#shared/features/keys.ts';
 import { game } from '#console/kernel/game/bindings.ts';
 import { GAME_FIELDS } from '#console/kernel/game/fields.ts';
-import { FLY_MODE, SETTING, SWEEP_AIM, SWEEP_MODES } from '#features/movement/keys.ts';
+import { FLY_MODE, SETTING, SWEEP_AIM, SWEEP_MODES, SWEEP_THROTTLE } from '#features/movement/keys.ts';
+import { GAME_HEIGHT, GAME_WIDTH } from '#console/kernel/game/constants.ts';
 import { settings } from '#console/kernel/state/store.ts';
-import { DIRECTIONAL_DEAD_ZONE, FLY_DAMPING, FRAMES_PER_TICK_AT_60_FPS, FULL_LIFT, OUTSIDE_VIEW_AIM_X, STEADY_STABILITY } from '../../constants.ts';
+import { DIRECTIONAL_DEAD_ZONE, EDGE_DEAD_ZONE, HALF_TURN_RADIANS, FLY_DAMPING, FRAMES_PER_TICK_AT_60_FPS, FULL_LIFT, OUTSIDE_VIEW_AIM_X, STEADY_STABILITY } from '../../constants.ts';
 import { SWEEP_FPS_CHOICE } from '../../keys.ts';
 import { aimWatched } from '#console/kernel/overrides/server-checks.ts';
 import { cursorSide, holdAim, holdKeys, releaseAim, sweep } from './sweep.ts';
@@ -41,7 +42,7 @@ function flyFree(character: MovingCharacter, tick: number): void {
   if (settings.effective(SETTING.flyUpright) === true) character[GAME_FIELDS.STABILITY] = STEADY_STABILITY;
 }
 
-type SweepBindings = { fpsChoice(): unknown; lowPhysics(): unknown };
+type SweepBindings = { fpsChoice(): unknown; lowPhysics(): unknown; zoom(): number };
 const sweepGame = game as unknown as SweepBindings;
 
 export const isDirectional = (): boolean => settings.effective(SETTING.flySweepAim) === SWEEP_AIM.directional;
@@ -50,6 +51,28 @@ export const isInverse = (): boolean => {
   const aim = settings.effective(SETTING.flySweepAim);
   return aim === SWEEP_AIM.inverse || aim === true || aim === SWEEP_AIM.directional;
 };
+
+const isEdge = (): boolean => settings.effective(SETTING.flySweepThrottle) !== SWEEP_THROTTLE.near;
+
+function shaped(share: number): number {
+  const clamped = Math.min(1, Math.abs(share));
+  if (clamped <= EDGE_DEAD_ZONE) return 0;
+  return ((clamped - EDGE_DEAD_ZONE) / (1 - EDGE_DEAD_ZONE)) ** numberSetting(SETTING.flySweepCurve);
+}
+
+function steerByEdge(character: MovingCharacter, cursor: { x: unknown; y: unknown }, isStarting: boolean): number {
+  const zoom = Number(sweepGame.zoom()) || 1;
+  const towardX = ((Number(cursor.x) - character.x) * zoom) / GAME_WIDTH;
+  const towardY = ((Number(cursor.y) - character.y) * zoom) / GAME_HEIGHT;
+  const halfSwing = shaped(towardY) * HALF_TURN_RADIANS;
+  const below = (Math.sign(towardY) || -1) * (sweep.inverse ? -1 : 1);
+  sweep.sideReach = isStarting ? sweep.range : sweep.range * Math.sin(halfSwing);
+  sweep.height = isStarting ? 0 : below * sweep.range * Math.cos(halfSwing);
+  sweep.sideCarry += shaped(towardX);
+  if (sweep.sideCarry < 1) return 0;
+  sweep.sideCarry -= 1;
+  return Math.sign(towardX);
+}
 
 export const isSweepReady = (): boolean => sweepGame.fpsChoice() === SWEEP_FPS_CHOICE && sweepGame.lowPhysics() !== true;
 
@@ -69,6 +92,14 @@ function flySweep(character: MovingCharacter, withMouse: boolean): void {
   sweep.range = sweepRange();
   sweep.inverse = isInverse();
   holdAim(character);
+  const cursor = sweep.held?.gameAim ?? { x: character.x, y: character.y };
+  if (isEdge()) {
+    const side = steerByEdge(character, cursor, isStarting);
+    holdKeys(withMouse, isDirectional() ? side : 0);
+    return;
+  }
+  sweep.sideReach = sweep.range;
+  sweep.height = null;
   holdKeys(withMouse, isDirectional() ? cursorSide(character, DIRECTIONAL_DEAD_ZONE) : 0);
 }
 

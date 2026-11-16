@@ -1,7 +1,7 @@
 import type { KeySpec } from '#console/kernel/state/schema.ts';
 import { GROUP, SETTING_TYPE } from '#console/kernel/state/keys.ts';
 import { CAPABILITY } from '#shared/features/keys.ts';
-import { FLY_MODE, SWEEP_AIM } from '../../keys.ts';
+import { FLY_MODE, SWEEP_AIM, SWEEP_THROTTLE } from '../../keys.ts';
 
 const FLY = CAPABILITY.movement.fly;
 
@@ -28,11 +28,19 @@ export const SETTINGS: Readonly<Record<string, KeySpec>> = Object.freeze({
   },
   fly_sweep_range: {
     capability: FLY, type: SETTING_TYPE.number, group: GROUP.player, min: 50, max: 3000, default: 700,
-    desc: 'How far left and right of you "fly sweep" aims, in game units (above 1000 is held back in approved matches)', example: '900',
+    desc: 'How far from you the sweep aims, in game units: the swing radius with the "edge" throttle, left and right with "near" (above 1000 is held back in approved matches)', example: '900',
   },
   fly_sweep_aim: {
     capability: FLY, type: SETTING_TYPE.bool, group: GROUP.player, extraValues: [SWEEP_AIM.plain, SWEEP_AIM.inverse, SWEEP_AIM.directional], default: SWEEP_AIM.directional, example: SWEEP_AIM.inverse,
     desc: 'How the sweep steers: "directional" (the default) flies toward your cursor: above lifts you, and left or right is held toward its side; "inverse" only mirrors the aim height (cursor above lifts you); "plain" is the plain sweep (cursor below lifts you)',
+  },
+  fly_sweep_throttle: {
+    capability: FLY, type: SETTING_TYPE.bool, group: GROUP.player, extraValues: [SWEEP_THROTTLE.edge, SWEEP_THROTTLE.near], default: SWEEP_THROTTLE.edge, example: SWEEP_THROTTLE.near,
+    desc: 'How fast the sweep flies: "edge" (the default) by how far your cursor is toward the screen edge (on you: nothing, at the edge: full speed), "near" the closer your cursor, the faster',
+  },
+  fly_sweep_curve: {
+    capability: FLY, type: SETTING_TYPE.number, group: GROUP.player, min: 0.25, max: 4, default: 1, example: '2',
+    desc: 'Speed curve for the "edge" throttle: 1 is a straight line, above 1 is gentler near you and faster near the edge',
   },
   fly_upright: { capability: FLY, type: SETTING_TYPE.bool, group: GROUP.player, default: true, desc: 'Keep you on your feet in "fly free"' },
 });

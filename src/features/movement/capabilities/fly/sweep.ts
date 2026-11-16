@@ -4,9 +4,12 @@ import { AIM_X_FIELD, AIM_Y_FIELD } from '../../keys.ts';
 type AimHolder = Record<string, unknown> & { x: number; y: number };
 type HeldAim = { character: AimHolder; gameAim: { x: unknown; y: unknown } };
 
-export type SweepState = { active: boolean; direction: number; range: number; inverse: boolean; held: HeldAim | null; holdsKeys: boolean };
+export type SweepState = {
+  active: boolean; direction: number; range: number; inverse: boolean; sideReach: number; height: number | null; sideCarry: number;
+  held: HeldAim | null; holdsKeys: boolean;
+};
 
-export const sweep: SweepState = { active: false, direction: 1, range: 0, inverse: false, held: null, holdsKeys: false };
+export const sweep: SweepState = { active: false, direction: 1, range: 0, inverse: false, sideReach: 0, height: null, sideCarry: 0, held: null, holdsKeys: false };
 
 type HeldKeys = { ragdoll: boolean; mouse: boolean; left: boolean; right: boolean };
 const keys = game as unknown as { holdKeys(held: HeldKeys): void };
@@ -51,13 +54,13 @@ export function holdAim(character: AimHolder): void {
   Object.defineProperty(character, AIM_X_FIELD, {
     configurable: true,
     enumerable: true,
-    get: (): number => character.x + sweep.direction * sweep.range,
+    get: (): number => character.x + sweep.direction * sweep.sideReach,
     set: (gameAimX: unknown): void => { held.gameAim.x = gameAimX; },
   });
   Object.defineProperty(character, AIM_Y_FIELD, {
     configurable: true,
     enumerable: true,
-    get: (): unknown => aimHeight(character, held.gameAim.y),
+    get: (): unknown => (sweep.height === null ? aimHeight(character, held.gameAim.y) : character.y + sweep.height),
     set: (gameAimY: unknown): void => { held.gameAim.y = gameAimY; },
   });
   sweep.held = held;
@@ -66,5 +69,6 @@ export function holdAim(character: AimHolder): void {
 export function setSweeping(active: boolean): void {
   sweep.active = active;
   sweep.direction = 1;
+  sweep.sideCarry = 0;
   if (!active) releaseAim();
 }

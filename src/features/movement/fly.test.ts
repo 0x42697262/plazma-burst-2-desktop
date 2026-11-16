@@ -79,6 +79,7 @@ test('"fly" is still the key: on, free, off and plain "fly" behave as before', (
 });
 
 test('"fly sweep --on" overrides your aim x left and right of you every tick; the mouse, cursor and camera are left alone', () => {
+  game.run('fly_sweep_throttle near');
   const { globals, names, player } = game;
   globals[names.fpsChoice] = 3;
   globals[names.lowPhysics] = false;
@@ -151,6 +152,7 @@ test('"fly sweep" holds ragdoll (X) while sweeping; "fly sword" also holds the m
 });
 
 test('--inverse mirrors your aim height through you, so the cursor above you lifts you; --plain puts it back; both modes share it', () => {
+  game.run('fly_sweep_throttle near');
   const { globals, names, player } = game;
   globals[names.fpsChoice] = 3;
   globals[names.lowPhysics] = false;
@@ -183,6 +185,7 @@ test('--inverse mirrors your aim height through you, so the cursor above you lif
 });
 
 test('--directional flies toward the cursor: the cursor above lifts you, and it holds left or right toward the cursor\'s side', () => {
+  game.run('fly_sweep_throttle near');
   const { globals, names, player } = game;
   globals[names.fpsChoice] = 3;
   globals[names.lowPhysics] = false;
@@ -236,6 +239,60 @@ test('the sweep starts toward your cursor\'s side, so you face your cursor: whil
     assert.equal(Math.sign(player.tarx - player.x), side, `cursor at ${cursorX}: first aim on that side`);
     game.run('fly sword --off');
   }
+});
+
+test('edge throttle: the farther your cursor toward the screen edge, the bigger the swing; at your level, none; zoom does not matter', () => {
+  const { globals, names, player } = game;
+  globals[names.fpsChoice] = 3;
+  globals[names.lowPhysics] = false;
+  globals[names.zoom] = 1;
+  game.run('unset fly_sweep_throttle; unset fly_sweep_curve; fly_sweep_range 500');
+  assert.ok(game.run('help fly_sweep_throttle').some((line) => /"edge" \(the default\)/.test(line)));
+  player.x = 100;
+  player.y = 50;
+  const aimAfterFrames = (cursorX: number, cursorY: number): Array<[number, number]> => {
+    const aims: Array<[number, number]> = [];
+    for (let frame = 0; frame < 3; frame++) {
+      game.frame();
+      player.tarx = cursorX;
+      player.tary = cursorY;
+      aims.push([Math.round(player.tarx - player.x), Math.round(player.tary - player.y)]);
+    }
+    return aims.slice(1);
+  };
+  player.tarx = 100;
+  player.tary = 50;
+  game.run('fly sweep --on');
+  for (const [offsetX, offsetY] of aimAfterFrames(100, 50)) {
+    assert.equal(offsetX, 0, 'cursor on you: no swing, both aims the same way');
+    assert.equal(Math.abs(offsetY), 500, 'at the swing radius');
+  }
+  const full = aimAfterFrames(100, 50 - 400);
+  assert.deepEqual(full.map(([offsetX]) => Math.abs(offsetX)), [500, 500], 'cursor at the top edge: level, the full swing');
+  assert.ok(full[0] && full[1] && Math.sign(full[0][0]) !== Math.sign(full[1][0]), 'left then right');
+  assert.ok(full.every(([, offsetY]) => Math.abs(offsetY) <= 1));
+  const half = aimAfterFrames(100, 50 - 200);
+  const angle = ((0.5 - 0.05) / 0.95) * Math.PI;
+  for (const [offsetX, offsetY] of half) {
+    assert.equal(Math.abs(offsetX), Math.round(500 * Math.sin(angle / 2)), 'half way: a part swing');
+    assert.equal(offsetY, Math.round(500 * Math.cos(angle / 2)), 'aimed below you, so the cursor above lifts you');
+  }
+  globals[names.zoom] = 0.5;
+  assert.deepEqual(aimAfterFrames(100, 50 - 400).map(([offsetX]) => Math.abs(offsetX)), half.map(([offsetX]) => Math.abs(offsetX)), 'zoomed out: twice as far for the same share of the screen');
+  globals[names.zoom] = 1;
+  game.run('fly_sweep_curve 2');
+  const curved = aimAfterFrames(100, 50 - 200);
+  assert.ok(Math.abs(curved[0]?.[0] ?? 0) < Math.abs(half[0]?.[0] ?? 0), 'a curve above 1 is gentler near you');
+  game.run('unset fly_sweep_curve');
+  let rightHeld = 0;
+  for (let frame = 0; frame < 95; frame++) {
+    game.frame();
+    player.tarx = 100 + 400;
+    player.tary = 50 - 400;
+    if (globals[names.keyRight] === true) rightHeld++;
+  }
+  assert.ok(Math.abs(rightHeld - 45) <= 2, `cursor half way to the right edge: right held about half the ticks (${rightHeld} of 95)`);
+  game.run('fly sweep --off; unset fly_sweep_range');
 });
 
 test('"fly sweep --on" arms the sweep mode when another one was set', () => {
