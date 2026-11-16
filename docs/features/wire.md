@@ -54,6 +54,35 @@ the heal or the effect while your screen stays still. That is the protocol, not 
 parameter. Turn on `net_log`, then `netlog show`, to see the message leave and confirm its
 fields.
 
+`respawn` and `ressurect` are relayed to every client, you included, but your client applies
+only the respawn counter from its own copy; the position and HP are applied by everyone else
+(`flash.js:4103-4107`). Sent while dead, the server and the other players see you alive, and
+your own screen stays dead until the game respawns you itself.
+
+## What a message can do
+
+Every message is about its sender: the server puts the sender's slot in front
+([protocol.md](../research/protocol.md) §4). So `wire` can act on you, or report something
+you did to another player, but never act as someone else.
+
+- **Respawning: yourself only.** `respawn` and `ressurect` have no "who" field. The server
+  refuses neither: it takes the HP as sent, adds one to your respawn counter and relays it
+  (§2, §34). In a `respawn_model: "v2"` match, `respawn` without a grant from
+  `enter_respawn_queue` posts "respawns without respawn permission or it has expired" to the
+  match chat; `ressurect` skips that check and posts nothing (`flash.js:3830-3849`). That is
+  the shipped code, which `src/server/` runs; the official server has not been watched doing
+  it.
+- **Healing: downed teammates only.** `heal_player` revives a teammate who is down and hurts
+  an enemy who is up (`30 × power`); it does nothing to a teammate who is up, however hurt, or
+  to an enemy who is down (§6). No message raises another player's HP.
+- **One target per message.** A single-target field refuses a list or a selector that matches
+  more than one player, and sends nothing. Only `damage_players_via_explosion` carries several
+  victims in one message, as the game sends it. For several targets, chain commands with `;`,
+  in the console or a bind: `wire heal_player target=blackmask; wire heal_player target=bob`.
+- **The weapon defaults to the gun in hand.** With no gun in hand that is `-1`, which the game
+  reads as a grenade; give `source=-11` for a melee hit. `wire help hit_player source` lists
+  the codes.
+
 ## Picking a target
 
 Any field that picks a player (a victim, a target, a bot) takes:
@@ -97,4 +126,6 @@ wire var_sync r door_1 1
 wire join_match 52099
 wire list
 wire help hit_player
+wire help hit_player source
+wire ressurect
 ```

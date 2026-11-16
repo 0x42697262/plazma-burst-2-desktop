@@ -127,3 +127,15 @@ test('wire help <message> <field> without a table says so, and an unknown field 
   assert.match(game.run('wire help hit_player power').map(String).join('\n'), /power has no fixed values: gun power, e\.g\. 3\.5/);
   assert.match(errorsOf(game.run('wire help hit_player nope'))[0] ?? '', /hit_player has no field "nope"/);
 });
+
+test('wire help respawn and ressurect say your own screen does not change, and which one is checked', async () => {
+  const game = await bootConsole();
+  const respawn = game.run('wire help respawn').map(String).join('\n');
+  const ressurect = game.run('wire help ressurect').map(String).join('\n');
+  for (const text of [respawn, ressurect]) {
+    assert.match(text, /Your own screen does not change/);
+    assert.ok(!/including yours/.test(text), 'no claim that your own client applies it');
+  }
+  assert.match(respawn, /warning to the match chat/);
+  assert.match(ressurect, /skips the respawn queue/);
+});

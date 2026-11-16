@@ -305,7 +305,7 @@ export const MESSAGE_BY_NAME: ReadonlyMap<string, Message> = new Map(MESSAGES.ma
 
 export const DESCRIPTIONS: Readonly<Record<string, string>> = Object.freeze({
   EXEC_TRIGGER: 'Runs a map trigger on every other client, as if you had activated it.',
-  RESPAWN: 'Announces a respawn: puts you at x, y with that HP on every client.',
+  RESPAWN: 'Announces your respawn: the server sets your HP and respawn counter, and every other client puts you at x, y with that HP. Your own screen does not change. In a v2 match without a queue grant it posts a warning to the match chat, but nothing refuses it.',
   HIT_PLAYER: 'Reports a projectile hitting a player. The server takes the damage off its own copy of the victim and every other client shows the hit.',
   DAMAGE_PLAYERS_VIA_EXPLOSION: 'Reports an explosion hurting players: a reply id, then one group of fields per victim.',
   HEAL_PLAYER: 'Reports a heal gun hitting a player. The healed player\'s own game applies it.',
@@ -326,7 +326,7 @@ export const DESCRIPTIONS: Readonly<Record<string, string>> = Object.freeze({
   ENDORDSE_USER: 'Endorses a player by auth id. Doing it twice takes it back.',
   KICK_USER: 'Removes a player from your match. Only the match owner or staff can.',
   BAN_USER: 'Bans a player. Only staff can.',
-  RESSURECT: 'Revives you at x, y with that HP, on every client including yours.',
+  RESSURECT: 'Revives you: the server sets your HP and respawn counter, and every other client sets that HP. Your own screen does not change. Unlike respawn it skips the respawn queue and posts no warning.',
   SWORD_ATTACK: 'Plays a sword swing on every other client.',
   VAR_SYNC: 'Sets a map variable on every other client. The mode says how they merge it: r replace, d only if unset, x keep the larger, n keep the smaller, l keep the longer text.',
   FLOW_AT: 'Plays a blood burst at x, y on every other client.',
