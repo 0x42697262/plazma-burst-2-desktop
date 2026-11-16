@@ -298,13 +298,13 @@ test('edge throttle: the farther your cursor toward the screen edge, the bigger 
   game.run('fly sweep --off; unset fly_sweep_range; unset fly_sweep_curve');
 });
 
-test('fly_sweep_ragdoll off: the sweep leaves X alone (you press it yourself); sword still holds the mouse button', () => {
+test('fly_sweep_ragdoll 0: the sweep leaves X alone (you press it yourself); sword still holds the mouse button', () => {
   const { globals, names, player } = game;
   globals[names.fpsChoice] = 3;
   globals[names.lowPhysics] = false;
   player.x = 100;
-  assert.ok(game.run('help fly_sweep_ragdoll').some((line) => /default: on/i.test(line) || /\(on\)/.test(line) || /on by default/i.test(line)));
-  game.run('fly_sweep_ragdoll off');
+  assert.ok(game.run('help fly_sweep_ragdoll').some((line) => /1 \(the default\)/.test(line)));
+  game.run('fly_sweep_ragdoll 0');
   globals[names.ragdollKey] = false;
   game.run('fly sword --on');
   game.frame();
@@ -319,6 +319,27 @@ test('fly_sweep_ragdoll off: the sweep leaves X alone (you press it yourself); s
   game.frame();
   assert.equal(globals[names.ragdollKey], true, 'on again by default');
   game.run('fly sweep --off');
+});
+
+test('fly_sweep_ragdoll between 0 and 1 holds X for that share of the ticks, spread evenly', () => {
+  const { globals, names, player } = game;
+  globals[names.fpsChoice] = 3;
+  globals[names.lowPhysics] = false;
+  player.x = 100;
+  for (const [share, expected] of [[0.5, 50], [0.25, 25], [1, 100]] as const) {
+    game.run(`fly_sweep_ragdoll ${share}`);
+    game.run('fly sweep --on');
+    const held: boolean[] = [];
+    for (let frame = 0; frame < 100; frame++) {
+      game.frame();
+      held.push(globals[names.ragdollKey] === true);
+    }
+    assert.equal(held.filter(Boolean).length, expected, `${share}: X on ${expected} of 100 ticks`);
+    if (share === 0.5) assert.ok(held.slice(0, 10).some(Boolean) && held.slice(0, 10).some((isHeld) => !isHeld), 'spread, not in one block');
+    game.run('fly sweep --off');
+    assert.equal(globals[names.ragdollKey], false, 'let go when it stops');
+  }
+  game.run('unset fly_sweep_ragdoll');
 });
 
 test('"fly sweep --on" arms the sweep mode when another one was set', () => {

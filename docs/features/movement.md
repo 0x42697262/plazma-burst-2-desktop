@@ -61,8 +61,10 @@ overrides in `src/console/kernel/overrides/frame.ts`.
       above you lifts you.
     - `--plain`: the plain sweep; the cursor below you lifts you.
     - `--default`: back to the default (unsets `fly_sweep_aim`).
-  - `fly_sweep_ragdoll` (on by default) is whether the sweep holds X for you. Off: it leaves X
-    alone and you press it yourself. The sweep only writes the keys it holds (X, the mouse
+  - `fly_sweep_ragdoll` is the share of ticks the sweep holds X for you: 1 (the default) every
+    tick; 0 never, it leaves X alone and you press it yourself; in between, X is held on that
+    share of the ticks, spread evenly, and released on the others (an experiment: less limp,
+    less lift). A saved on/off from before reads as 1/0. The sweep only writes the keys it holds (X, the mouse
     button for sword, A or D for directional) and lets go of only those when it stops, so
     your own click still fires a gun during `fly sweep`, and an X you hold yourself stays held.
   - How fast is `fly_sweep_throttle`:

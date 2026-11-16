@@ -52,7 +52,14 @@ export const isInverse = (): boolean => {
   return aim === SWEEP_AIM.inverse || aim === true || aim === SWEEP_AIM.directional;
 };
 
-const holdsRagdoll = (): boolean => settings.effective(SETTING.flySweepRagdoll) !== false;
+function holdsRagdoll(): boolean | null {
+  const share = numberSetting(SETTING.flySweepRagdoll);
+  if (!(share > 0)) return null;
+  sweep.ragdollCarry += Math.min(1, share);
+  if (sweep.ragdollCarry < 1) return false;
+  sweep.ragdollCarry -= 1;
+  return true;
+}
 
 const isEdge = (): boolean => settings.effective(SETTING.flySweepThrottle) !== SWEEP_THROTTLE.near;
 

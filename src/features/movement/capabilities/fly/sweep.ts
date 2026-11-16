@@ -5,20 +5,20 @@ type AimHolder = Record<string, unknown> & { x: number; y: number };
 type HeldAim = { character: AimHolder; gameAim: { x: unknown; y: unknown } };
 
 export type SweepState = {
-  active: boolean; direction: number; range: number; inverse: boolean; sideReach: number; height: number | null; sideCarry: number;
+  active: boolean; direction: number; range: number; inverse: boolean; sideReach: number; height: number | null; sideCarry: number; ragdollCarry: number;
   held: HeldAim | null; holdsKeys: boolean;
 };
 
-export const sweep: SweepState = { active: false, direction: 1, range: 0, inverse: false, sideReach: 0, height: null, sideCarry: 0, held: null, holdsKeys: false };
+export const sweep: SweepState = { active: false, direction: 1, range: 0, inverse: false, sideReach: 0, height: null, sideCarry: 0, ragdollCarry: 0, held: null, holdsKeys: false };
 
 type KeyName = 'ragdoll' | 'mouse' | 'left' | 'right';
 type HeldKeys = Partial<Record<KeyName, boolean>>;
 const keys = game as unknown as { holdKeys(held: HeldKeys): void };
 const keysHeld = new Set<KeyName>();
 
-export function holdKeys(wanted: Readonly<{ ragdoll: boolean; mouse: boolean; side: number | null }>): void {
+export function holdKeys(wanted: Readonly<{ ragdoll: boolean | null; mouse: boolean; side: number | null }>): void {
   const held: HeldKeys = {};
-  if (wanted.ragdoll) held.ragdoll = true;
+  if (wanted.ragdoll !== null) held.ragdoll = wanted.ragdoll;
   if (wanted.mouse) held.mouse = true;
   if (wanted.side !== null) {
     held.left = wanted.side < 0;
@@ -82,5 +82,6 @@ export function setSweeping(active: boolean): void {
   sweep.active = active;
   sweep.direction = 1;
   sweep.sideCarry = 0;
+  sweep.ragdollCarry = 0;
   if (!active) releaseAim();
 }
