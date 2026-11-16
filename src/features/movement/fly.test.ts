@@ -246,7 +246,10 @@ test('edge throttle: the farther your cursor toward the screen edge, the bigger 
   globals[names.fpsChoice] = 3;
   globals[names.lowPhysics] = false;
   globals[names.zoom] = 1;
-  game.run('unset fly_sweep_throttle; unset fly_sweep_curve; fly_sweep_range 500');
+  game.run('unset fly_sweep_throttle; fly_sweep_curve 1; fly_sweep_range 500');
+  assert.ok(game.run('help fly_sweep_curve').some((line) => /0\.25/.test(line)), 'the default is 0.25');
+  assert.ok(game.run('fly_sweep_curve 0.1').every((line) => !/error|must|between/i.test(line)), '0.1 is allowed');
+  game.run('fly_sweep_curve 1');
   assert.ok(game.run('help fly_sweep_throttle').some((line) => /"edge" \(the default\)/.test(line)));
   player.x = 100;
   player.y = 50;
@@ -283,7 +286,7 @@ test('edge throttle: the farther your cursor toward the screen edge, the bigger 
   game.run('fly_sweep_curve 2');
   const curved = aimAfterFrames(100, 50 - 200);
   assert.ok(Math.abs(curved[0]?.[0] ?? 0) < Math.abs(half[0]?.[0] ?? 0), 'a curve above 1 is gentler near you');
-  game.run('unset fly_sweep_curve');
+  game.run('fly_sweep_curve 1');
   let rightHeld = 0;
   for (let frame = 0; frame < 95; frame++) {
     game.frame();
@@ -292,7 +295,7 @@ test('edge throttle: the farther your cursor toward the screen edge, the bigger 
     if (globals[names.keyRight] === true) rightHeld++;
   }
   assert.ok(Math.abs(rightHeld - 45) <= 2, `cursor half way to the right edge: right held about half the ticks (${rightHeld} of 95)`);
-  game.run('fly sweep --off; unset fly_sweep_range');
+  game.run('fly sweep --off; unset fly_sweep_range; unset fly_sweep_curve');
 });
 
 test('fly_sweep_ragdoll off: the sweep leaves X alone (you press it yourself); sword still holds the mouse button', () => {

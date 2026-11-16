@@ -39,8 +39,8 @@ export const SETTINGS: Readonly<Record<string, KeySpec>> = Object.freeze({
     desc: 'How fast the sweep flies: "edge" (the default) by how far your cursor is toward the screen edge (on you: nothing, at the edge: full speed), "near" the closer your cursor, the faster',
   },
   fly_sweep_curve: {
-    capability: FLY, type: SETTING_TYPE.number, group: GROUP.player, min: 0.25, max: 4, default: 1, example: '2',
-    desc: 'Speed curve for the "edge" throttle: 1 is a straight line, above 1 is gentler near you and faster near the edge',
+    capability: FLY, type: SETTING_TYPE.number, group: GROUP.player, min: 0.1, max: 4, default: 0.25, example: '1',
+    desc: 'Speed curve for the "edge" throttle: 1 is a straight line, below 1 gets fast soon after you move the cursor off you (the default, 0.25), above 1 is gentler near you and faster near the edge',
   },
   fly_sweep_ragdoll: {
     capability: FLY, type: SETTING_TYPE.bool, group: GROUP.player, default: true,
