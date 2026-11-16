@@ -16,8 +16,10 @@ Type `local-<name>` as the Map ID in Campaign > Custom Map. The wrapper answers 
 game's map download (`POST /pb2/server.php`, `rq=cmap`) itself, with
 `data/maps/<name>.xml` (or `.txt`, or no extension; case does not matter; a byte
 order mark is dropped). A missing map is answered `<not_published />`, as the site
-answers an unpublished one. Sad Burst 2 uses `data/maps.sadburst/`, and Sad Burst 2 for the
-official servers `data/maps.sadburst-erich5/`. Both Sad Burst clients download maps from the
+answers an unpublished one. Sad Burst 2 uses `data/maps.sadburst/`. Sad Burst 2 for the
+official servers plays the official servers' maps, so it uses `data/maps/` like the official
+client: one saved map serves both, and `fast_maps` finds it in either (an older
+`data/maps.sadburst-erich5/` is merged into `data/maps/` at start). Both Sad Burst clients download maps from the
 official map service: their strings set the map address to
 `https://www.plazmaburst2.com/pb2/server.php` (`game.sadburst/gamelogic/09094c58e1872195.js`,
 `game.sadburst-erich5/gamelogic/8bc5a6f03c2b6c9c.js`, build of 2026-11-08). So every client

@@ -21,6 +21,8 @@ export const NETLOG_DIR = path.join(DATA_DIR, 'netlogs');
 export const SCREENSHOT_DIR = path.join(DATA_DIR, 'screenshots');
 export const REMOTE_TESTER_DATA_DIR = path.join(DATA_DIR, 'remote-data');
 
+const OFFICIAL_MAPS_DIR = path.join(DATA_DIR, 'maps');
+
 export type ClientPaths = Readonly<{ gameDir: string; names: string; opcodes: string; mapsDir: string; fingerprintDir: string }>;
 
 export const CLIENT_PATHS: Readonly<Record<ClientId, ClientPaths>> = Object.freeze({
@@ -28,7 +30,7 @@ export const CLIENT_PATHS: Readonly<Record<ClientId, ClientPaths>> = Object.free
     gameDir: path.join(USER_ROOT, 'game'),
     names: path.join(DATA_DIR, CLIENT_DETAILS[CLIENT.official].namesFileName),
     opcodes: path.join(DATA_DIR, 'opcodes.js'),
-    mapsDir: path.join(DATA_DIR, 'maps'),
+    mapsDir: OFFICIAL_MAPS_DIR,
     fingerprintDir: path.join(DATA_DIR, CLIENT_DETAILS[CLIENT.official].fingerprintFolder),
   }),
   [CLIENT.sadburst]: Object.freeze({
@@ -42,7 +44,7 @@ export const CLIENT_PATHS: Readonly<Record<ClientId, ClientPaths>> = Object.free
     gameDir: path.join(USER_ROOT, 'game.sadburst-erich5'),
     names: path.join(DATA_DIR, CLIENT_DETAILS[CLIENT.sadburstErich5].namesFileName),
     opcodes: path.join(DATA_DIR, 'opcodes.sadburst-erich5.js'),
-    mapsDir: path.join(DATA_DIR, 'maps.sadburst-erich5'),
+    mapsDir: OFFICIAL_MAPS_DIR,
     fingerprintDir: path.join(DATA_DIR, CLIENT_DETAILS[CLIENT.sadburstErich5].fingerprintFolder),
   }),
 });

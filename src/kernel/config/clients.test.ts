@@ -64,3 +64,9 @@ test('which clients play the official servers with the official accounts', async
   assert.equal(usesOfficialServers(null), false);
   assert.equal(usesOfficialServers('nope'), false);
 });
+
+test('Sad Burst 2 for the official servers plays the official maps, so it uses the official maps folder; Sad Burst 2 keeps its own', async () => {
+  const { CLIENT_PATHS } = await import('./paths.ts');
+  assert.equal(CLIENT_PATHS.sadburst_erich5.mapsDir, CLIENT_PATHS.official.mapsDir);
+  assert.notEqual(CLIENT_PATHS.sadburst.mapsDir, CLIENT_PATHS.official.mapsDir);
+});

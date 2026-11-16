@@ -24,6 +24,7 @@ export const LEGACY_MOVES: readonly LegacyMove[] = Object.freeze([
   { from: 'server/server.json', to: 'data/server/server.json' },
   { from: 'server/data', to: 'data/server' },
   { from: 'data/server/maps', to: 'data/maps' },
+  { from: 'data/maps.sadburst-erich5', to: 'data/maps' },
 ]);
 
 export const LEGACY_PREFIX_MOVES: readonly LegacyPrefixMove[] = Object.freeze([
@@ -31,7 +32,7 @@ export const LEGACY_PREFIX_MOVES: readonly LegacyPrefixMove[] = Object.freeze([
   { fromDir: 'desktop', prefix: 'dev-overrides', toDir: 'data' },
 ]);
 
-export const LEGACY_FOLDERS_REMOVED_WHEN_EMPTY: readonly string[] = Object.freeze(['desktop/dev', 'desktop', 'server/data', 'server', 'data/server/maps']);
+export const LEGACY_FOLDERS_REMOVED_WHEN_EMPTY: readonly string[] = Object.freeze(['desktop/dev', 'desktop', 'server/data', 'server', 'data/server/maps', 'data/maps.sadburst-erich5']);
 
 export const RETIRED_FILES: readonly Readonly<{ file: string; instead: string }>[] = Object.freeze([
   { file: 'data/dev-overrides.sadburst.json', instead: 'data/dev-overrides.json' },

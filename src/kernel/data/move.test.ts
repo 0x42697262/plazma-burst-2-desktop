@@ -79,3 +79,12 @@ test('a file the app no longer reads is reported while it is there, and left alo
     assert.deepEqual(moveLegacyData(root).problems, []);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+
+test('maps the official-servers Sad Burst 2 saved in its own folder join the official maps folder', () => {
+  const root = withRoot({ 'data/maps.sadburst-erich5/havenor-saw07.xml': '<a/>', 'data/maps.sadburst-erich5/same.xml': '<same/>', 'data/maps/same.xml': '<same/>' });
+  try {
+    moveLegacyData(root);
+    assert.equal(read(root, 'data/maps/havenor-saw07.xml'), '<a/>');
+    assert.equal(exists(root, 'data/maps.sadburst-erich5'), false, 'the emptied folder goes');
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
