@@ -35,7 +35,15 @@ player ([protocol.md](../research/protocol.md) §4).
   `default` is what a field you leave out takes, in words (`your x`, `your gun`, `aim`,
   `target's count`, `(automatic)`), or `required` when you must give it. It ends with an example
   line and, for a message relayed to every other client, a note that your own screen will not
-  change.
+  change. When some fields have a value table, a `values:` line names them.
+- `wire help <message> <field>` prints that field's row, then its value table: each value the
+  field takes and what the game does with it. For example, `wire help hit_player source` shows
+  that `-1` is a grenade (also what "your gun" sends when you hold none), `-11` a melee hit and a
+  gun index that gun. Tables cover `hit_player` `source`, `limb` and `frame`,
+  `damage_players_via_explosion` `source`, `projectile_create` `gun`, `var_sync` `mode`, `chat`
+  `destination`, `join_match` `slot`, `kick_user` `allGuests` and
+  `my_player_properties_changed` `property`; the values come from
+  [protocol.md](../research/protocol.md). A field without a table says what to put instead.
 
 ## Why your own screen does not change
 

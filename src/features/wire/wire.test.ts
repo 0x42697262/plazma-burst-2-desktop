@@ -102,3 +102,28 @@ test('wire help on a message with no fields has no column header, and a receive-
   assert.match(sword, /Plays a sword swing/);
   assert.match(game.run('wire help task').map(String).join('\n'), /note: the server sends this to clients/);
 });
+
+test('wire help <message> <field> prints the value table of that field', async () => {
+  const game = await bootConsole();
+  const text = game.run('wire help hit_player source').map(String).join('\n');
+  assert.match(text, /^hit_player source/m, 'a heading with the message and the field');
+  assert.match(text, /-1\s+a grenade/, '-1 is a grenade');
+  assert.match(text, /-11\s+swords/, '-11 is a melee hit');
+  assert.match(text, /a gun index\s+that gun/, 'a gun index names the gun');
+  assert.match(text, /no gun in hand/, 'says why the default can be a grenade');
+  assert.match(game.run('wire help var_sync mode').map(String).join('\n'), /x\s+keep the larger number/);
+  assert.match(game.run('wire help damage_players_via_explosion source').map(String).join('\n'), /-1\s+a grenade/, 'a group field has the table too');
+});
+
+test('wire help <message> names the fields that have a value table', async () => {
+  const game = await bootConsole();
+  const lines = game.run('wire help hit_player').map(String);
+  assert.ok(lines.some((line) => /values: wire help hit_player <field>, for limb, frame, source/.test(line)));
+  assert.ok(!game.run('wire help sword_attack').map(String).some((line) => /values: wire help/.test(line)), 'none for a message without tables');
+});
+
+test('wire help <message> <field> without a table says so, and an unknown field is an error', async () => {
+  const game = await bootConsole();
+  assert.match(game.run('wire help hit_player power').map(String).join('\n'), /power has no fixed values: gun power, e\.g\. 3\.5/);
+  assert.match(errorsOf(game.run('wire help hit_player nope'))[0] ?? '', /hit_player has no field "nope"/);
+});

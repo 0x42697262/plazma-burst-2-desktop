@@ -45,7 +45,7 @@ export const VALUE_HINTS: Readonly<Record<string, string>> = Object.freeze({
   'HIT_PLAYER.knockback': '1 normal, 0 none',
   'HIT_PLAYER.frame': 'a frame; 41 = no damage',
   'HIT_PLAYER.cclass': 'projectile class number',
-  'HIT_PLAYER.source': 'a gun index; your held gun',
+  'HIT_PLAYER.source': 'a gun index or a cause code',
   'HIT_PLAYER.atom': '0-9 body segment',
   'HIT_PLAYER.damage': 'HP taken, e.g. 25',
   'HEAL_PLAYER.power': 'heal power, e.g. 5',
@@ -75,8 +75,72 @@ export const VALUE_HINTS: Readonly<Record<string, string>> = Object.freeze({
   'FLOW_AT.count': 'how many times it repeats',
 });
 
+export type ValueRow = readonly [value: string, meaning: string];
+
+const rows = (...list: ValueRow[]): readonly ValueRow[] => Object.freeze(list);
+
+const SOURCE_VALUES: readonly ValueRow[] = rows(
+  ['a gun index', 'that gun, from the map\'s gun list; a kill reads "via <gun>"'],
+  ['-1', 'a grenade; also what "your gun" sends with no gun in hand'],
+  ['-11', 'swords, a melee hit; a kill reads "sliced" or "cut"'],
+  ['-12', 'a barrel'],
+  ['-13', 'level logic'],
+  ['-14', 'acid'],
+  ['-15', 'a wall'],
+  ['-16', 'nothing'],
+  ['-17', 'out of bounds; a kill reads "flew out of bounds"'],
+  ['anything else', 'the game shows "Unknown source"'],
+);
+
+export const VALUE_TABLES: Readonly<Record<string, readonly ValueRow[]>> = Object.freeze({
+  'HIT_PLAYER.source': SOURCE_VALUES,
+  'DAMAGE_PLAYERS_VIA_EXPLOSION.source': SOURCE_VALUES,
+  'HIT_PLAYER.limb': rows(
+    ['0', 'the head: damage x55, and a kill adds "[ Headshot ]"'],
+    ['1', 'damage x20; the game sends it only for a victim who is down'],
+    ['2', 'damage x30'],
+    ['3', 'damage x25; an explosion counts as this'],
+  ),
+  'HIT_PLAYER.frame': rows(
+    ['41', 'no damage, and it is sent even between teammates'],
+    ['29, 51', 'the second hit effect'],
+    ['anything else', 'a normal hit'],
+  ),
+  'PROJECTILE_CREATE.gun': rows(
+    ['a gun index', 'that gun; others create the shot only if they see you holding it'],
+    ['-1, -2, -3', 'a grenade of type 1, 2 or 3, thrown from your body'],
+    ['below -3', 'nothing is created'],
+  ),
+  'VAR_SYNC.mode': rows(
+    ['r', 'take the value as it comes'],
+    ['d', 'take it only where the variable is unset or not a number'],
+    ['x', 'keep the larger number'],
+    ['n', 'keep the smaller number'],
+    ['l', 'keep the longer text'],
+  ),
+  'CHAT.destination': rows(
+    ['1', 'everyone in the match'],
+    ['2', 'your team only'],
+  ),
+  'JOIN_MATCH.slot': rows(
+    ['-1', 'any free player slot'],
+    ['-100', 'a spectator slot'],
+    ['a slot index', 'that slot if it is free, else any free player slot'],
+  ),
+  'KICK_USER.allGuests': rows(
+    ['1', 'for a guest target, also bar every guest from the match'],
+    ['0 or empty', 'bar only this player'],
+  ),
+  'MY_PLAYER_PROPERTIES_CHANGED.property': rows(
+    ['0', 'team'],
+    ['1', 'skin_snapshot'],
+    ['2-11', 'slot0 to slot9, the gun in that slot'],
+    ['12', 'curwea, the gun in hand'],
+  ),
+});
+
 export const HELP_TEXT = Object.freeze({
-  usage: 'wire help <message>',
+  usage: 'wire help <message> [field]',
   desc: "Show what a message does, and each field's type, default and meaning",
   heading: (name: string, direction: string) => `${name}  (${direction})`,
   noteLine: (note: string) => `  note: ${note}`,
@@ -95,7 +159,14 @@ export const HELP_TEXT = Object.freeze({
   leaveOut: 'leave it out',
   units: '  xN: you type game units and the wire value is N times larger. Prefix a value with raw: to send it as is.',
   groupHeading: '  then, repeated once per victim or projectile:',
+  valuesLine: (message: string, fields: readonly string[]) => `  values: wire help ${message} <field>, for ${fields.join(', ')}`,
+  fieldHeading: (message: string, field: string) => `${message} ${field}`,
+  valueHeader: 'value',
+  valueMeaning: 'what the game does',
+  valueRow: (value: string, meaning: string) => `  ${value}  ${meaning}`,
+  noTable: (field: string, values: string) => `  ${field} has no fixed values: ${values}`,
   about: ['What one message does, then its fields in send order: name, type (xN is the wire',
-    'scale), the default when you leave it out, and what it means, then an example.'],
+    'scale), the default when you leave it out, and what it means, then an example.',
+    'With a field, the values that field takes and what the game does with each.'],
   see: ['wire', 'wire list'],
 });
