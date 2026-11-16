@@ -31,6 +31,12 @@ same plus the game, names and opcodes files). The gate: `src/wrapper/app.ts`.
     active account the screen is left alone.
   - **No build hash.** Its loader never computes `PB2_CLIENT_BUILD`; nothing in its code
     sends one.
+  - **Map images through its own site.** A request for the official
+    `mimage_cache.php?image_id=N` (custom decors, backgrounds, skins in maps) reaches the app as
+    `sadburst2.com/gameplay_erich5/mimage_cache.php?image_id=N`, a script on Sad Burst's site.
+    Any `.php` under a game folder goes to the site with its query and is never kept as a file
+    (`SERVER_SCRIPT`, `src/wrapper/platform/game-files.ts`); before, the first image was kept
+    and served for every id.
   - Its own session (`persist:sadburst-erich5`), game folder (`game.sadburst-erich5/`), names, opcodes, maps and fingerprints, all named
     `*.sadburst-erich5*`. The game version is `erich5-<build>`; the page tells the clients
     apart by that prefix (`clientOfVersion`).
