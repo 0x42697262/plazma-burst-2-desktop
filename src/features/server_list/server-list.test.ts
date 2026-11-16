@@ -245,3 +245,17 @@ test('the first row is the running client\'s own servers, and playing it titles 
     assert.equal(serviceWith(context.store).service.operations.list().official.client, 'official');
   } finally { context.cleanup(); }
 });
+
+test('the list opens on the last client played; until one is played it is settled only when a client was asked for at start', async () => {
+  const context = tempStore();
+  try {
+    const fresh = serviceWith(context.store).service;
+    assert.deepEqual([fresh.operations.list().client, fresh.operations.list().isClientSettled], ['official', false], 'no client asked for: the launcher may use your last choice');
+    await fresh.operations.play('official', 'sadburst');
+    assert.deepEqual([fresh.operations.list().client, fresh.operations.list().isClientSettled], ['sadburst', true], 'back from Sad Burst 2: its list');
+    assert.equal(fresh.operations.list('sadburst_erich5').client, 'sadburst_erich5', 'looking at another client does not change the default');
+    assert.equal(fresh.operations.list().client, 'sadburst');
+    const started = serviceWith(context.store, [], 'sadburst_erich5').service;
+    assert.deepEqual([started.operations.list().client, started.operations.list().isClientSettled], ['sadburst_erich5', true]);
+  } finally { context.cleanup(); }
+});

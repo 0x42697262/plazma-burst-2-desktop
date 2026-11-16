@@ -1,5 +1,4 @@
 import { usesOfficialServers } from '#shared/clients/keys.ts';
-import { CLIENT } from '#shared/features/keys.ts';
 import { PING_GOOD_MS, PING_OK_MS } from '../constants.ts';
 import { LAUNCHER_BRIDGE } from '../keys.ts';
 import { LAUNCHER_TEXT } from '../text.ts';
@@ -14,7 +13,7 @@ type CheckState = Check | typeof CHECKING | undefined;
 type ClientChoice = { id: string; title: string; host?: string };
 type Account = { login: string; active: boolean; updatedAt: string };
 type Accounts = { accounts: Account[]; canLogIn: boolean; overridden: boolean };
-type ListData = { official: Official; servers: Server[]; last: string | null; gameVersion: string | null; problems: string[]; clients: ClientChoice[]; client: string };
+type ListData = { official: Official; servers: Server[]; last: string | null; gameVersion: string | null; problems: string[]; clients: ClientChoice[]; client: string; isClientSettled: boolean };
 type SaveResult = { errors?: string[]; server?: Server };
 type Bridge = {
   list(client?: string): Promise<ListData>;
@@ -143,12 +142,13 @@ function showAccountsNote(message: string, isProblem = false): void {
 }
 
 async function drawAccounts(): Promise<void> {
+  const drawingFor = chosenClient;
   accountsDrawnFor = selected;
   const row = rows().find((candidate) => candidate.id === selected);
   const client = clientOfRow(row);
   const panel = query<HTMLElement>(LAUNCHER_ELEMENT.accounts);
   const accounts = api && client && row ? await api.accounts(client).catch(() => null) : null;
-  if (accountsDrawnFor !== selected) return;
+  if (accountsDrawnFor !== selected || drawingFor !== chosenClient) return;
   panel.hidden = !accounts;
   if (!accounts || !row) return;
   query<HTMLElement>(LAUNCHER_ELEMENT.accountsTitle).textContent = LAUNCHER_TEXT.accountsTitle(row.name);
@@ -167,13 +167,18 @@ async function drawAccounts(): Promise<void> {
 }
 
 async function check(bridge: Bridge, id: string): Promise<void> {
+  const askedFor = chosenClient;
   checks.set(id, CHECKING);
   draw();
+  let answer: Check;
   try {
-    checks.set(id, await bridge.check(id, chosenClient));
+    answer = await bridge.check(id, askedFor);
   } catch (error) {
-    checks.set(id, { ping: null, error: (error as Error).message });
+    answer = { ping: null, error: (error as Error).message };
   }
+  const isForAnotherClient = askedFor !== chosenClient;
+  if (isForAnotherClient) return;
+  checks.set(id, answer);
   draw();
 }
 
@@ -190,7 +195,7 @@ async function load(bridge: Bridge): Promise<void> {
   let loaded = await bridge.list(chosenClient);
   const saved = savedClient();
   const isFirstLoad = chosenClient === undefined;
-  if (isFirstLoad && loaded.client === CLIENT.official && saved && saved !== loaded.client && loaded.clients.some((choice) => choice.id === saved)) loaded = await bridge.list(saved);
+  if (isFirstLoad && !loaded.isClientSettled && saved && saved !== loaded.client && loaded.clients.some((choice) => choice.id === saved)) loaded = await bridge.list(saved);
   data = loaded;
   chosenClient = loaded.client;
   drawClients();
@@ -355,7 +360,8 @@ function wire(bridge: Bridge): void {
   document.addEventListener(LAUNCHER_EVENT.keyDown, (event) => {
     if (form.open || loginForm.open) return;
     const isInAccounts = (event.target as Element).closest(LAUNCHER_ELEMENT.accounts) !== null;
-    if (isInAccounts) return;
+    const isInClientChoice = (event.target as Element).closest(LAUNCHER_ELEMENT.client) !== null;
+    if (isInAccounts || isInClientChoice) return;
     if (event.key === LAUNCHER_KEY.enter) void play(selected);
     const isArrow = event.key === LAUNCHER_KEY.down || event.key === LAUNCHER_KEY.up;
     if (!isArrow) return;

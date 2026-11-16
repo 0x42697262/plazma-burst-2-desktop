@@ -52,7 +52,8 @@ const isNotPinned = (error: unknown): boolean => (error as { pinned?: boolean } 
 export function createServerListService(deps: ServerListDeps) {
   const { store, probe, session } = deps;
   let joinTarget: ServerEntry | null = null;
-  const defaultClient: ClientId = deps.client ?? CLIENT.official;
+  let defaultClient: ClientId = deps.client ?? CLIENT.official;
+  let isClientSettled = defaultClient !== CLIENT.official;
   const gameVersionOf = (client: string): string | null => (typeof deps.gameVersion === 'function' ? deps.gameVersion(client) : deps.gameVersion);
 
   function clientOf(asked: unknown): Pick<ClientDetails, 'id' | 'title' | 'lobby' | 'usesOfficial'> {
@@ -73,7 +74,7 @@ export function createServerListService(deps: ServerListDeps) {
     const client = clientOf(asked);
     const { servers, last, problems } = store.load();
     for (const problem of problems) deps.warn(SERVICE_TEXT.serversFileProblem(problem));
-    return { official: ownOf(client), servers: servers.map(shownServer), last, gameVersion: gameVersionOf(client.id), problems, clients: session.clients(), client: client.id };
+    return { official: ownOf(client), servers: servers.map(shownServer), last, gameVersion: gameVersionOf(client.id), problems, clients: session.clients(), client: client.id, isClientSettled };
   }
 
   function save(request: SaveRequest | null | undefined): { errors: string[] } | { server: ShownServer } {
@@ -125,6 +126,8 @@ export function createServerListService(deps: ServerListDeps) {
     if (!isOfficial && !target) throw new Error(SERVICE_TEXT.notSaved);
     if (target && !target.nickname) throw new Error(SERVICE_TEXT.needsNickname(target.name));
     await session.prepare(client.id);
+    defaultClient = client.id;
+    isClientSettled = true;
     store.save(servers, typeof id === 'string' ? id : null);
     let title = client.title;
     if (target) {
