@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { LEGACY_FOLDERS_REMOVED_WHEN_EMPTY, LEGACY_MOVES, LEGACY_PREFIX_MOVES, type LegacyMove } from './keys.ts';
+import { LEGACY_FOLDERS_REMOVED_WHEN_EMPTY, LEGACY_MOVES, LEGACY_PREFIX_MOVES, RETIRED_FILES, type LegacyMove } from './keys.ts';
 import { TEXT } from './text.ts';
 
 export type MoveReport = Readonly<{ moved: string[]; problems: string[] }>;
@@ -76,6 +76,7 @@ export function moveLegacyData(root: string): MoveReport {
   const report = { moved: [] as string[], problems: [] as string[] };
   for (const move of everyMove(root)) moveOne(root, move, report);
   for (const folder of LEGACY_FOLDERS_REMOVED_WHEN_EMPTY) removeIfEmpty(path.join(root, folder));
+  for (const { file, instead } of RETIRED_FILES) if (fs.existsSync(path.join(root, file))) report.problems.push(TEXT.retired(file, instead));
   return report;
 }
 

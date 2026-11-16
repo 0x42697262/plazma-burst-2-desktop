@@ -68,3 +68,14 @@ test('the private server\'s downloaded maps join the one maps folder; an identic
   ]);
   assert.ok(report.moved.some((line) => line.includes('data/server/maps/same.xml')), 'the dropped copy is reported');
 });
+
+test('a file the app no longer reads is reported while it is there, and left alone', () => {
+  const root = withRoot({ 'data/dev-overrides.sadburst.json': '{"binds":{"f":"heal"}}' });
+  try {
+    const report = moveLegacyData(root);
+    assert.match(report.problems.join('\n'), /data\/dev-overrides\.sadburst\.json is no longer read.*data\/dev-overrides\.json/);
+    assert.ok(exists(root, 'data/dev-overrides.sadburst.json'));
+    fs.rmSync(path.join(root, 'data/dev-overrides.sadburst.json'));
+    assert.deepEqual(moveLegacyData(root).problems, []);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
