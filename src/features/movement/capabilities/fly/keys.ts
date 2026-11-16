@@ -46,5 +46,9 @@ export const SETTINGS: Readonly<Record<string, KeySpec>> = Object.freeze({
     capability: FLY, type: SETTING_TYPE.number, group: GROUP.player, min: 0, max: 1, default: 1, example: '0.5',
     desc: 'Share of ticks the sweep holds ragdoll (X) for you: 1 (the default) every tick, the lift only comes while you are limp; 0 never, you press X yourself; between, spread evenly',
   },
+  fly_sweep_shoot: {
+    capability: FLY, type: SETTING_TYPE.bool, group: GROUP.player, default: false,
+    desc: 'While you hold the mouse button in "fly sweep", every other tick aims at your cursor, so your gun fires where you point (about half the lift while you shoot). Off by default; "fly sword" never does',
+  },
   fly_upright: { capability: FLY, type: SETTING_TYPE.bool, group: GROUP.player, default: true, desc: 'Keep you on your feet in "fly free"' },
 });

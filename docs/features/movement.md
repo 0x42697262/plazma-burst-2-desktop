@@ -100,7 +100,14 @@ overrides in `src/console/kernel/overrides/frame.ts`.
     ([anticheat](../research/anticheat.md) §6), sees nothing new; in an approved match the aim
     stays within 1000 of you, the server's zoom-hack limit (§14.6). `fly on` and `fly free`
     move you in ways no input can, and are not safe there.
-  - Not yet: aiming at the cursor on the ticks a gun fires.
+  - The sweep owns your aim, so your facing, arm and shots follow the swing, not the cursor.
+    `fly_sweep_shoot` (off by default): while you hold the left mouse button yourself in
+    `fly sweep`, every other tick aims at your cursor (the game's own aim, kept aside), so a
+    gun fires where you point when its reload falls on such a tick; the swept ticks still
+    take both sides in turn, so you keep about half the lift while you shoot. `fly sword`
+    holds the button itself and never does this. Checked headless: with the button held the
+    aims went `412,-211` (cursor), `241,657`, `411,-211` (cursor), `-394,-579`.
+  - Not yet: aiming at the cursor on exactly the tick a gun fires (all the lift kept).
   - Checked headless: the aim and facing flip every frame and the crosshair stays put. The
     climb was confirmed in a real window, not headless.
 - Client-only. With the flag off, the keys do not exist; saved values are kept but not

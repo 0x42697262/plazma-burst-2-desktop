@@ -9,11 +9,11 @@ export type SwingAim = Readonly<{ axisX: number; axisY: number; along: number; a
 export const LEVEL_SWING: SwingAim = Object.freeze({ axisX: 0, axisY: 1, along: 0, across: 1 });
 
 export type SweepState = {
-  active: boolean; direction: number; range: number; inverse: boolean; swing: SwingAim | null; sideCarry: number; ragdollCarry: number;
+  active: boolean; direction: number; range: number; inverse: boolean; swing: SwingAim | null; atCursor: boolean; sideCarry: number; ragdollCarry: number;
   held: HeldAim | null; holdsKeys: boolean;
 };
 
-export const sweep: SweepState = { active: false, direction: 1, range: 0, inverse: false, swing: null, sideCarry: 0, ragdollCarry: 0, held: null, holdsKeys: false };
+export const sweep: SweepState = { active: false, direction: 1, range: 0, inverse: false, swing: null, atCursor: false, sideCarry: 0, ragdollCarry: 0, held: null, holdsKeys: false };
 
 type KeyName = 'ragdoll' | 'mouse' | 'left' | 'right';
 type HeldKeys = Partial<Record<KeyName, boolean>>;
@@ -78,13 +78,13 @@ export function holdAim(character: AimHolder): void {
   Object.defineProperty(character, AIM_X_FIELD, {
     configurable: true,
     enumerable: true,
-    get: (): number => character.x + swingOffset(sweep.swing ?? LEVEL_SWING).x,
+    get: (): unknown => (sweep.atCursor ? held.gameAim.x : character.x + swingOffset(sweep.swing ?? LEVEL_SWING).x),
     set: (gameAimX: unknown): void => { held.gameAim.x = gameAimX; },
   });
   Object.defineProperty(character, AIM_Y_FIELD, {
     configurable: true,
     enumerable: true,
-    get: (): unknown => (sweep.swing === null ? aimHeight(character, held.gameAim.y) : character.y + swingOffset(sweep.swing).y),
+    get: (): unknown => (sweep.atCursor ? held.gameAim.y : sweep.swing === null ? aimHeight(character, held.gameAim.y) : character.y + swingOffset(sweep.swing).y),
     set: (gameAimY: unknown): void => { held.gameAim.y = gameAimY; },
   });
   sweep.held = held;
@@ -95,5 +95,6 @@ export function setSweeping(active: boolean): void {
   sweep.direction = 1;
   sweep.sideCarry = 0;
   sweep.ragdollCarry = 0;
+  sweep.atCursor = false;
   if (!active) releaseAim();
 }

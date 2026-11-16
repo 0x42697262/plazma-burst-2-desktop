@@ -381,6 +381,41 @@ test('directional tilts the swing toward the cursor: it circles the point opposi
   game.run('fly sweep --off; unset fly_sweep_aim; unset fly_sweep_curve; unset fly_sweep_range');
 });
 
+test('fly_sweep_shoot (off by default): while you hold the mouse button in fly sweep, every other tick aims at your cursor', () => {
+  const { globals, names, player } = game;
+  globals[names.fpsChoice] = 3;
+  globals[names.lowPhysics] = false;
+  game.run('fly_sweep_throttle near; fly_sweep_range 500');
+  player.x = 100;
+  player.y = 50;
+  assert.ok(game.run('help fly_sweep_shoot').some((line) => /off/.test(line)));
+  const aims = (count: number): number[] => {
+    const seen: number[] = [];
+    for (let frame = 0; frame < count; frame++) {
+      game.frame();
+      player.tarx = 333;
+      seen.push(player.tarx);
+    }
+    return seen;
+  };
+  player.tarx = 333;
+  game.run('fly sweep --on');
+  globals[names.mouseHeld] = true;
+  assert.ok(!aims(4).includes(333), 'off by default: the sweep keeps the aim while you click');
+  game.run('fly_sweep_shoot on');
+  const firing = aims(4);
+  assert.equal(firing.filter((aimX) => aimX === 333).length, 2, 'every other tick at your cursor');
+  const swept = firing.filter((aimX) => aimX !== 333);
+  assert.deepEqual(swept.map((aimX) => Math.sign(aimX - 100)).sort(), [-1, 1], 'the swept ticks still take both sides');
+  globals[names.mouseHeld] = false;
+  assert.ok(!aims(4).includes(333), 'let go of the button: back to sweeping every tick');
+  game.run('fly sweep --off');
+  game.run('fly sword --on');
+  assert.ok(!aims(4).includes(333), 'sword holds the button itself, so it never aims at the cursor');
+  game.run('fly sword --off; unset fly_sweep_shoot; unset fly_sweep_throttle; unset fly_sweep_range');
+  globals[names.mouseHeld] = false;
+});
+
 test('"fly sweep --on" arms the sweep mode when another one was set', () => {
   game.run('fly free');
   game.run('fly sweep --on');

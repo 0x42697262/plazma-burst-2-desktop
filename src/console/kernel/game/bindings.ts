@@ -106,6 +106,7 @@ export const game = {
   },
   teleportFx: (atX: number, atY: number): unknown => call('effect', atX, atY, bagOf(read('effectTypes'))[nameOf('effectTeleport')], 0, 0),
 
+  isMouseHeld: (): boolean => read('mouseHeld') === true,
   holdKeys: (held: Partial<Record<'ragdoll' | 'mouse' | 'left' | 'right', boolean>>): void => {
     if (held.ragdoll !== undefined) write('ragdollKey', held.ragdoll);
     if (held.mouse !== undefined) write('mouseHeld', held.mouse);

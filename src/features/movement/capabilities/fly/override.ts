@@ -42,7 +42,7 @@ function flyFree(character: MovingCharacter, tick: number): void {
   if (settings.effective(SETTING.flyUpright) === true) character[GAME_FIELDS.STABILITY] = STEADY_STABILITY;
 }
 
-type SweepBindings = { fpsChoice(): unknown; lowPhysics(): unknown; zoom(): number };
+type SweepBindings = { fpsChoice(): unknown; lowPhysics(): unknown; zoom(): number; isMouseHeld(): boolean };
 const sweepGame = game as unknown as SweepBindings;
 
 export const isDirectional = (): boolean => settings.effective(SETTING.flySweepAim) === SWEEP_AIM.directional;
@@ -101,7 +101,9 @@ function flySweep(character: MovingCharacter, withMouse: boolean): void {
   }
   const isStarting = sweep.held?.character !== character;
   if (isStarting) sweep.direction = -(Math.sign(Number(character.tarx) - character.x) || 1);
-  sweep.direction = -sweep.direction;
+  const isShooting = !withMouse && !isStarting && settings.effective(SETTING.flySweepShoot) === true && sweepGame.isMouseHeld();
+  sweep.atCursor = isShooting && !sweep.atCursor;
+  if (!sweep.atCursor) sweep.direction = -sweep.direction;
   sweep.range = sweepRange();
   sweep.inverse = isInverse();
   holdAim(character);
