@@ -30,7 +30,8 @@ ack | state | uid | reliable message | uid | reliable message | …
 ```
 
 - **`ack`** — the highest reliable sequence number received in order.
-- **`state`** — one unreliable message, the newest; an unsent older one is replaced.
+- **`state`** — one unreliable message, the newest; an unsent older one is replaced
+  ([protocol-state.md](protocol-state.md)).
 - **reliable messages** — numbered per connection, `0`, `1`, `2` … Every one that is not acked
   yet is repeated in each packet until its ack arrives, roughly one round trip later.
 - **Split characters** — fields by `\x01`, a message's parts by `\x02`, both written `$.1` and
@@ -4728,6 +4729,13 @@ had its `"k"`; its entry is only removed.
 - **For the local server's maintainer.** A player stuck on the death screen in DM or TDM: look
   for an `ENTER_RESPAWN_QUEUE` without a `RESPONSE`, and for the chat warnings above.
 
+## The state message
+
+Position, velocity, HP, the cursor, the keys held and the projectiles in flight travel in the
+unreliable state message, not in any message above. Its parts, what the server does with them
+and how the cursor gets from the mouse to the other screens are in
+[protocol-state.md](protocol-state.md).
+
 ## Crafting one
 
 Every message has a ready line in [protocol-crafting.md](protocol-crafting.md); the general shape is below.
@@ -4772,8 +4780,7 @@ no longer matches, the claim is to be corrected here (see "Reporting fixes" in `
 
 ## What is not here
 
-- The bytes inside a match's *state* message (position, HP, aim, …), which
-  [anticheat.md](anticheat.md) §13 maps field by field.
+- The *state* message, in [protocol-state.md](protocol-state.md).
 - What the lobby decides to do with a message once it has it — the account module is not
   shipped ([reputation.md](reputation.md)).
 - The private server's side of the same protocol: it runs this very code
