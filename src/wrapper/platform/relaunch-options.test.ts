@@ -15,3 +15,8 @@ test('elsewhere the running executable starts again', () => {
   const options = relaunchOptions(['electron', '.', '--sadburst'], {}, CLIENT.official);
   assert.deepEqual(options, { args: ['.'] });
 });
+
+test('switching from one Sad Burst client to the other swaps the flag', () => {
+  assert.deepEqual(relaunchOptions(['electron', '.', '--sadburst'], {}, CLIENT.sadburstErich5), { args: ['.', '--sadburst-erich5'] });
+  assert.deepEqual(relaunchOptions([MOUNTED_BINARY, '--sadburst-erich5'], { APPIMAGE: APP_IMAGE }, CLIENT.sadburst), { args: ['--sadburst'], execPath: APP_IMAGE });
+});

@@ -1,3 +1,4 @@
+import { usesOfficialServers } from '#shared/clients/keys.ts';
 import { PING_GOOD_MS, PING_OK_MS } from '../constants.ts';
 import { LAUNCHER_BRIDGE } from '../keys.ts';
 import { LAUNCHER_TEXT } from '../text.ts';
@@ -60,7 +61,7 @@ function element(tag: keyof HTMLElementTagNameMap, attributes: Record<string, st
 }
 
 const clientRows = (clients: readonly ClientChoice[]): Row[] => clients.map((client) => ({
-  id: CLIENT_ROW_PREFIX + client.id, name: client.title, address: client.host ?? '', clientId: client.id, description: LAUNCHER_TEXT.clientDescription(client.title),
+  id: CLIENT_ROW_PREFIX + client.id, name: client.title, address: client.host ?? '', clientId: client.id, description: LAUNCHER_TEXT.clientDescription(client.title, usesOfficialServers(client.id)),
 }));
 const rows = (): Row[] => (data ? [{ ...data.official, official: true, address: hostPortOf(data.official.host, data.official.port) }, ...clientRows(data.otherClients ?? []), ...data.servers] : []);
 const clientOfRow = (row: Row | undefined): string | null => (row?.official ? row.id : row?.clientId ?? null);
@@ -149,7 +150,7 @@ async function drawAccounts(): Promise<void> {
   list.disabled = !accounts.accounts.length;
   query<HTMLButtonElement>(LAUNCHER_ELEMENT.accountRemove).disabled = !accounts.accounts.length;
   query<HTMLButtonElement>(LAUNCHER_ELEMENT.accountNew).hidden = !accounts.canLogIn;
-  showAccountsNote(accounts.overridden && client === data?.official.id ? LAUNCHER_TEXT.overridden : '');
+  showAccountsNote(accounts.overridden && usesOfficialServers(client) ? LAUNCHER_TEXT.overridden : '');
 }
 
 async function check(bridge: Bridge, id: string): Promise<void> {
@@ -239,7 +240,7 @@ function wireAccounts(bridge: Bridge): void {
   query<HTMLButtonElement>(LAUNCHER_ELEMENT.accountNew).addEventListener(LAUNCHER_EVENT.click, () => {
     const client = selectedClient();
     if (!client) return;
-    if (client !== data?.official.id) {
+    if (!usesOfficialServers(client)) {
       loginField(LOGIN_FIELD.login).value = '';
       loginField(LOGIN_FIELD.password).value = '';
       showLoginErrors('');

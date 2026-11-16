@@ -16,6 +16,7 @@ export type ClientDetails = Readonly<{
   npmVariable: string;
   versionPrefix: string;
   bundled: boolean;
+  usesOfficial: boolean;
   feature: FeatureId | null;
 }>;
 
@@ -45,6 +46,7 @@ export const CLIENT_DETAILS: Readonly<Record<ClientId, ClientDetails>> = Object.
     npmVariable: '',
     versionPrefix: 'v',
     bundled: false,
+    usesOfficial: true,
     feature: null,
   }),
   [CLIENT.sadburst]: Object.freeze({
@@ -63,6 +65,7 @@ export const CLIENT_DETAILS: Readonly<Record<ClientId, ClientDetails>> = Object.
     npmVariable: npmVariableOf(SADBURST_FLAG),
     versionPrefix: 'sadburst-',
     bundled: true,
+    usesOfficial: false,
     feature: FEATURE.clientSadburst,
   }),
   [CLIENT.sadburstErich5]: Object.freeze({
@@ -81,6 +84,7 @@ export const CLIENT_DETAILS: Readonly<Record<ClientId, ClientDetails>> = Object.
     npmVariable: npmVariableOf(SADBURST_ERICH5_FLAG),
     versionPrefix: 'erich5-',
     bundled: true,
+    usesOfficial: true,
     feature: FEATURE.clientSadburstErich5,
   }),
 });
@@ -88,6 +92,7 @@ export const CLIENT_DETAILS: Readonly<Record<ClientId, ClientDetails>> = Object.
 export const CLIENT_LIST: readonly ClientDetails[] = Object.freeze(Object.values(CLIENT_DETAILS));
 export const OTHER_CLIENT_LIST: readonly ClientDetails[] = Object.freeze(CLIENT_LIST.filter((details) => details.flag));
 export const CLIENT_FLAGS: readonly string[] = Object.freeze(OTHER_CLIENT_LIST.map((details) => details.flag));
+export const usesOfficialServers = (client: string | null): boolean => CLIENT_LIST.find((details) => details.id === client)?.usesOfficial ?? false;
 export const clientOfVersion = (version: unknown): ClientId => (
   typeof version === 'string' ? OTHER_CLIENT_LIST.find((details) => version.startsWith(details.versionPrefix))?.id ?? CLIENT.official : CLIENT.official
 );

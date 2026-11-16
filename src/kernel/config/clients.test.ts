@@ -62,3 +62,12 @@ test('switching clients changes only the client flag, so the app starts again as
   assert.deepEqual(argsForClient(['.', '--sadburst'], 'sadburst_erich5'), ['.', '--sadburst-erich5']);
   assert.deepEqual(argsForClient(['.', '--sadburst-erich5'], 'sadburst'), ['.', '--sadburst']);
 });
+
+test('which clients play the official servers with the official accounts', async () => {
+  const { usesOfficialServers } = await import('#shared/clients/keys.ts');
+  assert.equal(usesOfficialServers('official'), true);
+  assert.equal(usesOfficialServers('sadburst_erich5'), true);
+  assert.equal(usesOfficialServers('sadburst'), false);
+  assert.equal(usesOfficialServers(null), false);
+  assert.equal(usesOfficialServers('nope'), false);
+});

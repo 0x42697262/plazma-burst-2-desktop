@@ -88,7 +88,7 @@ export const LAUNCHER_TEXT = Object.freeze({
   fingerprintFailed: (message: string) => `Could not get the fingerprint: ${message}`,
   confirmRemove: (name: string) => `Remove ${name} from the list?`,
   clientTag: 'game',
-  clientDescription: (title: string) => `${title}, its own servers and accounts. Play starts the app again as ${title}.`,
+  clientDescription: (title: string, usesOfficial: boolean) => `${title}, ${usesOfficial ? 'the official servers and accounts' : 'its own servers and accounts'}. Play starts the app again as ${title}.`,
   accountsTitle: (name: string) => `Account for ${name}`,
   noAccounts: 'No saved account: the game\'s own login is used',
   accountOption: (login: string) => login,
