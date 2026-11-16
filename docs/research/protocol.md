@@ -46,7 +46,7 @@ the first id is `h`). A part is only a number if the receiving side reads it as 
 ## Requests and replies
 
 A message that wants an answer carries the shared placeholder object
-(`Multiplayer.CALLBACK_UID_PLACEHOLDER`, `flash.js:77`) in the slot where the reply id goes.
+(`Multiplayer.$p1еeс`, `flash.js:77`; `PB2_NAMES.netReplyTo` names it) in the slot where the reply id goes.
 The sender swaps it for its own counter and files the callback under it
 (`connection.js:693`); the answer is a `RELIABLE_RESPONSE` whose first value is that id
 (`flash.js:1868`, `:1888`):
@@ -100,7 +100,7 @@ spectating, only `CHAT`, `JOIN_MATCH`, `RESPONSE`, `CLIENT_READY_FOR_FIRST_SYNC`
 | 22 | `MAP_CHUNK` | `1,2,3` | chunk index, chunk count, and the text of one piece (`:3268`) |
 | 23 | `CLIENT_READY_FOR_FIRST_SYNC` | — | asks the match for its first state (`:3395`) |
 | 24 | `FIRST_SYNC_RESPONSE` | `1,2,3` | slot, the player's JSON or empty for a free slot, and whether to announce it (`:3421`) |
-| 25 | `MY_PLAYER_PROPERTIES_CHANGED` | — | your own player fields: `team`, `skin_snapshot`, `slot0…slot9`, `curwea` only (`flash.js:216-221`, `:3526`) |
+| 25 | `MY_PLAYER_PROPERTIES_CHANGED` | pairs from `1` | property index and JSON value, per pair; your own player fields: `team`, `skin_snapshot`, `slot0…slot9`, `curwea` only (`flash.js:216-221`, `:3526`) |
 | 26 | `PING` | `1,2,3` | the lobby's ping, answered empty; the client sends it only as the anti-tamper report, `"undefined"` then mode and detail, never answered (`:3066-3078`) |
 | 27 | `REPORT_USER` | `1,2,3` | target auth id and reply id; self refused (`:2845`) |
 | 28 | `ENDORDSE_USER` | `1,2,3` | same shape, the opposite relation (`:2846`) |
@@ -180,7 +180,7 @@ The ids start at 100 on every connection, so the same id shows up again and agai
 #### How it works
 
 1. **The asker files a callback.** `connection.js:693-709` finds the placeholder object
-   (`Multiplayer.CALLBACK_UID_PLACEHOLDER`, `flash.js:77`) in the message, replaces it with
+   (`Multiplayer.$p1еeс`, `flash.js:77`) in the message, replaces it with
    the connection's counter, and stores the callback under that number. The counter starts at
    100 (`connection.js:414`). Over 1000 pending callbacks logs a warning (`:706-707`).
 2. **The answering side runs the request's handler.** The handler calls the answer function

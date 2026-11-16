@@ -1454,16 +1454,16 @@ So the same function runs in three places:
 | 1 | `$ММ.$ТOlOep` = 1 | `:453` | `x` |
 | 2 | `$ММ.$1ТIHТр` = 2 | `:454` | `y` |
 | 3, 4 | | `:455–456` | Velocity `tox`, `toy`, times `$ММ.$MеМMА` = 5 |
-| 5 | | `:458–478` | Only when part 0 is under 100: the limp body's points, 8 or 10 of them (10 when face HP ≤ 0), 4 numbers each relative to `x`/`y`, joined with `~` |
+| 5 | | `:458–478` | Only when part 0 is under 100: the limp body's points, 8 or 10 of them (10 when body HP ≤ 0, `$НТcep`, `:462`), 4 numbers each relative to `x`/`y`, joined with `~` |
 | 6 | `$ММ.$сoТрIН` = 6 | `:480` | **HP**: `Math.ceil(char.hea)` |
 | 7 | `$ММ.$OlОplр` = 7 | `:482` | **Aim dx**: `tarx - x` (crosshair minus position, game units) |
 | 8 | `$ММ.$рI1lрA` = 8 | `:483` | **Aim dy**: `tary - y` |
 | 9 | | `:486–527` | Packed booleans (`$IooорO.$oеМ0рe`): per weapon slot "not ready", then 5 action flags |
-| 10 | | `:529` | The held gun's network id, `""` for none |
+| 10 | | `:529` | The held gun's animation frame (`$OАMco`), `""` for none; receivers jump to it when more than 10 frames off (`:1560-1580`) |
 | 11 | | `:530` | Vehicle index (`$ОMррe`), `""` when on foot |
-| 12–15 | `$ММ.$НсеMep` = 12, `$ММ.$lIHрHТ` = 13 | `:532–535` | Body part HP: head, face, arms, legs (`ceil`) |
-| 16 | `$ММ.$MHOeе0` = 16 | `:537–540` | Alive: crouch amount (`sit * 35`, `""` standing). Dead: **who killed you** (`$1МI0р`) |
-| 17 | | `:542–555` | `"3"`, `"2"`, `"1"` or `""`: two flags, one of them "knocked down" (`$loАoM`) |
+| 12–15 | `$ММ.$НсеMep` = 12, `$ММ.$lIHрHТ` = 13 | `:532–535` | Body part HP: head, body, arms, legs (`ceil`; `$ААНММ`, `$НТcep`, `$lMIсo`, `$HAрH1`) |
+| 16 | `$ММ.$MHOeе0` = 16 | `:537–540` | Alive: crouch amount (`sit * 35`, `""` standing). Dead: **the last damage source** (`$1МI0р`: a gun index or a negative cause code, written by each hit, e.g. `frame2.js:30804`); the server uses it as the cause of death (`:1080-1083`) |
+| 17 | | `:542–555` | `"3"`, `"2"`, `"1"` or `""`: two flags: `$ОeНIpo` (X held, `frame2.js:37376`) and `$loАoM` (set on death or when the body breaks, `frame2.js:35390`, `:16452-16527`) |
 | 18 | | `:558–591` | Your projectiles in flight, 7 numbers each (id, x, y, speed x, speed y, rotation, one more), joined with `~` |
 | 19 | `$ММ.$ОHIАAA` = 19 | `:593` | **Client clock**: `performance.now() - $ММ.$1МАTMH` |
 | 20 | `$ММ.$TТoМоА` = 20 | `:595` | **Respawn count**: `char["respawns"]` |
@@ -1484,7 +1484,7 @@ if this is the server side ($с0А0О)
      CHECK 2: respawn count                                         :897
      if it does not match: count, maybe announce, and STOP here      :899–911
      if it matches:                                                 :912
-       revivable = head HP > 0 and face HP > 0                     :924–926
+       revivable = head HP > 0 and body HP > 0                     :924–926
        if the HP part is not empty:                                 :928
          if alive on the server, or revivable within 3 s of a revive:   :934–936
            CHECK 1: HP above match max -> report, return            :938–944
@@ -1554,7 +1554,7 @@ if (parts[6].length > 0) {                                  // the HP part is th
 5. If any rule fails, the limit stays 0 and every player gets `Map Verification Error: <reason>` (`:5731`) as a service message.
 6. `match.$OННОeО = Date.now() + 10000` (`:5736`): **a 10 s grace period** after every map load, so the HP of the previous map does not trip the check.
 
-**When it is checked:** only while the server thinks you are **alive** (`hea > 0` from your last accepted update), or during a **revive window**. The window opens when you are revivable (head and face HP above 0, parts 12 and 13) and the server has set `$МеeНMO = now + 3000` (`$ММ.$0AA1HO`):
+**When it is checked:** only while the server thinks you are **alive** (`hea > 0` from your last accepted update), or during a **revive window**. The window opens when you are revivable (head and body HP above 0, parts 12 and 13) and the server has set `$МеeНMO = now + 3000` (`$ММ.$0AA1HO`):
 
 - at round start / warmup, for every player (`:6402`)
 - when a teammate's heal hit lands on you while you are dead (`:6950–6955`)
@@ -1823,7 +1823,7 @@ When a `find-names` pattern stops matching, the run says which key (`problem: st
 | `connection.$HАНeT` | The server's record of the player on this connection (`hea`, `respawns`, `login`, `nickname`, `team` ...) |
 | `$HАНeT.$HеeТTA` | Sent `CLIENT_READY_FOR_FIRST_SYNC`: checks are on |
 | `$HАНeT.$еТр1O` | Spectator: no checks |
-| `$HАНeT.$МоТeII` | Revivable: head and face HP above 0 in the last update |
+| `$HАНeT.$МоТeII` | Revivable: head and body HP above 0 in the last update |
 | `$HАНeT.$МеeНMO` | Revive window end (`now + $ММ.$0AA1HO`, 3000 ms) |
 | `$HАНeT.$оcIеMM` | Next `YOU_ARE_STILL_DEAD` time |
 | `$HАНeT.$OeeНl` | Your last state, passed on to the other players |

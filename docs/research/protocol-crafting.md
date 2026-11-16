@@ -95,7 +95,7 @@ the match is at 0 (`:4993`). The commands are listed in
 ```
 js pb.req("REPORT_USER",   ["<auth id>", "REPLY"])
 js pb.req("ENDORDSE_USER", ["<auth id>", "REPLY"])
-js pb.req("KICK_USER",     ["<auth id>", "REPLY", "1"])
+js pb.req("KICK_USER",     ["<auth id>", "REPLY", "0"])
 js pb.req("BAN_USER",      ["<auth id>", "REPLY"])
 ```
 
