@@ -72,6 +72,12 @@ String constants are matched as literals: the game keeps them in `_strings.js` a
 - `zoom`: The camera zoom the game sets (1 = 100%): the map's "gamescale" engine mark, the "set zoom" trigger actions and the chat's "zoom 50" write it, the camera follows it.
 - `varSyncOn`: The map's "var_sync" engine mark: set from an <inf mark="var_sync"> element, and the gate on both sending and applying a variable sync. Never set back to false.
 - `mapVars`: Map variables: one object, variable name -> value, emptied when a map loads. Found at the "sync this variable to the server" action, which reads both the name and the value.
+### Display settings and aim (src/features/fps/, fly sweep)
+
+- `fpsChoice`, `lowPhysics`: The game saves its options in a table that names each one (`"framerate"`, `"lite_phys"`) next to the global that holds it, in backticks; the pattern reads the global from there.
+- `applyFps`: The function the Esc menu's FPS buttons call after setting `fpsChoice`: it sets the stage frame rate to 20, 30 or 60.
+- `aimSourceX, aimSourceY`: Each tick the game copies the mouse into these two (`if(mouseX!=0||mouseY!=0)`); the next tick turns them into the character's aim. The other `mouseX` copy (the drawn cursor) writes `myCursor`, so the pattern does not match it.
+
 ### Input, chat, multiplayer, map
 
 - `mapId`: The map being loaded or played: a campaign level ("c31a") or a custom map ID, set as the load starts, before the built-in levels table is looked up.
