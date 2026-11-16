@@ -4,11 +4,13 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { REPO_ROOT } from '#kernel/config/paths.ts';
 import { connectCdp, type CdpSession } from './cdp.ts';
 import {
-  BOOT_TIMEOUT_MS, CDP, CONSOLE_LINE_PREFIX, DEFAULT_CLIENT, CONSOLE_READY_EXPRESSION, DEBUG_PORT_SWITCH,
+  BOOT_TIMEOUT_MS, CDP, CONSOLE_LINE_PREFIX, CONSOLE_READY_EXPRESSION, FAILED_EXIT_CODE, STOP_SIGNALS, DEBUG_PORT_SWITCH,
   ELECTRON_BIN, GAME_URL_PREFIX, LAUNCHER_URL_SUFFIX, PAGE_TARGET_TYPE, POLL_MS,
   SETTLE_MS, TARGET_LIST_URL, ENTER_AS_GUEST_EXPRESSION, GAME_LOADED_EXPRESSION, LAUNCHER_READY_EXPRESSION, LEVEL_CHECK_COMMAND, LEVEL_RUNNING_LINE, startLevelCommand, APP_DIR, CONSOLE_ARGUMENT_SEPARATOR, playOwnExpression, runCommandExpression,
 } from './constants.ts';
 import { TEXT } from './text.ts';
+import { CLIENT } from '#shared/features/keys.ts';
+import { stopGroup } from './args.ts';
 
 type Target = { type: string; url: string; webSocketDebuggerUrl: string };
 type EvaluateResult = { result?: { value?: unknown }; exceptionDetails?: { exception?: { description?: string } } };
@@ -17,9 +19,11 @@ type ConsoleCall = { args?: { value?: string | number | boolean | null }[] };
 export type SmokeOptions = { client: string; level: string | null; electronArgs: readonly string[]; commands: readonly string[]; report: (line: string) => void };
 export type SmokeResult = { consoleReady: boolean; output: Map<string, string[]> };
 
-async function waitFor<T>(what: string, probe: () => Promise<T | null>): Promise<T> {
+async function waitFor<T>(what: string, probe: () => Promise<T | null>, failure: () => string | null = () => null): Promise<T> {
   const deadline = Date.now() + BOOT_TIMEOUT_MS;
   while (Date.now() < deadline) {
+    const failed = failure();
+    if (failed) throw new Error(failed);
     const found = await probe().catch(() => null);
     if (found !== null) return found;
     await sleep(POLL_MS);
@@ -55,14 +59,20 @@ export async function runSmoke({ client, level, electronArgs, commands, report }
   report(TEXT.started(args));
   const electron: ChildProcess = spawn(path.join(REPO_ROOT, ELECTRON_BIN), args, { cwd: REPO_ROOT, stdio: 'ignore', detached: true });
   const output = new Map<string, string[]>();
+  const stopOnSignal = (): void => {
+    stopGroup(electron.pid);
+    process.exit(FAILED_EXIT_CODE);
+  };
+  for (const signal of STOP_SIGNALS) process.once(signal, stopOnSignal);
   try {
     await waitFor(TEXT.waitingFor.debugger, async () => (await pageTargets()).length ? true : null);
     const launcher = await waitFor(TEXT.waitingFor.launcher, findPage((url) => url.endsWith(LAUNCHER_URL_SUFFIX)));
     report(TEXT.launcher);
     const launcherSession = await connectCdp(launcher.webSocketDebuggerUrl);
     await waitFor(TEXT.waitingFor.launcher, async () => (await evaluate(launcherSession, LAUNCHER_READY_EXPRESSION)) === true ? true : null);
-    void evaluate(launcherSession, playOwnExpression(client)).then((played) => { if (played !== true) report(TEXT.playFailed(JSON.stringify(played))); }).catch(() => null);
-    const game = await waitFor(TEXT.waitingFor.game, findPage((url) => url.startsWith(GAME_URL_PREFIX)));
+    let playFailure: string | null = null;
+    void evaluate(launcherSession, playOwnExpression(client)).then((played) => { if (played !== true) playFailure = TEXT.playFailed(JSON.stringify(played)); }).catch(() => null);
+    const game = await waitFor(TEXT.waitingFor.game, findPage((url) => url.startsWith(GAME_URL_PREFIX)), () => playFailure);
     launcherSession.close();
     report(TEXT.gamePage(game.url));
     const gameSession = await connectCdp(game.webSocketDebuggerUrl);
@@ -70,7 +80,7 @@ export async function runSmoke({ client, level, electronArgs, commands, report }
     await gameSession.send(CDP.enableRuntime);
     await waitFor(TEXT.waitingFor.console, async () => (await evaluate(gameSession, CONSOLE_READY_EXPRESSION)) === true ? true : null);
     report(TEXT.consoleReady);
-    if (client !== DEFAULT_CLIENT) {
+    if (client !== CLIENT.official) {
       await waitFor(TEXT.waitingFor.gameScripts, async () => {
         await evaluate(gameSession, ENTER_AS_GUEST_EXPRESSION);
         return (await evaluate(gameSession, GAME_LOADED_EXPRESSION)) === true ? true : null;
@@ -96,6 +106,7 @@ export async function runSmoke({ client, level, electronArgs, commands, report }
     gameSession.close();
     return { consoleReady: true, output };
   } finally {
-    if (electron.pid !== undefined) process.kill(-electron.pid);
+    for (const signal of STOP_SIGNALS) process.off(signal, stopOnSignal);
+    stopGroup(electron.pid);
   }
 }

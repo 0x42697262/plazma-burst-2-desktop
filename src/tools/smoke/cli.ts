@@ -1,22 +1,15 @@
 import fs from 'node:fs';
-import { CLI_ARGS_START, CLIENT_FLAG, LEVEL_FLAG, LINE_BREAKS, COMMAND_FLAG, DEFAULT_CLIENT, DEFAULT_COMMANDS, ELECTRON_ARGS_FLAG } from './constants.ts';
+import { CLI_ARGS_START, DEFAULT_COMMANDS, FAILED_EXIT_CODE } from './constants.ts';
+import { parseSmokeArgs } from './args.ts';
 import { runSmoke } from './smoke.ts';
 import { TEXT } from './text.ts';
 
-const argv = process.argv.slice(CLI_ARGS_START);
-const electronArgsStart = argv.indexOf(ELECTRON_ARGS_FLAG);
-const ownArgs = electronArgsStart < 0 ? argv : argv.slice(0, electronArgsStart);
-const electronArgs = electronArgsStart < 0 ? [] : argv.slice(electronArgsStart + 1);
-const commands = ownArgs.flatMap((arg, index) => (ownArgs[index - 1] === COMMAND_FLAG ? [arg] : []));
-
-const valueAfter = (flag: string): string | null => (ownArgs.includes(flag) ? ownArgs[ownArgs.indexOf(flag) + 1] ?? null : null);
-const client = valueAfter(CLIENT_FLAG) ?? DEFAULT_CLIENT;
-const levelFile = valueAfter(LEVEL_FLAG);
-if (levelFile && client !== DEFAULT_CLIENT) {
-  console.error(TEXT.levelOfficialOnly);
-  process.exit(1);
+const { client, levelFile, commands, electronArgs, problem } = parseSmokeArgs(process.argv.slice(CLI_ARGS_START));
+if (problem) {
+  console.error(problem);
+  process.exit(FAILED_EXIT_CODE);
 }
-const level = levelFile ? fs.readFileSync(levelFile, 'utf8').replace(LINE_BREAKS, '') : null;
+const level = levelFile ? fs.readFileSync(levelFile, 'utf8') : null;
 const result = await runSmoke({ client, level, electronArgs, commands: commands.length ? commands : DEFAULT_COMMANDS, report: (line) => console.log(line) });
 for (const [line, printed] of result.output) {
   console.log(TEXT.command(line));

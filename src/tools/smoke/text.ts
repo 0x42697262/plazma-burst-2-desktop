@@ -3,6 +3,8 @@ export const TEXT = Object.freeze({
   launcher: 'Smoke: launcher open; playing the chosen client\'s own servers',
   gamePage: (url: string) => `Smoke: game page ${url}`,
   playFailed: (answer: string) => `Smoke: Play did not start the game: ${answer}`,
+  needsValue: (flag: string) => `Smoke: ${flag} needs a value`,
+  unknownClient: (client: string, known: readonly string[]) => `Smoke: unknown client "${client}" (${known.join(', ')})`,
   levelOfficialOnly: 'Smoke: --level starts a level in the official client only; the Sad Burst clients start a map through their difficulty screen, which smoke cannot press yet',
   levelStarted: 'Smoke: level started from the map file',
   consoleReady: 'Smoke: dev console ready',
