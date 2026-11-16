@@ -19,6 +19,7 @@ import { MAIN_WINDOW } from './platform/constants.ts';
 import { OFFICIAL_LOGIN_FILE } from './platform/keys.ts';
 import { createSiteCookies } from './platform/site-cookies.ts';
 import { readGameVersion } from './platform/game-files.ts';
+import { oncePerKeyAtATime } from './platform/single-flight.ts';
 import type { JoinPage } from './platform/index-page.ts';
 import { MENU_ROLE, WINDOW_ALL_CLOSED } from './keys.ts';
 import { APP_TEXT as TEXT } from './text.ts';
@@ -95,7 +96,9 @@ export function startApp(context: WrapperContext): void {
     return made;
   };
 
-  async function prepareClient(id: string): Promise<void> {
+  const prepareClient = oncePerKeyAtATime(prepareOnce);
+
+  async function prepareOnce(id: string): Promise<void> {
     const client = clientById(id);
     const flags = context.flagsFor(client.id).flags;
     if (client.feature && !flags[client.feature].on) throw new Error(SADBURST_TEXT.flagOff(client.title, client.feature));

@@ -203,8 +203,11 @@ async function load(bridge: Bridge): Promise<void> {
   for (const row of rows()) void check(bridge, row.id);
 }
 
+let isPlaying = false;
+
 async function play(id: string | null): Promise<void> {
-  if (!id || !api) return;
+  if (!id || !api || isPlaying) return;
+  isPlaying = true;
   const button = query<HTMLButtonElement>(LAUNCHER_ELEMENT.play);
   button.disabled = true;
   try {
@@ -212,6 +215,7 @@ async function play(id: string | null): Promise<void> {
   } catch (error) {
     alert((error as Error).message);
     button.disabled = false;
+    isPlaying = false;
   }
 }
 

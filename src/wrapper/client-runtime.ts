@@ -26,6 +26,7 @@ import { prepareIndex, pageGlobalScript, type JoinPage } from './platform/index-
 import { createGameFiles, readGameVersion, checkSadburstBuild } from './platform/game-files.ts';
 import { createDevFiles, checkNamesFile, checkPageBundle } from './platform/dev-files.ts';
 import { textResponse, typedResponse } from './platform/responses.ts';
+import { onceUntilItFails } from './platform/single-flight.ts';
 import { logPage } from './platform/page-log.ts';
 import type { PageContext } from './platform/context.ts';
 import { CONSTRAINT_SOURCE, DEBUG_LEVEL, FETCH_DEST, FILE_ERROR_METHOD, HTTPS_PREFIX, RELOAD_METHOD, RENDER_PROCESS_GONE } from './keys.ts';
@@ -70,7 +71,6 @@ export function createClientRuntime(shared: SharedServices, client: GameClient) 
 
   let mainWindow: BrowserWindow | null = null;
   let serverPage: ServerPage | null = null;
-  let isInstalled = false;
   const liveWindow = (): BrowserWindow | null => (mainWindow && !mainWindow.isDestroyed() ? mainWindow : null);
   const gameSession = (): Session => (client.partition ? session.fromPartition(client.partition) : session.defaultSession);
 
@@ -214,9 +214,7 @@ export function createClientRuntime(shared: SharedServices, client: GameClient) 
 
   const isMissing = (): boolean => !version || !fsSync.existsSync(path.join(root, INDEX_FILE));
 
-  async function install(): Promise<void> {
-    if (isInstalled) return;
-    isInstalled = true;
+  async function installOnce(): Promise<void> {
     if (devConsoleOn && seedKvFile(devSettingsFile, EDITION_DEFAULTS.settings)) log.info(TEXT.settingsSeeded(path.relative(USER_ROOT, devSettingsFile)));
     log.info(TEXT.gameFrom(isBundled ? TEXT.clientPrefix(client.title) : '', version ?? '', root));
     if (isBundled) {
@@ -236,6 +234,8 @@ export function createClientRuntime(shared: SharedServices, client: GameClient) 
     if (isBundled) gameSession().protocol.handle(HTTPS_SCHEME, handler);
     else protocol.handle(HTTPS_SCHEME, handler);
   }
+
+  const install = onceUntilItFails(installOnce);
 
   function openWindow(title: string): BrowserWindow {
     const window = new BrowserWindow({
