@@ -61,7 +61,7 @@ test('the map download: a local ID is served from disk; with fast_maps a saved m
     fs.mkdirSync(context.dir, { recursive: true });
     fs.writeFileSync(path.join(context.dir, 'arena.xml'), '﻿' + MAP + '\n');
     const errors: string[] = [];
-    const intercept = mapDownloadInterceptor({ files: context.files, host: HOST, info: () => undefined, error: (message) => errors.push(message) });
+    const intercept = mapDownloadInterceptor({ files: context.files, hosts: ['sadburst2.com', HOST], info: () => undefined, error: (message) => errors.push(message) });
     let fetched = 0;
     const fetchContext = { fetch: async () => { fetched++; return new Response(MAP); } };
     const call = (request: Request) => intercept(request, new URL(request.url), fetchContext);
@@ -77,6 +77,8 @@ test('the map download: a local ID is served from disk; with fast_maps a saved m
     assert.equal(fetched, 1, 'fast load: not downloaded again');
     const other = new Request(`https://${HOST}/pb2/server.php`, { method: 'POST', body: new URLSearchParams({ rq: 'login' }) });
     assert.equal(await call(other), null);
+    const fromSadBurst = new Request('https://sadburst2.com/pb2/server.php', { method: 'POST', body: new URLSearchParams({ rq: 'cmap', cmap: 'local-ARENA' }) });
+    assert.equal(await (await call(fromSadBurst))?.text(), MAP, 'a Sad Burst client\'s own host is served too, and the official map server is whichever client asks');
     assert.equal(await intercept(new Request('https://example.test/pb2/server.php', { method: 'POST' }), new URL('https://example.test/pb2/server.php'), {}), null);
   } finally { context.cleanup(); }
 });

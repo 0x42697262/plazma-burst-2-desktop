@@ -13,7 +13,17 @@ export const COMMAND_FLAG = '--run';
 export const ELECTRON_ARGS_FLAG = '--';
 export const ELECTRON_BIN = 'node_modules/.bin/electron';
 export const DEBUG_PORT_SWITCH = `--remote-debugging-port=${DEBUG_PORT}`;
-export const PLAY_OFFICIAL_EXPRESSION = 'pb2servers.list().then((data) => pb2servers.play(data.official.id)).then(() => true)';
+export const playOwnExpression = (client: string): string => `pb2servers.list(${JSON.stringify(client)}).then((data) => pb2servers.play(data.official.id, ${JSON.stringify(client)})).then(() => true)`;
+export const DEFAULT_CLIENT = 'official';
+export const LAUNCHER_READY_EXPRESSION = 'typeof globalThis.pb2servers === "object" && document.readyState === "complete"';
+export const ENTER_AS_GUEST_EXPRESSION = 'document.querySelector("#login_guest, #game_entry_guest")?.click() === undefined';
+export const GAME_LOADED_EXPRESSION = '(0, eval)("typeof Guns") !== "undefined"';
+export const CLIENT_FLAG = '--client';
+export const LEVEL_FLAG = '--level';
+export const startLevelCommand = (mapXml: string): string => `js (0, eval)(PB2_NAMES.mapText + " = " + ${JSON.stringify(JSON.stringify(mapXml))}); gotoAndStop("gaming")`;
+export const LEVEL_CHECK_COMMAND = 'pos';
+export const LEVEL_RUNNING_LINE = /^you: /;
+export const LINE_BREAKS = /\r?\n/g;
 export const CONSOLE_READY_EXPRESSION = 'typeof globalThis.pb2dev === "object" && globalThis.pb2dev !== null';
 export const runCommandExpression = (line: string): string => `globalThis.pb2dev.run(${JSON.stringify(line)})`;
 export const CDP = Object.freeze({

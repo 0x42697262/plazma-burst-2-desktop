@@ -1,6 +1,7 @@
 import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { agoText } from '#console/kernel/core/words.ts';
+import { PAGE_CLIENT } from '#console/kernel/game/names.ts';
 import { CHARS_WIDTH, DATE_CHARS, KIND_WIDTH, SEEN_WIDTH } from '../../constants.ts';
 import { COMMAND } from '../../keys.ts';
 import { listFingerprints } from '../../adapters/wrapper-client.ts';
@@ -14,10 +15,10 @@ function list(args: readonly string[]): Promise<void> {
   return listFingerprints()
     .then((versions) => {
       if (!versions.length) {
-        print(TEXT.none, COLOR.notice);
+        print(TEXT.none(PAGE_CLIENT.fingerprintFolder), COLOR.notice);
         return;
       }
-      print(TEXT.title(versions.length), COLOR.title);
+      print(TEXT.title(versions.length, PAGE_CLIENT.fingerprintFolder), COLOR.title);
       for (const version of versions) {
         print(TEXT.row(
           version.id, version.latest ? TEXT.latestMark : TEXT.notLatestMark, version.kind.padEnd(KIND_WIDTH),

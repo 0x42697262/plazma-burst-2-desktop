@@ -31,8 +31,7 @@ same plus the game, names and opcodes files). The gate: `src/wrapper/app.ts`.
     active account the screen is left alone.
   - **No build hash.** Its loader never computes `PB2_CLIENT_BUILD`; nothing in its code
     sends one.
-  - Its own session (`persist:sadburst-erich5`), settings (`dev-overrides.sadburst-erich5.json`),
-    game folder (`game.sadburst-erich5/`), names, opcodes, maps and fingerprints, all named
+  - Its own session (`persist:sadburst-erich5`), game folder (`game.sadburst-erich5/`), names, opcodes, maps and fingerprints, all named
     `*.sadburst-erich5*`. The game version is `erich5-<build>`; the page tells the clients
     apart by that prefix (`clientOfVersion`).
 
@@ -65,12 +64,18 @@ same plus the game, names and opcodes files). The gate: `src/wrapper/app.ts`.
   reader is `clientOf` in `src/kernel/config/environment.ts`.
 
 ## Kept apart
-- Sad Burst 2 keeps everything apart from the official client: its own settings file
-  (`data/dev-overrides.sadburst.json`), names and opcodes files, game folder and
-  browser session (`persist:sadburst`). Its lobby can run code in its page
-  (RELIABLE_TASK, [fingerprinting](../research/fingerprinting.md) §4), and nothing it
-  writes may reach the official client, e.g. a bind running `js ...` in the official
-  game, signed in with your official account.
+- Each Sad Burst client keeps its own names and opcodes files, game folder, maps folder,
+  fingerprinters (`data/fingerprint.sadburst*/`: they are code a lobby sent, so they stay
+  with that lobby's client) and browser session (`persist:sadburst`,
+  `persist:sadburst-erich5`).
+- **Shared by every client:** the console settings file `data/dev-overrides.json`, so your
+  keys, binds, profiles and history are the same in all three. The older
+  `data/dev-overrides.sadburst.json` is no longer read; copy what you want from it by hand.
+- **The risk this takes:** Sad Burst 2's own lobby can run code in its page (RELIABLE_TASK,
+  [fingerprinting](../research/fingerprinting.md) §4; the lobby task guard stops it only on
+  private servers). That code can reach the console's settings, so it could add a bind such
+  as `js ...`, which would then run in the official client too, signed in with your official
+  account. A separate file per client prevented that; sharing the file is your choice.
 - Sad Burst 2 (`/gameplay/`): hooks are in the flag's hands like everywhere else, but its
   loader sends a hash of the game scripts, as the page receives them, with the login, so a hook
   that changes a script changes that hash ([hooks](hooks.md),

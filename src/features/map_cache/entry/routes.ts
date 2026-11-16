@@ -8,7 +8,7 @@ import { TEXT } from '../text.ts';
 import { isLocalMapId, localNameOf } from '../domain/map-id.ts';
 import type { MapFiles } from '../adapters/map-files.ts';
 
-export type MapRouteDeps = { files: MapFiles; host: string; info: (message: string) => void; error: (message: string) => void };
+export type MapRouteDeps = { files: MapFiles; hosts: readonly string[]; info: (message: string) => void; error: (message: string) => void };
 type ContextWithFetch = RequestContext & { fetch?: (request: Request) => Promise<Response> };
 
 export function mapRoutes({ files }: Pick<MapRouteDeps, 'files'>): DevRoute[] {
@@ -55,7 +55,7 @@ export function mapRoutes({ files }: Pick<MapRouteDeps, 'files'>): DevRoute[] {
   ];
 }
 
-export function mapDownloadInterceptor({ files, host, info, error }: MapRouteDeps): Interceptor {
+export function mapDownloadInterceptor({ files, hosts, info, error }: MapRouteDeps): Interceptor {
   async function serveServerMap(request: Request, id: string, context: ContextWithFetch): Promise<Response | null> {
     if (!id) return null;
     if (files.isFastLoading()) {
@@ -76,7 +76,7 @@ export function mapDownloadInterceptor({ files, host, info, error }: MapRouteDep
   }
 
   return async (request, url, context) => {
-    const isMapDownload = url.hostname === host && url.pathname === SERVER_SCRIPT_PATH && request.method === HTTP_METHOD.post;
+    const isMapDownload = hosts.includes(url.hostname) && url.pathname === SERVER_SCRIPT_PATH && request.method === HTTP_METHOD.post;
     if (!isMapDownload) return null;
     const body = new URLSearchParams(await request.clone().text());
     if (body.get(MAP_REQUEST.field) !== MAP_REQUEST.value) return null;

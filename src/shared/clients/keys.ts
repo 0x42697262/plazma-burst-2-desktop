@@ -8,6 +8,7 @@ export type ClientDetails = Readonly<{
   gamePrefix: (version: string | null) => string;
   settingsFileName: string;
   namesFileName: string;
+  fingerprintFolder: string;
   partition: string | null;
   editorScript: string | null;
   fetchFlag: string;
@@ -27,6 +28,7 @@ export const OFFICIAL_LOBBY = Object.freeze({ host: 'vvvv.plazmaburst2.com', por
 export const SADBURST_LOBBY = Object.freeze({ host: 'ca.sadburst2.com', port: 2053 });
 
 const SADBURST_SITE = 'https://sadburst2.com';
+const SHARED_SETTINGS_FILE = 'dev-overrides.json';
 const SADBURST_EDITOR_SCRIPT = SADBURST_SITE + '/map_editor/scripts/ale/ale-all.js';
 const FLAG_PREFIX = '--';
 const npmVariableOf = (flag: string): string => 'npm_config_' + flag.slice(FLAG_PREFIX.length).replaceAll('-', '_');
@@ -38,8 +40,9 @@ export const CLIENT_DETAILS: Readonly<Record<ClientId, ClientDetails>> = Object.
     host: 'www.plazmaburst2.com',
     site: 'https://www.plazmaburst2.com',
     gamePrefix: (version: string | null) => `/h5/versions/${version ?? ''}/`,
-    settingsFileName: 'dev-overrides.json',
+    settingsFileName: SHARED_SETTINGS_FILE,
     namesFileName: 'names.js',
+    fingerprintFolder: 'fingerprint',
     partition: null,
     editorScript: null,
     fetchFlag: '',
@@ -58,8 +61,9 @@ export const CLIENT_DETAILS: Readonly<Record<ClientId, ClientDetails>> = Object.
     host: 'sadburst2.com',
     site: SADBURST_SITE,
     gamePrefix: () => '/gameplay/',
-    settingsFileName: 'dev-overrides.sadburst.json',
+    settingsFileName: SHARED_SETTINGS_FILE,
     namesFileName: 'names.sadburst.js',
+    fingerprintFolder: 'fingerprint.sadburst',
     partition: 'persist:sadburst',
     editorScript: SADBURST_EDITOR_SCRIPT,
     fetchFlag: ` ${SADBURST_FLAG}`,
@@ -78,8 +82,9 @@ export const CLIENT_DETAILS: Readonly<Record<ClientId, ClientDetails>> = Object.
     host: 'sadburst2.com',
     site: SADBURST_SITE,
     gamePrefix: () => '/gameplay_erich5/',
-    settingsFileName: 'dev-overrides.sadburst-erich5.json',
+    settingsFileName: SHARED_SETTINGS_FILE,
     namesFileName: 'names.sadburst-erich5.js',
+    fingerprintFolder: 'fingerprint.sadburst-erich5',
     partition: 'persist:sadburst-erich5',
     editorScript: SADBURST_EDITOR_SCRIPT,
     fetchFlag: ` ${SADBURST_ERICH5_FLAG}`,

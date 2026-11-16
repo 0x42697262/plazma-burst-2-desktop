@@ -27,7 +27,7 @@ test('each client keeps its own files, settings, session and page', () => {
   assert.notEqual(sadburst.gameDir, official.gameDir);
   assert.notEqual(sadburst.names, official.names);
   assert.notEqual(sadburst.opcodes, official.opcodes);
-  assert.notEqual(sadburst.settingsFileName, official.settingsFileName);
+  assert.equal(sadburst.settingsFileName, official.settingsFileName, 'console settings, binds and profiles are shared by every client');
   assert.equal(official.partition, null, 'the official client uses the default session');
   assert.equal(sadburst.partition, 'persist:sadburst');
   assert.equal(official.gamePrefix('v123'), '/h5/versions/v123/');
@@ -38,7 +38,8 @@ test('each client keeps its own files, settings, session and page', () => {
 
 test('Sad Burst 2 for the official servers keeps its own files, settings, session and page', () => {
   const { sadburst, sadburst_erich5: erich5 } = CLIENTS;
-  for (const field of ['gameDir', 'names', 'opcodes', 'settingsFileName', 'partition'] as const) assert.notEqual(erich5[field], sadburst[field], field);
+  assert.equal(erich5.settingsFileName, sadburst.settingsFileName);
+  for (const field of ['gameDir', 'names', 'opcodes', 'partition'] as const) assert.notEqual(erich5[field], sadburst[field], field);
   assert.equal(erich5.partition, 'persist:sadburst-erich5');
   assert.equal(erich5.gamePrefix('v123'), '/gameplay_erich5/');
   assert.equal(erich5.host, sadburst.host);
