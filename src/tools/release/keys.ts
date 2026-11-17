@@ -36,3 +36,12 @@ export const CLOUDFLARE_RANGES: readonly string[] = Object.freeze([
 ]);
 export const TEXT_ENCODING = 'utf8';
 export const LINE_END = '\n';
+export const RELEASE_FUSES = Object.freeze({
+  runAsNode: false,
+  enableNodeOptionsEnvironmentVariable: false,
+  enableNodeCliInspectArguments: false,
+  enableEmbeddedAsarIntegrityValidation: true,
+  onlyLoadAppFromAsar: true,
+  loadBrowserProcessSpecificV8Snapshot: false,
+  grantFileProtocolExtraPrivileges: true,
+});

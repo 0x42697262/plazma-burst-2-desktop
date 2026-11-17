@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import vm from 'node:vm';
 import { bootConsole } from '#console/testing/fake-game.fixture.ts';
 import { buildPage } from './build.ts';
 import { obfuscateOutputs } from './obfuscate.ts';
@@ -44,6 +45,27 @@ test('an obfuscated single-file output loses the source map next to it', async (
     assert.deepEqual(await obfuscateOutputs([file], []), [file]);
     assert.equal(fs.existsSync(`${file}.map`), false);
     assert.doesNotMatch(fs.readFileSync(file, 'utf8'), /sourceMappingURL/);
+  } finally {
+    fs.rmSync(outDir, { recursive: true, force: true });
+  }
+});
+
+test('the wrapper gets the stronger obfuscation: its strings are encoded, its flow flattened, and it still runs', async () => {
+  const { obfuscateOutputs: obfuscate } = await import('./obfuscate.ts');
+  const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-obfuscated-wrapper-'));
+  const file = path.join(outDir, 'main.cjs');
+  const source = "'use strict';\nconst secretWord = 'cert-pinning-check';\nfunction pick(list, wanted) { for (const item of list) { if (item === wanted) return 'found ' + item; } return 'missing'; }\nmodule.exports = { answer: pick(['a', secretWord], secretWord) };\n";
+  try {
+    fs.writeFileSync(file, source);
+    const normal = path.join(outDir, 'page.cjs');
+    fs.writeFileSync(normal, source);
+    await obfuscate([file, normal], [], [file]);
+    const strong = fs.readFileSync(file, 'utf8');
+    assert.doesNotMatch(strong, /cert-pinning-check/, 'no string in the clear');
+    assert.ok(strong.length > fs.readFileSync(normal, 'utf8').length, 'more than the page obfuscation');
+    const loaded: { exports: { answer?: string } } = { exports: {} };
+    vm.runInNewContext(strong, { module: loaded, exports: loaded.exports });
+    assert.equal(loaded.exports.answer, 'found cert-pinning-check', 'it still runs the same');
   } finally {
     fs.rmSync(outDir, { recursive: true, force: true });
   }

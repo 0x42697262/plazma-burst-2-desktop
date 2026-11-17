@@ -36,6 +36,7 @@ and `chars`, and nothing else: `player_info.chars` picks one command of `player_
 | `defaults` | Optional: servers, binds and settings a new player starts with (see [Defaults](#defaults)) |
 | `diagnostics` | Optional: `hidden`, `host`, `send`, `auto` (see [Diagnostics settings](#diagnostics-settings)) |
 | `obfuscate` | Optional: `true` obfuscates the built scripts (see [Obfuscation](#obfuscation)) |
+| `devtools` | Optional: `true` keeps DevTools and the debugging port in the packaged app (see [releases](releases.md#hardening)); off by default |
 
 `dev` is the one edition the tooling relies on: every feature, what `npm start` and
 `npm run verify` build.
@@ -119,6 +120,13 @@ off:
 | `renameGlobals` | `pb2dev` and the hooks runtime's global |
 | `selfDefending`, `debugProtection`, `disableConsoleOutput` | they change `console` and globals, which the game's anti-tamper scan compares |
 | `controlFlowFlattening`, `deadCodeInjection` | nothing, but they slow down code that runs every frame |
+
+The main process (`dist/wrapper/main.cjs`) gets more on top (`WRAPPER_OBFUSCATOR_OPTIONS`):
+control-flow flattening, dead code, every string in an RC4-encoded string array behind
+wrapper functions, split strings, numbers as expressions and transformed object keys. It
+runs once at start-up and never in the game's frame, and the game's anti-tamper scan does
+not see it, so none of the costs in the table above apply to it. `selfDefending` stays off
+there too: it reads function source, which bytecode would break.
 
 Two tests guard this: `src/features/hooks/hooks.test.ts` runs every hook test against the
 plain and the obfuscated runtime (with `renameProperties` on, 9 of them fail), and

@@ -1,12 +1,13 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import JavaScriptObfuscator from 'javascript-obfuscator';
-import { NODE_EXTENSION, OBFUSCATED_EXTENSIONS, OBFUSCATOR_OPTIONS, SOURCE_MAP_EXTENSION } from './constants.ts';
+import { NODE_EXTENSION, OBFUSCATED_EXTENSIONS, OBFUSCATOR_OPTIONS, SOURCE_MAP_EXTENSION, WRAPPER_OBFUSCATOR_OPTIONS } from './constants.ts';
 
 export type SourceType = 'module' | 'script';
 
-export const obfuscateCode = (code: string, sourceType: SourceType, file: string): string => JavaScriptObfuscator.obfuscate(code, {
+export const obfuscateCode = (code: string, sourceType: SourceType, file: string, isStrong = false): string => JavaScriptObfuscator.obfuscate(code, {
   ...OBFUSCATOR_OPTIONS,
+  ...(isStrong ? WRAPPER_OBFUSCATOR_OPTIONS : {}),
   sourceType,
   target: file.endsWith(NODE_EXTENSION) ? 'node' : 'browser',
 }).getObfuscatedCode();
@@ -18,7 +19,7 @@ async function filesIn(output: string): Promise<string[]> {
   return entries.filter((entry) => entry.isFile()).map((entry) => path.join(entry.parentPath, entry.name));
 }
 
-export async function obfuscateOutputs(outputs: readonly string[], moduleOutputs: readonly string[]): Promise<string[]> {
+export async function obfuscateOutputs(outputs: readonly string[], moduleOutputs: readonly string[], strongOutputs: readonly string[] = []): Promise<string[]> {
   const obfuscated: string[] = [];
   for (const output of outputs) {
     const sourceType: SourceType = moduleOutputs.includes(output) ? 'module' : 'script';
@@ -28,7 +29,7 @@ export async function obfuscateOutputs(outputs: readonly string[], moduleOutputs
         continue;
       }
       if (!OBFUSCATED_EXTENSIONS.includes(path.extname(file))) continue;
-      await fs.writeFile(file, obfuscateCode(await fs.readFile(file, 'utf8'), sourceType, file));
+      await fs.writeFile(file, obfuscateCode(await fs.readFile(file, 'utf8'), sourceType, file, strongOutputs.includes(output)));
       await fs.rm(file + SOURCE_MAP_EXTENSION, { force: true });
       obfuscated.push(file);
     }

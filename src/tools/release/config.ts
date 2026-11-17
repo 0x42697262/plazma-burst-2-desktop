@@ -1,6 +1,6 @@
 import type { Edition } from '#shared/editions/types.ts';
 import {
-  DESKTOP_FILE_EXTENSION, FILE_NAME_JOIN, LINUX_CATEGORY, LINUX_TARGETS, PLATFORM, STAGED_FILES, STAGED_MAIN, UNSAFE_FILE_CHARACTER, WINDOWS_TARGETS,
+  DESKTOP_FILE_EXTENSION, FILE_NAME_JOIN, RELEASE_FUSES, LINUX_CATEGORY, LINUX_TARGETS, PLATFORM, STAGED_FILES, STAGED_MAIN, UNSAFE_FILE_CHARACTER, WINDOWS_TARGETS,
   artifactName, type Platform,
 } from './keys.ts';
 
@@ -27,6 +27,7 @@ export function builderConfig({ edition, electronVersion, outDir, platforms }: {
     productName: edition.title,
     electronVersion,
     asar: true,
+    electronFuses: { ...RELEASE_FUSES },
     publish: null,
     directories: { output: outDir },
     files: [...STAGED_FILES],

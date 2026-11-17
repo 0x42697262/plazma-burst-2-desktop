@@ -43,6 +43,29 @@ npm run release -- --edition <name> --linux --windows
 4. packages that with electron-builder (`src/tools/release/config.ts`) into
    `release/<name>/`, for example `Plazma-Burst-2-Client-1.0.0-linux-x86_64.AppImage`.
 
+## Hardening
+
+Every release (`npm run release`), whatever the edition:
+- **Electron fuses** (`RELEASE_FUSES` in `src/tools/release/keys.ts`, written by
+  electron-builder): `ELECTRON_RUN_AS_NODE` does nothing (the binary cannot be used as Node),
+  `NODE_OPTIONS` and `--inspect` are ignored, and the app is only loaded from its asar, which
+  is checked against its hash where Electron supports it (Windows and macOS). Cookie
+  encryption stays off: on Linux it needs the system keyring, which can ask for a password at
+  start. File pages keep their privileges: the launcher is a `file://` page and does not
+  load without them. `npx @electron/fuses read --app <binary>` shows them.
+- **No DevTools, no debugging port** (`src/wrapper/platform/release-lockdown.ts`): a
+  packaged app drops `--remote-debugging-port`, `--remote-debugging-pipe`, `--inspect` and
+  `--inspect-brk` before it starts, and closes DevTools as soon as any page opens them.
+  `npm start`, `npx electron .` and the smoke tool are not packaged and keep both. An edition
+  with `"devtools": true` keeps both in its release, for debugging one.
+- With `"obfuscate": true`, the main process gets the stronger obfuscation
+  ([editions](editions.md#obfuscation)).
+
+Checked on a packaged Linux build (obfuscated `player` copy): the fuses read back as set,
+`ELECTRON_RUN_AS_NODE=1 <binary> -e …` does not run Node, `--remote-debugging-port=9555`
+opens nothing (and does with `"devtools": true`), the launcher loads, and with
+`PB2_GAME_DIR` and `PB2_FEATURES=-server_list` the official game reaches its name screen.
+
 ## Windows
 
 ```

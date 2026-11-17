@@ -15,6 +15,19 @@ test('an edition packages under its own id and title, with only the built bundle
   assert.equal(config.publish, null, 'publishing is never part of a build');
 });
 
+test('releases set the Electron fuses: no Node mode, no NODE_OPTIONS or --inspect, the app only from its checked asar; file:// keeps what the launcher page needs', () => {
+  const fuses = builderConfig({ edition: player, electronVersion: '45.0.0', outDir: '/out', platforms: ['linux'] }).electronFuses;
+  assert.deepEqual(fuses, {
+    runAsNode: false,
+    enableNodeOptionsEnvironmentVariable: false,
+    enableNodeCliInspectArguments: false,
+    enableEmbeddedAsarIntegrityValidation: true,
+    onlyLoadAppFromAsar: true,
+    loadBrowserProcessSpecificV8Snapshot: false,
+    grantFileProtocolExtraPrivileges: true,
+  });
+});
+
 test('only the asked platforms are configured', () => {
   const config = builderConfig({ edition: player, electronVersion: '45.0.0', outDir: '/out', platforms: ['linux'] });
   assert.equal('win' in config, false);

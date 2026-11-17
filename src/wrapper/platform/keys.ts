@@ -71,3 +71,6 @@ export const LINE_EVENT = 'line';
 export const CLOSE_EVENT = 'close';
 export const INTERRUPT_SIGNAL = 'SIGINT';
 export const OFFICIAL_LOGIN_FILE = 'official-login.json';
+export const DEBUGGING_SWITCHES: readonly string[] = Object.freeze(['remote-debugging-port', 'remote-debugging-pipe', 'inspect', 'inspect-brk']);
+export const WEB_CONTENTS_CREATED_EVENT = 'web-contents-created';
+export const DEVTOOLS_OPENED_EVENT = 'devtools-opened';

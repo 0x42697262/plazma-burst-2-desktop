@@ -10,6 +10,7 @@ export type Edition = Readonly<{
   features: readonly FeatureId[] | null;
   capabilities: readonly string[] | null;
   diagnostics?: EditionDiagnostics;
+  devtools?: boolean;
 }>;
 
 export type DefaultServer = Readonly<{ name: string; address: string; fingerprint: string }>;

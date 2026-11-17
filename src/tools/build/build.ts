@@ -128,12 +128,13 @@ export type BuildOptions = Readonly<{ obfuscate: boolean }>;
 export type BuildResult = Readonly<{ outputs: string[]; obfuscated: string[] }>;
 
 export async function buildAll(edition: Edition = EDITION, defaults?: EditionDefaults, options: BuildOptions = { obfuscate: false }): Promise<BuildResult> {
-  const builds = [buildPage(PAGE_BUNDLE_DIR, edition), buildWrapperBundle(path.join(WRAPPER_BUNDLE_DIR, WRAPPER_BUNDLE_FILE), edition, defaults)];
+  const wrapperBundle = path.join(WRAPPER_BUNDLE_DIR, WRAPPER_BUNDLE_FILE);
+  const builds = [buildPage(PAGE_BUNDLE_DIR, edition), buildWrapperBundle(wrapperBundle, edition, defaults)];
   if (hasFeature(edition, FEATURE.serverList)) builds.push(buildLauncher());
   if (hasFeature(edition, FEATURE.hooks)) builds.push(buildHooksRuntime());
   if (hasFeature(edition, FEATURE.remotePlay)) builds.push(buildRemoteClient());
   const outputs = await Promise.all(builds);
-  const obfuscated = options.obfuscate ? await obfuscateOutputs(outputs, [PAGE_BUNDLE_DIR]) : [];
+  const obfuscated = options.obfuscate ? await obfuscateOutputs(outputs, [PAGE_BUNDLE_DIR], [wrapperBundle]) : [];
   return { outputs, obfuscated };
 }
 

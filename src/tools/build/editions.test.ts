@@ -122,6 +122,21 @@ test('an edition is obfuscated only when its file says "obfuscate": true, and th
   }
 });
 
+test('an edition keeps DevTools in its release only when its file says "devtools": true', () => {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'pb2-editions-'));
+  const write = (extra: Record<string, unknown>) => fs.writeFileSync(path.join(folder, 'mine.json'), JSON.stringify({ name: 'mine', title: 'Mine', appId: 'a.b', features: [], ...extra }));
+  try {
+    write({});
+    assert.equal(readEdition('mine', folder).edition.devtools, undefined);
+    write({ devtools: true });
+    assert.equal(readEdition('mine', folder).edition.devtools, true);
+    write({ devtools: 'yes' });
+    assert.throws(() => readEdition('mine', folder), /devtools/);
+  } finally {
+    fs.rmSync(folder, { recursive: true, force: true });
+  }
+});
+
 test('every capability builds alone, without the code of its siblings', async () => {
   for (const capability of CAPABILITIES) {
     const { edition, problems } = oneOffEdition(withRequirements(CATALOG, [capability.id]));

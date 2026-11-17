@@ -1,3 +1,4 @@
+import type { ObfuscatorOptions } from 'javascript-obfuscator';
 export const PAGE_ENTRIES = Object.freeze({ page: 'src/page/index.ts', console: 'src/console/index.ts' });
 export const CHUNK_NAMES = 'chunks/[name]-[hash]';
 export const BROWSER_TARGET = 'es2024';
@@ -60,6 +61,21 @@ export const DEFAULTS_MODULE = 'src/shared/editions/defaults.ts';
 export const COMMAND_CHAIN_SEPARATOR = ';';
 export const COMMAND_QUOTE = '"';
 export const COMMAND_WORDS = /\s+/;
+export const WRAPPER_OBFUSCATOR_OPTIONS: Readonly<ObfuscatorOptions> = Object.freeze({
+  controlFlowFlattening: true,
+  controlFlowFlatteningThreshold: 0.5,
+  deadCodeInjection: true,
+  deadCodeInjectionThreshold: 0.2,
+  numbersToExpressions: true,
+  splitStrings: true,
+  splitStringsChunkLength: 8,
+  stringArrayThreshold: 1,
+  stringArrayEncoding: ['rc4' as const],
+  stringArrayCallsTransform: true,
+  stringArrayWrappersCount: 2,
+  stringArrayWrappersType: 'function' as const,
+  transformObjectKeys: true,
+});
 export const OBFUSCATED_EXTENSIONS: readonly string[] = Object.freeze(['.js', '.cjs']);
 export const NODE_EXTENSION = '.cjs';
 export const SOURCE_MAP_EXTENSION = '.map';

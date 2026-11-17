@@ -19,6 +19,7 @@ const editionFileSchema = z.object({
   appId: z.string().regex(APP_ID_PATTERN),
   features: z.union([z.literal(EVERY_FEATURE), z.array(z.string())]),
   obfuscate: z.boolean().optional(),
+  devtools: z.boolean().optional(),
   diagnostics: z.object({
     hidden: z.boolean().optional(),
     host: z.string().optional(),
@@ -53,7 +54,7 @@ export function readEdition(name: string, folder: string = EDITIONS_DIR): BuiltE
     throw new Error(TEXT.editionUnreadable(shown, (error as Error).message), { cause: error });
   }
   if (parsed.name !== name) throw new Error(TEXT.nameMismatch(shown, parsed.name));
-  const built = withFeatures({ name: parsed.name, title: parsed.title, appId: parsed.appId, ...(parsed.diagnostics ? { diagnostics: withoutUnset(parsed.diagnostics) } : {}) }, parsed.features, parsed.defaults, parsed.obfuscate === true);
+  const built = withFeatures({ name: parsed.name, title: parsed.title, appId: parsed.appId, ...(parsed.diagnostics ? { diagnostics: withoutUnset(parsed.diagnostics) } : {}), ...(parsed.devtools === undefined ? {} : { devtools: parsed.devtools }) }, parsed.features, parsed.defaults, parsed.obfuscate === true);
   const hasDiagnostics = built.edition.features === null || built.edition.features.includes(FEATURE.diagnostics);
   if (!parsed.diagnostics || hasDiagnostics) return built;
   return Object.freeze({ ...built, missing: [...built.missing, FEATURE.diagnostics], problems: [...built.problems, TEXT.diagnosticsNeedsFeature] });
