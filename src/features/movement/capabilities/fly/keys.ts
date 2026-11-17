@@ -31,8 +31,8 @@ export const SETTINGS: Readonly<Record<string, KeySpec>> = Object.freeze({
     desc: 'How far from you the sweep aims, in game units: the swing radius with the "edge" throttle, left and right with "near" (above 1000 is held back in approved matches)', example: '900',
   },
   fly_sweep_aim: {
-    capability: FLY, type: SETTING_TYPE.bool, group: GROUP.player, extraValues: [SWEEP_AIM.plain, SWEEP_AIM.inverse, SWEEP_AIM.directional], default: SWEEP_AIM.directional, example: SWEEP_AIM.inverse,
-    desc: 'How the sweep steers: "directional" (the default) flies toward your cursor: above lifts you, and left or right is held toward its side; "inverse" only mirrors the aim height (cursor above lifts you); "plain" is the plain sweep (cursor below lifts you)',
+    capability: FLY, type: SETTING_TYPE.bool, group: GROUP.player, extraValues: [SWEEP_AIM.plain, SWEEP_AIM.inverse, SWEEP_AIM.directional, SWEEP_AIM.up], default: SWEEP_AIM.directional, example: SWEEP_AIM.inverse,
+    desc: 'How the sweep steers: "directional" (the default) flies toward your cursor: above lifts you, and left or right is held toward its side; "inverse" only mirrors the aim height (cursor above lifts you); "plain" is the plain sweep (cursor below lifts you); "up" always lifts you, wherever the cursor is, its distance setting the speed',
   },
   fly_sweep_throttle: {
     capability: FLY, type: SETTING_TYPE.bool, group: GROUP.player, extraValues: [SWEEP_THROTTLE.edge, SWEEP_THROTTLE.near], default: SWEEP_THROTTLE.edge, example: SWEEP_THROTTLE.near,

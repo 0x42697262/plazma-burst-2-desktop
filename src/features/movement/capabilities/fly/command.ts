@@ -11,8 +11,8 @@ import { setSweeping, sweep } from './sweep.ts';
 import { isInverse, isSweepReady, sweepRange } from './override.ts';
 
 const RUN_OPTIONS: readonly string[] = Object.freeze([FLY_COMMAND.on, FLY_COMMAND.off, FLY_COMMAND.toggle]);
-const AIM_OPTIONS: readonly string[] = Object.freeze([FLY_COMMAND.default, FLY_COMMAND.plain, FLY_COMMAND.inverse, FLY_COMMAND.directional]);
-const AIM_SAID: Readonly<Record<string, string>> = Object.freeze({ [FLY_COMMAND.default]: TEXT.aimDefault, [FLY_COMMAND.plain]: TEXT.aimPlain, [FLY_COMMAND.inverse]: TEXT.aimInverse, [FLY_COMMAND.directional]: TEXT.aimDirectional });
+const AIM_OPTIONS: readonly string[] = Object.freeze([FLY_COMMAND.default, FLY_COMMAND.plain, FLY_COMMAND.inverse, FLY_COMMAND.directional, FLY_COMMAND.up]);
+const AIM_SAID: Readonly<Record<string, string>> = Object.freeze({ [FLY_COMMAND.default]: TEXT.aimDefault, [FLY_COMMAND.plain]: TEXT.aimPlain, [FLY_COMMAND.inverse]: TEXT.aimInverse, [FLY_COMMAND.directional]: TEXT.aimDirectional, [FLY_COMMAND.up]: TEXT.aimUp });
 const SWEEP_OPTIONS: readonly string[] = Object.freeze([...RUN_OPTIONS, ...AIM_OPTIONS]);
 
 function runSweep(option: string, mode: string): void {

@@ -1,6 +1,6 @@
 export const TEXT = Object.freeze({
-  usage: 'fly [on | off | free | sweep | sword | reset]  |  fly sweep | sword [--on | --off | --toggle] [--directional | --inverse | --plain | --default]',
-  usageError: 'usage: fly [on | off | free | sweep | sword | reset]  |  fly sweep | sword [--on | --off | --toggle] [--directional | --inverse | --plain | --default]',
+  usage: 'fly [on | off | free | sweep | sword | reset]  |  fly sweep | sword [--on | --off | --toggle] [--directional | --up | --inverse | --plain | --default]',
+  usageError: 'usage: fly [on | off | free | sweep | sword | reset]  |  fly sweep | sword [--on | --off | --toggle] [--directional | --up | --inverse | --plain | --default]',
   description: 'Fly: up/down, free glide, or the aim sweep (sweep for guns, sword for swords); --on/--off/--toggle run it',
   clientOnly: 'your own movement and aim',
   about: [
@@ -27,6 +27,7 @@ export const TEXT = Object.freeze({
     ['sword --on | --off | --toggle', 'the same, holding the mouse button too (swords)'],
     ['--inverse', 'cursor above you lifts you: your aim height is mirrored through you (fly_sweep_aim)'],
     ['--directional', 'fly toward the cursor: inverse, and left or right held toward its side (the default)'],
+    ['--up', 'always up, wherever the cursor is; its distance sets the speed'],
     ['--plain', 'cursor below you lifts you, the plain sweep'],
     ['--default', 'back to the default, directional'],
   ],
@@ -43,6 +44,7 @@ export const TEXT = Object.freeze({
   aimInverse: 'Sweep aim: inverse (cursor above you lifts you)',
   aimDefault: 'Sweep aim: back to the default, directional (you fly toward the cursor)',
   aimPlain: 'Sweep aim: plain (cursor below you lifts you)',
+  aimUp: 'Sweep aim: up (always up; the cursor\'s distance sets the speed)',
   aimDirectional: 'Sweep aim: directional (you fly toward the cursor: above lifts you, its side is held)',
   notReady: 'It only sweeps at 60 FPS with high physics: "fps 60 high"',
   heldBack: (range: number, hint: string) => `Approved match: the sweep stays within ${range} of you, because aiming farther is reported to the other players. ${hint}.`,

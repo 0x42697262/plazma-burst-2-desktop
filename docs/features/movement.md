@@ -60,6 +60,9 @@ overrides in `src/console/kernel/overrides/frame.ts`.
     - `--inverse`: only the aim height is mirrored (`tary`, a getter like `tarx`), so the cursor
       above you lifts you.
     - `--plain`: the plain sweep; the cursor below you lifts you.
+    - `--up`: only up. The swing always circles the point below you, wherever the cursor is;
+      the cursor's distance from you, in any direction, sets the speed (edge throttle), and no
+      A or D is held. With the near throttle the aim height is always below you.
     - `--default`: back to the default (unsets `fly_sweep_aim`).
   - `fly_sweep_ragdoll` is the share of ticks the sweep holds X for you: 1 (the default) every
     tick; 0 never, it leaves X alone and you press it yourself; in between, X is held on that

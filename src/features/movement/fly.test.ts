@@ -450,6 +450,49 @@ test('fly_sweep_measure distance: the speed comes from how far the cursor is fro
   game.run('fly sweep --off; unset fly_sweep_aim; unset fly_sweep_curve; unset fly_sweep_range; unset fly_sweep_reach');
 });
 
+test('--up only goes up: the swing always circles the point below you, wherever the cursor is; its distance still sets the speed; no A or D', () => {
+  const { globals, names, player } = game;
+  globals[names.fpsChoice] = 3;
+  globals[names.lowPhysics] = false;
+  globals[names.zoom] = 1;
+  globals[names.keyLeft] = false;
+  globals[names.keyRight] = false;
+  game.run('fly_sweep_curve 1; fly_sweep_range 500');
+  assert.ok(game.run('fly sweep --up').some((line) => /up/.test(line)));
+  assert.ok(game.run('get fly_sweep_aim').includes('fly_sweep_aim = up'));
+  player.x = 100;
+  player.y = 50;
+  const aims = (cursorX: number, cursorY: number): Array<[number, number]> => {
+    const seen: Array<[number, number]> = [];
+    for (let frame = 0; frame < 3; frame++) {
+      game.frame();
+      player.tarx = cursorX;
+      player.tary = cursorY;
+      seen.push([player.tarx - player.x, player.tary - player.y]);
+    }
+    return seen.slice(1);
+  };
+  player.tarx = 100;
+  player.tary = 50;
+  game.run('fly sweep --on');
+  for (const [cursorX, cursorY] of [[100, 50 + 400], [100 + 800, 50], [100 - 800, 50 + 400], [100, 50 - 400]]) {
+    const seen = aims(cursorX as number, cursorY as number);
+    const middleX = seen.reduce((sum, [offsetX]) => sum + offsetX, 0);
+    const middleY = seen.reduce((sum, [, offsetY]) => sum + offsetY, 0);
+    assert.ok(Math.abs(middleX) < 1 && middleY >= 0, `cursor at ${cursorX}, ${cursorY}: the swing is centered below you`);
+    assert.deepEqual([globals[names.keyLeft], globals[names.keyRight]], [false, false], 'no A or D');
+  }
+  assert.ok(aims(100, 50).every(([offsetX]) => Math.abs(offsetX) < 1), 'cursor on you: no swing');
+  assert.ok(aims(100 + 800, 50).every(([offsetX]) => Math.round(Math.abs(offsetX)) === 500), 'cursor at the edge, any side: full swing');
+  game.run('fly_sweep_throttle near');
+  for (const cursorY of [50 - 120, 50 + 120]) {
+    aims(100, cursorY);
+    player.tary = cursorY;
+    assert.equal(player.tary - player.y, 120, `near: the aim height is below you whether the cursor is above or below (${cursorY})`);
+  }
+  game.run('fly sweep --off; unset fly_sweep_aim; unset fly_sweep_throttle; unset fly_sweep_curve; unset fly_sweep_range');
+});
+
 test('"fly sweep --on" arms the sweep mode when another one was set', () => {
   game.run('fly free');
   game.run('fly sweep --on');

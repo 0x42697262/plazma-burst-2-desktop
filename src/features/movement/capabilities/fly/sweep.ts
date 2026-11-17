@@ -9,11 +9,11 @@ export type SwingAim = Readonly<{ axisX: number; axisY: number; along: number; a
 export const LEVEL_SWING: SwingAim = Object.freeze({ axisX: 0, axisY: 1, along: 0, across: 1 });
 
 export type SweepState = {
-  active: boolean; direction: number; range: number; inverse: boolean; swing: SwingAim | null; atCursor: boolean; sideCarry: number; ragdollCarry: number;
+  active: boolean; direction: number; range: number; inverse: boolean; upOnly: boolean; swing: SwingAim | null; atCursor: boolean; sideCarry: number; ragdollCarry: number;
   held: HeldAim | null; holdsKeys: boolean;
 };
 
-export const sweep: SweepState = { active: false, direction: 1, range: 0, inverse: false, swing: null, atCursor: false, sideCarry: 0, ragdollCarry: 0, held: null, holdsKeys: false };
+export const sweep: SweepState = { active: false, direction: 1, range: 0, inverse: false, upOnly: false, swing: null, atCursor: false, sideCarry: 0, ragdollCarry: 0, held: null, holdsKeys: false };
 
 type KeyName = 'ragdoll' | 'mouse' | 'left' | 'right';
 type HeldKeys = Partial<Record<KeyName, boolean>>;
@@ -68,7 +68,9 @@ function swingOffset(swing: SwingAim): { x: number; y: number } {
 }
 
 function aimHeight(character: AimHolder, gameAimY: unknown): unknown {
-  return sweep.inverse && typeof gameAimY === 'number' ? character.y + (character.y - gameAimY) : gameAimY;
+  if (typeof gameAimY !== 'number') return gameAimY;
+  if (sweep.upOnly) return character.y + Math.abs(gameAimY - character.y);
+  return sweep.inverse ? character.y + (character.y - gameAimY) : gameAimY;
 }
 
 export function holdAim(character: AimHolder): void {

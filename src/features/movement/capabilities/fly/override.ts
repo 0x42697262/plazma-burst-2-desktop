@@ -80,8 +80,8 @@ function steerByEdge(character: MovingCharacter, cursor: { x: unknown; y: unknow
   const distance = Math.hypot(offsetX, offsetY);
   const isTilted = isDirectional() && distance > 0;
   const axisX = isTilted ? -offsetX / distance : 0;
-  const axisY = isTilted ? -offsetY / distance : (Math.sign(towardY) || -1) * (sweep.inverse ? -1 : 1);
-  const halfSwing = shaped(isTilted ? Math.hypot(towardX, towardY) : towardY) * HALF_TURN_RADIANS;
+  const axisY = isTilted ? -offsetY / distance : sweep.upOnly ? 1 : (Math.sign(towardY) || -1) * (sweep.inverse ? -1 : 1);
+  const halfSwing = shaped(isTilted || sweep.upOnly ? Math.hypot(towardX, towardY) : towardY) * HALF_TURN_RADIANS;
   sweep.swing = isStarting ? LEVEL_SWING : { axisX, axisY, along: Math.cos(halfSwing), across: Math.sin(halfSwing) };
   sweep.sideCarry += shaped(towardX);
   if (sweep.sideCarry < 1) return 0;
@@ -108,6 +108,7 @@ function flySweep(character: MovingCharacter, withMouse: boolean): void {
   if (!sweep.atCursor) sweep.direction = -sweep.direction;
   sweep.range = sweepRange();
   sweep.inverse = isInverse();
+  sweep.upOnly = settings.effective(SETTING.flySweepAim) === SWEEP_AIM.up;
   holdAim(character);
   const cursor = sweep.held?.gameAim ?? { x: character.x, y: character.y };
   if (isEdge()) {
