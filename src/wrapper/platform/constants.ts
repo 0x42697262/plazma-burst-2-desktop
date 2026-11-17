@@ -9,3 +9,7 @@ export const CONFLICT = 409;
 export const OK = 200;
 export const OFFICIAL_LOGIN_FILE_VERSION = 1;
 export const OFFICIAL_LOGIN_FILE_MODE = 0o600;
+export const BYTECODE_SOURCE_HASH_OFFSET = 8;
+export const BYTECODE_FLAG_HASH_OFFSET = 12;
+export const BYTECODE_HASH_BYTES = 4;
+export const BYTECODE_PLACEHOLDER_QUOTES = 2;

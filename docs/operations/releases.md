@@ -60,8 +60,19 @@ Every release (`npm run release`), whatever the edition:
   with `"devtools": true` keeps both in its release, for debugging one.
 - With `"obfuscate": true`, the main process gets the stronger obfuscation
   ([editions](editions.md#obfuscation)).
+- **The main process ships as V8 bytecode**, not JavaScript. After the build (and
+  obfuscation), Electron's own binary, run as Node (`ELECTRON_RUN_AS_NODE`, which only the
+  packaged app's fuse turns off), compiles `dist/wrapper/main.cjs` eagerly (`--no-lazy`) into
+  V8's code cache, `main.jsc` (`src/tools/release/compile-main.ts`). `main.cjs` is replaced
+  by a small loader (`src/wrapper/bytecode-main.ts`): it runs `main.jsc` with a placeholder
+  source of the same length, copies the running engine's flag hash into it first, and keeps V8
+  from flushing the bytecode (`--no-flush-bytecode`), which would need the source back. A
+  function's source reads as the placeholder. Bytecode from another Electron version or a
+  damaged file is refused with an error, never run. The same Electron version builds and
+  runs it, since both come from `node_modules/electron`.
 
-Checked on a packaged Linux build (obfuscated `player` copy): the fuses read back as set,
+Checked on a packaged Linux build (obfuscated `player` copy): the asar holds a 6.9 KB loader
+`main.cjs` and `main.jsc`, and the app starts from the bytecode; the fuses read back as set,
 `ELECTRON_RUN_AS_NODE=1 <binary> -e …` does not run Node, `--remote-debugging-port=9555`
 opens nothing (and does with `"devtools": true`), the launcher loads, and with
 `PB2_GAME_DIR` and `PB2_FEATURES=-server_list` the official game reaches its name screen.

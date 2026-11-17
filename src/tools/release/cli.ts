@@ -2,12 +2,15 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { build as packageApp } from 'electron-builder';
 import { REPO_ROOT, DIST_DIR } from '#kernel/config/paths.ts';
-import { buildAll } from '#tools/build/build.ts';
+import { buildAll, buildBytecodeLoader } from '#tools/build/build.ts';
+import { spawnSync } from 'node:child_process';
+import { WRAPPER_BUNDLE_DIR } from '#kernel/config/paths.ts';
+import { WRAPPER_BUNDLE_FILE } from '#tools/build/constants.ts';
 import { readEdition, readyEdition } from '#tools/build/edition-file.ts';
 import { createProbe } from '#features/server_list/adapters/probe.ts';
 import { builderConfig, stagedPackage } from './config.ts';
 import { FAILED_EXIT_CODE, FIRST_USER_ARGUMENT, JSON_INDENT } from './constants.ts';
-import { ARG, DIST_FOLDER, ELECTRON_PACKAGE, LINE_JOIN, NEVER_PUBLISH, PACKAGE_FILE, PLATFORM, RELEASE_FOLDER, SOURCE_MAP_SUFFIX, STAGING_FOLDER, type Platform } from './keys.ts';
+import { ARG, BYTECODE_OUTPUT, COMPILE_MAIN_SCRIPT, ELECTRON_BINARY, RUN_AS_NODE, DIST_FOLDER, ELECTRON_PACKAGE, LINE_JOIN, NEVER_PUBLISH, PACKAGE_FILE, PLATFORM, RELEASE_FOLDER, SOURCE_MAP_SUFFIX, STAGING_FOLDER, type Platform } from './keys.ts';
 import { TEXT } from './text.ts';
 import { TEXT as BUILD_TEXT } from '#tools/build/text.ts';
 import { isServerEditionFile, readServerEdition, withPublicUrl } from '#tools/build/server-edition.ts';
@@ -58,6 +61,7 @@ async function main(): Promise<void> {
   await fs.rm(DIST_DIR, { recursive: true, force: true });
   const { obfuscated } = await buildAll(edition, defaults, { obfuscate });
   if (obfuscated.length) console.log(BUILD_TEXT.obfuscated(obfuscated.length));
+  console.log(TEXT.bytecode(path.relative(REPO_ROOT, await compileMainToBytecode())));
 
   const outDir = path.join(REPO_ROOT, RELEASE_FOLDER, edition.name);
   const appDir = path.join(outDir, STAGING_FOLDER);
@@ -78,6 +82,15 @@ async function main(): Promise<void> {
     ...(platforms.includes(PLATFORM.windows) ? { win: [] } : {}),
   });
   console.log(TEXT.done(files.map((file) => path.relative(REPO_ROOT, file))));
+}
+
+async function compileMainToBytecode(): Promise<string> {
+  const mainFile = path.join(WRAPPER_BUNDLE_DIR, WRAPPER_BUNDLE_FILE);
+  const bytecodeFile = path.join(WRAPPER_BUNDLE_DIR, BYTECODE_OUTPUT);
+  const compiled = spawnSync(path.join(REPO_ROOT, ELECTRON_BINARY), [path.join(REPO_ROOT, COMPILE_MAIN_SCRIPT), mainFile, bytecodeFile], { cwd: REPO_ROOT, env: { ...process.env, ...RUN_AS_NODE }, encoding: 'utf8' });
+  if (compiled.status !== 0) throw new Error(TEXT.bytecodeFailed(`${compiled.stdout}${compiled.stderr}`));
+  await buildBytecodeLoader(mainFile);
+  return bytecodeFile;
 }
 
 main().catch((error: unknown) => {

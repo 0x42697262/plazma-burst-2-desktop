@@ -74,3 +74,7 @@ export const OFFICIAL_LOGIN_FILE = 'official-login.json';
 export const DEBUGGING_SWITCHES: readonly string[] = Object.freeze(['remote-debugging-port', 'remote-debugging-pipe', 'inspect', 'inspect-brk']);
 export const WEB_CONTENTS_CREATED_EVENT = 'web-contents-created';
 export const DEVTOOLS_OPENED_EVENT = 'devtools-opened';
+export const NO_FLUSH_BYTECODE_FLAG = '--no-flush-bytecode';
+export const BYTECODE_FILE = 'main.jsc';
+export const BYTECODE_PLACEHOLDER_QUOTE = '"';
+export const BYTECODE_PLACEHOLDER_CHARACTER = '\u200b';

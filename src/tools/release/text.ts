@@ -1,4 +1,7 @@
 export const TEXT = Object.freeze({
+  compileUsage: 'usage: compile-main <main.cjs> <main.jsc>',
+  bytecode: (file: string) => `Compiled the main process to V8 bytecode: ${file}`,
+  bytecodeFailed: (output: string) => `Could not compile the main process to bytecode:\n${output}`,
   usage: 'Usage: npm run release -- --edition <name> [--linux] [--windows] [--public-url <url>]\n  Builds the edition (editions/<name>.json) and packages it into release/<name>/.\n  Without --linux or --windows, packages for the system it runs on.\n  --public-url: for a server edition, the address players open (instead of its config\'s public_url).',
   noEdition: 'Which edition? --edition <name> (the files in editions/)',
   everyFeature: 'This edition has every feature (the dev console, hooks, js …). Release it anyway? It is meant for development.',

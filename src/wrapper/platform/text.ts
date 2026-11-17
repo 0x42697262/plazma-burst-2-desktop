@@ -1,4 +1,5 @@
 export const TEXT = Object.freeze({
+  bytecodeRejected: (file: string) => `${file}: this bytecode was not made by this app's engine, or the file is damaged; reinstall the app`,
   expectedObject: 'expected a JSON object',
 });
 

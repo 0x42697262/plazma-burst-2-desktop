@@ -13,7 +13,7 @@ import {
 import { RUNTIME_BUNDLE, RUNTIME_SOURCE } from '#features/hooks/paths.ts';
 import { CLIENT_DIST_DIR, CLIENT_SCRIPT_SOURCE, CLIENT_SOURCE_DIR } from '#features/remote_play/paths.ts';
 import { CLIENT_SCRIPT_FILE, CLIENT_STATIC_FILES } from '#features/remote_play/keys.ts';
-import { BROWSER_TARGET, CHUNK_NAMES, ELECTRON_MODULE, PAGE_ENTRIES, WRAPPER_BUNDLE_FILE, WRAPPER_ENTRY, WRAPPER_TARGET, LAUNCHER_PRELOAD_FILE, LAUNCHER_SCRIPT_FILE, NODE_TARGET } from './constants.ts';
+import { BROWSER_TARGET, BYTECODE_LOADER_ENTRY, CHUNK_NAMES, ELECTRON_MODULE, PAGE_ENTRIES, WRAPPER_BUNDLE_FILE, WRAPPER_ENTRY, WRAPPER_TARGET, LAUNCHER_PRELOAD_FILE, LAUNCHER_SCRIPT_FILE, NODE_TARGET } from './constants.ts';
 
 
 const shared: esbuild.BuildOptions = { bundle: true, sourcemap: 'linked', legalComments: 'none', logLevel: 'warning' };
@@ -118,6 +118,11 @@ export const wrapperBuildOptions = (outfile: string = path.join(WRAPPER_BUNDLE_D
   target: WRAPPER_TARGET,
   external: [ELECTRON_MODULE],
 });
+
+export async function buildBytecodeLoader(outfile: string = path.join(WRAPPER_BUNDLE_DIR, WRAPPER_BUNDLE_FILE)): Promise<string> {
+  await esbuild.build({ ...shared, entryPoints: [path.join(REPO_ROOT, BYTECODE_LOADER_ENTRY)], outfile, format: 'cjs', platform: 'node', target: WRAPPER_TARGET, sourcemap: false });
+  return outfile;
+}
 
 export async function buildWrapperBundle(outfile: string = path.join(WRAPPER_BUNDLE_DIR, WRAPPER_BUNDLE_FILE), edition: Edition = EDITION, defaults?: EditionDefaults): Promise<string> {
   await esbuild.build(wrapperBuildOptions(outfile, edition, defaults));

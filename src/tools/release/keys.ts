@@ -45,3 +45,8 @@ export const RELEASE_FUSES = Object.freeze({
   loadBrowserProcessSpecificV8Snapshot: false,
   grantFileProtocolExtraPrivileges: true,
 });
+export const EAGER_COMPILE_FLAG = '--no-lazy';
+export const COMPILE_MAIN_SCRIPT = 'src/tools/release/compile-main.ts';
+export const BYTECODE_OUTPUT = 'main.jsc';
+export const RUN_AS_NODE = Object.freeze({ ELECTRON_RUN_AS_NODE: '1' });
+export const ELECTRON_BINARY = 'node_modules/.bin/electron';

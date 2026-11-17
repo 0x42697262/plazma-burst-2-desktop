@@ -35,6 +35,7 @@ export const PACKAGED_ROOT_MODULE = [
   'export const USER_ROOT = app.isPackaged ? app.getPath(\'userData\') : APP_ROOT;',
 ].join('\n');
 export const WRAPPER_ENTRY = 'src/wrapper/main.ts';
+export const BYTECODE_LOADER_ENTRY = 'src/wrapper/bytecode-main.ts';
 export const WRAPPER_BUNDLE_FILE = 'main.cjs';
 export const WRAPPER_TARGET = 'node24';
 export const ROOT_PLUGIN_NAME = 'packaged-root';
