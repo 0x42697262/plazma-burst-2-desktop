@@ -114,6 +114,12 @@ export const game = {
     if (held.right !== undefined) write('keyRight', held.right);
   },
   gameCanvas: (): unknown => optionalGlobal(GAME_GLOBAL.canvas),
+  setWorldOffset: (offsetX: number, offsetY: number): void => {
+    const camera = world();
+    if (!camera) return;
+    camera.x = offsetX;
+    camera.y = offsetY;
+  },
   camera: (): CameraView | null => {
     const camera = world();
     if (!camera) return null;

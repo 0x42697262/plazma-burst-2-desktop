@@ -1,0 +1,27 @@
+export const TEXT = Object.freeze({
+  usage: 'freecam [--on | --off]',
+  usageError: 'usage: freecam [--on | --off]',
+  description: 'Free camera: move the view without moving your character; "freecam" switches it on and off',
+  clientOnly: 'your own view',
+  about: [
+    'Moves the view without moving your character, for live map editing.',
+    'While it is on, W A S D or the arrow keys pan the view and do not reach the game, so your',
+    'character stands still; Shift pans faster (freecam_fast). Drag with the middle mouse button',
+    'to drag the map. Every other key, click and the map editor work as usual.',
+    'It ends when you turn it off, die or the level ends. Off in approved matches, where your',
+    'cursor can reach far outside the normal view, unless "bypass checks" is on.',
+    'Settings: freecam_speed, freecam_fast.',
+  ],
+  args: [['--on', 'turn it on'], ['--off', 'turn it off']],
+  examples: [
+    ['freecam', 'switch it on or off'],
+    ['bind --hold f4 freecam', 'free camera only while F4 is held'],
+    ['bind g freecam', 'switch it with G'],
+  ],
+  see: ['zoom', 'editor', 'bind'],
+  on: 'Free camera on: W A S D or the arrows pan, Shift faster, middle drag drags the map',
+  off: 'Free camera off',
+  endedLevel: 'Free camera off: you are not in a level, or you died',
+  endedWatched: 'Free camera off: this match is approved, where your cursor would reach outside the normal view',
+  subject: 'Free camera',
+});

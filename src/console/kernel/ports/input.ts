@@ -3,10 +3,13 @@ export type KeyHandler = (event: KeyLike) => boolean;
 export type PasteClaim = (text: string) => string | null;
 
 const keyHandlers: KeyHandler[] = [];
+const keyUpHandlers: Array<(event: KeyLike) => void> = [];
 const pasteClaims: PasteClaim[] = [];
 
 export const provideKeyHandler = (handler: KeyHandler): void => { keyHandlers.push(handler); };
 export const handledByAFeature = (event: KeyLike): boolean => keyHandlers.some((handler) => handler(event));
+export const provideKeyUpHandler = (handler: (event: KeyLike) => void): void => { keyUpHandlers.push(handler); };
+export const releasedForFeatures = (event: KeyLike): void => { for (const handler of keyUpHandlers) handler(event); };
 
 export const providePasteClaim = (claim: PasteClaim): void => { pasteClaims.push(claim); };
 export const commandForPaste = (text: string): string | null => {

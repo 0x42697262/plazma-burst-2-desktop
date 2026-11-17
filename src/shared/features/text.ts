@@ -18,6 +18,7 @@ export const FEATURE_DESCRIPTION: Readonly<Record<FeatureId, string>> = Object.f
   [FEATURE.mapCache]: 'Saving multiplayer maps and serving local maps',
   [FEATURE.gameChat]: 'Game chat commands',
   [FEATURE.zoom]: 'Zoom',
+  [FEATURE.freeCamera]: 'Free camera: move the view without moving your character',
   [FEATURE.fps]: 'fps: the game\'s FPS, physics quality and logic, as its Esc menu sets them',
   [FEATURE.screenshot]: 'Screenshots of the game window',
   [FEATURE.netlog]: 'The network recorder and its logs in data/netlogs/',

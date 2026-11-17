@@ -8,6 +8,7 @@ import { fingerprintConsole } from '#features/fingerprint/console.ts';
 import { screenshotConsole } from '#features/screenshot/console.ts';
 import { jsEvalConsole } from '#features/js_eval/console.ts';
 import { zoomConsole } from '#features/zoom/console.ts';
+import { freeCameraConsole } from '#features/free_camera/console.ts';
 import { fpsConsole } from '#features/fps/console.ts';
 import { gameChatConsole } from '#features/game_chat/console.ts';
 import { traceConsole } from '#features/trace/console.ts';
@@ -34,6 +35,7 @@ export const CONSOLE_FEATURES: readonly ConsoleFeature[] = Object.freeze([
   screenshotConsole,
   jsEvalConsole,
   zoomConsole,
+  freeCameraConsole,
   fpsConsole,
   gameChatConsole,
   traceConsole,

@@ -55,6 +55,7 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   consoleFeature(FEATURE.mapEditor, { requires: [FEATURE.devConsole, FEATURE.mapCache, FEATURE.triggers] }),
   consoleFeature(FEATURE.gameChat, { capabilities: noNeeds(CAPABILITY.gameChat) }),
   consoleFeature(FEATURE.zoom),
+  consoleFeature(FEATURE.freeCamera),
   consoleFeature(FEATURE.fps),
   consoleFeature(FEATURE.screenshot, { capabilities: { [CAPABILITY.screenshot.screenshot]: [], [CAPABILITY.screenshot.key]: [CAPABILITY.screenshot.screenshot] } }),
   consoleFeature(FEATURE.netlog, { capabilities: { [CAPABILITY.netlog.status]: [], [CAPABILITY.netlog.show]: [], [CAPABILITY.netlog.runs]: [], [CAPABILITY.netlog.record]: [], [CAPABILITY.netlog.all]: [CAPABILITY.netlog.record], [CAPABILITY.netlog.state]: [CAPABILITY.netlog.record] } }),

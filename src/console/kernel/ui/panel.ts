@@ -9,7 +9,7 @@ import { hotkeyOf } from '../state/hotkeys.ts';
 import { levelWasActive } from '../overrides/frame.ts';
 import { run, maskLine } from '../dispatch.ts';
 import { holdCommands, mouseButtonName, type MouseButtonEvent } from '../commands/hold.ts';
-import { commandForPaste, handledByAFeature } from '../ports/input.ts';
+import { commandForPaste, handledByAFeature, releasedForFeatures } from '../ports/input.ts';
 import { el } from './dom.ts';
 import { THEME, IN_OVERLAY, swallow, markUi } from './theme.ts';
 import { print, attachLog, clearLog } from './log.ts';
@@ -273,6 +273,7 @@ export function onKeyDownCapture(event: KeyboardEvent): void {
 }
 
 export function onKeyUpCapture(event: KeyboardEvent): void {
+  releasedForFeatures(event);
   const isToggleRelease = toggleKeyHeld && baseKey(eventKeyName(event)) === baseKey(TOGGLE_KEY);
   if (isToggleRelease) {
     toggleKeyHeld = false;
