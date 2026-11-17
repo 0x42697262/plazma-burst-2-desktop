@@ -18,11 +18,12 @@ export function printPair(left: string, right: string | undefined, width: number
     return;
   }
   if (indented.length < width) {
-    print([[indented.padEnd(width + 1), COLOR.bright], [right, COLOR.hint]]);
+    print([[indented.padEnd(width + 1), COLOR.bright], [right, COLOR.hint]], undefined, width + 1);
     return;
   }
   print(indented, COLOR.bright);
-  print(TEXT.deepIndent(right), COLOR.hint);
+  const deep = TEXT.deepIndent(right);
+  print(deep, COLOR.hint, deep.length - right.length);
 }
 
 function printSections(help: CommandHelp): void {
@@ -120,12 +121,20 @@ export function printTopicHelp(raw: string): void {
   throw new Error(TEXT.noHelp(raw, near));
 }
 
+const shownName = (entry: HelpEntry): string => (entry.def.usage ?? entry.id).split(WHITESPACE)[0] ?? entry.id;
+const byName = (entries: readonly HelpEntry[]): HelpEntry[] => [...entries].sort((left, right) => shownName(left).localeCompare(shownName(right)) || left.id.localeCompare(right.id));
+
 function printOverview(): void {
   print(TEXT.commandsTitle, COLOR.title);
-  for (const { def: definition } of helpEntries()) {
-    const line: Segment[] = [[TEXT.overviewLine(definition.usage ?? '', definition.desc ?? '', USAGE_WIDTH)]];
+  const column = TEXT.indent('').length + USAGE_WIDTH + 1;
+  for (const { def: definition } of byName(helpEntries())) {
+    const usage = definition.usage ?? '';
+    const description = definition.desc ?? '';
+    const isWide = usage.length > USAGE_WIDTH;
+    if (isWide) print(TEXT.indent(usage));
+    const line: Segment[] = [[isWide ? TEXT.padTo(description, column) : TEXT.overviewLine(usage, description, USAGE_WIDTH)]];
     if (typeof definition.clientOnly === 'string') line.push(CLIENT_TAG);
-    print(line);
+    print(line, undefined, column);
   }
   const keys = keysOn();
   print(TEXT.keysTitle, COLOR.title);

@@ -17,6 +17,7 @@ export const UI_MARK = 'pb2devUi';
 
 export const LOG_TAG = '[pb2dev]';
 export const LINE_ELEMENT = 'div';
+export const HANG_UNIT = 'ch';
 export const SEGMENT_ELEMENT = 'span';
 export const SMALL_TEXT_SIZE = '0.8em';
 

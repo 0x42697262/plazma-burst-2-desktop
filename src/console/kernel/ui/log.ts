@@ -1,6 +1,6 @@
 import { LOG_MAX } from '../core/constants.ts';
 import { redact } from '../core/mode.ts';
-import { LINE_ELEMENT, LOG_TAG, SEGMENT_ELEMENT, SMALL_TEXT_SIZE } from './keys.ts';
+import { HANG_UNIT, LINE_ELEMENT, LOG_TAG, SEGMENT_ELEMENT, SMALL_TEXT_SIZE } from './keys.ts';
 import { el } from './dom.ts';
 import { TEXT } from './text.ts';
 import { stringOf } from '#kernel/text/text-of.ts';
@@ -17,11 +17,13 @@ export const clearLog = (): void => {
   if (logElement) logElement.textContent = '';
 };
 
-export function print(text: unknown, color?: string): void {
+const hangingStyle = (column: number): Record<string, string> => ({ paddingLeft: `${column}${HANG_UNIT}`, textIndent: `${-column}${HANG_UNIT}` });
+
+export function print(text: unknown, color?: string, hangAt = 0): void {
   const segments: readonly Segment[] = Array.isArray(text) ? text as Segment[] : [[text, color]];
   console.log(TEXT.terminalLine(TAG, segments.map((segment) => stringOf(segment[0])).join('')));
   if (!logElement) return;
-  const line = el(LINE_ELEMENT, color ? { color } : {});
+  const line = el(LINE_ELEMENT, { ...(color ? { color } : {}), ...(hangAt > 0 ? hangingStyle(hangAt) : {}) });
   for (const [segmentText, segmentColor, small] of segments) {
     const style: Record<string, string> = {};
     if (segmentColor) style.color = segmentColor;

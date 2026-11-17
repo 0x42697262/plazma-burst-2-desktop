@@ -32,6 +32,7 @@ export const HELP_TEXT = Object.freeze({
   clientTag: '  WARNING: client-only',
   clientOnlyLine: (reason: string) => `  WARNING: client-only: ${reason}.`,
   indent: (text: string) => `  ${text}`,
+  padTo: (text: string, column: number) => `${' '.repeat(column)}${text}`,
   deepIndent: (text: string) => `      ${text}`,
   arguments: 'Arguments:',
   examples: 'Examples:',
@@ -87,6 +88,7 @@ export const HELP_TEXT = Object.freeze({
 });
 
 export const SETTINGS_TEXT = Object.freeze({
+  padTo: (text: string, column: number) => `${' '.repeat(column)}${text}`,
   defaultWord: 'default',
   profileTag: (profile: string, yours: string) => `[profile ${profile}${yours}]`,
   yoursTag: (shown: string) => `, yours: ${shown}`,

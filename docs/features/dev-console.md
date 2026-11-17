@@ -35,6 +35,12 @@
 - A line run from DevTools or `eval` (`pb2dev.run` in DevTools, `js pb2dev.run(...)`)
   runs again from a clean timer: the game reloads the page if the first call of its stack
   check sees an anonymous frame.
+- `help` lists the commands alphabetically by the word you type (a command's own line before
+  its subcommands), and `list` its groups and keys alphabetically. A row's description starts
+  in a fixed column, and a line that wraps continues in that column (a hanging indent:
+  `padding-left` and a negative `text-indent` in `ch`, the console's font being monospace).
+  A usage or key wider than its column goes on its own line, with the description on the next
+  line in the column. `help <command>` pages wrap their arguments and examples the same way.
 - `a ; b` runs both in one go: nothing from the game or the network lands between them.
   A `;` in double quotes, in a key-name position (`bind ; heal`), or in a command that
   takes the rest of the line (`js`, `triggers exec`) is not a separator.

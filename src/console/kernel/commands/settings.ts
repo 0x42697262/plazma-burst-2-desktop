@@ -93,14 +93,19 @@ function listKeys(group?: string): void {
     print(TEXT.noGroup(group ?? '', listGroups()), COLOR.error);
     return;
   }
-  for (const [groupName, keys] of byGroup) {
+  const column = TEXT.keyRow('', '', '', KEY_WIDTH, VALUE_WIDTH).length;
+  for (const groupName of [...byGroup.keys()].sort((left, right) => left.localeCompare(right))) {
     print(TEXT.sectionTitle(groupName), COLOR.title);
-    for (const key of keys) {
-      const line: Segment[] = [[TEXT.keyRow(key, shown(key), describeKey(key), KEY_WIDTH, VALUE_WIDTH), settings.has(key) ? COLOR.ok : undefined]];
+    for (const key of [...(byGroup.get(groupName) ?? [])].sort((left, right) => left.localeCompare(right))) {
+      const color = settings.has(key) ? COLOR.ok : undefined;
+      const value = shown(key);
+      const isWide = key.length > KEY_WIDTH || value.length > VALUE_WIDTH;
+      if (isWide) print(TEXT.keyRow(key, value, '', KEY_WIDTH, VALUE_WIDTH).trimEnd(), color);
+      const line: Segment[] = [[isWide ? TEXT.padTo(describeKey(key), column) : TEXT.keyRow(key, value, describeKey(key), KEY_WIDTH, VALUE_WIDTH), color]];
       const tag = sourceTag(key);
       if (tag) line.push([TEXT.tag(tag), COLOR.warn, true]);
       if (keyClientOnly(key)) line.push(CLIENT_TAG);
-      print(line);
+      print(line, undefined, column);
     }
   }
   if (!group) listExtras();
