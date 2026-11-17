@@ -1,7 +1,7 @@
 import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { oneOf, takeValueOptions } from '#console/kernel/core/args.ts';
-import { player } from '#console/kernel/game/level.ts';
+import { pointerInWorld } from '#console/kernel/ui/overlay.ts';
 import type { MapDoc, MapElement, Spot } from '../domain/doc.ts';
 import type { Placement } from '../domain/merge.ts';
 import { editorDoc, selected } from '../services/session.ts';
@@ -22,9 +22,9 @@ function spotOf(option: string, values: readonly string[] | undefined): Spot | u
 }
 
 function crosshair(): Spot {
-  const me = player();
-  if (!me) throw new Error(TEXT.noPlayer);
-  return { x: Math.round(me.tarx as number), y: Math.round(me.tary as number) };
+  const spot = pointerInWorld();
+  if (!spot) throw new Error(TEXT.noPlayer);
+  return { x: Math.round(spot.x), y: Math.round(spot.y) };
 }
 
 function loadRunOf(args: readonly string[]): { words: string[]; run: LoadRun; watch: boolean } {

@@ -114,6 +114,11 @@ export const game = {
     if (held.right !== undefined) write('keyRight', held.right);
   },
   gameCanvas: (): unknown => optionalGlobal(GAME_GLOBAL.canvas),
+  pointer: (): { x: number; y: number } | null => {
+    const pointerX = Number(readGlobal(GAME_GLOBAL.mouseX)) || 0;
+    const pointerY = Number(readGlobal(GAME_GLOBAL.mouseY)) || 0;
+    return pointerX || pointerY ? { x: pointerX, y: pointerY } : null;
+  },
   setWorldOffset: (offsetX: number, offsetY: number): void => {
     const camera = world();
     if (!camera) return;

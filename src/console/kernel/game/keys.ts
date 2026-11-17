@@ -48,6 +48,8 @@ export const GAME_GLOBAL = Object.freeze({
   loaderInfo: 'loaderInfo',
   unlimitedRefresh: 'UNLIMITED_SCREEN_REFRESH_RATE',
   frameInterpolation: 'FRAME_INTERPOLATION',
+  mouseX: 'mouseX',
+  mouseY: 'mouseY',
 } as const);
 
 export const LEVEL_FRAME = 'gaming';

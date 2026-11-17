@@ -25,7 +25,22 @@ function worldTransform(canvas: HTMLCanvasElement, camera: CameraView): Transfor
 export const toScreen = (transform: Transform, point: Point): Point => ({ x: (transform.a * point.x + transform.e) / transform.unit, y: (transform.d * point.y + transform.f) / transform.unit });
 export const toWorld = (transform: Transform, point: Point): Point => ({ x: (point.x * transform.unit - transform.e) / transform.a, y: (point.y * transform.unit - transform.f) / transform.d });
 
+export function aimInWorld(): Point | null {
+  const current = player();
+  const aimX = current?.tarx;
+  const aimY = current?.tary;
+  return typeof aimX === 'number' && typeof aimY === 'number' && Number.isFinite(aimX) && Number.isFinite(aimY) ? { x: aimX, y: aimY } : null;
+}
+
+export function pointerInWorld(): Point | null {
+  const pointer = game.pointer();
+  const transform = currentTransform();
+  return pointer && transform ? toWorld(transform, pointer) : aimInWorld();
+}
+
 export function crosshair(transform: Transform): Point | null {
+  const pointer = game.pointer();
+  if (pointer) return pointer;
   const current = player();
   const aimX = current?.tarx;
   const aimY = current?.tary;

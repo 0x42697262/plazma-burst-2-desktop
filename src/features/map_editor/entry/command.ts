@@ -4,8 +4,7 @@ import { showKey } from '#console/kernel/state/key-names.ts';
 import { SETTING } from '#features/map_editor/keys.ts';
 import { settings } from '#console/kernel/state/store.ts';
 import { takeOptions } from '#console/kernel/core/args.ts';
-import { player } from '#console/kernel/game/level.ts';
-import { hasLayer } from '#console/kernel/ui/overlay.ts';
+import { hasLayer, pointerInWorld } from '#console/kernel/ui/overlay.ts';
 import { REMOTE } from '#console/kernel/core/mode.ts';
 import type { CommandContext, CommandDefinition } from '#console/kernel/commands/registry.ts';
 import { stringOf } from '#kernel/text/text-of.ts';
@@ -90,8 +89,9 @@ function add(args: string[]): void {
   const numbers = args.slice(1).map(Number);
   if (!numbers.every(Number.isFinite)) throw new Error(usage);
   const [atX, atY, width, height] = numbers.length ? numbers : (() => {
-    const me = player() as NonNullable<ReturnType<typeof player>>;
-    return [Math.round(me.tarx as number), Math.round(me.tary as number)];
+    const spot = pointerInWorld();
+    if (!spot) throw new Error(TEXT.noPlayer);
+    return [Math.round(spot.x), Math.round(spot.y)];
   })();
   const item = addElement(tag, { x: atX as number, y: atY as number, ...(width !== undefined ? { w: width, h: height } : {}) });
   showLayer(tag);

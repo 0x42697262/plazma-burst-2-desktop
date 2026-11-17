@@ -213,7 +213,7 @@ session and draw again when it notifies them; the session never draws.
   - `--sync` also deletes what the file does not have, only of the kinds the file has: a
     file of triggers never deletes a wall.
   - `--only <kinds>` takes the file's objects of these kinds (layer groups too).
-  - `--offset dx dy` moves what is loaded; `--at x y` (or `--here`, the crosshair) puts its
+  - `--offset dx dy` moves what is loaded; `--at x y` (or `--here`, the crosshair: see below) puts its
     top left corner there. A movable's target place (`tarx`, `tary`, absolute in the game:
     it moves to them) moves with it.
   - `--reset` builds replaced objects again with the game's loader (`rebuildLive`), as at
@@ -565,3 +565,12 @@ session and draw again when it notifies them; the session never draws.
 - How the anti-cheat works is not shown to remote testers
   (`src/console/kernel/core/mode.ts`): the help note about the integrity check is left out
   in remote mode.
+
+## The crosshair
+`editor add` without a place, `editor load --here` and `editor paste --here` use the crosshair:
+your mouse pointer, turned into world coordinates through the camera (`pointerInWorld`, from
+the game's `mouseX` and `mouseY`). It is not your aim: in multiplayer the game holds your aim
+within 800 left and right and 400 up and down of you (`frame2.js:34983`), and `fly sweep`
+overrides it, so with the free camera ([free-camera](free-camera.md)) far from you the aim
+would place things in the wrong spot. Before the mouse has moved (the game reads 0, 0 as no
+mouse) it falls back to your aim.

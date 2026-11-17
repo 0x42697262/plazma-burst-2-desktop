@@ -267,6 +267,18 @@ test('editor tools: place, copy, delete and undo; live edits still reach the rig
     assert.equal(session.pickAt({ x: 2050, y: 50 })?.attrs.x, '2000', 'and can be selected');
 
     assert.match(runWithoutNotes('editor add region 100 200 50 50')[0]!, /^Added #region\*1 at 100, 200 \(50 x 50\)/, 'add by command, with a uid numbered like the map editor\'s');
+    const pointerAt = toScreen(currentTransform()!, { x: 3000, y: -500 });
+    globals.mouseX = pointerAt.x;
+    globals.mouseY = pointerAt.y;
+    game.player.tarx = 40;
+    game.player.tary = 60;
+    assert.match(runWithoutNotes('editor add lamp')[0]!, /at 3000, -500/, 'at the pointer in the world, even far from your aim (free camera; aim held within 800 of you in multiplayer)');
+    globals.mouseX = 0;
+    globals.mouseY = 0;
+    assert.match(runWithoutNotes('editor add lamp')[0]!, /at 40, 60/, 'the mouse has not moved yet: your aim');
+    game.run('editor undo');
+    game.run('editor undo');
+    session.select(doc.byUid('#region*1'));
     game.press('KeyD', { ctrlKey: true });
     assert.equal(session.selected()!.attrs.uid, '#region*2', 'a copy gets the next one');
     assert.deepEqual([session.selected()!.attrs.x, session.selected()!.attrs.y], ['120', '220']);
