@@ -72,7 +72,9 @@ overrides in `src/console/kernel/overrides/frame.ts`.
       measured on screen, per axis (the cursor's distance from you times the zoom, over the
       game's width, 800, left and right, and its height, 400, up and down), so zoom does not
       change it; the camera keeps you opposite the cursor, so the edge is 100%. Under 5% counts
-      as nothing; `fly_sweep_curve` shapes the rest: 1 is a straight line, 2 gentler near you, and the
+      as nothing. `fly_sweep_measure distance` measures in game units from you instead, against
+      `fly_sweep_reach` (400): the cursor that far away is full speed at any zoom, so zoomed out
+      (25%) you do not have to reach for the screen edge. `fly_sweep_curve` shapes the rest: 1 is a straight line, 2 gentler near you, and the
       default, 0.25 (down to 0.1), gets fast soon after the cursor leaves you.
       Up and down: the aim swings on a circle of radius `fly_sweep_range` around you, by an
       angle from none (both aims straight below or above you: no lift) to half a turn (level

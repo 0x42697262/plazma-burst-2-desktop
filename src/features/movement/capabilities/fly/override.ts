@@ -3,7 +3,7 @@ import type { MovingCharacter } from '#console/kernel/game/types.ts';
 import { CAPABILITY } from '#shared/features/keys.ts';
 import { game } from '#console/kernel/game/bindings.ts';
 import { GAME_FIELDS } from '#console/kernel/game/fields.ts';
-import { FLY_MODE, SETTING, SWEEP_AIM, SWEEP_MODES, SWEEP_THROTTLE } from '#features/movement/keys.ts';
+import { FLY_MODE, SETTING, SWEEP_AIM, SWEEP_MEASURE, SWEEP_MODES, SWEEP_THROTTLE } from '#features/movement/keys.ts';
 import { GAME_HEIGHT, GAME_WIDTH } from '#console/kernel/game/constants.ts';
 import { settings } from '#console/kernel/state/store.ts';
 import { DIRECTIONAL_DEAD_ZONE, EDGE_DEAD_ZONE, HALF_TURN_RADIANS, FLY_DAMPING, FRAMES_PER_TICK_AT_60_FPS, FULL_LIFT, OUTSIDE_VIEW_AIM_X, STEADY_STABILITY } from '../../constants.ts';
@@ -71,8 +71,10 @@ function shaped(share: number): number {
 
 function steerByEdge(character: MovingCharacter, cursor: { x: unknown; y: unknown }, isStarting: boolean): number {
   const zoom = Number(sweepGame.zoom()) || 1;
-  const towardX = ((Number(cursor.x) - character.x) * zoom) / GAME_WIDTH;
-  const towardY = ((Number(cursor.y) - character.y) * zoom) / GAME_HEIGHT;
+  const isByDistance = settings.effective(SETTING.flySweepMeasure) === SWEEP_MEASURE.distance;
+  const reach = numberSetting(SETTING.flySweepReach);
+  const towardX = isByDistance ? (Number(cursor.x) - character.x) / reach : ((Number(cursor.x) - character.x) * zoom) / GAME_WIDTH;
+  const towardY = isByDistance ? (Number(cursor.y) - character.y) / reach : ((Number(cursor.y) - character.y) * zoom) / GAME_HEIGHT;
   const offsetX = Number(cursor.x) - character.x;
   const offsetY = Number(cursor.y) - character.y;
   const distance = Math.hypot(offsetX, offsetY);

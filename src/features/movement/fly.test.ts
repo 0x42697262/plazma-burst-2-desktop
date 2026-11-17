@@ -416,6 +416,40 @@ test('fly_sweep_shoot (off by default): while you hold the mouse button in fly s
   globals[names.mouseHeld] = false;
 });
 
+test('fly_sweep_measure distance: the speed comes from how far the cursor is from you in game units, against fly_sweep_reach, at any zoom', () => {
+  const { globals, names, player } = game;
+  globals[names.fpsChoice] = 3;
+  globals[names.lowPhysics] = false;
+  game.run('fly_sweep_aim inverse; fly_sweep_curve 1; fly_sweep_range 500; fly_sweep_measure distance; fly_sweep_reach 400');
+  assert.ok(game.run('help fly_sweep_measure').some((line) => /"screen" \(the default\)/.test(line)));
+  player.x = 100;
+  player.y = 50;
+  const sideAfter = (cursorY: number): number => {
+    let offset = 0;
+    for (let frame = 0; frame < 2; frame++) {
+      game.frame();
+      player.tarx = 100;
+      player.tary = cursorY;
+      offset = Math.abs(Math.round(player.tarx - player.x));
+    }
+    return offset;
+  };
+  player.tarx = 100;
+  player.tary = 50;
+  game.run('fly sweep --on');
+  const halfAngle = (((0.5 - 0.05) / 0.95) * Math.PI) / 2;
+  for (const zoom of [1, 0.25]) {
+    globals[names.zoom] = zoom;
+    assert.equal(sideAfter(50 - 200), Math.round(500 * Math.sin(halfAngle)), `200 of 400 above you at zoom ${zoom}: half`);
+    assert.equal(sideAfter(50 - 400), 500, `400 above you at zoom ${zoom}: full`);
+  }
+  game.run('unset fly_sweep_measure');
+  globals[names.zoom] = 0.25;
+  assert.ok(sideAfter(50 - 400) < 500, 'screen measure at zoom 0.25: 400 above is only part of the way to the edge');
+  globals[names.zoom] = 1;
+  game.run('fly sweep --off; unset fly_sweep_aim; unset fly_sweep_curve; unset fly_sweep_range; unset fly_sweep_reach');
+});
+
 test('"fly sweep --on" arms the sweep mode when another one was set', () => {
   game.run('fly free');
   game.run('fly sweep --on');

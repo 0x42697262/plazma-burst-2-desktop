@@ -1,7 +1,7 @@
 import type { KeySpec } from '#console/kernel/state/schema.ts';
 import { GROUP, SETTING_TYPE } from '#console/kernel/state/keys.ts';
 import { CAPABILITY } from '#shared/features/keys.ts';
-import { FLY_MODE, SWEEP_AIM, SWEEP_THROTTLE } from '../../keys.ts';
+import { FLY_MODE, SWEEP_AIM, SWEEP_MEASURE, SWEEP_THROTTLE } from '../../keys.ts';
 
 const FLY = CAPABILITY.movement.fly;
 
@@ -37,6 +37,14 @@ export const SETTINGS: Readonly<Record<string, KeySpec>> = Object.freeze({
   fly_sweep_throttle: {
     capability: FLY, type: SETTING_TYPE.bool, group: GROUP.player, extraValues: [SWEEP_THROTTLE.edge, SWEEP_THROTTLE.near], default: SWEEP_THROTTLE.edge, example: SWEEP_THROTTLE.near,
     desc: 'How fast the sweep flies: "edge" (the default) by how far your cursor is toward the screen edge (on you: nothing, at the edge: full speed), "near" the closer your cursor, the faster',
+  },
+  fly_sweep_measure: {
+    capability: FLY, type: SETTING_TYPE.bool, group: GROUP.player, extraValues: [SWEEP_MEASURE.screen, SWEEP_MEASURE.distance], default: SWEEP_MEASURE.screen, example: SWEEP_MEASURE.distance,
+    desc: 'How the "edge" throttle measures the cursor: "screen" (the default) by its share of the screen, so zoomed out you reach farther; "distance" by game units from you, against fly_sweep_reach, the same at any zoom',
+  },
+  fly_sweep_reach: {
+    capability: FLY, type: SETTING_TYPE.number, group: GROUP.player, min: 50, max: 5000, default: 400, example: '600',
+    desc: 'With fly_sweep_measure distance: how far from you, in game units, the cursor flies at full speed',
   },
   fly_sweep_curve: {
     capability: FLY, type: SETTING_TYPE.number, group: GROUP.player, min: 0.1, max: 4, default: 0.25, example: '1',
