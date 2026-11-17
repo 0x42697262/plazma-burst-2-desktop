@@ -25,6 +25,7 @@ type Raw = Record<string, unknown>;
 let values: Values = {};
 let bindMap: Binds = {};
 let heldKeys = new Set<string>();
+let passKeys = new Set<string>();
 let profileMap: Record<string, Profile> = {};
 let mapProfiles: Record<string, string> = {};
 let problems: string[] = [];
@@ -165,25 +166,30 @@ export const binds = {
     const command = bindMap[key];
     return command ? { command, profile: null } : null;
   },
-  set(key: string, command: string, isHeld = false): void {
+  set(key: string, command: string, isHeld = false, isPass = false): void {
     bindMap[key] = command;
     if (isHeld) heldKeys.add(key);
     else heldKeys.delete(key);
+    if (isPass) passKeys.add(key);
+    else passKeys.delete(key);
     save();
   },
   remove(key: string): void {
     delete bindMap[key];
     heldKeys.delete(key);
+    passKeys.delete(key);
     save();
   },
   clear(): number {
     const count = Object.keys(bindMap).length;
     bindMap = {};
     heldKeys = new Set();
+    passKeys = new Set();
     save();
     return count;
   },
   isHeld: (key: string): boolean => heldKeys.has(key),
+  isPass: (key: string): boolean => passKeys.has(key),
   keys: (): string[] => Object.keys(bindMap).sort(),
   boundTo: (command: string): string[] => Object.keys(bindMap).filter((key) => bindMap[key]?.toLowerCase() === command),
 };
@@ -314,6 +320,7 @@ function apply(raw: unknown): void {
   values = sanitizeValues(file, '', false);
   bindMap = sanitizeBinds(file?.[FILE_SECTION.binds]);
   heldKeys = sanitizeHeldKeys(file?.[FILE_SECTION.heldBinds], bindMap);
+  passKeys = sanitizeHeldKeys(file?.[FILE_SECTION.passBinds], bindMap);
   profileMap = sanitizeProfiles(file?.[FILE_SECTION.profiles]);
   mapProfiles = sanitizeMapProfiles(file?.[FILE_SECTION.maps], profileMap);
   const savedHistory = file?.[FILE_SECTION.history];
@@ -336,6 +343,7 @@ function clearAll(): void {
   values = {};
   bindMap = {};
   heldKeys = new Set();
+  passKeys = new Set();
   profileMap = {};
   mapProfiles = {};
 }
@@ -381,6 +389,7 @@ export function save(): void {
     ...values,
     ...(Object.keys(bindMap).length ? { [FILE_SECTION.binds]: bindMap } : {}),
     ...(heldKeys.size ? { [FILE_SECTION.heldBinds]: [...heldKeys].sort() } : {}),
+    ...(passKeys.size ? { [FILE_SECTION.passBinds]: [...passKeys].sort() } : {}),
     ...(Object.keys(profileMap).length ? { [FILE_SECTION.profiles]: Object.fromEntries(Object.entries(profileMap).map(([name, profile]) => [name, profileJson(profile)])) } : {}),
     ...(Object.keys(mapProfiles).length ? { [FILE_SECTION.maps]: mapProfiles } : {}),
     ...(lines.length ? { [FILE_SECTION.history]: lines } : {}),

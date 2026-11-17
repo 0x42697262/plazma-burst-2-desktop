@@ -23,6 +23,12 @@ Capabilities: `binds.bind` (`bind`, `unbind`, and running bound keys) and
   every held bind. Held keys are saved in `dev-overrides.json` under `held_binds`; one key
   holds one bind, so binding it again replaces it, held or not. `bind` and `list binds` mark
   them `(hold)`. Profile binds are not held.
+- `bind --pass <key> <command>`: the key or button still reaches the game, and the bind runs
+  too; `bind --pass mouse1 …` still shoots. It goes with `--hold` in either order
+  (`bind --hold --pass mouse1 "fly sweep"` sweeps while you click, and the click fires), and
+  there is no "the game uses this key" warning. Passed keys are saved under `pass_binds`;
+  binding the key again without `--pass` replaces it. `bind` marks them `(pass)` or
+  `(hold, pass)`. Profile binds are not passed.
 - A quoted `;` chain is one bind (`bind f "heal; pos"`). Every command in it is checked
   the way it will run: split at `;`, phrases turned into keys
   (`src/console/kernel/commands/command-text.ts`, shared with profiles' `onload`).

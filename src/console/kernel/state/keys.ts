@@ -47,7 +47,7 @@ export const FALSE_WORDS: readonly string[] = Object.freeze(['0', 'off', 'false'
 export const NO_KEY_WORD = 'none';
 
 export const STORAGE_KEY = 'pb2dev_kv';
-export const FILE_SECTION = Object.freeze({ binds: 'binds', heldBinds: 'held_binds', history: 'history', profiles: 'profiles', maps: 'maps', oldTeleportKey: 'tp_key' } as const);
+export const FILE_SECTION = Object.freeze({ binds: 'binds', heldBinds: 'held_binds', passBinds: 'pass_binds', history: 'history', profiles: 'profiles', maps: 'maps', oldTeleportKey: 'tp_key' } as const);
 export const FILE_SECTIONS: readonly string[] = Object.freeze(Object.values(FILE_SECTION));
 export const PROFILE_SECTION = Object.freeze({ binds: 'binds', onload: 'onload' } as const);
 export const PROFILE_SECTIONS: readonly string[] = Object.freeze(Object.values(PROFILE_SECTION));

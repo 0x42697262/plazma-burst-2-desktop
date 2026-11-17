@@ -3,5 +3,6 @@ export const ALL_WORDS: readonly string[] = Object.freeze(['all', '--all']);
 export const LIST_SECTION = 'binds';
 export const KEY_ARGUMENT = 1;
 export const HOLD_OPTION = '--hold';
-export const KEY_ARGUMENT_AFTER_HOLD = 2;
+export const PASS_OPTION = '--pass';
+export const BIND_OPTIONS: readonly string[] = Object.freeze([HOLD_OPTION, PASS_OPTION]);
 export const SINGLE_CHARACTER = 1;

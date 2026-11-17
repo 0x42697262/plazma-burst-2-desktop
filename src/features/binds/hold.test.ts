@@ -53,6 +53,32 @@ test('mouse buttons bind like keys and never reach the game; opening the console
 
 test('only commands with --on/--off, or on/off keys, can be held', () => {
   assert.match(errorsOf(game.run('bind --hold f heal')).join('\n'), /cannot be held/);
-  assert.match(errorsOf(game.run('bind --hold f')).join('\n'), /usage: bind --hold/);
+  assert.match(errorsOf(game.run('bind --hold f')).join('\n'), /usage: bind \[--hold\]/);
   assert.deepEqual(game.run('bind f'), ['f is not bound']);
+});
+
+test('--pass: the bind runs and the key or button still reaches the game; it goes with --hold and is listed', () => {
+  let gameSawIt = 0;
+  game.globals.onmousedown = () => { gameSawIt++; };
+  const said = game.run('bind --pass mouse1 heal');
+  assert.ok(said.some((line) => /mouse1 \(pass\) = heal/.test(line)));
+  assert.ok(!said.some((line) => /shoot/.test(line)), 'no "it no longer shoots" warning');
+  game.dispatch(null, 'mousedown', { button: 0 });
+  assert.equal(gameSawIt, 1, 'the click still reaches the game');
+  game.dispatch(null, 'mouseup', { button: 0 });
+  game.run('bind --hold --pass mouse1 god');
+  assert.ok(game.run('bind').some((line) => line.includes('mouse1 (hold, pass)')));
+  game.dispatch(null, 'mousedown', { button: 0 });
+  assert.equal(gameSawIt, 2, 'held and passed');
+  assert.ok(game.run('get god').includes('god = on'));
+  game.dispatch(null, 'mouseup', { button: 0 });
+  assert.ok(game.run('get god').includes('god = off'), 'released');
+  game.run('bind --pass ctrl+t god');
+  const event = game.dispatch(null, 'keydown', { ...key('KeyT'), ctrlKey: true });
+  assert.equal(event.defaultPrevented, false, 'a passed key is not kept from the game');
+  assert.ok(game.run('get god').includes('god = on'), 'and its bind ran');
+  game.dispatch(null, 'keyup', { ...key('KeyT'), ctrlKey: true });
+  game.run('bind mouse1 heal');
+  assert.ok(game.run('bind').some((line) => /^\s*mouse1\s+heal/.test(line)), 'binding again without --pass replaces it');
+  game.run('unbind mouse1; unbind ctrl+t; unset god');
 });

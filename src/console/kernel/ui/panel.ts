@@ -32,6 +32,7 @@ let historyPosition = 0;
 let toggleKeyHeld = false;
 const heldBoundKeys = new Set<string>();
 const heldReleases = new Map<string, string>();
+const passedKeys = new Set<string>();
 let keyCatcher: CaughtKey | null = null;
 
 export function catchNextKey(report: CaughtKey): () => void {
@@ -254,8 +255,11 @@ export function onKeyDownCapture(event: KeyboardEvent): void {
   if (!isOpen && !event.metaKey && isCapabilityOn(CAPABILITY.binds.bind)) {
     const bound = keyName ? binds.active(keyName) : null;
     if (bound && !isTyping && isActive()) {
-      swallowEvent(event);
-      heldBoundKeys.add(event.code);
+      if (!bound.profile && binds.isPass(keyName)) passedKeys.add(event.code);
+      else {
+        swallowEvent(event);
+        heldBoundKeys.add(event.code);
+      }
       runBound(bound.command, !bound.profile && binds.isHeld(keyName), event.code, TEXT.bindSource(bound.profile, showKey(keyName)), event.repeat);
       return;
     }
@@ -274,6 +278,7 @@ export function onKeyDownCapture(event: KeyboardEvent): void {
 
 export function onKeyUpCapture(event: KeyboardEvent): void {
   releasedForFeatures(event);
+  if (passedKeys.delete(event.code)) releaseBound(event.code, TEXT.bindSource(null, showKey(eventKeyName(event))));
   const isToggleRelease = toggleKeyHeld && baseKey(eventKeyName(event)) === baseKey(TOGGLE_KEY);
   if (isToggleRelease) {
     toggleKeyHeld = false;
@@ -285,6 +290,7 @@ export function onKeyUpCapture(event: KeyboardEvent): void {
 }
 
 const heldBoundButtons = new Set<string>();
+const passedButtons = new Set<string>();
 
 export function onMouseDownCapture(event: MouseEvent & MouseButtonEvent): void {
   const name = mouseButtonName(event);
@@ -292,15 +298,22 @@ export function onMouseDownCapture(event: MouseEvent & MouseButtonEvent): void {
   if (!name || isOpen || isTyping || !isCapabilityOn(CAPABILITY.binds.bind) || !isActive()) return;
   const bound = binds.active(name);
   if (!bound) return;
-  event.preventDefault();
-  event.stopImmediatePropagation();
   const button = baseKey(name);
-  heldBoundButtons.add(button);
+  if (!bound.profile && binds.isPass(name)) passedButtons.add(button);
+  else {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    heldBoundButtons.add(button);
+  }
   runBound(bound.command, !bound.profile && binds.isHeld(name), button, TEXT.bindSource(bound.profile, showKey(name)), false);
 }
 
 export function onMouseUpCapture(event: MouseEvent & MouseButtonEvent): void {
   const button = baseKey(mouseButtonName(event));
+  if (passedButtons.delete(button)) {
+    releaseBound(button, TEXT.bindSource(null, showKey(button)));
+    return;
+  }
   if (!heldBoundButtons.delete(button)) return;
   event.preventDefault();
   event.stopImmediatePropagation();
