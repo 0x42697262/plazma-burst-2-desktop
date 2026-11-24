@@ -28,18 +28,28 @@ function atKeyName(current: string): boolean {
   return words.length > 0 && MODIFIERS_ONLY.test(typing) && keyArgOf(words) === words.length;
 }
 
-export function splitCommands(text: string): string[] {
+function takesRestOfLine(text: string): boolean {
   const words = text.trim().split(WHITESPACE);
   const command = findRunnable(words[0]);
-  if (command && (command.rawLine || findSubcommand(command, words[1])?.rawLine)) return [text];
+  return Boolean(command && (command.rawLine || findSubcommand(command, words[1])?.rawLine));
+}
+
+export function splitCommands(text: string): string[] {
+  if (takesRestOfLine(text)) return [text];
   const parts: string[] = [];
   let current = '';
   let quoted = false;
-  for (const character of text) {
+  for (let index = 0; index < text.length; index++) {
+    const character = text[index] ?? '';
     if (character === QUOTE) quoted = !quoted;
     if (character === CHAIN_SEPARATOR && !quoted && !atKeyName(current)) {
       parts.push(current);
       current = '';
+      const rest = text.slice(index + 1);
+      if (takesRestOfLine(rest)) {
+        parts.push(rest);
+        return parts.map((part) => part.trim()).filter(Boolean);
+      }
       continue;
     }
     current += character;
