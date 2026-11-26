@@ -37,8 +37,9 @@ test('quoted toggle binds with risky commands are caught, while harmless ones ar
   const triggerToggle = '"triggers exec SetGunPower( ""#gun*12"", ""30"" );" "heal"';
   const chainedJsToggle = '"heal" "pos; js alert(1)"';
   const safeToggle = '"heal" "heal; pos"';
-  assert.deepEqual(newRiskyCommands({}, { binds: { f: triggerToggle }, toggle_binds: ['f'] }), [{ where: 'bind f', command: triggerToggle }]);
+  assert.deepEqual(newRiskyCommands({}, { binds: { f: triggerToggle }, toggle_binds: ['f'] }), [{ where: 'bind f', command: '"triggers exec SetGunPower( "#gun*12", "30" );" "heal"' }], 'shown unescaped');
   assert.deepEqual(newRiskyCommands({}, { binds: { f: chainedJsToggle }, toggle_binds: ['f'] }), [{ where: 'bind f', command: chainedJsToggle }]);
+  assert.deepEqual(newRiskyCommands({}, { binds: { f: triggerToggle } }), [{ where: 'bind f', command: triggerToggle }], 'not marked a toggle: shown as stored');
   assert.deepEqual(newRiskyCommands({}, { binds: { f: safeToggle }, toggle_binds: ['f'] }), []);
 });
 

@@ -168,3 +168,22 @@ test('a toggle step may chain a normal command with a triggers exec script', () 
   assert.ok(press.includes('triggers exec ShowText( "60 high", "#FFF000" );'));
   assert.ok(!press.includes('not an action'));
 });
+
+test('a step whose quotes do not close says so, and binds nothing', () => {
+  const cut = errorsOf(game.run('bind --toggle f "js console.log("a;b")" "heal"')).join('\n');
+  assert.match(cut, /quotes are not closed/);
+  assert.match(errorsOf(game.run('bind --toggle f "heal" "pos')).join('\n'), /quotes are not closed/);
+  assert.deepEqual(game.run('bind f'), ['f is not bound']);
+});
+
+test('a reload starts every toggle from its first step', () => {
+  game.run('bind --toggle h "heal" "pos"');
+  assert.equal(game.press('KeyH')[0], '[bind h] > heal');
+  game.globals.pb2dev.reload({ binds: { h: 'pos; heal' }, toggle_binds: ['h'] });
+  assert.equal(game.press('KeyH')[0], '[bind h] > pos');
+});
+
+test('showing one key marks a toggle and shows its steps unescaped', () => {
+  game.run(GUN_TOGGLE);
+  assert.deepEqual(game.run('bind shift+h'), [`shift+h (toggle) = "${GUN_30}" "${GUN_1}"`]);
+});

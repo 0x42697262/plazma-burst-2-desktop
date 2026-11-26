@@ -3,6 +3,7 @@ import { COLOR } from '#console/kernel/core/keys.ts';
 import { COMMAND, SINGLE_CHARACTER } from '../../keys.ts';
 import { TEXT } from './text.ts';
 import { bindStore, keyNames, type KeyEvent } from '../../adapters/keys.ts';
+import { shownCommand } from '../../format.ts';
 
 let stopWaiting: (() => void) | null = null;
 
@@ -14,7 +15,7 @@ function usesOf(name: string): string[] {
   const bound = bindStore.active(name);
   if (bound?.profile) uses.push(TEXT.profileBound(bound.profile, bound.command));
   const yours = bindStore.get(name);
-  if (yours) uses.push(TEXT.yoursBound(!!bound?.profile, yours));
+  if (yours) uses.push(TEXT.yoursBound(!!bound?.profile, shownCommand(name, yours)));
   const base = keyNames.base(name);
   const gameUse = keyNames.gameUse(base);
   if (gameUse !== undefined) uses.push(TEXT.gameKey(base === name ? '' : keyNames.show(base), gameUse));

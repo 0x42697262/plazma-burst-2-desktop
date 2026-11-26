@@ -1,6 +1,6 @@
 import { CHAIN_JOIN } from '#console/kernel/state/keys.ts';
 import { QUOTE } from '#console/kernel/commands/keys.ts';
-import { toggleChoices } from '#console/kernel/commands/toggle.ts';
+import { formatToggleChoices, toggleChoices } from '#console/kernel/commands/toggle.ts';
 import { CHAIN_SEPARATOR, LINE_BREAKS_AND_TABS, RISKY_COMMANDS, SECTION, SPACE, WORDS } from '../keys.ts';
 import { SHOWN_COMMAND_MAX } from '../constants.ts';
 import { TEXT } from '../text.ts';
@@ -24,22 +24,29 @@ function onloadText(onload: unknown): string | null {
   return typeof joined === 'string' ? joined.trim() : null;
 }
 
-type Place = Readonly<{ where: string; path: readonly string[]; command: string }>;
+type Place = Readonly<{ where: string; path: readonly string[]; command: string; isToggle: boolean }>;
+
+const toggleKeysOf = (settings: Settings): readonly unknown[] => {
+  const keys = settings[SECTION.toggleBinds];
+  return Array.isArray(keys) ? keys : [];
+};
 
 function placesOf(settings: Settings): Place[] {
   const found: Place[] = [];
-  const addBinds = (binds: unknown, path: readonly string[], where: (key: string) => string): void => {
+  const addBinds = (binds: unknown, path: readonly string[], where: (key: string) => string, toggleKeys: readonly unknown[]): void => {
     if (!isObject(binds)) return;
-    for (const [key, command] of Object.entries(binds)) if (typeof command === 'string') found.push({ where: where(key), path: [...path, key], command: command.trim() });
+    for (const [key, command] of Object.entries(binds)) {
+      if (typeof command === 'string') found.push({ where: where(key), path: [...path, key], command: command.trim(), isToggle: toggleKeys.includes(key) });
+    }
   };
-  addBinds(settings[SECTION.binds], [SECTION.binds], TEXT.bind);
+  addBinds(settings[SECTION.binds], [SECTION.binds], TEXT.bind, toggleKeysOf(settings));
   const profiles = settings[SECTION.profiles];
   if (!isObject(profiles)) return found;
   for (const [name, profile] of Object.entries(profiles)) {
     if (!isObject(profile)) continue;
-    addBinds(profile[SECTION.binds], [SECTION.profiles, name, SECTION.binds], (key) => TEXT.profileBind(name, key));
+    addBinds(profile[SECTION.binds], [SECTION.profiles, name, SECTION.binds], (key) => TEXT.profileBind(name, key), []);
     const onload = onloadText(profile[SECTION.onload]);
-    if (onload !== null) found.push({ where: TEXT.profileOnload(name), path: [SECTION.profiles, name, SECTION.onload], command: onload });
+    if (onload !== null) found.push({ where: TEXT.profileOnload(name), path: [SECTION.profiles, name, SECTION.onload], command: onload, isToggle: false });
   }
   return found;
 }
@@ -49,7 +56,10 @@ function newRiskyPlaces(previous: unknown, next: unknown): Place[] {
   return (isObject(next) ? placesOf(next) : []).filter((place) => isRisky(place.command) && before.get(place.where) !== place.command);
 }
 
-export const newRiskyCommands = (previous: unknown, next: unknown): RiskyCommand[] => newRiskyPlaces(previous, next).map(({ where, command }) => ({ where, command }));
+export const newRiskyCommands = (previous: unknown, next: unknown): RiskyCommand[] => newRiskyPlaces(previous, next).map(({ where, command, isToggle }) => ({
+  where,
+  command: isToggle && command.startsWith(QUOTE) ? formatToggleChoices(command) : command,
+}));
 
 const valueAt = (settings: unknown, path: readonly string[]): unknown => path.reduce<unknown>((value, key) => (isObject(value) ? value[key] : undefined), settings);
 

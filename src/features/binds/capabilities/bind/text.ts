@@ -7,6 +7,7 @@ export const TEXT = Object.freeze({
   notHoldable: (command: string) => `"${command}" cannot be held: hold binds take one command with --on and --off (like "fly sweep") or an on/off key (like "god")`,
   holdUsage: 'usage: bind [--hold] [--pass] [--toggle] <key> <command>',
   toggleUsage: 'usage: bind --toggle [--pass] <key> "<command>" "<command>" ...  (two or more commands, each in its own quotes)',
+  toggleUnclosed: 'a toggle step\'s quotes are not closed: pair every quote inside a step, and keep ";" out of those inner quotes (the console ends the bind at it)',
   toggleHold: 'a toggle cannot also be held: use --toggle or --hold, not both',
   profileTitle: (name: string, count: number) => `On this map, profile "${name}" binds (${count}):`,
   profileRow: (key: string, command: string) => `  ${key} ${command}`,

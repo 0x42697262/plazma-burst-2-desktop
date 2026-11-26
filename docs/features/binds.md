@@ -36,7 +36,9 @@ Capabilities: `binds.bind` (`bind`, `unbind`, and running bound keys) and
   cannot be combined with `--hold`. Toggle keys are saved in `dev-overrides.json` under
   `toggle_binds` (steps containing `;` or `"` are stored as quoted choices with `""`-escaped inner
   quotes, which `settings_guard` also inspects), and `bind` and `list binds` mark them `(toggle)`.
-  Rebinding or unbinding the key resets its step. Profile binds are not toggled.
+  Rebinding or unbinding the key, or reloading the settings file, resets its step. A `;` inside
+  a step's inner quotes (`"js f("a;b")"`) ends the bind there, so the bind is refused with "quotes
+  are not closed"; `bind f` and `keyname` show the steps unescaped. Profile binds are not toggled.
 - A quoted `;` chain is one bind (`bind f "heal; pos"`). Every command in it is checked
   the way it will run: split at `;`, phrases turned into keys
   (`src/console/kernel/commands/command-text.ts`, shared with profiles' `onload`).

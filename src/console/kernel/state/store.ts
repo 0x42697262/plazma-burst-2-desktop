@@ -11,6 +11,7 @@ import {
 import { TEXT } from './text.ts';
 import { SCHEMA, affectsGame, isKeyOn, parseValue } from './schema.ts';
 import { parseKeyName } from './key-names.ts';
+import { forgetAllToggleSteps } from '../commands/toggle.ts';
 
 export { HISTORY_MAX, PROFILE_NAME };
 
@@ -389,6 +390,7 @@ export async function load(): Promise<LoadSource> {
 export function reload(raw: unknown): void {
   clearTimeout(saveTimer);
   saveTimer = undefined;
+  forgetAllToggleSteps();
   apply(raw);
   writeLocal(JSON.stringify(raw));
 }

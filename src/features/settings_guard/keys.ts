@@ -9,7 +9,7 @@ export const SAFE_COMMANDS: readonly string[] = Object.freeze([
   'throw', 'tp', 'teleport', 'pos', 'where', 'chars', 'players', 'bots', 'uid', 'playeruid', 'puid', 'accounts', 'authids', 'ids',
   'hp', 'heal', 'revive', 'res', 'maps', 'hooks', 'hook', 'editor', 'edit', 'mapedit', 'logic', 'links',
 ]);
-export const SECTION = Object.freeze({ binds: 'binds', profiles: 'profiles', onload: 'onload' });
+export const SECTION = Object.freeze({ binds: 'binds', toggleBinds: 'toggle_binds', profiles: 'profiles', onload: 'onload' });
 export const CHAIN_SEPARATOR = ';';
 export const WORDS = /\s+/;
 export const LINE_BREAKS_AND_TABS = /[\s\u2028\u2029]+/g;

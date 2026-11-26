@@ -34,7 +34,7 @@ function quotedChoices(text: string): string[] | null {
       if (!isInsideInnerQuote && isBoundary) end = index;
       else isInsideInnerQuote = !isInsideInnerQuote;
     }
-    if (end < 0) return null;
+    if (end < 0) throw new Error(TEXT.toggleUnclosed);
     choices.push(text.slice(start, end).trim());
     position = end + 1;
     while (text[position] === WORD_SEPARATOR) position++;
@@ -84,7 +84,7 @@ export function bindKey(allArgs: Args): void {
   const old = bindStore.get(key);
   const shownOld = old ? shownCommand(key, old) : undefined;
   if (args.length < BIND_ARGUMENTS_MIN) {
-    print(shownOld ? TEXT.shown(keyNames.show(key), shownOld) : TEXT.notBound(keyNames.show(key)), shownOld ? undefined : COLOR.notice);
+    print(shownOld ? TEXT.shown(shownKey(key), shownOld) : TEXT.notBound(keyNames.show(key)), shownOld ? undefined : COLOR.notice);
     return;
   }
   const command = isToggle ? toggleCommand(args.slice(1)) : commandText(args.slice(1), TEXT.bindUsage);
