@@ -1,4 +1,6 @@
 import { CHAIN_JOIN } from '#console/kernel/state/keys.ts';
+import { QUOTE } from '#console/kernel/commands/keys.ts';
+import { toggleChoices } from '#console/kernel/commands/toggle.ts';
 import { CHAIN_SEPARATOR, LINE_BREAKS_AND_TABS, RISKY_COMMANDS, SECTION, SPACE, WORDS } from '../keys.ts';
 import { SHOWN_COMMAND_MAX } from '../constants.ts';
 import { TEXT } from '../text.ts';
@@ -9,8 +11,12 @@ type Settings = Readonly<Record<string, unknown>>;
 
 const isObject = (value: unknown): value is Settings => !!value && typeof value === 'object' && !Array.isArray(value);
 
-export const isRisky = (command: string): boolean => command.split(CHAIN_SEPARATOR)
+const hasRiskyPart = (command: string): boolean => command.split(CHAIN_SEPARATOR)
   .some((part) => RISKY_COMMANDS.includes((part.trim().split(WORDS)[0] ?? '').toLowerCase()));
+
+export const isRisky = (command: string): boolean => (
+  hasRiskyPart(command) || (command.startsWith(QUOTE) && toggleChoices(command).some(hasRiskyPart))
+);
 
 function onloadText(onload: unknown): string | null {
   const isCommandList = Array.isArray(onload) && onload.every((command) => typeof command === 'string');

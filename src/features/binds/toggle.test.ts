@@ -110,6 +110,36 @@ test('a toggle with quotes survives being saved and loaded', () => {
   const saved = JSON.parse(game.store.get('pb2dev_kv') ?? '{}') as { binds?: Record<string, string>; toggle_binds?: string[] };
   assert.deepEqual(saved.toggle_binds, ['shift+h']);
   assert.ok(saved.binds?.['shift+h']?.includes('SetGunPower'));
+  game.run('unbind --all');
+  game.globals.pb2dev.reload(saved);
+  assert.equal(game.press('KeyH', { shiftKey: true })[0], `[bind shift+h] > ${GUN_30}`);
+  assert.equal(game.press('KeyH', { shiftKey: true })[0], `[bind shift+h] > ${GUN_1}`);
+});
+
+test('inner quotes separated by spaces stay inside their toggle step', () => {
+  assert.deepEqual(errorsOf(game.run('bind --toggle f "vars set note "a" "b"" "vars set note "hello""')), []);
+  assert.equal(game.press('KeyF')[0], '[bind f] > vars set note "a" "b"');
+  assert.equal(game.press('KeyF')[0], '[bind f] > vars set note "hello"');
+  assert.equal(game.press('KeyF')[0], '[bind f] > vars set note "a" "b"');
+});
+
+test('list binds, rebind and unbind show formatted toggle choices and unbind resets the step', () => {
+  game.run(GUN_TOGGLE);
+  assert.ok(game.run('list binds').some((line) => line.includes('shift+h (toggle)') && line.includes(`"${GUN_30}" "${GUN_1}"`) && !line.includes('""')));
+  assert.equal(game.press('KeyH', { shiftKey: true })[0], `[bind shift+h] > ${GUN_30}`);
+  const unbound = game.run('unbind shift+h').join('\n');
+  assert.ok(unbound.includes(`"${GUN_30}" "${GUN_1}"`) && !unbound.includes('""'), 'unbind formats stored toggle choices');
+  game.globals.pb2dev.reload({ binds: { 'shift+h': 'heal; pos' }, toggle_binds: ['shift+h'] });
+  assert.equal(game.press('KeyH', { shiftKey: true })[0], '[bind shift+h] > heal', 'unbind reset the toggle step');
+  game.run(GUN_TOGGLE);
+  const rebound = game.run('bind shift+h heal').join('\n');
+  assert.ok(rebound.includes(`(was: "${GUN_30}" "${GUN_1}")`) && !rebound.includes('""'), 'rebind formats previous toggle');
+});
+
+test('a key saved in both held_binds and toggle_binds is treated as held, not both', () => {
+  game.globals.pb2dev.reload({ binds: { f: 'god' }, held_binds: ['f'], toggle_binds: ['f'] });
+  const listed = game.run('bind').join('\n');
+  assert.ok(listed.includes('f (hold)') && !listed.includes('toggle'));
 });
 
 test('each toggle step can be several commands: one, then two, then round again', () => {

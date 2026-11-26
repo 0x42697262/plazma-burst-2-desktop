@@ -1,15 +1,16 @@
-import { CHAIN_SEPARATOR, QUOTE } from './keys.ts';
+import { CHAIN_SEPARATOR, QUOTE, QUOTE_ESCAPED, WORD_SEPARATOR } from './keys.ts';
 import { CHAIN_JOIN } from '../state/keys.ts';
 
 const nextSteps = new Map<string, number>();
 
-const QUOTE_ESCAPED = '""';
 const isPlain = (choice: string): boolean => !choice.includes(CHAIN_SEPARATOR) && !choice.includes(QUOTE);
 
 export function joinToggleChoices(choices: readonly string[]): string {
   if (choices.every(isPlain)) return choices.join(CHAIN_JOIN);
-  return choices.map((choice) => `${QUOTE}${choice.split(QUOTE).join(QUOTE_ESCAPED)}${QUOTE}`).join(' ');
+  return choices.map((choice) => `${QUOTE}${choice.split(QUOTE).join(QUOTE_ESCAPED)}${QUOTE}`).join(WORD_SEPARATOR);
 }
+
+export const formatToggleChoices = (command: string): string => toggleChoices(command).map((choice) => `${QUOTE}${choice}${QUOTE}`).join(WORD_SEPARATOR);
 
 function quotedChoices(command: string): string[] {
   const choices: string[] = [];
@@ -61,4 +62,8 @@ export function nextToggleCommand(key: string, command: string): string {
 
 export const forgetToggleStep = (key: string): void => {
   nextSteps.delete(key);
+};
+
+export const forgetAllToggleSteps = (): void => {
+  nextSteps.clear();
 };

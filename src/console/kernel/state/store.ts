@@ -173,7 +173,7 @@ export const binds = {
     else heldKeys.delete(key);
     if (isPass) passKeys.add(key);
     else passKeys.delete(key);
-    if (isToggle) toggleKeys.add(key);
+    if (isToggle && !isHeld) toggleKeys.add(key);
     else toggleKeys.delete(key);
     save();
   },
@@ -306,18 +306,18 @@ function sanitizeMapProfiles(raw: unknown, known: Record<string, Profile>): Reco
   return sanitized;
 }
 
-function sanitizeHeldKeys(raw: unknown, bound: Binds): Set<string> {
-  const held = new Set<string>();
-  if (!Array.isArray(raw)) return held;
+function sanitizeKeySet(raw: unknown, bound: Binds): Set<string> {
+  const keys = new Set<string>();
+  if (!Array.isArray(raw)) return keys;
   for (const key of raw) {
     try {
       const name = parseKeyName(key);
-      if (bound[name]) held.add(name);
+      if (bound[name]) keys.add(name);
     } catch {
       continue;
     }
   }
-  return held;
+  return keys;
 }
 
 function apply(raw: unknown): void {
@@ -325,9 +325,10 @@ function apply(raw: unknown): void {
   const file = isObject(raw) ? raw : null;
   values = sanitizeValues(file, '', false);
   bindMap = sanitizeBinds(file?.[FILE_SECTION.binds]);
-  heldKeys = sanitizeHeldKeys(file?.[FILE_SECTION.heldBinds], bindMap);
-  passKeys = sanitizeHeldKeys(file?.[FILE_SECTION.passBinds], bindMap);
-  toggleKeys = sanitizeHeldKeys(file?.[FILE_SECTION.toggleBinds], bindMap);
+  heldKeys = sanitizeKeySet(file?.[FILE_SECTION.heldBinds], bindMap);
+  passKeys = sanitizeKeySet(file?.[FILE_SECTION.passBinds], bindMap);
+  toggleKeys = sanitizeKeySet(file?.[FILE_SECTION.toggleBinds], bindMap);
+  for (const key of heldKeys) toggleKeys.delete(key);
   profileMap = sanitizeProfiles(file?.[FILE_SECTION.profiles]);
   mapProfiles = sanitizeMapProfiles(file?.[FILE_SECTION.maps], profileMap);
   const savedHistory = file?.[FILE_SECTION.history];

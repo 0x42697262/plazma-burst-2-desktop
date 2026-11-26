@@ -33,6 +33,15 @@ test('aliases and the other commands that run code or act as you are risky too',
   }
 });
 
+test('quoted toggle binds with risky commands are caught, while harmless ones are allowed', () => {
+  const triggerToggle = '"triggers exec SetGunPower( ""#gun*12"", ""30"" );" "heal"';
+  const chainedJsToggle = '"heal" "pos; js alert(1)"';
+  const safeToggle = '"heal" "heal; pos"';
+  assert.deepEqual(newRiskyCommands({}, { binds: { f: triggerToggle }, toggle_binds: ['f'] }), [{ where: 'bind f', command: triggerToggle }]);
+  assert.deepEqual(newRiskyCommands({}, { binds: { f: chainedJsToggle }, toggle_binds: ['f'] }), [{ where: 'bind f', command: chainedJsToggle }]);
+  assert.deepEqual(newRiskyCommands({}, { binds: { f: safeToggle }, toggle_binds: ['f'] }), []);
+});
+
 test('nothing new, a changed harmless command, a removed one, or a broken file is not risky', () => {
   assert.deepEqual(newRiskyCommands({ binds: { g: 'js 1' } }, { binds: { g: 'js 1' } }), []);
   assert.deepEqual(newRiskyCommands({ binds: { g: 'js 1' } }, { binds: {} }), []);
