@@ -24,11 +24,21 @@ Capabilities: `binds.bind` (`bind`, `unbind`, and running bound keys) and
   holds one bind, so binding it again replaces it, held or not. `bind` and `list binds` mark
   them `(hold)`. Profile binds are not held.
 - `bind --pass <key> <command>`: the key or button still reaches the game, and the bind runs
-  too; `bind --pass mouse1 …` still shoots. It goes with `--hold` in either order
+  too; `bind --pass mouse1 …` still shoots. It goes with `--hold` or `--toggle` in either order
   (`bind --hold --pass mouse1 "fly sweep"` sweeps while you click, and the click fires), and
   there is no "the game uses this key" warning. Passed keys are saved under `pass_binds`;
-  binding the key again without `--pass` replaces it. `bind` marks them `(pass)` or
-  `(hold, pass)`. Profile binds are not passed.
+  binding the key again without `--pass` replaces it. `bind` and `list binds` mark them `(pass)`,
+  `(hold, pass)` or `(toggle, pass)`. Profile binds are not passed.
+- `bind --toggle <key> "<command>" "<command>" ...` cycles through two or more quoted steps: the
+  first press runs the first step, the next press runs the second, and after the last it wraps
+  around. Key repeats do not advance it. Each quoted step can be a single command or a `;` chain
+  (including trailing `rawLine` commands like `triggers exec ...;`). It goes with `--pass` and
+  cannot be combined with `--hold`. Toggle keys are saved in `dev-overrides.json` under
+  `toggle_binds` (steps containing `;` or `"` are stored as quoted choices with `""`-escaped inner
+  quotes, which `settings_guard` also inspects), and `bind` and `list binds` mark them `(toggle)`.
+  Rebinding or unbinding the key, or reloading the settings file, resets its step. A `;` inside
+  a step's inner quotes (`"js f("a;b")"`) ends the bind there, so the bind is refused with "quotes
+  are not closed"; `bind f` and `keyname` show the steps unescaped. Profile binds are not toggled.
 - A quoted `;` chain is one bind (`bind f "heal; pos"`). Every command in it is checked
   the way it will run: split at `;`, phrases turned into keys
   (`src/console/kernel/commands/command-text.ts`, shared with profiles' `onload`).

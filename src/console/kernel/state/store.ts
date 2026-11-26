@@ -11,6 +11,7 @@ import {
 import { TEXT } from './text.ts';
 import { SCHEMA, affectsGame, isKeyOn, parseValue } from './schema.ts';
 import { parseKeyName } from './key-names.ts';
+import { forgetAllToggleSteps } from '../commands/toggle.ts';
 
 export { HISTORY_MAX, PROFILE_NAME };
 
@@ -26,6 +27,7 @@ let values: Values = {};
 let bindMap: Binds = {};
 let heldKeys = new Set<string>();
 let passKeys = new Set<string>();
+let toggleKeys = new Set<string>();
 let profileMap: Record<string, Profile> = {};
 let mapProfiles: Record<string, string> = {};
 let problems: string[] = [];
@@ -166,18 +168,21 @@ export const binds = {
     const command = bindMap[key];
     return command ? { command, profile: null } : null;
   },
-  set(key: string, command: string, isHeld = false, isPass = false): void {
+  set(key: string, command: string, isHeld = false, isPass = false, isToggle = false): void {
     bindMap[key] = command;
     if (isHeld) heldKeys.add(key);
     else heldKeys.delete(key);
     if (isPass) passKeys.add(key);
     else passKeys.delete(key);
+    if (isToggle && !isHeld) toggleKeys.add(key);
+    else toggleKeys.delete(key);
     save();
   },
   remove(key: string): void {
     delete bindMap[key];
     heldKeys.delete(key);
     passKeys.delete(key);
+    toggleKeys.delete(key);
     save();
   },
   clear(): number {
@@ -185,11 +190,13 @@ export const binds = {
     bindMap = {};
     heldKeys = new Set();
     passKeys = new Set();
+    toggleKeys = new Set();
     save();
     return count;
   },
   isHeld: (key: string): boolean => heldKeys.has(key),
   isPass: (key: string): boolean => passKeys.has(key),
+  isToggle: (key: string): boolean => toggleKeys.has(key),
   keys: (): string[] => Object.keys(bindMap).sort(),
   boundTo: (command: string): string[] => Object.keys(bindMap).filter((key) => bindMap[key]?.toLowerCase() === command),
 };
@@ -300,18 +307,18 @@ function sanitizeMapProfiles(raw: unknown, known: Record<string, Profile>): Reco
   return sanitized;
 }
 
-function sanitizeHeldKeys(raw: unknown, bound: Binds): Set<string> {
-  const held = new Set<string>();
-  if (!Array.isArray(raw)) return held;
+function sanitizeKeySet(raw: unknown, bound: Binds): Set<string> {
+  const keys = new Set<string>();
+  if (!Array.isArray(raw)) return keys;
   for (const key of raw) {
     try {
       const name = parseKeyName(key);
-      if (bound[name]) held.add(name);
+      if (bound[name]) keys.add(name);
     } catch {
       continue;
     }
   }
-  return held;
+  return keys;
 }
 
 function apply(raw: unknown): void {
@@ -319,8 +326,10 @@ function apply(raw: unknown): void {
   const file = isObject(raw) ? raw : null;
   values = sanitizeValues(file, '', false);
   bindMap = sanitizeBinds(file?.[FILE_SECTION.binds]);
-  heldKeys = sanitizeHeldKeys(file?.[FILE_SECTION.heldBinds], bindMap);
-  passKeys = sanitizeHeldKeys(file?.[FILE_SECTION.passBinds], bindMap);
+  heldKeys = sanitizeKeySet(file?.[FILE_SECTION.heldBinds], bindMap);
+  passKeys = sanitizeKeySet(file?.[FILE_SECTION.passBinds], bindMap);
+  toggleKeys = sanitizeKeySet(file?.[FILE_SECTION.toggleBinds], bindMap);
+  for (const key of heldKeys) toggleKeys.delete(key);
   profileMap = sanitizeProfiles(file?.[FILE_SECTION.profiles]);
   mapProfiles = sanitizeMapProfiles(file?.[FILE_SECTION.maps], profileMap);
   const savedHistory = file?.[FILE_SECTION.history];
@@ -344,6 +353,7 @@ function clearAll(): void {
   bindMap = {};
   heldKeys = new Set();
   passKeys = new Set();
+  toggleKeys = new Set();
   profileMap = {};
   mapProfiles = {};
 }
@@ -380,6 +390,7 @@ export async function load(): Promise<LoadSource> {
 export function reload(raw: unknown): void {
   clearTimeout(saveTimer);
   saveTimer = undefined;
+  forgetAllToggleSteps();
   apply(raw);
   writeLocal(JSON.stringify(raw));
 }
@@ -390,6 +401,7 @@ export function save(): void {
     ...(Object.keys(bindMap).length ? { [FILE_SECTION.binds]: bindMap } : {}),
     ...(heldKeys.size ? { [FILE_SECTION.heldBinds]: [...heldKeys].sort() } : {}),
     ...(passKeys.size ? { [FILE_SECTION.passBinds]: [...passKeys].sort() } : {}),
+    ...(toggleKeys.size ? { [FILE_SECTION.toggleBinds]: [...toggleKeys].sort() } : {}),
     ...(Object.keys(profileMap).length ? { [FILE_SECTION.profiles]: Object.fromEntries(Object.entries(profileMap).map(([name, profile]) => [name, profileJson(profile)])) } : {}),
     ...(Object.keys(mapProfiles).length ? { [FILE_SECTION.maps]: mapProfiles } : {}),
     ...(lines.length ? { [FILE_SECTION.history]: lines } : {}),

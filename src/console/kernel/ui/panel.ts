@@ -4,11 +4,12 @@ import { COLOR } from '../core/keys.ts';
 import { game } from '../game/bindings.ts';
 import { isActive } from '../game/level.ts';
 import { eventKeyName, showKey, baseKey, TOGGLE_KEY } from '../state/key-names.ts';
-import { binds, history } from '../state/store.ts';
+import { binds, history, type ActiveBind } from '../state/store.ts';
 import { hotkeyOf } from '../state/hotkeys.ts';
 import { levelWasActive } from '../overrides/frame.ts';
 import { run, maskLine } from '../dispatch.ts';
 import { holdCommands, mouseButtonName, type MouseButtonEvent } from '../commands/hold.ts';
+import { nextToggleCommand } from '../commands/toggle.ts';
 import { commandForPaste, handledByAFeature, releasedForFeatures } from '../ports/input.ts';
 import { el } from './dom.ts';
 import { THEME, IN_OVERLAY, swallow, markUi } from './theme.ts';
@@ -60,6 +61,10 @@ export function releaseHolds(): void {
   heldReleases.clear();
   for (const command of releases) run(command, TEXT.releasedSource);
 }
+
+const pickedCommand = (bound: NonNullable<ActiveBind>, name: string, isRepeat: boolean): string => (
+  !isRepeat && !bound.profile && binds.isToggle(name) ? nextToggleCommand(name, bound.command) : bound.command
+);
 
 function runBound(command: string, isHeld: boolean, hold: string, source: string, isRepeat: boolean): void {
   if (isRepeat) return;
@@ -260,7 +265,7 @@ export function onKeyDownCapture(event: KeyboardEvent): void {
         swallowEvent(event);
         heldBoundKeys.add(event.code);
       }
-      runBound(bound.command, !bound.profile && binds.isHeld(keyName), event.code, TEXT.bindSource(bound.profile, showKey(keyName)), event.repeat);
+      runBound(pickedCommand(bound, keyName, event.repeat), !bound.profile && binds.isHeld(keyName), event.code, TEXT.bindSource(bound.profile, showKey(keyName)), event.repeat);
       return;
     }
   }
@@ -305,7 +310,7 @@ export function onMouseDownCapture(event: MouseEvent & MouseButtonEvent): void {
     event.stopImmediatePropagation();
     heldBoundButtons.add(button);
   }
-  runBound(bound.command, !bound.profile && binds.isHeld(name), button, TEXT.bindSource(bound.profile, showKey(name)), false);
+  runBound(pickedCommand(bound, name, false), !bound.profile && binds.isHeld(name), button, TEXT.bindSource(bound.profile, showKey(name)), false);
 }
 
 export function onMouseUpCapture(event: MouseEvent & MouseButtonEvent): void {

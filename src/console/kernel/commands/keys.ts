@@ -6,6 +6,7 @@ export const FIRST_CAPTURE = '$1';
 export const ANONYMOUS_FRAME = 'at <anonymous>:';
 export const CHAIN_SEPARATOR = ';';
 export const QUOTE = '"';
+export const QUOTE_ESCAPED = '""';
 export const MODIFIERS_ONLY = /^((ctrl|control|ctl|alt|option|shift)\+)*$/i;
 export const KEY_TYPE = 'key';
 export const BOOL_TYPE = 'bool';

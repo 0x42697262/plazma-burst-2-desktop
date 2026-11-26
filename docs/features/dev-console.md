@@ -43,7 +43,9 @@
   line in the column. `help <command>` pages wrap their arguments and examples the same way.
 - `a ; b` runs both in one go: nothing from the game or the network lands between them.
   A `;` in double quotes, in a key-name position (`bind ; heal`), or in a command that
-  takes the rest of the line (`js`, `triggers exec`) is not a separator.
+  takes the rest of the line (`js`, `triggers exec`) is not a separator. Such a command
+  takes the rest of the line also after a `;`: `heal; triggers exec X(); pos` runs `heal`,
+  then `triggers exec` with `X(); pos`.
 
 ## Tests: the fake game
 - `src/console/testing/fake-game.fixture.ts` is a fake Plazma Burst 2 runtime: it
