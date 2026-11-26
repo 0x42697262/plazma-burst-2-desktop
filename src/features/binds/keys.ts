@@ -5,6 +5,5 @@ export const KEY_ARGUMENT = 1;
 export const HOLD_OPTION = '--hold';
 export const PASS_OPTION = '--pass';
 export const TOGGLE_OPTION = '--toggle';
-export const TOGGLE_CHOICES_MIN = 2;
 export const BIND_OPTIONS: readonly string[] = Object.freeze([HOLD_OPTION, PASS_OPTION, TOGGLE_OPTION]);
 export const SINGLE_CHARACTER = 1;

@@ -1,8 +1,8 @@
 import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { commandText, warnKeyUses } from '#console/kernel/commands/command-text.ts';
-import { BIND_ARGUMENTS_MIN, KEY_WIDTH } from '../../constants.ts';
-import { ALL_WORDS, BIND_OPTIONS, COMMAND, HOLD_OPTION, KEY_ARGUMENT, PASS_OPTION, TOGGLE_CHOICES_MIN, TOGGLE_OPTION } from '../../keys.ts';
+import { BIND_ARGUMENTS_MIN, KEY_WIDTH, TOGGLE_CHOICES_MIN } from '../../constants.ts';
+import { ALL_WORDS, BIND_OPTIONS, COMMAND, HOLD_OPTION, KEY_ARGUMENT, PASS_OPTION, TOGGLE_OPTION } from '../../keys.ts';
 import { holdCommands } from '#console/kernel/commands/hold.ts';
 import { QUOTE, WORD_SEPARATOR } from '#console/kernel/commands/keys.ts';
 import { forgetAllToggleSteps, forgetToggleStep, joinToggleChoices, toggleChoices } from '#console/kernel/commands/toggle.ts';
@@ -19,7 +19,7 @@ function leadingOptions(allArgs: Args): { options: Set<string>; args: Args } {
   return { options, args: allArgs.slice(index) };
 }
 
-function quotedChoices(text: string): string[] | null {
+function typedChoices(text: string): string[] | null {
   const choices: string[] = [];
   let position = 0;
   while (position < text.length) {
@@ -44,7 +44,7 @@ function quotedChoices(text: string): string[] | null {
 
 function toggleCommand(words: Args): string {
   const text = words.join(WORD_SEPARATOR).trim();
-  const choices = quotedChoices(text);
+  const choices = typedChoices(text);
   if (!choices || choices.length < TOGGLE_CHOICES_MIN || choices.includes('')) throw new Error(TEXT.toggleUsage);
   const validated = choices.map((choice) => commandText([choice], TEXT.toggleUsage));
   return joinToggleChoices(validated);

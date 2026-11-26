@@ -12,7 +12,7 @@ export function joinToggleChoices(choices: readonly string[]): string {
 
 export const formatToggleChoices = (command: string): string => toggleChoices(command).map((choice) => `${QUOTE}${choice}${QUOTE}`).join(WORD_SEPARATOR);
 
-function quotedChoices(command: string): string[] {
+function storedChoices(command: string): string[] {
   const choices: string[] = [];
   let current = '';
   for (let index = 1; index < command.length; index++) {
@@ -35,7 +35,7 @@ function quotedChoices(command: string): string[] {
 }
 
 export function toggleChoices(command: string): string[] {
-  if (command.startsWith(QUOTE)) return quotedChoices(command);
+  if (command.startsWith(QUOTE)) return storedChoices(command);
   const choices: string[] = [];
   let current = '';
   let isQuoted = false;
