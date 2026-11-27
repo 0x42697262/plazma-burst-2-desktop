@@ -49,7 +49,8 @@ sends ([research](../research/reputation.md#the-device-id-travels-with-the-accou
   session: what the next lobby login sends. "None yet" until a lobby login makes one.
 - **Its shape.** Four base-36 numbers joined by dots is how this game version makes one
   (`flash.js:7536-7543`); anything else came from an older version, another client, or a
-  hand edit.
+  hand edit. How the game makes it, step by step:
+  [How the device id is made](../research/reputation.md#how-the-device-id-is-made).
 - **The first account on this save** (`first_login`), and whether its login proof is kept. The
   proof itself is never shown.
 - **How it got here, in this session**, from the wrapper's record of network saves:

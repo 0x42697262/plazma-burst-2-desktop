@@ -205,6 +205,47 @@ its own device id: the official client, and Sad Burst 2 for the official servers
 `persist:sadburst-erich5` ([client-sadburst](../features/client-sadburst.md)). Both log in
 to the same official lobby with the same account and the same password.
 
+### How the device id is made
+
+The id is made by the game, once per save, the first time a lobby login asks for one.
+
+1. **The hook.** At start, after the network save download (`main.js:1179`), the game runs
+   `$ММ.$еccIpl()` (`main.js:1185`), which calls `$IooорO.$OОOeMе(JSON, save.data)`
+   (`flash.js:28-31`, `:7468`). That adds two properties to the global `JSON` object whose
+   names only look like `stringify` and `parse`: `JSON.strіngіfy` and `JSON.pаrsе`, with
+   Cyrillic `і`, `а` and `е` (`flash.js:7520`, `:7534`). The real `JSON.stringify` and
+   `JSON.parse` are untouched.
+2. **The call.** The lobby login builds part 7 as
+   `JSON.strіngіfy(r() + "." + r() + "." + r() + "." + r())` with fresh random values
+   (`MPLobby.js:141-158`). The look-alike ignores its argument (`flash.js:7534-7547`):
+   - if the save has no `first_uid`, it makes one: four times
+     `Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(36)`, joined by `.`
+     (`:7538-7543`), and saves at once (`:7544`, `$IеOАT`);
+   - it returns `"` + the saved `first_uid` + `"`, so the part is the saved id in quotes.
+3. **The save.** `$IеOАT` (`frame2.js:3434`) writes the save to
+   `localStorage["plazma_burst2"]` (`:3574`) and then uploads it to the account's network
+   save (`:3597`), which is how the new id reaches the account (below).
+4. **The lobby side.** The lobby strips the first and last character, the quotes; a missing
+   part becomes `0hash`; over 60 characters throws and drops the connection
+   (`flash.js:1990-1999`). The value goes to the account module as it is.
+
+What follows from it:
+
+- **Its shape.** Each of the four numbers is 0 to 2^53 − 2 written in base 36: 1 to 11
+  characters of `0-9a-z` (`Number.MAX_SAFE_INTEGER` is `2gosa7pa2gv`). The whole id is 7 to
+  47 characters, well under the lobby's 60. `rep device` checks this shape
+  ([reputation](../features/reputation.md#rep-device)).
+- **Its randomness.** `Math.random()` is the browser's ordinary generator, not a
+  cryptographic one; nothing on the client ties the id to the hardware.
+- **Made once.** Only when the save has none; afterwards every login sends the same id until
+  the save changes: a network save download that carries another id, a cleared save, or
+  another client with its own save.
+- **The twin.** `JSON.pаrsе` parses the login answer and, the first time a non-guest
+  account logs in, records `first_login` and `first_login_proof` in the same save
+  (`flash.js:7520-7531`).
+- **Other shapes.** An id that does not match, such as `l0.` followed by digits, was not
+  made by this code: an older game version, another client, or an edited save.
+
 ### The device id travels with the account's saved game
 
 `first_uid` is not only kept on the install. The game also keeps it in the account's
