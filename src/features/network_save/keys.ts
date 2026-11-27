@@ -1,2 +1,13 @@
 export const SERVER_SCRIPT_PATH = '/pb2/server.php';
-export const SAVE_REQUEST = Object.freeze({ kind: 'rq', load: 'load', save: 'save', login: 'l', text: 'str' });
+export const SAVE_REQUEST = Object.freeze({ kind: 'rq', load: 'load', save: 'save', login: 'l', password: 'p', text: 'str' });
+export const HIDDEN_VALUE = '‹hidden›';
+export const EMPTY_SHOWN = '""';
+export const PROOF_PAIR = /(^|;)first_login_proof=[^;]*/g;
+export const proofHidden = (start: string): string => `${start}first_login_proof=${HIDDEN_VALUE}`;
+export const ACTION = Object.freeze({ load: 'load', save: 'save' } as const);
+export const FORM_TYPE = 'application/x-www-form-urlencoded';
+export const CONTENT_TYPE_HEADER = 'Content-Type';
+export const COMMAND = Object.freeze({ name: 'netsave', aliases: Object.freeze(['networksave']) });
+export const RAW_OPTION = '--raw';
+export const NOTHING_TO_LOAD = Object.freeze({ none: 'x', empty: '.', errorStart: 'Error: ' });
+export const SUBCOMMAND = Object.freeze({ preview: 'preview', diff: 'diff', download: 'download', upload: 'upload', restore: 'restore', backups: 'backups' });

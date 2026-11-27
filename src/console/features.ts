@@ -18,6 +18,7 @@ import { gunsConsole } from '#features/guns/console.ts';
 import { teleportConsole } from '#features/teleport/console.ts';
 import { playerInfoConsole } from '#features/player_info/console.ts';
 import { reputationConsole } from '#features/reputation/console.ts';
+import { networkSaveConsole } from '#features/network_save/console.ts';
 import { wireConsole } from '#features/wire/console.ts';
 import { healthConsole } from '#features/health/console.ts';
 import { movementConsole } from '#features/movement/console.ts';
@@ -46,6 +47,7 @@ export const CONSOLE_FEATURES: readonly ConsoleFeature[] = Object.freeze([
   teleportConsole,
   playerInfoConsole,
   reputationConsole,
+  networkSaveConsole,
   wireConsole,
   healthConsole,
   movementConsole,

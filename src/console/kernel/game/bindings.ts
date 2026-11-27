@@ -313,6 +313,29 @@ export const game = {
     parameters.p = password;
   },
 
+  loginParams: (): { login: string; password: string } => {
+    const parameters = bagOf(Reflect.get(globalThis, GAME_GLOBAL.loaderInfo)).parameters as Bag | undefined;
+    const text = (value: unknown): string => (typeof value === 'string' ? value : '');
+    return { login: text(parameters?.l), password: text(parameters?.p) };
+  },
+  saveUrl: (): string => {
+    const url = read('saveUrl');
+    return typeof url === 'string' ? url : '';
+  },
+  saveData: (): Bag => bagOf(bagOf(read('gameSave')).data),
+  saveText: (withDevice: boolean): string => {
+    const text = call('saveText', withDevice);
+    return typeof text === 'string' ? text : '';
+  },
+  saveUpload: (): void => { call('saveUpload'); },
+  saveApply: (text: string): void => { call('saveApply', text, true); },
+  saveReplace: (data: Bag): void => {
+    const save = bagOf(read('gameSave'));
+    const current = bagOf(save.data);
+    for (const key of Object.keys(current)) Reflect.deleteProperty(current, key);
+    Object.assign(current, data);
+    (save.flush as Callable)();
+  },
   frameLabel: (): string | null => stageOrNull()?.currentFrameLabel ?? null,
   goToScreen: (label: string): unknown => (readGlobal(GAME_GLOBAL.goToFrame) as Callable)(label),
   lobbyReady: (): boolean => {

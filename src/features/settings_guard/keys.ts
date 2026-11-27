@@ -1,6 +1,6 @@
 export const RISKY_COMMANDS: readonly string[] = Object.freeze([
   'js', 'fingerprint', 'fp', 'wire', 'game', 'servers', 'server-list', 'diagnostics', 'diag', 'triggers', 'trigger', 'trig', 'bypass',
-  'regions', 'region', 'vars', 'var', 'variables',
+  'regions', 'region', 'vars', 'var', 'variables', 'netsave', 'networksave',
 ]);
 export const SAFE_COMMANDS: readonly string[] = Object.freeze([
   'help', '?', 'list', 'ls', 'set', 'get', 'unset', 'del', 'rm', 'reset', 'more', 'next', 'page', 'pg', 'features', 'flags',
