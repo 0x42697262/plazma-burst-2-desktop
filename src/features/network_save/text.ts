@@ -21,13 +21,14 @@ export const SHARED_TEXT = Object.freeze({
 export const BACKUP_ROUTE_TEXT = Object.freeze({
   badBackup: 'expected { kind: "local" | "online", login, reason, data | text }',
   noSuchBackup: (id: string) => `no backup ${id}`,
-  off: 'backups are off (capabilities network_save.upload, direct and restore)',
+  off: 'backups are off (capabilities network_save.upload, direct, restore and edit)',
 });
 
 export const BACKUP_TEXT = Object.freeze({
   beforeUpload: 'before an upload',
   beforeRestore: 'before a restore',
   beforeBackupRestore: 'before restoring a backup',
+  beforeEdits: 'before editing fields',
   onlineKept: 'A backup of the network save from before was kept (see the list of backups).',
   nothingOnlineToKeep: 'The site had no network save for this account, so there was none to back up.',
   backupFailed: (message: string) => `Could not back up the network save first, so nothing was uploaded: ${message}`,

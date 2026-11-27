@@ -23,7 +23,7 @@ export function networkSaveWrapper(deps: WrapperDeps): WrapperFeature {
     routes: [
       ...deviceRoutes({ watch }),
       ...requestRoutes({ watch, hosts, clock: Date.now, isAllowed }),
-      ...backupRoutes({ store: createBackupStore(backupsDir(deps.client)), clock: Date.now, isOn: () => anyOn([capability.upload, capability.direct, capability.restore]) }),
+      ...backupRoutes({ store: createBackupStore(backupsDir(deps.client)), clock: Date.now, isOn: () => anyOn([capability.upload, capability.direct, capability.restore, capability.edit]) }),
     ],
     interceptors: [networkSaveInterceptor({ watch, hosts, clock: Date.now, isOn: () => deps.isCapabilityOn(CAPABILITY.networkSave.watch) })],
   });

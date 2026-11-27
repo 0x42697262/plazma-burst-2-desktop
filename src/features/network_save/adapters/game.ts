@@ -7,6 +7,7 @@ type SaveBindings = Readonly<{
   saveData(): Bag;
   saveText(withDevice: boolean): string;
   saveUpload(): void;
+  saveFlush(): void;
   saveApply(text: string): void;
   saveReplace(data: Bag): void;
   myAccount(): unknown;

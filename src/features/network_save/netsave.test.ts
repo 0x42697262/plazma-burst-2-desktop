@@ -174,3 +174,38 @@ test('netsave backups lists them, and restore --backup writes one back and uploa
   assert.match(errorsOf((await saveGame()).game.run('netsave restore --backup x'))[0] ?? '', /usage: netsave restore/);
   assert.ok(flushed.length >= 0);
 });
+
+test('netsave fields lists the save field by field, typed, the proof hidden, and a filter narrows it', async () => {
+  const { lines, data } = await saveGame();
+  data.cmpg_nick = 'Player';
+  const rows = (await lines('netsave fields')).join('\n');
+  assert.match(rows, /Save fields: 5/);
+  assert.match(rows, /cmpg_nick +"Player"/);
+  assert.match(rows, /volume +1/);
+  assert.match(rows, /first_login_proof +‹hidden›/);
+  assert.doesNotMatch(rows, /secret-proof/);
+  assert.match((await lines('netsave fields vol')).join('\n'), /Save fields matching "vol": 1 of 5/);
+});
+
+test('netsave set types the value as the game\'s loader does, backs up once, flushes, and get and del work', async () => {
+  const { lines, data, flushed, backups, game } = await saveGame();
+  const first = (await lines('netsave set volume 0.25')).join('\n');
+  assert.match(first, /Backed up the local save first/);
+  assert.match(first, /volume = 0\.25 {2}\(was 1\)/);
+  assert.equal(data.volume, 0.25);
+  assert.equal(flushed.length, 1);
+  await lines('netsave set altcur false');
+  await lines('netsave set cmpg_nick some player');
+  assert.equal(data.altcur, false);
+  assert.equal(data.cmpg_nick, 'some player');
+  assert.equal(backups.length, 1, 'one backup per session');
+  assert.deepEqual(await lines('netsave get cmpg_nick'), ['> netsave get cmpg_nick', 'cmpg_nick = "some player"']);
+  assert.match((await lines('netsave del cmpg_nick')).join('\n'), /Removed cmpg_nick \(was "some player"\)/);
+  assert.equal('cmpg_nick' in data, false);
+  assert.match((await lines('netsave set skin_allowed_2 1')).join('\n'), /stays in this install's save only/);
+  assert.match(errorsOf(game.run('netsave set first_uid x.y.z.w'))[0] ?? '', /first_uid is locked/);
+  assert.match(errorsOf(game.run('netsave del first_login'))[0] ?? '', /locked/);
+  assert.match(errorsOf(game.run('netsave set volume NaN'))[0] ?? '', /cannot be stored/);
+  assert.match(errorsOf(game.run('netsave get nothing_here'))[0] ?? '', /no field "nothing_here"/);
+  assert.equal(data.first_uid, ID);
+});

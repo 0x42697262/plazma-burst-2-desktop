@@ -5,3 +5,4 @@ export const BACKUPS_KEPT = 10;
 export const BACKUP_FILE_MODE = 0o600;
 export const BACKUP_DIR_MODE = 0o700;
 export const JSON_INDENT = 1;
+export const FIELD_NAME_WIDTH = 28;

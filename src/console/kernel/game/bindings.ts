@@ -328,6 +328,7 @@ export const game = {
     return typeof text === 'string' ? text : '';
   },
   saveUpload: (): void => { call('saveUpload'); },
+  saveFlush: (): void => { (bagOf(read('gameSave')).flush as Callable)(); },
   saveApply: (text: string): void => { call('saveApply', text, true); },
   saveReplace: (data: Bag): void => {
     const save = bagOf(read('gameSave'));
