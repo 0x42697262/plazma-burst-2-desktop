@@ -89,6 +89,7 @@ What playing on a private server does:
 | `ban <nickname>` / `unban` / `bans` | keep someone out; kept in `data/server/bans.json` |
 | `end <match>` | end a match (its number from `matches`) |
 | `map <match> <map ID>` | change a match's map |
+| `maps update <map ID \| #match> [now]` | download a saved map again; `now` also reloads the match ([map-update](../features/map-update.md)) |
 | `join` | what players need to add the server |
 | `quit` (Ctrl+C) | close the server |
 
@@ -126,7 +127,8 @@ A match's map ID is looked up on the server's computer:
   answers, unpacked to plain XML with the game's own function, and kept in
   `data/maps/<map id>.xml` (the same folder and file names the game client saves downloaded
   maps to, through `src/kernel/maps/file-name.ts`), so each map is downloaded once, by either.
-  This is the only time the server contacts a map source.
+  This is the only time the server contacts a map source, unless an admin asks for a new
+  version ([map-update](../features/map-update.md)).
 - **Only if a source says the map is not published** does the match get an error ("does
   not exist"). A map without player starts (an add-on such as `nanotech-cht`) leaves the
   player count to the match's own setting.

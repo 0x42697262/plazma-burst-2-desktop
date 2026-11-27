@@ -239,7 +239,7 @@ client it serves, released as one bundle ([ADR 0007](../adr/0007-server-editions
   "kind": "server",
   "title": "Example Server",
   "include_game": false,
-  "server": { "features": ["map_bot", "web_client"] },
+  "server": { "features": ["map_bot", "web_client", "map_update"] },
   "web": { "features": ["server_list", "lobby_task_guard", "cert_pinning"] },
   "config": { "name": "Example", "behind_proxy": true, "public_url": "https://pb2.example.com", "map_sources": ["official_lobby"] }
 }
@@ -249,7 +249,7 @@ client it serves, released as one bundle ([ADR 0007](../adr/0007-server-editions
 |---|---|
 | `kind` | `"server"` |
 | `include_game` | `true` fetches the game into the bundle at release time; `false` leaves `game/` to be copied |
-| `server.features` | the lobby server's features (catalog mode `lobby`: `map_bot`, `web_client`) |
+| `server.features` | the lobby server's features (catalog mode `lobby`: `map_bot`, `web_client`, `map_update`) |
 | `web.features` | the web client's page core: the lobby task guard and the join client (`server_list`, which needs `lobby_task_guard` and `cert_pinning`); never the dev console |
 | `config` | the bundle's `server.example.json`, checked like `data/server/server.json`. A release needs `public_url`, here or from `npm run release -- --edition <name> --public-url <url>`, which keeps the domain out of the repository |
 

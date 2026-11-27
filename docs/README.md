@@ -24,6 +24,7 @@
 - [fingerprint.md](features/fingerprint.md): `fingerprint`, keeping and running the main server's fingerprinter
 - [game-setup.md](features/game-setup.md): `game_setup`, downloading and updating the game
 - [map-bot.md](features/map-bot.md): `map_bot`, the lobby server's maps from the official lobby
+- [map-update.md](features/map-update.md): `map_update`, an admin downloads a saved map again
 - [web-client.md](features/web-client.md): `web_client`, the game in a browser for this server only
 - [fps.md](features/fps.md): `fps`, the game's FPS, physics quality and logic
 - [free-camera.md](features/free-camera.md): `freecam`, move the view without moving your character
