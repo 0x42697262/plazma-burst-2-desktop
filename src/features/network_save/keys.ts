@@ -13,3 +13,4 @@ export const NOTHING_TO_LOAD = Object.freeze({ none: 'x', empty: '.', errorStart
 export const SUBCOMMAND = Object.freeze({ preview: 'preview', diff: 'diff', download: 'download', upload: 'upload', restore: 'restore', backups: 'backups' });
 export const YES_OPTION = '--yes';
 export const DIRECT_OPTION = '--direct';
+export const WORD_SEPARATOR = ' ';

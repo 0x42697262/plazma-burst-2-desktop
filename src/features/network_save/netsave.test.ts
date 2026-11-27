@@ -109,3 +109,14 @@ test('netsave upload says what it would do; with --yes it runs the game\'s uploa
   const skipping = await saveGame({ skipsUpload: true });
   assert.match(await afterUploadWait(skipping.game, 'netsave upload --yes'), /The game did not upload: it skips while a level is being played/);
 });
+
+test('netsave upload --direct sends the save text through the app, whatever the game is doing', async () => {
+  const { lines, asked, uploadCalls } = await saveGame({ skipsUpload: true });
+  assert.match((await lines('netsave upload --direct')).join('\n'), /sent directly through the desktop app\.[\s\S]*netsave upload --direct --yes/);
+  assert.equal(asked.length, 0);
+  const done = (await lines('netsave upload --yes --direct')).join('\n');
+  assert.match(done, /Sent 4 values to player-one's network save directly; the site answered HTTP 200/);
+  assert.equal(asked[0]?.action, 'save');
+  assert.match(asked[0]?.text ?? '', /first_uid=abc12\.def34\.ghi56\.jkl78;/);
+  assert.equal(uploadCalls.length, 0, 'not the game\'s upload');
+});
