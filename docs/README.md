@@ -41,7 +41,7 @@
 - [settings-guard.md](features/settings-guard.md): `settings_guard`, asking before a risky bind is saved
 - [teleport.md](features/teleport.md): `teleport`, `tp`
 - [player-info.md](features/player-info.md): `player_info`, `pos`, `chars`, `players`, `bots`, `uid` and `accounts`
-- [reputation.md](features/reputation.md): `reputation`, `rep`, `rep relations` and `rep players`
+- [reputation.md](features/reputation.md): `reputation`, `rep`, `rep relations`, `rep players` and `rep device`
 - [wire.md](features/wire.md): `wire`, send a protocol message by name
 - [health.md](features/health.md): `health`, `heal`, `hp`, `revive` and the HP keys
 - [movement.md](features/movement.md): `movement`, the movement keys

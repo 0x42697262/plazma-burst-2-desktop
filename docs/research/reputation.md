@@ -319,7 +319,8 @@ each on a fresh connection (accounts A, B, C; devices numbered as above):
   refuse one; if the module has it, it compares the two connections' entries.
 
 To see which entry a client is on: open the multiplayer lobby, then `rep` and `rep relations`
-in the dev console ([reputation](../features/reputation.md)).
+in the dev console, and `rep device` for the device id this client sends and how it got there
+([reputation](../features/reputation.md)).
 
 ## Who can change what
 
