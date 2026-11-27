@@ -7,7 +7,8 @@ import { SAVE_SOURCE } from '#kernel/game-save/keys.ts';
 import type { SeenSaves } from '#kernel/game-save/seen.ts';
 import { MIN_ERROR_STATUS, UPLOAD_SEEN_WAIT_MS } from '../../constants.ts';
 import { COMMAND, DIRECT_OPTION, SUBCOMMAND, WORD_SEPARATOR, YES_OPTION } from '../../keys.ts';
-import { SHARED_TEXT } from '../../text.ts';
+import { BACKUP_TEXT, SHARED_TEXT } from '../../text.ts';
+import { backupOnline } from '../../services/backup.ts';
 import { gameSave, lobbyLogin } from '../../adapters/game.ts';
 import { seenSaves, uploadSaveText } from '../../adapters/wrapper-client.ts';
 import { TEXT } from './text.ts';
@@ -32,6 +33,17 @@ async function uploadDirect(login: string): Promise<void> {
   print(TEXT.sentDirect(login, decodeSaveText(text).size, status), status >= MIN_ERROR_STATUS ? COLOR.error : COLOR.ok);
 }
 
+async function keepOnline(login: string): Promise<boolean> {
+  try {
+    const id = await backupOnline(login, BACKUP_TEXT.beforeUpload);
+    print(id ? BACKUP_TEXT.onlineKept : BACKUP_TEXT.nothingOnlineToKeep, COLOR.hint);
+    return true;
+  } catch (error) {
+    print(BACKUP_TEXT.backupFailed((error as Error).message), COLOR.error);
+    return false;
+  }
+}
+
 function upload(args: readonly string[]): Promise<void> | void {
   const options = new Set(args);
   const isKnown = args.every((arg) => arg === YES_OPTION || arg === DIRECT_OPTION) && options.size === args.length;
@@ -51,7 +63,7 @@ function upload(args: readonly string[]): Promise<void> | void {
     print(TEXT.howToGo([COMMAND.name, SUBCOMMAND.upload, ...(isDirect ? [DIRECT_OPTION] : [])].join(WORD_SEPARATOR)), COLOR.hint);
     return;
   }
-  return (isDirect ? uploadDirect(login) : uploadNow(login)).catch((error: unknown) => { print((error as Error).message, COLOR.error); });
+  return keepOnline(login).then((isKept) => (isKept ? (isDirect ? uploadDirect(login) : uploadNow(login)) : undefined)).catch((error: unknown) => { print((error as Error).message, COLOR.error); });
 }
 
 export const uploadCommand = Object.freeze({

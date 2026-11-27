@@ -6,6 +6,9 @@ import { networkSaveInterceptor } from './entry/interceptor.ts';
 import { deviceRoutes } from './entry/routes.ts';
 import { requestRoutes } from './entry/requests.ts';
 import { ACTION } from './keys.ts';
+import { backupRoutes } from './entry/backup-routes.ts';
+import { createBackupStore } from './adapters/backups.ts';
+import { backupsDir } from './paths.ts';
 
 export function networkSaveWrapper(deps: WrapperDeps): WrapperFeature {
   const watch = createSaveWatch();
@@ -13,11 +16,15 @@ export function networkSaveWrapper(deps: WrapperDeps): WrapperFeature {
   const capability = CAPABILITY.networkSave;
   const anyOn = (ids: readonly string[]): boolean => ids.some((id) => deps.isCapabilityOn(id));
   const isAllowed = (action: string): boolean => (action === ACTION.load
-    ? anyOn([capability.download, capability.diff, capability.restore])
+    ? anyOn([capability.download, capability.diff, capability.restore, capability.upload, capability.direct])
     : anyOn([capability.direct, capability.restore]));
   return Object.freeze({
     id: FEATURE.networkSave,
-    routes: [...deviceRoutes({ watch }), ...requestRoutes({ watch, hosts, clock: Date.now, isAllowed })],
+    routes: [
+      ...deviceRoutes({ watch }),
+      ...requestRoutes({ watch, hosts, clock: Date.now, isAllowed }),
+      ...backupRoutes({ store: createBackupStore(backupsDir(deps.client)), clock: Date.now, isOn: () => anyOn([capability.upload, capability.direct, capability.restore]) }),
+    ],
     interceptors: [networkSaveInterceptor({ watch, hosts, clock: Date.now, isOn: () => deps.isCapabilityOn(CAPABILITY.networkSave.watch) })],
   });
 }

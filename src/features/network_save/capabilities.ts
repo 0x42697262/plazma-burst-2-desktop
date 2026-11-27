@@ -4,6 +4,7 @@ import { previewParts } from './capabilities/preview/parts.ts';
 import { diffParts } from './capabilities/diff/parts.ts';
 import { downloadParts } from './capabilities/download/parts.ts';
 import { uploadParts } from './capabilities/upload/parts.ts';
+import { restoreParts } from './capabilities/restore/parts.ts';
 
 export const NETWORK_SAVE_PARTS: readonly CapabilityParts[] = Object.freeze([
   statusParts,
@@ -11,4 +12,5 @@ export const NETWORK_SAVE_PARTS: readonly CapabilityParts[] = Object.freeze([
   diffParts,
   downloadParts,
   uploadParts,
+  restoreParts,
 ]);

@@ -20,6 +20,7 @@ export const ROUTE_NAME = Object.freeze({
   diagnostics: 'diagnostics',
   netsaves: 'netsaves',
   netsave: 'netsave',
+  netsaveBackups: 'netsavebackups',
 });
 
 export const MAP_MARKER = Object.freeze({

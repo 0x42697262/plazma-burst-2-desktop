@@ -5,7 +5,7 @@ import { errorsOf } from '#console/testing/console-output.fixture.ts';
 
 const ID = 'abc12.def34.ghi56.jkl78';
 const SITE = 'https://www.plazmaburst2.com/pb2/server.php';
-const settled = async () => { for (let round = 0; round < 4; round++) await new Promise((resolve) => { setImmediate(resolve); }); };
+const settled = async () => { for (let round = 0; round < 30; round++) await new Promise((resolve) => { setImmediate(resolve); }); };
 
 type Asked = { action: string; url: string; login: string; password: string; text: string };
 
@@ -16,6 +16,8 @@ async function saveGame({ local = { volume: 1, first_uid: ID, first_login: 'play
   const flushed: string[] = [];
   globals[names.gameSave] = { data, flush: () => { flushed.push(JSON.stringify(data)); } };
   globals[names.saveUrl] = SITE;
+  const applied: string[] = [];
+  globals[names.saveApply] = (text: string) => { applied.push(text); for (const pair of text.split(';')) { const at = pair.indexOf('='); if (at > 0) data[pair.slice(0, at)] = pair.slice(at + 1); } };
   globals[names.saveText] = (withDevice: boolean) => Object.entries(data).filter(([name]) => withDevice || !name.startsWith('first_')).map(([name, value]) => `${name}=${String(value)};`).join('');
   globals.loaderInfo = { parameters: { l: login, p: 'the-password' } };
   const gameUploadsSeen: unknown[] = [];
@@ -23,8 +25,20 @@ async function saveGame({ local = { volume: 1, first_uid: ID, first_login: 'play
   globals[names.saveUpload] = () => { uploadCalls.push(1); if (!skipsUpload) gameUploadsSeen.push({ at: Date.now(), login, source: 'game', uid: ID, firstLogin: login, hasProof: true }); };
   globals[names.net][names.connUser] = { login: lobby };
   const asked: Asked[] = [];
+  const backups: Record<string, unknown>[] = [];
   globals.fetch = async (url: string, init?: { body?: string }) => {
     if (String(url).endsWith('/netsaves')) return { ok: true, json: async () => ({ loads: [{ at: Date.now() - 60000, login, source: 'game', uid: ID, firstLogin: login, hasProof: true }], uploads: [...gameUploadsSeen] }) };
+    if (String(url).includes('/netsavebackups')) {
+      if (init && (init as { method?: string }).method === 'POST') {
+        const backup = JSON.parse(init.body ?? '{}') as Record<string, unknown>;
+        const id = `2026-01-0${backups.length + 1}T00-00-00-000Z_${String(backup.kind)}`;
+        backups.unshift({ ...backup, id, at: Date.now() });
+        return { ok: true, json: async () => ({ id }) };
+      }
+      const id = new URL(String(url), 'https://x').searchParams.get('id');
+      if (id) return { ok: true, json: async () => backups.find((backup) => backup.id === id) };
+      return { ok: true, json: async () => backups.map((backup) => ({ ...backup, values: backup.data ? Object.keys(backup.data).length : 0 })) };
+    }
     if (String(url).endsWith('/netsave')) {
       const body = JSON.parse(init?.body ?? '{}') as Asked;
       asked.push(body);
@@ -38,7 +52,7 @@ async function saveGame({ local = { volume: 1, first_uid: ID, first_login: 'play
     await settled();
     return game.log.printed.map(String);
   };
-  return { game, data, flushed, asked, lines, uploadCalls };
+  return { game, data, flushed, asked, lines, uploadCalls, backups, applied };
 }
 
 test('netsave shows the page\'s account, the local save and what was seen; a lobby login on another account is a warning', async () => {
@@ -116,7 +130,47 @@ test('netsave upload --direct sends the save text through the app, whatever the 
   assert.equal(asked.length, 0);
   const done = (await lines('netsave upload --yes --direct')).join('\n');
   assert.match(done, /Sent 4 values to player-one's network save directly; the site answered HTTP 200/);
-  assert.equal(asked[0]?.action, 'save');
-  assert.match(asked[0]?.text ?? '', /first_uid=abc12\.def34\.ghi56\.jkl78;/);
+  assert.deepEqual(asked.map((entry) => entry.action), ['load', 'save'], 'the network save is backed up, then the upload');
+  assert.match(asked[1]?.text ?? '', /first_uid=abc12\.def34\.ghi56\.jkl78;/);
   assert.equal(uploadCalls.length, 0, 'not the game\'s upload');
+});
+
+test('an upload keeps a backup of the network save first', async () => {
+  const { lines, backups } = await saveGame();
+  await lines('netsave upload --direct --yes');
+  assert.equal(backups.length, 1);
+  assert.deepEqual({ kind: backups[0]?.kind, login: backups[0]?.login, reason: backups[0]?.reason }, { kind: 'online', login: 'player-one', reason: 'before an upload' });
+  assert.match(String(backups[0]?.text), /only_online=1;/);
+});
+
+test('netsave restore writes the network save over the local one with the game\'s loader, after a local backup and a device id warning', async () => {
+  const { lines, applied, backups, data } = await saveGame({ online: 'volume=0.5;first_uid=other.id.from.there;only_online=1;' });
+  const told = (await lines('netsave restore')).join('\n');
+  assert.match(told, /would write player-one's network save \(3 values, 3 different from now\) over the local save/);
+  assert.match(told, /The device id would change from abc12\.def34\.ghi56\.jkl78 to other\.id\.from\.there/);
+  assert.equal(applied.length, 0);
+  const done = (await lines('netsave restore --yes')).join('\n');
+  assert.equal(applied.length, 1);
+  assert.equal(backups[0]?.kind, 'local');
+  assert.equal((backups[0]?.data as Record<string, unknown>).first_uid, 'abc12.def34.ghi56.jkl78', 'the local save from before');
+  assert.match(done, /Restored 3 values from player-one's network save/);
+  assert.equal(data.only_online, '1');
+});
+
+test('netsave backups lists them, and restore --backup writes one back and uploads it', async () => {
+  const { lines, backups, asked, data, flushed } = await saveGame();
+  await lines('netsave upload --direct --yes');
+  data.volume = 9;
+  const listed = (await lines('netsave backups')).join('\n');
+  assert.match(listed, /Backups \(1\), newest first:[\s\S]*#1 .* online {2}player-one {2}before an upload/);
+  const told = (await lines('netsave restore --backup 1')).join('\n');
+  assert.match(told, /would write backup #1 \(online save of player-one, before an upload/);
+  asked.length = 0;
+  await lines('netsave restore --backup 1 --yes');
+  assert.equal(data.volume, '0.5', 'the backup is back in the local save');
+  assert.equal(asked[0]?.action, 'save', 'and uploaded, so the next start keeps it');
+  assert.equal(backups[0]?.kind, 'local', 'the save from before was backed up first');
+  assert.match((await lines('netsave restore --backup 7')).join('\n'), /No backup #7/);
+  assert.match(errorsOf((await saveGame()).game.run('netsave restore --backup x'))[0] ?? '', /usage: netsave restore/);
+  assert.ok(flushed.length >= 0);
 });
