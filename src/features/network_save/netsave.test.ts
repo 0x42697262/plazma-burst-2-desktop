@@ -9,7 +9,7 @@ const settled = async () => { for (let round = 0; round < 4; round++) await new 
 
 type Asked = { action: string; url: string; login: string; password: string; text: string };
 
-async function saveGame({ local = { volume: 1, first_uid: ID, first_login: 'player-one', first_login_proof: 'secret-proof' }, online = `volume=0.5;first_uid=${ID};only_online=1;first_login_proof=other-proof;`, login = 'player-one', lobby = 'player-one' } = {}) {
+async function saveGame({ local = { volume: 1, first_uid: ID, first_login: 'player-one', first_login_proof: 'secret-proof' }, online = `volume=0.5;first_uid=${ID};only_online=1;first_login_proof=other-proof;`, login = 'player-one', lobby = 'player-one', skipsUpload = false } = {}) {
   const game = await bootConsole();
   const { globals, names } = game;
   const data: Record<string, unknown> = { ...local };
@@ -18,10 +18,13 @@ async function saveGame({ local = { volume: 1, first_uid: ID, first_login: 'play
   globals[names.saveUrl] = SITE;
   globals[names.saveText] = (withDevice: boolean) => Object.entries(data).filter(([name]) => withDevice || !name.startsWith('first_')).map(([name, value]) => `${name}=${String(value)};`).join('');
   globals.loaderInfo = { parameters: { l: login, p: 'the-password' } };
+  const gameUploadsSeen: unknown[] = [];
+  const uploadCalls: number[] = [];
+  globals[names.saveUpload] = () => { uploadCalls.push(1); if (!skipsUpload) gameUploadsSeen.push({ at: Date.now(), login, source: 'game', uid: ID, firstLogin: login, hasProof: true }); };
   globals[names.net][names.connUser] = { login: lobby };
   const asked: Asked[] = [];
   globals.fetch = async (url: string, init?: { body?: string }) => {
-    if (String(url).endsWith('/netsaves')) return { ok: true, json: async () => ({ loads: [{ at: Date.now() - 60000, login, source: 'game', uid: ID, firstLogin: login, hasProof: true }], uploads: [] }) };
+    if (String(url).endsWith('/netsaves')) return { ok: true, json: async () => ({ loads: [{ at: Date.now() - 60000, login, source: 'game', uid: ID, firstLogin: login, hasProof: true }], uploads: [...gameUploadsSeen] }) };
     if (String(url).endsWith('/netsave')) {
       const body = JSON.parse(init?.body ?? '{}') as Asked;
       asked.push(body);
@@ -35,7 +38,7 @@ async function saveGame({ local = { volume: 1, first_uid: ID, first_login: 'play
     await settled();
     return game.log.printed.map(String);
   };
-  return { game, data, flushed, asked, lines };
+  return { game, data, flushed, asked, lines, uploadCalls };
 }
 
 test('netsave shows the page\'s account, the local save and what was seen; a lobby login on another account is a warning', async () => {
@@ -86,4 +89,23 @@ test('without a login there is no network save, the site saying none is shown, a
   const empty = await saveGame({ online: 'x' });
   assert.match((await empty.lines('netsave download')).join('\n'), /player-one has no network save on the site \(it answered "x"\)/);
   assert.match(errorsOf(empty.game.run('netsave preview now'))[0] ?? '', /usage: netsave preview/);
+});
+
+const afterUploadWait = async (game: { run(line: string): unknown; log: { printed: unknown[] } }, line: string): Promise<string> => {
+  game.log.printed.length = 0;
+  game.run(line);
+  await new Promise((resolve) => { setTimeout(resolve, 1700); });
+  return game.log.printed.map(String).join('\n');
+};
+
+test('netsave upload says what it would do; with --yes it runs the game\'s upload and tells whether the game sent it', async () => {
+  const { game, lines, uploadCalls } = await saveGame({ lobby: 'player-two' });
+  const told = (await lines('netsave upload')).join('\n');
+  assert.match(told, /would overwrite player-one's network save with 4 values/);
+  assert.match(told, /The lobby is logged in as player-two; the upload goes to player-one/);
+  assert.equal(uploadCalls.length, 0, 'nothing without --yes');
+  assert.match(await afterUploadWait(game, 'netsave upload --yes'), /The game uploaded the save to player-one's network save/);
+  assert.equal(uploadCalls.length, 1);
+  const skipping = await saveGame({ skipsUpload: true });
+  assert.match(await afterUploadWait(skipping.game, 'netsave upload --yes'), /The game did not upload: it skips while a level is being played/);
 });

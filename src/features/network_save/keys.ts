@@ -11,3 +11,5 @@ export const COMMAND = Object.freeze({ name: 'netsave', aliases: Object.freeze([
 export const RAW_OPTION = '--raw';
 export const NOTHING_TO_LOAD = Object.freeze({ none: 'x', empty: '.', errorStart: 'Error: ' });
 export const SUBCOMMAND = Object.freeze({ preview: 'preview', diff: 'diff', download: 'download', upload: 'upload', restore: 'restore', backups: 'backups' });
+export const YES_OPTION = '--yes';
+export const DIRECT_OPTION = '--direct';
