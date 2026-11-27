@@ -279,6 +279,19 @@ That is why the number looks tied to the account most of the time (the account b
 with it), and why another account can take it over on one install and keep it ("it gets
 stored there").
 
+Two cases that follow from the order (download at start, then the first lobby login):
+
+- **Clearing the game's data** does not by itself make a new id. If the game starts logged in,
+  the download puts the account's id back before the first lobby login. A new id is made only
+  when the account's network save has none, the game starts without a login, or the download
+  fails all 10 tries.
+- **Each client has its own network save address.** The game builds the address from where
+  its page was loaded ([map-cache](../features/map-cache.md)), so Sad Burst 2 for the official
+  servers loads and uploads at `https://sadburst2.com/gameplay_erich5/pb2/server.php`, not at
+  plazmaburst2.com. It never sees the official network save, keeps an id of its own, and so
+  reaches another reputation entry. What Sad Burst's server keeps is not visible from here;
+  `rep device` in that client shows what its download carried.
+
 ### Observed: one account, two entries
 
 Network logs from 2026-11-27 (`data/netlogs/`, `GET_MATCH_LIST` replies and the
