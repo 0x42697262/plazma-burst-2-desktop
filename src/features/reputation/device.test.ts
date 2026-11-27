@@ -11,7 +11,7 @@ async function deviceGame(save: Record<string, unknown> | null, seen: unknown) {
   const game = await bootConsole();
   if (save) game.globals.localStorage.setItem('plazma_burst2', JSON.stringify(save));
   else game.globals.localStorage.removeItem('plazma_burst2');
-  game.globals.fetch = (url: string) => (String(url).endsWith('/device') && seen
+  game.globals.fetch = (url: string) => (String(url).endsWith('/netsaves') && seen
     ? Promise.resolve({ ok: true, json: () => Promise.resolve(seen) })
     : Promise.reject(new Error('no wrapper')));
   game.log.printed.length = 0;
@@ -24,8 +24,8 @@ async function deviceGame(save: Record<string, unknown> | null, seen: unknown) {
 test('rep device shows the id, its shape, the first account, and that it came with a network save', async () => {
   const now = Date.now();
   const lines = await deviceGame({ first_uid: ID, first_login: 'player-one', first_login_proof: 'p', volume: 1 }, {
-    loads: [{ at: now - 2 * HOUR, login: 'player-one', uid: ID, firstLogin: 'player-one', hasProof: true }],
-    uploads: [{ at: now - HOUR, login: 'player-two', uid: ID, firstLogin: 'player-one', hasProof: true }],
+    loads: [{ at: now - 2 * HOUR, login: 'player-one', source: 'game', uid: ID, firstLogin: 'player-one', hasProof: true }],
+    uploads: [{ at: now - HOUR, login: 'player-two', source: 'game', uid: ID, firstLogin: 'player-one', hasProof: true }],
   });
   const text = lines.join('\n');
   assert.ok(lines.includes(`Device id: ${ID}`), text);
@@ -38,7 +38,7 @@ test('rep device shows the id, its shape, the first account, and that it came wi
 
 test('rep device explains a kept id, another shape, no id, and no record', async () => {
   const now = Date.now();
-  const kept = (await deviceGame({ first_uid: 'l0.123456789' }, { loads: [{ at: now, login: 'player-one', uid: null, firstLogin: null, hasProof: false }], uploads: [] })).join('\n');
+  const kept = (await deviceGame({ first_uid: 'l0.123456789' }, { loads: [{ at: now, login: 'player-one', source: 'game', uid: null, firstLogin: null, hasProof: false }], uploads: [] })).join('\n');
   assert.match(kept, /not the way this game version makes one/);
   assert.match(kept, /carried no id, so this one was already in this install's save/);
   assert.match(kept, /First account on this save: none yet/);

@@ -9,6 +9,3 @@ export const LOBBY_TEXT = Object.freeze({
   refused: (reason: string) => `the lobby refused: ${reason || 'no reason given'}`,
 });
 
-export const ROUTE_TEXT = Object.freeze({
-  notInRemotePlay: 'The device id is not shown in remote play',
-});

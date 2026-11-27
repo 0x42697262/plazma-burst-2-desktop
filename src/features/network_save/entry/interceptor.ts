@@ -2,6 +2,7 @@ import { HTTP_METHOD } from '#wrapper/http/keys.ts';
 import type { Interceptor, RequestContext } from '#wrapper/feature-types.ts';
 import { SAVE_REQUEST, SERVER_SCRIPT_PATH } from '../keys.ts';
 import { saveValuesOf } from '#kernel/game-save/save-text.ts';
+import { SAVE_SOURCE } from '#kernel/game-save/keys.ts';
 import type { SaveWatch } from '../services/save-watch.ts';
 
 type ContextWithFetch = RequestContext & { fetch?: (request: Request) => Promise<Response> };
@@ -15,13 +16,13 @@ export function networkSaveInterceptor({ watch, hosts, clock, isOn }: NetworkSav
     const kind = body.get(SAVE_REQUEST.kind);
     const login = body.get(SAVE_REQUEST.login) ?? '';
     if (kind === SAVE_REQUEST.save) {
-      watch.upload({ at: clock(), login, ...saveValuesOf(body.get(SAVE_REQUEST.text) ?? '') });
+      watch.upload({ at: clock(), login, source: SAVE_SOURCE.game, ...saveValuesOf(body.get(SAVE_REQUEST.text) ?? '') });
       return null;
     }
     if (kind !== SAVE_REQUEST.load || !context.fetch) return null;
     const response = await context.fetch(request);
     const text = await response.text();
-    if (response.ok) watch.load({ at: clock(), login, ...saveValuesOf(text) });
+    if (response.ok) watch.load({ at: clock(), login, source: SAVE_SOURCE.game, ...saveValuesOf(text) });
     return new Response(text, { status: response.status, statusText: response.statusText, headers: response.headers });
   };
 }

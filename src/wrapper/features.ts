@@ -1,7 +1,7 @@
 import type { WrapperParts } from './feature-parts.ts';
 import { netlogWrapper } from '#features/netlog/wrapper.ts';
 import { fingerprintWrapper } from '#features/fingerprint/wrapper.ts';
-import { reputationWrapper } from '#features/reputation/wrapper.ts';
+import { networkSaveWrapper } from '#features/network_save/wrapper.ts';
 import { screenshotWrapper } from '#features/screenshot/wrapper.ts';
 import { settingsGuardWrapper } from '#features/settings_guard/wrapper.ts';
 import { createMapCacheWrapper } from '#features/map_cache/wrapper.ts';
@@ -15,7 +15,7 @@ import { diagnosticsPart } from '#features/diagnostics/wrapper.ts';
 export const WRAPPER_PARTS: WrapperParts = Object.freeze({
   netlogWrapper,
   fingerprintWrapper,
-  reputationWrapper,
+  networkSaveWrapper,
   screenshotWrapper,
   settingsGuardWrapper,
   createMapCacheWrapper,

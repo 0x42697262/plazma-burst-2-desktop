@@ -12,7 +12,7 @@ type FeatureFactory = (deps: WrapperDeps) => WrapperFeature;
 export type WrapperParts = Readonly<Partial<{
   netlogWrapper: FeatureFactory;
   fingerprintWrapper: FeatureFactory;
-  reputationWrapper: FeatureFactory;
+  networkSaveWrapper: FeatureFactory;
   screenshotWrapper: FeatureFactory;
   settingsGuardWrapper: FeatureFactory;
   createMapCacheWrapper: typeof createMapCacheWrapper;

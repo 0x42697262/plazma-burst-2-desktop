@@ -1,7 +1,6 @@
+import type { SaveSeen, SeenSaves } from '#kernel/game-save/seen.ts';
 import { SEEN_KEPT } from '../constants.ts';
-import type { SaveSeen } from '../domain/device.ts';
 
-export type SeenSaves = Readonly<{ loads: SaveSeen[]; uploads: SaveSeen[] }>;
 export type SaveWatch = Readonly<{ load(seen: SaveSeen): void; upload(seen: SaveSeen): void; snapshot(): SeenSaves }>;
 
 export function createSaveWatch(): SaveWatch {

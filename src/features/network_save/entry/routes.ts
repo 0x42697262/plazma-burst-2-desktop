@@ -9,5 +9,5 @@ export function deviceRoutes({ watch }: Readonly<{ watch: SaveWatch }>): DevRout
   const handle = (_request: Request, _url: URL, context: RequestContext): Promise<Response> => Promise.resolve(
     context.remote ? errorResponse(ROUTE_TEXT.notInRemotePlay, STATUS.forbidden) : jsonResponse(watch.snapshot()),
   );
-  return [{ name: ROUTE_NAME.device, handle }];
+  return [{ name: ROUTE_NAME.netsaves, handle }];
 }

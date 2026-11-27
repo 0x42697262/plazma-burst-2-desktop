@@ -10,5 +10,3 @@ export const DEVICE_COMMAND = Object.freeze({ name: 'device', aliases: Object.fr
 export const GAME_ID_SHAPE = /^[0-9a-z]+(\.[0-9a-z]+){3}$/;
 export const ID_SHAPE = Object.freeze({ game: 'game', other: 'other', none: 'none' } as const);
 export const ORIGIN = Object.freeze({ notSeen: 'notSeen', fromNetworkSave: 'fromNetworkSave', keptLocal: 'keptLocal', differs: 'differs' } as const);
-export const SERVER_SCRIPT_PATH = '/pb2/server.php';
-export const SAVE_REQUEST = Object.freeze({ kind: 'rq', load: 'load', save: 'save', login: 'l', text: 'str' });

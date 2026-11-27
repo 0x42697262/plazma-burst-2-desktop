@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createSaveWatch } from './services/save-watch.ts';
-import { networkSaveInterceptor } from './entry/network-save.ts';
+import { networkSaveInterceptor } from './entry/interceptor.ts';
 import { deviceRoutes } from './entry/routes.ts';
 
 const ID = 'abc12.def34.ghi56.jkl78';
@@ -23,7 +23,7 @@ test('a network save download is passed through unchanged and its device id note
   assert.equal(fetched.length, 1);
   assert.equal(await response?.text(), `volume=1;first_uid=${ID};first_login=player-one;first_login_proof=secret;`);
   assert.equal(response?.headers.get('Content-Type'), 'text/html');
-  assert.deepEqual(watch.snapshot(), { loads: [{ at: 5000, login: 'player-one', uid: ID, firstLogin: 'player-one', hasProof: true }], uploads: [] });
+  assert.deepEqual(watch.snapshot(), { loads: [{ at: 5000, login: 'player-one', source: 'game', uid: ID, firstLogin: 'player-one', hasProof: true }], uploads: [] });
   assert.ok(!JSON.stringify(watch.snapshot()).includes('the-password') && !JSON.stringify(watch.snapshot()).includes('secret'));
 });
 
@@ -32,7 +32,7 @@ test('an upload is noted from its body and goes on untouched', async () => {
   const answer = await intercept(post(SITE, { rq: 'save', l: 'player-two', p: 'x', str: `first_uid=${ID};first_login=player-one;` }), new URL(SITE), context);
   assert.equal(answer, null, 'the game sends it itself');
   assert.equal(fetched.length, 0);
-  assert.deepEqual(watch.snapshot().uploads, [{ at: 5000, login: 'player-two', uid: ID, firstLogin: 'player-one', hasProof: false }]);
+  assert.deepEqual(watch.snapshot().uploads, [{ at: 5000, login: 'player-two', source: 'game', uid: ID, firstLogin: 'player-one', hasProof: false }]);
 });
 
 test('maps, other hosts, other paths and the capability off are left alone', async () => {
@@ -47,11 +47,11 @@ test('maps, other hosts, other paths and the capability off are left alone', asy
 
 test('the device route answers what was seen, never to a remote play tester, and keeps the last ones only', async () => {
   const { watch } = setup();
-  for (let index = 0; index < 30; index++) watch.load({ at: index, login: 'a', uid: null, firstLogin: null, hasProof: false });
+  for (let index = 0; index < 30; index++) watch.load({ at: index, login: 'a', source: 'game', uid: null, firstLogin: null, hasProof: false });
   const [route] = deviceRoutes({ watch });
-  const answer = await route?.handle(new Request('https://x/__dev/device'), new URL('https://x/__dev/device'), {});
+  const answer = await route?.handle(new Request('https://x/__dev/netsaves'), new URL('https://x/__dev/netsaves'), {});
   const seen = await answer?.json() as { loads: { at: number }[] };
   assert.equal(seen.loads.length, 20);
   assert.equal(seen.loads.at(-1)?.at, 29);
-  assert.equal((await route?.handle(new Request('https://x/__dev/device'), new URL('https://x/__dev/device'), { remote: true }))?.status, 403);
+  assert.equal((await route?.handle(new Request('https://x/__dev/netsaves'), new URL('https://x/__dev/netsaves'), { remote: true }))?.status, 403);
 });
