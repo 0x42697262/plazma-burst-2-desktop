@@ -2,7 +2,9 @@
 
 Reputation points are the lobby's, not the game's: the page never computes one, it only
 shows what the lobby sends and forwards two requests that ask the lobby to move somebody
-else's points. Checked against game build v1769098419 (`game/pb2-version.json`). The
+else's points. They belong to a **stats entry**, not to an account: the lobby picks the
+entry at each login, and one account can get different entries from different clients
+([Which entry a login gets](#which-entry-a-login-gets)). Checked against game build v1769098419 (`game/pb2-version.json`). The
 commands under [Re-checking](#re-checking) print every line cited here.
 
 ## The account module
@@ -89,10 +91,14 @@ The second reply value is the rows; the third is your own numbers
 
 Two collections, both on the lobby:
 
-- **`entries`** — per account: login, nickname, reputation, skill, wins, losses, last
-  activity. The same object the profile comes from.
+- **`entries`** — keyed by a stats key, not by account: login, nickname, reputation,
+  skill, wins, losses, last activity. A connection holds its entry as `connStats`
+  (`connection.$НMМpо`), and the lobby reads `connStats.key` and
+  `$с0A.entries[<key>]["login"]` (`flash.js:2559-2566`). One account can have more than
+  one entry ([Which entry a login gets](#which-entry-a-login-gets)).
 - **`relations`** — one record per report or endorsement that still counts. Its fields, as
-  the lobby reads them: the two account keys, a `type` (compared against the module's
+  the lobby reads them: the two stats keys (`$TeeНОO` the sender's, `$АoсIрM` the
+  receiver's), a `type` (compared against the module's
   `$МоНM0`, the endorsement type), `since`, a cap time, an active flag, and **two deltas**:
   one for the side that sent it and one for the side that received it
   (`flash.js:2555-2612`, shown in the lobby as "Reputation delta", "Since", "Until",
@@ -110,11 +116,163 @@ In a match the number arrives per player, in the state message, as
 and the scoreboard's "Rep." column shows it (`scripts/screens/GameScene.js:413-433`,
 drawn at `scripts/frame2.js:20729`).
 
+## Which entry a login gets
+
+Every reputation the lobby uses is read from `connStats`, the stats entry the account module
+attaches to the connection while it logs in. Nothing reads a reputation from the client.
+
+| Use | Reads | Code |
+|---|---|---|
+| Your own numbers in a list reply | `connStats.reputation`, `skill`, `wins`, `loses` | `flash.js:2645-2652` |
+| Creating a match: refused below 0 | `connStats.reputation` | `:2673` |
+| Creating a match: `min_reputation` lowered to yours | `connStats.reputation` | `:2688-2689` |
+| `-min_reputation <n>` lowered to yours | `connStats.reputation` | `:4998-4999` |
+| `match_owner_reputation` in the list | the owner's `connStats.reputation` | `:2764`, `:5507-5508` |
+| The scoreboard's Rep. column | `connStats.reputation` in the state message | `:835` |
+| The join check against `min_reputation` | the joiner's `connStats.reputation` | `:6573` |
+| Your relations list | relations whose sender or receiver key is `connStats.key` | `:2559-2560` |
+| "Similar user" match bans | `connStats.key`, beside uid, address and device id | `:6623`, kick adds it at `:7219` |
+
+So the relations list (and the "Reputation delta" it shows) belongs to the entry, and a
+report or an endorsement made from a connection is stored against that connection's key.
+
+### What the account module is given
+
+`RELIABLE_AUTHENTICATE` hands the module the connection (with its address), version, hash,
+login, password, nickname, the **device id** and the build (`flash.js:1982-2036`,
+[protocol](protocol.md), part 7). The device id is `first_uid`: made once from four random
+base-36 numbers and kept in the game's save data, so it is the same on every login from one
+install and different between installs ([protocol](protocol.md), "Part 7"). The module also
+gives every connection a device id function (`connection.$сOрpM.$0О1еcM()`, read at `:6617`
+and `:7216`). How it turns these inputs into a key is in the module, which is not shipped.
+
+Each client of this app runs in its own browser session, so each has its own save data and
+its own device id: the official client, and Sad Burst 2 for the official servers in
+`persist:sadburst-erich5` ([client-sadburst](../features/client-sadburst.md)). Both log in
+to the same official lobby with the same account and the same password.
+
+### The device id travels with the account's saved game
+
+`first_uid` is not only kept on the install. The game also keeps it in the account's
+**network save** on the website, in both directions:
+
+- **Upload.** Every local save also sends the whole save to the site (`frame2.js:3597` →
+  `frame1.js:394-416`): `POST <site>/pb2/server.php` with `rq=save`, the logged-in account's
+  `l` and `p`, and the save as `name=value;` text (`frame1.js:419-433`). That text includes
+  `first_uid`, `first_login` and `first_login_proof` (`frame1.js:362-384`): the install's
+  device id, and the first non-guest account that ever logged in on it with the lobby's
+  `login_proof` for it (recorded by the look-alike `JSON.pаrsе`, `flash.js:7520-7531`).
+- **Download.** At start, with a login, the game asks for the account's network save
+  (`main.js:1179` → `frame1.js:205-214`, `rq=load` at `:226-279`) and writes every value it
+  gets into the local save, `first_uid`, `first_login` and `first_login_proof` included
+  (`frame1.js:330`, read with `$0Ao1o = true`). Only the Settings screen's text export leaves
+  the three out (`Settings.js:657`, `$pНсНl(false)`).
+- **The lobby login** then sends whatever `first_uid` the local save holds
+  (`flash.js:7534-7547`).
+
+So the device id follows the account wherever its network save is loaded, and an account can
+pick up another account's id:
+
+1. Account A's network save holds device id **X**. Starting the game as A writes X into the
+   local save.
+2. Switching to account B on the same install: if B's network save has its own id, the
+   download replaces X with it; if it has none, X stays.
+3. With X still local, B's lobby login sends X and gets X's entry, and B's next save uploads X
+   into B's network save. From then on B carries X on every install.
+
+That is why the number looks tied to the account most of the time (the account brings its id
+with it), and why another account can take it over on one install and keep it ("it gets
+stored there").
+
+### Observed: one account, two entries
+
+Network logs from 2026-11-27 (`data/netlogs/`, `GET_MATCH_LIST` replies and the
+`relations` view; accounts and devices renamed here). Account **A** is one official account:
+the same uid in both login answers.
+
+| Time (local) | Client | Device id | `reputation` / `reputation_potential` |
+|---|---|---|---|
+| 15:59 | Sad Burst 2 (official servers) | device 2 | 7 / 20 |
+| 16:00 | official client | device 1 | 16 / 20 |
+| 16:05–16:14 | Sad Burst 2 (official servers) | device 2 | 7, two endorsements sent |
+| 16:19–16:21 | official client | device 1 | 16, then 17 |
+| 16:22 | Sad Burst 2 (official servers) | device 2 | 11 / 20 |
+
+- **Two numbers at once.** Logged in a few minutes apart, the same account read 16 through
+  one client and 7 through the other, and each number moved on its own afterwards (16 → 17
+  and 7 → 11). The account page on plazmaburst2.com showed 17, the official client's number.
+- **Two relation lists.** At 16:01 the official client's `relations` view listed four relations
+  (endorsements from three players, one to a fourth). The Sad Burst 2 view at 16:12 listed
+  only the endorsement sent from that session a minute earlier. So the two connections had different
+  `connStats.key`s, and what was given or received through one did not show on the other.
+- **Not the client's doing.** Both clients send the same request with no reputation in it;
+  the only identity part that differs is the device id (and both clients send `"version_h5"`,
+  `"hash_h5"`, the same nickname and build).
+
+The logs also show entries shared **between** accounts that log in with the same device id,
+each on a fresh connection (accounts A, B, C; devices numbered as above):
+
+| Time | Client | Account | Device | `reputation` | `skill` |
+|---|---|---|---|---|---|
+| 15:55 | Sad Burst 2 (official servers) | B | device 2 | 7 | 0 |
+| 15:59 | Sad Burst 2 (official servers) | A | device 2 | 7 | 0 |
+| 16:21 | official client | A | device 1 | 17 | 0 |
+| 16:39 | official client | B | device 1 | 17 | 0 |
+| 19:05 | official client | B | device 3 | 0 | the same 16-digit value on both |
+| 19:12 | Sad Burst 2 (official servers) | B | device 4 | 0 | the same 16-digit value on both |
+
+- **The id moves between sessions of one client.** In the official client, B logged in
+  with device 3 at 15:38 and with device 1 at 16:39, right after A had logged in there
+  with device 1; account C then logged in with device 3 again. Each account's network save
+  set the local `first_uid`, or left the previous account's there.
+- **B on A's device reads A's number.** At 15:39 and 15:55 account B read 6 and 7 elsewhere;
+  logged in on device 1 at 16:39 it read 17, account A's number on that device 18 minutes
+  earlier. On device 2 it was the other way round: A read B's 7.
+- **Two devices, one entry.** At 19:05 and 19:12 account B read the same `skill` to all 16
+  digits on device 3 and on device 4, so those two devices led to one entry.
+- **A re-login on one connection is not evidence.** One log has account C log in, then
+  account B on the **same** socket; B then shows C's `skill` exactly. That fits an entry
+  that follows the device, but it also fits a lobby that keeps the first login's
+  `connStats` on that connection, so it is left out of the tables above.
+
+### What this means in practice
+
+- **Your reputation is the entry's.** Which entry you get follows the device id the client
+  sends, and that id comes from the local save, which the account's network save overwrites at
+  start. An account logged in after another one on the same install can send the previous
+  account's id, read its numbers, and save that id into its own network save. A client whose
+  save is not the official network save (another session, a cleared save) keeps an id of its
+  own and lands on another entry, with other numbers and another relations list.
+- **Everything follows the entry of the connection in use**: whether you may create a match,
+  the most `min_reputation` you can set, which matches let you join, what others see on the
+  scoreboard, and which entry an endorsement or a report is stored against, sent or
+  received.
+- **It is still the server's number.** No client can raise it: the request carries no
+  amount ([Report and endorse](#report-and-endorse)), and `connStats` is written only by the
+  account module at login (and the p2p branch, `:3181`).
+
+### Not known
+
+- The rule that maps (login, device id, address, …) to a key, and when two of them are
+  merged or split. The logs show one account split across two devices, two accounts sharing
+  one entry through one device, and two devices sharing one entry. The address is the
+  likeliest other input, and the client cannot see it.
+- Whether a second login on the same connection gets a new entry.
+- Whether the website shows one particular entry (it matched the official client's here) or
+  computes its number some other way.
+- Whether the module refuses an endorsement to a player whose reputation is higher than
+  yours. The page has no such check (`HUD.js:2123-2133`), and none of the replies in the logs
+  refuse one; if the module has it, it compares the two connections' entries.
+
+To see which entry a client is on: `net_log on`, open the multiplayer lobby, then
+`netlog show type:get_match_list` and read the last value of the reply (your numbers), and
+open Relations for that entry's list.
+
 ## Who can change what
 
 | Number | Changed by | Limits |
 |---|---|---|
-| Your own reputation | nothing in the game | only the lobby's module, through logins and relations |
+| Your own reputation | nothing in the game | only the lobby's module, through logins and relations; it is the reputation of the entry your login got ([Which entry a login gets](#which-entry-a-login-gets)) |
 | Another player's reputation | `RELIABLE_REPORT_USER`, `RELIABLE_ENDORDSE_USER` | the amount is the module's; the game sends none |
 | A relation's effect | its initiator, `delete_relation: <since>` | only the side that created it (`flash.js:2588`) |
 | A match's `min_reputation` | owner or staff: create settings, or `-min_reputation <n> [-recheck <slot>]` in chat | lowered to the setter's own reputation (`:2686`, `:4998`); with `-recheck`, players below it are disconnected (`:5010-5021`) |
