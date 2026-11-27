@@ -1,0 +1,22 @@
+export const TEXT = Object.freeze({
+  usage: 'rep relations',
+  desc: 'Your relations: who endorsed (fit) or reported (unfit) whom, the points each one moves and for how long',
+  about: [
+    'The lobby\'s Relations view, as text. "delta" is what the relation moves your',
+    'reputation by while it is active; "ends in" is its cap time. Only the side that',
+    'created a relation can end it, from the lobby\'s Relations screen.',
+  ],
+  examples: [['rep relations', 'every relation of this entry']],
+  usageError: 'usage: rep relations',
+  asking: 'Asking the lobby for your relations...',
+  noValue: '-',
+  none: 'No relations',
+  title: (count: number) => `Relations (${count}):`,
+  fit: 'fit  ',
+  unfit: 'unfit',
+  row: (kind: string, from: string, to: string, delta: string, state: string) => `  ${kind}  ${from} -> ${to}  delta ${delta}  ${state}`,
+  active: (since: string, until: string) => `active, since ${since}, ends in ${until}`,
+  activeEnded: (since: string, ago: string) => `active, since ${since}, cap passed ${ago} ago`,
+  ended: (since: string) => `ended, made ${since} ago`,
+  positive: (value: string) => `+${value}`,
+});

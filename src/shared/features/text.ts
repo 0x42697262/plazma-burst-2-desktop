@@ -6,6 +6,7 @@ export const FEATURE_DESCRIPTION: Readonly<Record<FeatureId, string>> = Object.f
   [FEATURE.profiles]: 'Per-map profiles of settings, binds and start-up commands',
   [FEATURE.diagnostics]: 'Crash and error reports: captured, kept on this machine, shown in the console, and sent to a server you set',
   [FEATURE.teleport]: 'tp: teleport to the crosshair, to coordinates or to a character',
+  [FEATURE.reputation]: 'rep: your reputation and relations as the lobby has them, and the reputation of everyone in the match',
   [FEATURE.playerInfo]: 'pos, chars and uid: your position, the characters in the level, and their map uids',
   [FEATURE.wire]: 'wire: send a protocol message by name, with scaled fields and target lookup',
   [FEATURE.health]: 'heal, hp and revive, and the keys god, max_hp, hp_bonus, hp_bonus_pct',

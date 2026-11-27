@@ -5,7 +5,7 @@ export const RISKY_COMMANDS: readonly string[] = Object.freeze([
 export const SAFE_COMMANDS: readonly string[] = Object.freeze([
   'help', '?', 'list', 'ls', 'set', 'get', 'unset', 'del', 'rm', 'reset', 'more', 'next', 'page', 'pg', 'features', 'flags',
   'clear', 'cls', 'close', 'exit', 'netlog', 'net', 'packets', 'screenshot', 'ss', 'shot', 'zoom', 'freecam', 'fps', 'fly', 'builtin', 'trace', 'tracer',
-  'track', 'profile', 'profiles', 'bind', 'binds', 'unbind', 'keyname', 'whichkey', 'keytest', 'guns', 'weapons', 'give', 'drop',
+  'track', 'rep', 'reputation', 'profile', 'profiles', 'bind', 'binds', 'unbind', 'keyname', 'whichkey', 'keytest', 'guns', 'weapons', 'give', 'drop',
   'throw', 'tp', 'teleport', 'pos', 'where', 'chars', 'players', 'bots', 'uid', 'playeruid', 'puid', 'accounts', 'authids', 'ids',
   'hp', 'heal', 'revive', 'res', 'maps', 'hooks', 'hook', 'editor', 'edit', 'mapedit', 'logic', 'links',
 ]);

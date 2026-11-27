@@ -39,6 +39,7 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   consoleFeature(FEATURE.profiles, { capabilities: { [CAPABILITY.profiles.status]: [], [CAPABILITY.profiles.list]: [], [CAPABILITY.profiles.show]: [], [CAPABILITY.profiles.use]: [], [CAPABILITY.profiles.set]: [], [CAPABILITY.profiles.onload]: [], [CAPABILITY.profiles.delete]: [], [CAPABILITY.profiles.bind]: [CAPABILITY.binds.bind] } }),
   consoleFeature(FEATURE.teleport),
   consoleFeature(FEATURE.playerInfo, { capabilities: noNeeds(CAPABILITY.playerInfo) }),
+  consoleFeature(FEATURE.reputation, { availableIn: LOCAL_AND_SERVER, capabilities: noNeeds(CAPABILITY.reputation) }),
   consoleFeature(FEATURE.wire, { capabilities: {
     [CAPABILITY.wire.send]: [], [CAPABILITY.wire.list]: [], [CAPABILITY.wire.help]: [],
     [CAPABILITY.wire.lobby]: [CAPABILITY.wire.send], [CAPABILITY.wire.match]: [CAPABILITY.wire.send],
