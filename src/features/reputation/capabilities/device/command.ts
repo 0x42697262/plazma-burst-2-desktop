@@ -1,8 +1,10 @@
 import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import { CLIENT_TITLE } from '#console/kernel/game/names.ts';
-import { COMMAND, DEVICE_COMMAND, ID_SHAPE, ORIGIN, SAVE_STORAGE_KEY } from '../../keys.ts';
-import { deviceOfSave, idShape, originOf } from '../../domain/device.ts';
+import { SAVE_STORAGE_KEY } from '#kernel/game-save/keys.ts';
+import { deviceOfSave } from '#kernel/game-save/save-text.ts';
+import { COMMAND, DEVICE_COMMAND, ID_SHAPE, ORIGIN } from '../../keys.ts';
+import { idShape, originOf } from '../../domain/device.ts';
 import { durationText } from '../../domain/reply.ts';
 import { seenSaves } from '../../adapters/wrapper-client.ts';
 import { TEXT } from './text.ts';

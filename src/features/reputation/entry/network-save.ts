@@ -1,7 +1,7 @@
 import { HTTP_METHOD } from '#wrapper/http/keys.ts';
 import type { Interceptor, RequestContext } from '#wrapper/feature-types.ts';
 import { SAVE_REQUEST, SERVER_SCRIPT_PATH } from '../keys.ts';
-import { saveValuesOf } from '../domain/device.ts';
+import { saveValuesOf } from '#kernel/game-save/save-text.ts';
 import type { SaveWatch } from '../services/save-watch.ts';
 
 type ContextWithFetch = RequestContext & { fetch?: (request: Request) => Promise<Response> };
