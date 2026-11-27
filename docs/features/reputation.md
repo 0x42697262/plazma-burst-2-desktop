@@ -6,8 +6,8 @@ Code: `src/features/reputation/`: the lobby request (`adapters/lobby.ts`), readi
 [reputation research](../research/reputation.md).
 
 Capabilities: `reputation.mine` (`rep`), `reputation.relations` (`rep relations`),
-`reputation.players` (`rep players`) and `reputation.device` (`rep device`, with the
-wrapper's record of network saves). `reputation` is an alias of `rep`.
+`reputation.players` (`rep players`) and `reputation.device` (`rep device`, which needs
+`network_save.watch`, the wrapper's record of network saves). `reputation` is an alias of `rep`.
 
 | Command | Shows | From |
 |---|---|---|
@@ -64,19 +64,11 @@ sends ([research](../research/reputation.md#the-device-id-travels-with-the-accou
 The id identifies the install; the command says not to share it. There is no command to
 change it.
 
-### The record of network saves (wrapper)
+### The record of network saves
 
-The game loads the account's network save at start and uploads its save after saves, both as
-`POST /pb2/server.php` on the official site or the client's own host (`rq=load`, `rq=save`).
-The wrapper watches these on those hosts, with `reputation.device` on:
-
-- **Upload:** reads `first_uid`, `first_login` and whether `first_login_proof` is set from the
-  `str` field, and lets the request go on untouched.
-- **Download:** sends the request itself, reads the same three from the answer, and hands the
-  game the answer unchanged: same body, status and headers.
-- Kept in memory only, the last 20 of each, with the time and the `l` field (the account).
-  The password (`p`) and the proof are never kept.
-- `__dev/device` answers `{ loads, uploads }`, and 403 to a remote play tester.
+`rep device` reads the record the `network_save` feature keeps of the game's downloads and
+uploads (`__dev/netsaves`, [network-save](network-save.md#the-wrapper)). It uses only the ones
+the game made, not the console's (`netsave download`, `netsave upload --direct`).
 
 ## Which numbers these are
 
@@ -86,6 +78,6 @@ numbers ([Which entry a login gets](../research/reputation.md#which-entry-a-logi
 
 ## With the flag off
 
-`PB2_FEATURES=-reputation npm start`: `rep` and `reputation` are unknown commands, and
-the wrapper neither watches network saves nor answers `__dev/device`.
-`PB2_FEATURES=-reputation.device` keeps the other commands and leaves network saves alone.
+`PB2_FEATURES=-reputation npm start`: `rep` and `reputation` are unknown commands.
+`PB2_FEATURES=-reputation.device` keeps the other commands. With `network_save.watch` off,
+`rep device` is off as well.
