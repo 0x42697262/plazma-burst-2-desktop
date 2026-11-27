@@ -1,6 +1,7 @@
 export const CONNECTION_CLASS_NAME = 'connClass';
 
 export const NAME_KEYS = Object.freeze([
+  'gameSave', 'saveUrl', 'saveText', 'saveUpload', 'saveApply',
   'chars', 'me', 'playersBySlot', 'dead', 'dying', 'updateBody', 'charCount', 'refreshChar', 'healChar', 'headHp', 'faceHp',
   'legsHp', 'armsHp', 'headOff', 'faceGone', 'legsBroken', 'armsBroken', 'jump', 'walk', 'playerDt', 'noSwords', 'moveIntentX', 'moveIntentY', 'stability',
   'ptCount', 'ptOwner', 'charIndex', 'gunPtBase', 'gunPtRange', 'guns', 'ptX', 'ptY', 'interpolating', 'ptPrevX',

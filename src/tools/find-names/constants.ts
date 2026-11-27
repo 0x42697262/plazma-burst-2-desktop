@@ -1,4 +1,5 @@
 export const FILES = Object.freeze({
+  frame1: 'scripts/frame1.js',
   frame2: 'scripts/frame2.js',
   actions: 'scripts/actions.js',
   guns: 'scripts/guns.js',
@@ -16,6 +17,16 @@ export type Rule = Readonly<{ file: FileKey; keys: readonly string[]; what: read
 export type Check = Readonly<{ file: FileKey; what: string; re: string }>;
 
 export const RULES: readonly Rule[] = Object.freeze([
+  { file: 'frame1', keys: ['gameSave'], what: ['the game\'s save (SharedObject "plazma_burst2": data, flush)'],
+    re: String.raw`⟨ID⟩=SharedObject\.getLocal\("plazma_burst2"\);` },
+  { file: 'frame1', keys: ['saveUrl'], what: ['the network save address (server.php), rewritten by where the page was loaded'],
+    re: String.raw`var ⟨ID⟩="https://www\.plazmaburst2\.com/pb2/server\.php";` },
+  { file: 'frame1', keys: ['saveText'], what: ['function(withDevice = true): the save as name=value; text, as the upload sends it'],
+    re: String.raw`function ⟨ID⟩\(⟨_⟩=true\)\s*\{\s*var str="";\s*for\(var ⟨_⟩ in ⟨gameSave⟩\["data"\]\)` },
+  { file: 'frame1', keys: ['saveUpload'], what: ['function(): the network save upload, with its own skip rules and retries'],
+    re: String.raw`function ⟨ID⟩\(\)\s*\{\s*if\(\(globalThis\.⟨_⟩&&globalThis\.⟨_⟩\.visible\)\|\|\(globalThis\.⟨_⟩&&globalThis\.⟨_⟩\.visible\)\|\|HUD\.⟨_⟩\|\|currentLabel!=="gaming"\)` },
+  { file: 'frame1', keys: ['saveApply'], what: ['function(text, withDevice = true): writes a network save text over the save and flushes it'],
+    re: String.raw`function ⟨ID⟩\(⟨_⟩,⟨_⟩=true\)\s*\{\s*if\(⟨_⟩!="x"&&⟨_⟩\.indexOf\("Error: "\)!=0\)` },
   { file: 'frame2', keys: ['chars', 'me'],
     what: ['characters array', 'index of your character in chars'],
     re: String.raw`=="god"\)\s*\{\s*⟨ID⟩\[⟨ID⟩\]\.hmax\*=100000;` },
