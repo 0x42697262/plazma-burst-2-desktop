@@ -6,7 +6,7 @@ export const FEATURE_DESCRIPTION: Readonly<Record<FeatureId, string>> = Object.f
   [FEATURE.profiles]: 'Per-map profiles of settings, binds and start-up commands',
   [FEATURE.diagnostics]: 'Crash and error reports: captured, kept on this machine, shown in the console, and sent to a server you set',
   [FEATURE.teleport]: 'tp: teleport to the crosshair, to coordinates or to a character',
-  [FEATURE.networkSave]: 'netsave: the account\'s network save on the site: watch, show, compare, download, upload and restore it',
+  [FEATURE.networkSave]: 'netsave: the account\'s network save on the site: watch, show, compare, download, upload, restore and edit it',
   [FEATURE.reputation]: 'rep: your reputation and relations as the lobby has them, and the reputation of everyone in the match',
   [FEATURE.playerInfo]: 'pos, chars and uid: your position, the characters in the level, and their map uids',
   [FEATURE.wire]: 'wire: send a protocol message by name, with scaled fields and target lookup',

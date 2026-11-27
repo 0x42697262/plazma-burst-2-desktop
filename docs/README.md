@@ -42,7 +42,7 @@
 - [teleport.md](features/teleport.md): `teleport`, `tp`
 - [player-info.md](features/player-info.md): `player_info`, `pos`, `chars`, `players`, `bots`, `uid` and `accounts`
 - [reputation.md](features/reputation.md): `reputation`, `rep`, `rep relations`, `rep players` and `rep device`
-- [network-save.md](features/network-save.md): `network_save`, `netsave` and its preview, diff, download, upload, restore and backups
+- [network-save.md](features/network-save.md): `network_save`, `netsave` and its preview, diff, download, upload, restore, backups and field editor
 - [wire.md](features/wire.md): `wire`, send a protocol message by name
 - [health.md](features/health.md): `health`, `heal`, `hp`, `revive` and the HP keys
 - [movement.md](features/movement.md): `movement`, the movement keys

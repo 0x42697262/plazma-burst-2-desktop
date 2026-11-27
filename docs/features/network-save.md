@@ -12,7 +12,8 @@ with (the page's `l` and `p`). `netsave` shows and drives both sides.
 
 Capabilities: `network_save.watch` (the wrapper's record, which `rep device` also needs),
 `network_save.status` (`netsave`), `.preview`, `.diff`, `.download`, `.upload`, `.direct`
-(`netsave upload --direct`) and `.restore` (`netsave restore`, `netsave backups`).
+(`netsave upload --direct`), `.restore` (`netsave restore`, `netsave backups`), `.fields`
+(`netsave fields`) and `.edit` (`netsave set`, `get`, `del`).
 `networksave` is an alias of `netsave`.
 
 ## Commands
@@ -28,6 +29,8 @@ Capabilities: `network_save.watch` (the wrapper's record, which `rep device` als
 | `netsave restore [--yes]` | writes the network save over the local save with the game's own loader, as a start does | the local save |
 | `netsave restore --backup <n> [--yes]` | writes backup n over the local save, then uploads it so the next start keeps it | both |
 | `netsave backups` | the kept backups, newest first | nothing |
+| `netsave fields [filter]` | every field of the local save with its typed value, sorted, paged like `vars` | nothing |
+| `netsave set\|get\|del <name> [value]` | changes, prints in full, or removes one field (`unset`, `rm` also remove) | the local save |
 
 - **Every write asks first.** Without `--yes` a write command only says what it would do: which
   account, how many values, and, for a restore, whether the device id would change (the lobby
@@ -39,7 +42,16 @@ Capabilities: `network_save.watch` (the wrapper's record, which `rep device` als
   no menu open (`netsave upload` then says so), and the site's answer is not checked. `--direct`
   skips those rules and reports the answer.
 - **Never shown:** the password or site token (`p`) and `first_login_proof` (`‹hidden›`).
-- **No editing.** There is no command to write a hand-made text or to change the device id.
+- **Editing fields** works like `vars set`. The value is typed as the game's loader types a
+  downloaded save (`frame1.js`, the `saveApply` function): `true`/`false` become booleans, a
+  number a number, anything else text, so it keeps its type after the next start. An empty
+  value, `NaN` and `undefined` are refused (the upload drops them). A name or value the upload
+  skips (`skin_allowed…`, names with `< > { } ( ) . " :` or a space, values with `document.` or
+  `'script'`) is kept, with a warning that it stays local. The change is flushed to
+  `localStorage` at once and goes online with the next upload; some settings show only after a
+  reload. Before the first change of a session the local save is backed up.
+- **Locked:** `first_uid`, `first_login` and `first_login_proof` cannot be set or removed, and
+  there is no command to write a hand-made save text.
 - `settings_guard` counts `netsave` as risky: a bind or profile that runs it asks first.
 
 ## The game's functions
@@ -64,7 +76,7 @@ client), `saveText` (builds the upload text), `saveUpload` (the upload, with its
   session (its cookies). The password is passed through and never kept or logged.
 - **Backups** (`__dev/netsavebackups`): `data/netsaves/` (Sad Burst 2:
   `data/netsaves.sadburst/`, for the official servers `data/netsaves.sadburst-erich5/`), one
-  JSON file each, mode 600, the newest 10. A local backup holds the save object, an online one
+  JSON file each, mode 600, the newest 10, made before uploads, restores and a session's first edit. A local backup holds the save object, an online one
   the save text. Both hold the whole save, the login proof included, never the password. Off
   when upload, direct and restore are all off.
 
@@ -75,4 +87,4 @@ All three routes answer 403 to a remote play tester.
 `PB2_FEATURES=-network_save npm start`: `netsave` is an unknown command, the wrapper neither
 watches nor answers its routes, and `rep device` is off too (it needs `network_save.watch`).
 `PB2_FEATURES=-network_save.direct` refuses `--direct`; `-network_save.restore` removes
-`restore` and `backups`.
+`restore` and `backups`; `-network_save.edit` removes `set`, `get` and `del`.
