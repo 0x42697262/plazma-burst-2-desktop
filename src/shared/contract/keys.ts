@@ -18,6 +18,7 @@ export const ROUTE_NAME = Object.freeze({
   fingerprints: 'fingerprints',
   servers: 'servers',
   diagnostics: 'diagnostics',
+  device: 'device',
 });
 
 export const MAP_MARKER = Object.freeze({
