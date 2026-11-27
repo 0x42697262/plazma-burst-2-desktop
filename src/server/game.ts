@@ -17,8 +17,10 @@ import type { Maps } from './maps.ts';
 type Bag = Record<string, unknown>;
 type Callable = (...args: unknown[]) => unknown;
 type Names = Readonly<Record<string, string>>;
-type Connection = Bag & { ip?: string; ping?: number; Disconnect: () => void };
-type Match = Bag & { title: string; uid: number; map_id: string };
+export type Connection = Bag & { ip?: string; ping?: number; Disconnect: () => void };
+export type Match = Bag & { title: string; uid: number; map_id: string };
+export type ChatMessage = Readonly<{ connection: Connection; nickname: string; isStaff: boolean; match: Match | null; text: string }>;
+export type ChatListener = (message: ChatMessage) => void;
 type Network = Bag & { connections: Connection[]; matches?: Match[] };
 type AccountRecord = { connection: Connection | null; login: string; entry: { login: string; nickname: string; reputation: number } | null };
 type Realm = { Map: MapConstructor; Array: ArrayConstructor };
@@ -210,7 +212,10 @@ export class GameServer {
     const who = this.whoIs(connection);
     const where = match ? LOG.where(plainText(match.title)) : '';
     const isKind = (key: ServerNameKey): boolean => kind === accounts[this.name(key)];
-    if (isKind('logChat')) this.log.info(LOG.chat(where, who, plainText(text)));
+    if (isKind('logChat')) {
+      this.log.info(LOG.chat(where, who, plainText(text)));
+      if (connection) this.heardChat(connection, plainText(text), match);
+    }
     else if (isKind('logCreate')) this.log.info(LOG.created(who, where));
     else if (isKind('logJoin')) this.log.info(LOG.joined(who, where));
     else if (isKind('logSpectate')) this.log.info(LOG.spectating(who, where));
@@ -219,6 +224,21 @@ export class GameServer {
       if (connection?.[this.name('connUser')]) this.log.info(LOG.disconnected(who, stringOf(connection[this.name('connReason')] ?? '')));
       this.forget(connection);
     } else this.log.debug(LOG.event(stringOf(kind), who, where, plainText(text)));
+  }
+
+  readonly chatListeners: ChatListener[] = [];
+
+  private heardChat(connection: Connection, text: string, match: Match | null): void {
+    const user = connection[this.name('connUser')] as { nickname: string; is_staff?: boolean } | undefined;
+    if (!user) return;
+    const message: ChatMessage = { connection, nickname: user.nickname, isStaff: !!user.is_staff, match, text };
+    for (const listener of this.chatListeners) {
+      try {
+        listener(message);
+      } catch (error) {
+        this.log.warn(LOG.chatListenerFailed((error as Error).message));
+      }
+    }
   }
 
   forget(connection: Connection | null): void {
@@ -394,9 +414,25 @@ export class GameServer {
 
   setMap(word: string, id: string): Promise<{ match: Match; ok: boolean; message: string }> {
     const found = this.match(word);
+    return this.loadMap(found, id).then(({ ok, message }) => ({ match: found, ok, message }));
+  }
+
+  reloadMatch(match: Match): Promise<{ ok: boolean; message: string }> {
+    return this.loadMap(match, match.map_id);
+  }
+
+  private loadMap(match: Match, id: string): Promise<{ ok: boolean; message: string }> {
     return new Promise((resolve) => {
-      (found[this.name('matchLoadMap')] as Callable)(id, (ok: boolean, message: string) => { resolve({ match: found, ok, message }); });
+      (match[this.name('matchLoadMap')] as Callable)(id, (ok: boolean, message: string) => { resolve({ ok, message }); });
     });
+  }
+
+  sayTo(connection: Connection, text: string): void {
+    callQuietly(() => { (connection[this.name('connSay')] as Callable)(announcement(text.replace(LESS_THAN, ESCAPED_LESS_THAN))); });
+  }
+
+  sayToMatch(match: Match, text: string): void {
+    for (const player of this.online()) if (player.match === match) this.sayTo(player.conn, text);
   }
 }
 

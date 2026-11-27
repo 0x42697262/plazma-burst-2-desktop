@@ -27,7 +27,7 @@ import type { MapSourceSetting } from './config.ts';
 import { GameServer } from './game.ts';
 import { clientAddressOf } from './proxy.ts';
 import { enabledServerFeatures } from './features.ts';
-import type { HttpHandler, ServerFeatureContext } from './feature-types.ts';
+import type { HttpHandler, ServerFeatureContext, ServerRuntime, TerminalCommand } from './feature-types.ts';
 import { CATALOG } from '#shared/features/catalog.ts';
 import { CLIENT, MODE } from '#shared/features/keys.ts';
 import { EDITION } from '#shared/editions/constants.ts';
@@ -184,6 +184,12 @@ function main(): void {
   const maps = createMaps({ mapsDir: CLIENT_PATHS.official.mapsDir, unpack: makeUnpacker(args.game), sources: chosenSources.sources });
   const game = new GameServer({ gameDir: args.game, names: found.found, config, log, maps });
   game.onBans = (bans) => { writeBans(dataDir, bans); };
+  const runtime: ServerRuntime = Object.freeze({ game, maps });
+  const featureCommands: Record<string, TerminalCommand> = Object.fromEntries(features.flatMap((feature) => Object.entries(feature.commands?.(featureContext, runtime) ?? {})));
+  for (const feature of features) {
+    const listener = feature.chat?.(featureContext, runtime);
+    if (listener) game.chatListeners.push(listener);
+  }
 
   const tls = config.behind_proxy ? null : certificate(dataDir, log);
   const version = gameVersion(args.game);
@@ -266,7 +272,7 @@ function main(): void {
     }
   };
   const commands: Record<string, (rest: string) => void> = {
-    help: () => { for (const line of TEXT.help) log.info(line); },
+    help: () => { for (const line of [...TEXT.help, ...Object.values(featureCommands).flatMap((command) => command.help)]) log.info(line); },
     status: () => {
       log.info(TEXT.status(game.online().length, game.matches().length));
       listMatches();
@@ -293,6 +299,7 @@ function main(): void {
       void game.setMap(which, id.join(SPACE)).then(({ match, ok, message }) => { log.info(ok ? TEXT.mapChanged(match.title, match.map_id) : TEXT.mapNotChanged(message)); });
     },
     join: printJoin,
+    ...Object.fromEntries(Object.entries(featureCommands).map(([name, command]) => [name, (rest: string) => { command.run(rest); }])),
   };
 
   let closing = false;

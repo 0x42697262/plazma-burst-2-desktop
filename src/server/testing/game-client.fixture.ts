@@ -84,7 +84,7 @@ export function createClient({ gameDir, names, url }: { gameDir: string; names: 
     list: () => ask(['RELIABLE_GET_MATCH_LIST', '{}', 'REPLY', 'match_list']),
     create: (settings) => ask(['RELIABLE_CREATE_MATCH', JSON.stringify(settings), 'REPLY']),
     join: (uid, password = '') => ask(['RELIABLE_JOIN_MATCH', uid, 'REPLY', -1, '1', password]),
-    say: (text) => { net.Event(net.RELIABLE_CHAT, net[names.netNum](CHAT_TO_EVERYONE_NOT_TEAM), text); },
+    say: (text) => { conn[names.netSend](net[names.netChannel], ContextArray.from([net.RELIABLE_CHAT, net[names.netNum](CHAT_TO_EVERYONE_NOT_TEAM), text])); },
     closed: () => !!conn[names.connClosed],
     close() { clearInterval(timer); try { conn.Disconnect(); } catch { return; } },
   };

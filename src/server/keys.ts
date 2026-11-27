@@ -40,6 +40,7 @@ export const GAME_DIR_VARIABLE = 'PB2_GAME_DIR';
 export const MAP_EXTENSIONS: readonly string[] = Object.freeze(['.xml', '.txt', '']);
 export const LOCAL_PREFIX = 'local-';
 export const HIDDEN_FILE = '.';
+export const UPDATING_SUFFIX = '.updating';
 export const PATH_SEPARATORS: readonly string[] = Object.freeze(['/', '\\']);
 export const SITE_MAPS = 'https://www.plazmaburst2.com/pb2/server.php';
 export const SADBURST_MAPS = 'https://sadburst2.com/pb2/server.php';

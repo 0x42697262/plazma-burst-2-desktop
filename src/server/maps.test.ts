@@ -112,3 +112,45 @@ test('map sources: the HTTP source asks server.php for the map, and a refusal is
   assert.equal(await httpMapSource('site', 'https://example.test/', answer(200, '<not_published />')).fetchMap('gone'), null);
   await assert.rejects(httpMapSource('site', 'https://example.test/', answer(403, 'Just a moment...')).fetchMap('a-map'), /403/);
 });
+
+test('map update: downloads a saved map again and replaces the file the server reads, in place', () => withMaps(async (mapsDir) => {
+  const { clock, sleep } = fakeTime();
+  let version = '<player x="1" y="1" />';
+  const site = source('site', async () => version);
+  const maps = createMaps({ mapsDir, unpack: plainUnpack, sources: [site.make(clock)], clock, sleep });
+  await maps.download('the-map');
+  version = '<player x="2" y="2" />';
+  assert.equal(maps.local('the-map'), '<player x="1" y="1" />', 'a saved map is not downloaded again by itself');
+  assert.equal(await maps.update('the-map'), '<player x="2" y="2" />\n');
+  assert.equal(maps.local('the-map'), '<player x="2" y="2" />');
+  fs.renameSync(path.join(mapsDir, 'the-map.xml'), path.join(mapsDir, 'The-Map.txt'));
+  version = '<player x="3" y="3" />';
+  await maps.update('the-map');
+  assert.deepEqual(fs.readdirSync(mapsDir), ['The-Map.txt'], 'the file the server reads is replaced, no second copy, no temporary file left');
+  assert.equal(maps.local('the-map'), '<player x="3" y="3" />');
+}));
+
+test('map update: a failed or empty answer keeps the saved map', () => withMaps(async (mapsDir) => {
+  const { clock, sleep } = fakeTime();
+  fs.writeFileSync(path.join(mapsDir, 'kept.xml'), '<player x="1" y="1" />\n');
+  let answer: () => Promise<string | null> = async () => null;
+  const site = source('site', () => answer());
+  const maps = createMaps({ mapsDir, unpack: plainUnpack, sources: [site.make(clock)], clock, sleep });
+  await assert.rejects(maps.update('kept'), /not published/);
+  answer = async () => { throw new Error('HTTP 500'); };
+  await assert.rejects(maps.update('kept'), /HTTP 500/);
+  answer = async () => '<!DOCTYPE html><html>Just a moment...</html>';
+  await assert.rejects(maps.update('kept'), /no map/);
+  assert.equal(maps.local('kept'), '<player x="1" y="1" />');
+}));
+
+test('map update: local maps and unsafe names are refused, and updates count against the new-map limit', () => withMaps(async (mapsDir) => {
+  const { clock, sleep } = fakeTime();
+  const site = source('site', async () => COMPRESSED_LOOKALIKE);
+  const maps = createMaps({ mapsDir, unpack: plainUnpack, sources: [site.make(clock)], clock, sleep });
+  await assert.rejects(maps.update('local-mine'), /local map/);
+  await assert.rejects(maps.update('../escape'), /not a map ID/);
+  for (let count = 0; count < MAP_LIMITS.newMapsPerMinute; count++) await maps.update(`map-${count}`);
+  await assert.rejects(maps.update('one-more'), /try again in a minute/);
+  assert.equal(site.asked.length, MAP_LIMITS.newMapsPerMinute);
+}));

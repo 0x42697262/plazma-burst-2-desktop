@@ -1,0 +1,20 @@
+export const TEXT = Object.freeze({
+  help: Object.freeze([
+    '  maps update <map ID>    download a saved map again (matches keep their copy until their next map)',
+    '  maps update #<match>    the same for a match\'s map; add "now" to reload the match (or every match playing that map ID)',
+  ]),
+  usage: 'usage: maps update <map ID | #match> [now]',
+  noDownloads: 'This server downloads no maps (download_maps is false), so there is nothing to update',
+  started: (id: string) => `Downloading ${id} again...`,
+  updated: (id: string) => `Updated ${id}`,
+  reloaded: (id: string, titles: readonly string[]) => `Updated ${id}; reloaded ${titles.map((title) => `"${title}"`).join(', ')}`,
+  reloadFailed: (title: string, message: string) => `"${title}" was not reloaded: ${message}`,
+  failed: (id: string, message: string) => `${id} was not updated: ${message}`,
+  terminalNotice: 'This map was updated by the server admin: reloading',
+  chatNotice: (nickname: string) => `This map was updated by ${nickname}: reloading`,
+  chatStarted: (id: string) => `Downloading ${id} again; your match keeps playing`,
+  chatUpdated: (id: string, command: string) => `Updated ${id}. "${command} now" reloads this match`,
+  chatOutsideMatch: (command: string) => `${command} works inside a match: it updates that match's map`,
+  chatFailed: (id: string, message: string) => `${id} was not updated: ${message}`,
+  chatLog: (nickname: string, id: string, now: boolean) => `${nickname} asked to update ${id}${now ? ' and reload the match' : ''}`,
+});

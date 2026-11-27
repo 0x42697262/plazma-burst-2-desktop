@@ -5,18 +5,18 @@ import { stringOf } from '#kernel/text/text-of.ts';
 import { mapBaseName, mapFileName, mapIdOfFile } from '#kernel/maps/file-name.ts';
 import { MAP_LIMITS, MAP_TIMEOUT_MS } from './constants.ts';
 import {
-  BYTE_ORDER_MARK, HIDDEN_FILE, LOCAL_PREFIX, MAP_EXTENSIONS, MAP_REQUEST, NOT_A_MAP, PATH_SEPARATORS, POST_METHOD, TEXT_ENCODING, XML_START,
+  BYTE_ORDER_MARK, HIDDEN_FILE, LOCAL_PREFIX, MAP_EXTENSIONS, MAP_REQUEST, NOT_A_MAP, PATH_SEPARATORS, POST_METHOD, TEXT_ENCODING, UPDATING_SUFFIX, XML_START,
 } from './keys.ts';
 import { MAPS_TEXT as TEXT } from './text.ts';
 
 export type MapAnswer = string | null;
 export type MapSource = Readonly<{ name: string; fetchMap(id: string): Promise<MapAnswer> }>;
-export type Maps = { list(): string[]; local(id: unknown): string | null; download(id: string): Promise<string | null> };
+export type Maps = { list(): string[]; local(id: unknown): string | null; download(id: string): Promise<string | null>; update(id: string): Promise<string> };
 type Fetch = (url: string, init: RequestInit) => Promise<Response>;
 type Clock = () => number;
 type Sleep = (ms: number) => Promise<void>;
 
-function readIn(folder: string, name: string): string | null {
+function fileIn(folder: string, name: string): string | null {
   let files: string[];
   try {
     files = fs.readdirSync(folder);
@@ -26,9 +26,24 @@ function readIn(folder: string, name: string): string | null {
   const wanted = name.toLowerCase();
   for (const extension of MAP_EXTENSIONS) {
     const hit = files.find((file) => file.toLowerCase() === wanted + extension && !file.startsWith(HIDDEN_FILE));
-    if (hit) return fs.readFileSync(path.join(folder, hit), TEXT_ENCODING).replace(BYTE_ORDER_MARK, '').trim();
+    if (hit) return hit;
   }
   return null;
+}
+
+function readIn(folder: string, name: string): string | null {
+  const hit = fileIn(folder, name);
+  return hit === null ? null : fs.readFileSync(path.join(folder, hit), TEXT_ENCODING).replace(BYTE_ORDER_MARK, '').trim();
+}
+
+const isUnsafeName = (name: string): boolean => !name || PATH_SEPARATORS.some((separator) => name.includes(separator)) || name.startsWith(HIDDEN_FILE);
+
+function replaceSaved(mapsDir: string, id: string, xml: string): void {
+  fs.mkdirSync(mapsDir, { recursive: true });
+  const target = fileIn(mapsDir, id) ?? fileIn(mapsDir, mapBaseName(id)) ?? mapFileName(id);
+  const temporary = path.join(mapsDir, HIDDEN_FILE + target + UPDATING_SUFFIX);
+  fs.writeFileSync(temporary, xml);
+  fs.renameSync(temporary, path.join(mapsDir, target));
 }
 
 function mapFiles(folder: string): string[] {
@@ -141,8 +156,7 @@ export function createMaps({ mapsDir, unpack, sources = [], clock = Date.now, sl
     list: () => [...new Set(mapFiles(mapsDir).map(mapIdOfFile))],
     local(id) {
       const wanted = stringOf(id || '').trim();
-      const isUnsafe = !wanted || PATH_SEPARATORS.some((separator) => wanted.includes(separator)) || wanted.startsWith(HIDDEN_FILE);
-      if (isUnsafe) return null;
+      if (isUnsafeName(wanted)) return null;
       const name = wanted.toLowerCase().startsWith(LOCAL_PREFIX) ? wanted.slice(LOCAL_PREFIX.length) : wanted;
       return plain(readIn(mapsDir, name) || readIn(mapsDir, mapBaseName(wanted)));
     },
@@ -158,6 +172,25 @@ export function createMaps({ mapsDir, unpack, sources = [], clock = Date.now, sl
         const xml = await askSources(id);
         if (xml === null) missedAt.set(key, clock());
         else keep(mapsDir, id, xml);
+        return xml;
+      });
+      queue = result.catch(() => undefined);
+      return result;
+    },
+    update(id) {
+      const wanted = id.trim();
+      if (isUnsafeName(wanted)) return Promise.reject(new Error(TEXT.notAMapId(wanted)));
+      if (wanted.toLowerCase().startsWith(LOCAL_PREFIX)) return Promise.reject(new Error(TEXT.localMap(wanted)));
+      try {
+        takeStartSlot();
+      } catch (error) {
+        return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+      }
+      const result = queue.then(async () => {
+        const xml = await askSources(wanted);
+        if (xml === null) throw new Error(TEXT.notPublishedKept(wanted));
+        replaceSaved(mapsDir, wanted, xml);
+        missedAt.delete(wanted.toLowerCase());
         return xml;
       });
       queue = result.catch(() => undefined);

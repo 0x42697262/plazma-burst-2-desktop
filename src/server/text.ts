@@ -32,6 +32,9 @@ export const MAPS_TEXT = Object.freeze({
   notAMap: (name: string) => `${name}: the answer is no map`,
   problemJoin: '; ',
   noSources: 'no map sources (map_sources)',
+  notAMapId: (id: string) => `"${id}" is not a map ID`,
+  localMap: (id: string) => `"${id}" is a local map: it is never downloaded, so there is nothing to update`,
+  notPublishedKept: (id: string) => `"${id}" is not published: the saved copy is kept`,
 });
 
 export const GAME_TEXT = Object.freeze({
@@ -68,6 +71,7 @@ export const GAME_TEXT = Object.freeze({
 export const GAME_LOG = Object.freeze({
   loggedIn: (nickname: string, address: string, admin: boolean) => `+ ${nickname} logged in from ${address}${admin ? ' (admin)' : ''}`,
   chat: (where: string, who: string, text: string) => `[chat]${where} ${who}: ${text}`,
+  chatListenerFailed: (message: string) => `A chat command failed: ${message}`,
   created: (who: string, where: string) => `${who} created match${where}`,
   joined: (who: string, where: string) => `${who} joined${where}`,
   spectating: (who: string, where: string) => `${who} is spectating${where}`,

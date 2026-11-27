@@ -76,6 +76,7 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   define(FEATURE.diagnostics, { capabilities: noNeeds(CAPABILITY.diagnostics) }),
   define(FEATURE.webClient, { availableIn: LOBBY_SERVER_ONLY }),
   define(FEATURE.mapBot, { availableIn: LOBBY_SERVER_ONLY }),
+  define(FEATURE.mapUpdate, { availableIn: LOBBY_SERVER_ONLY }),
 ]);
 
 export const CATALOG_BY_ID: ReadonlyMap<FeatureId, FeatureDefinition> = new Map(CATALOG.map((definition) => [definition.id, definition]));

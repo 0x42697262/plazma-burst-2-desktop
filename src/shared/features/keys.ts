@@ -35,6 +35,7 @@ export const FEATURE = Object.freeze({
   diagnostics: 'diagnostics',
   webClient: 'web_client',
   mapBot: 'map_bot',
+  mapUpdate: 'map_update',
   wire: 'wire',
 });
 export type FeatureId = typeof FEATURE[keyof typeof FEATURE];

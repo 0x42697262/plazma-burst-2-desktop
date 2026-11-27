@@ -38,4 +38,5 @@ export const FEATURE_DESCRIPTION: Readonly<Record<FeatureId, string>> = Object.f
   [FEATURE.clientSadburstErich5]: 'The Sad Burst 2 client for the official servers (--sadburst-erich5)',
   [FEATURE.webClient]: 'The lobby server (npm run server) serves the game to browsers, for this server only',
   [FEATURE.mapBot]: 'The lobby server gets maps from the official lobby, with an account (map_sources: "official_lobby")',
+  [FEATURE.mapUpdate]: 'The lobby server downloads a saved map again on an admin\'s request (maps update in its terminal, -mapupdate in a match)',
 });

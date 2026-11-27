@@ -6,7 +6,8 @@
   "server": {
     "features": [
       "map_bot",
-      "web_client"
+      "web_client",
+      "map_update"
     ]
   },
   "web": {
