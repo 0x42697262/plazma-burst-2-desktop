@@ -13,7 +13,7 @@ with (the page's `l` and `p`). `netsave` shows and drives both sides.
 Capabilities: `network_save.watch` (the wrapper's record, which `rep device` also needs),
 `network_save.status` (`netsave`), `.preview`, `.diff`, `.download`, `.upload`, `.direct`
 (`netsave upload --direct`), `.restore` (`netsave restore`, `netsave backups`), `.fields`
-(`netsave fields`) and `.edit` (`netsave set`, `get`, `del`).
+(`netsave fields`) and `.edit` (`netsave set`, `get`, `del`, `newuid`).
 `networksave` is an alias of `netsave`.
 
 ## Commands
@@ -31,6 +31,7 @@ Capabilities: `network_save.watch` (the wrapper's record, which `rep device` als
 | `netsave backups` | the kept backups, newest first | nothing |
 | `netsave fields [filter]` | every field of the local save with its typed value, sorted, paged like `vars` | nothing |
 | `netsave set\|get\|del <name> [value]` | changes, prints in full, or removes one field (`unset`, `rm` also remove) | the local save |
+| `netsave newuid` | writes a new random device id over `first_uid`, made as the game makes one (four random base-36 numbers joined by `.`, [reputation research](../research/reputation.md#how-the-device-id-is-made)), and prints the old one; backed up like `set` | the local save |
 
 - **Every write asks first.** Without `--yes` a write command only says what it would do: which
   account, how many values, and, for a restore, whether the device id would change (the lobby
@@ -86,4 +87,4 @@ All three routes answer 403 to a remote play tester.
 `PB2_FEATURES=-network_save npm start`: `netsave` is an unknown command, the wrapper neither
 watches nor answers its routes, and `rep device` is off too (it needs `network_save.watch`).
 `PB2_FEATURES=-network_save.direct` refuses `--direct`; `-network_save.restore` removes
-`restore` and `backups`; `-network_save.edit` removes `set`, `get` and `del`.
+`restore` and `backups`; `-network_save.edit` removes `set`, `get`, `del` and `newuid`.

@@ -2,9 +2,8 @@ import { print } from '#console/kernel/ui/log.ts';
 import { COLOR } from '#console/kernel/core/keys.ts';
 import type { CommandContext } from '#console/kernel/commands/registry.ts';
 import { COMMAND, EDIT_VERBS, FIELD_COUNT_ARGS, SUBCOMMAND, WORD_SEPARATOR } from '../../keys.ts';
-import { BACKUP_TEXT } from '../../text.ts';
 import { gameSave } from '../../adapters/game.ts';
-import { backupLocal } from '../../services/backup.ts';
+import { change } from './change.ts';
 import { fieldShown, isStorableText, parseFieldValue, uploadSkipsName, uploadSkipsValue } from '../../domain/fields.ts';
 import { TEXT } from './text.ts';
 
@@ -12,27 +11,6 @@ const VERB_OF: Readonly<Record<string, string>> = Object.freeze({
   [EDIT_VERBS.set]: EDIT_VERBS.set, [EDIT_VERBS.get]: EDIT_VERBS.get,
   [EDIT_VERBS.del]: EDIT_VERBS.del, [EDIT_VERBS.unset]: EDIT_VERBS.del, [EDIT_VERBS.rm]: EDIT_VERBS.del,
 });
-
-let isBackedUp = false;
-
-async function backupOnce(): Promise<boolean> {
-  if (isBackedUp) return true;
-  try {
-    print(TEXT.kept(await backupLocal(gameSave.loginParams().login, BACKUP_TEXT.beforeEdits)), COLOR.hint);
-    isBackedUp = true;
-    return true;
-  } catch (error) {
-    print(TEXT.backupFailed((error as Error).message), COLOR.error);
-    return false;
-  }
-}
-
-async function change(apply: () => void): Promise<boolean> {
-  if (!await backupOnce()) return false;
-  apply();
-  gameSave.saveFlush();
-  return true;
-}
 
 function editField(args: readonly string[], { verb }: CommandContext): Promise<void> | void {
   const action = VERB_OF[String(verb ?? EDIT_VERBS.set).toLowerCase()] ?? EDIT_VERBS.set;

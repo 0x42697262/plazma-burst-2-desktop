@@ -27,3 +27,19 @@ export const TEXT = Object.freeze({
   kept: (id: string) => `Backed up the local save first: ${id}.`,
   backupFailed: (message: string) => `Could not back up the local save first, so nothing was changed: ${message}`,
 });
+
+export const NEW_UID_TEXT = Object.freeze({
+  usage: 'netsave newuid',
+  desc: 'Write a new random device id (first_uid) into the local save',
+  about: [
+    'Makes a device id the way the game does, four random base-36 numbers joined by dots,',
+    'and writes it over first_uid in the local save. The lobby login sends this id and',
+    'picks the reputation entry with it (rep device). Before the first change of a session',
+    'the local save is backed up (netsave backups). The id goes online with the game\'s',
+    'next upload, or now with netsave upload.',
+  ],
+  examples: [['netsave newuid', 'a new id, printed with the old one']],
+  usageError: 'usage: netsave newuid',
+  changed: (uid: string, was: string | null) => `first_uid = ${uid}${was === null ? '  (new)' : `  (was ${was})`}`,
+  next: 'The next lobby login sends it. "netsave upload" puts it in the network save now.',
+});

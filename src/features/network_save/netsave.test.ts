@@ -206,3 +206,13 @@ test('netsave set types the value as the game\'s loader does, backs up once, flu
   assert.match(errorsOf(game.run('netsave set volume NaN'))[0] ?? '', /cannot be stored/);
   assert.match(errorsOf(game.run('netsave get nothing_here'))[0] ?? '', /no field "nothing_here"/);
 });
+
+test('netsave newuid writes a new random device id over first_uid and flushes', async () => {
+  const { lines, data, flushed, game } = await saveGame();
+  const text = (await lines('netsave newuid')).join('\n');
+  assert.match(text, new RegExp(`first_uid = [0-9a-z]+(\\.[0-9a-z]+){3} {2}\\(was ${ID.replaceAll('.', '\\.')}\\)`));
+  assert.match(String(data.first_uid), /^[0-9a-z]+(\.[0-9a-z]+){3}$/);
+  assert.notEqual(data.first_uid, ID);
+  assert.equal(flushed.length, 1);
+  assert.match(errorsOf(game.run('netsave newuid extra'))[0] ?? '', /usage: netsave newuid/);
+});
