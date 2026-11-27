@@ -318,9 +318,8 @@ each on a fresh connection (accounts A, B, C; devices numbered as above):
   yours. The page has no such check (`HUD.js:2123-2133`), and none of the replies in the logs
   refuse one; if the module has it, it compares the two connections' entries.
 
-To see which entry a client is on: `net_log on`, open the multiplayer lobby, then
-`netlog show type:get_match_list` and read the last value of the reply (your numbers), and
-open Relations for that entry's list.
+To see which entry a client is on: open the multiplayer lobby, then `rep` and `rep relations`
+in the dev console ([reputation](../features/reputation.md)).
 
 ## Who can change what
 
