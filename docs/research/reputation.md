@@ -116,6 +116,60 @@ In a match the number arrives per player, in the state message, as
 and the scoreboard's "Rep." column shows it (`scripts/screens/GameScene.js:413-433`,
 drawn at `scripts/frame2.js:20729`).
 
+## Data flow: sent, stored, received
+
+Three places hold something, and only one of them holds reputation.
+
+| Where | What it holds | Reputation? |
+|---|---|---|
+| The install: `localStorage["plazma_burst2"]` | the game's save, a JSON object (`SharedObject.getLocal`, `flash.js:4047-4064`; opened at `frame1.js:457`), with `first_uid`, `first_login`, `first_login_proof` among the other saved values | no: the only reputation-related value saved is the create screen's `min_reputation` |
+| The site: the account's network save | the same save as `name=value;` text, per account (`server.php`, `rq=save` / `rq=load`) | no |
+| The lobby: the account module's `entries` and `relations` | per stats key: login, nickname, reputation, skill, wins, losses; relations between keys with their deltas | **yes**, and only here |
+
+### Sent
+
+| Message | Transport | Carries |
+|---|---|---|
+| Network save upload | `POST https://www.plazmaburst2.com/pb2/server.php` (`frame1.js:160`; Sad Burst 2 for the official servers rewrites the host, [map-cache](../features/map-cache.md)) | form fields `rq=save`, `l` (login), `p` (password or site token), `str` (the save text) (`frame1.js:419-433`) |
+| Network save download | the same URL | `rq=load`, `l`, `p` (`frame1.js:226-279`) |
+| Lobby login | socket.io, `RELIABLE_AUTHENTICATE` | part 7: `"\"<first_uid>\""`, the device id JSON-quoted ([protocol](protocol.md), part 7) |
+| Endorse, report | socket.io, `RELIABLE_ENDORDSE_USER`, `RELIABLE_REPORT_USER` | the target's auth id only ([Report and endorse](#report-and-endorse)) |
+
+**The save text.** Each value as `name=value;`, with `;` written `^1` and `=` written `^2`
+inside names and values (`frame1.js:362-384`). Skipped: names starting `skin_allowed`, values
+`NaN`, `undefined` or empty, and names with `<`, `>`, `{`, `}`, `(`, `)`, a space, `.`, `"` or
+`:`. The upload includes `first_uid`, `first_login` and `first_login_proof`; the Settings
+screen's text export is the only caller that leaves them out (`Settings.js:657`).
+
+**When it is sent.** The download once per start with a login (`main.js:1179` →
+`frame1.js:205-214`), retried up to 10 times on a network error. The upload after every local
+save (`frame2.js:3597` → `frame1.js:394-416`), unless a level is being played with no menu
+open, and only with a login; retried up to 10 times as well.
+
+### Received
+
+| From | Answer | Reputation in it |
+|---|---|---|
+| Network save download | the save text, or `x`, `Error: …` or `.` for "nothing to load" (`frame1.js:293-297`) | none. Every value is written into the local save, the three `first_*` values included (`frame1.js:300-347`); `true`/`false` and numbers are converted back |
+| Lobby login | `["ok", <profile JSON>]` | none ([Requests and replies](#requests-and-replies)) |
+| `GET_MATCH_LIST` | rows plus your own numbers | your entry's `reputation` and `reputation_potential`; the owner's in `match_owner_reputation` |
+| `GET_MATCH_LIST`, `relations` view | relations of your entry's key | each relation's `personal_delta` |
+| Endorse, report | one chat string | none |
+| State message, in a match | `ping~skill*100~reputation` per player | each player's entry's `reputation` (`flash.js:835`, stored on the player at `:1297`) |
+
+### One login, step by step
+
+1. Start with a login: the network save is downloaded and written over the local save,
+   `first_uid` included.
+2. If the local save has no `first_uid`, the first lobby login makes one and saves it
+   (`flash.js:7536-7546`); the save upload then puts it in the account's network save.
+3. The lobby login sends `first_uid`. The account module picks a stats entry and puts it on
+   the connection as `connStats`.
+4. The first `["ok", …]` login answer records `first_login` and `first_login_proof` in the
+   local save if they are not there yet (`flash.js:7520-7531`).
+5. From here every reputation the client sees comes from `connStats` in the lobby's replies,
+   and every endorsement or report it sends is stored against `connStats.key`.
+
 ## Which entry a login gets
 
 Every reputation the lobby uses is read from `connStats`, the stats entry the account module
