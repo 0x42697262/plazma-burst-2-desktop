@@ -144,7 +144,61 @@ screen's text export is the only caller that leaves them out (`Settings.js:657`)
 **When it is sent.** The download once per start with a login (`main.js:1179` →
 `frame1.js:205-214`), retried up to 10 times on a network error. The upload after every local
 save (`frame2.js:3597` → `frame1.js:394-416`), unless a level is being played with no menu
-open, and only with a login; retried up to 10 times as well.
+open, and only with a login; retried up to 10 times as well. The details follow.
+
+### How the network save travels
+
+Both directions go through the game's Flash-style `URLLoader`, a stand-in for Flash's class
+that the page defines on top of `fetch` (`libs/flash.js:3701`):
+
+- **The request.** `fetch(url, { method, headers: { "Content-Type":
+  "application/x-www-form-urlencoded" }, body: new URLSearchParams(data) })` for a `POST`
+  (`libs/flash.js:3807-3813`), sent from the page like any of its own requests. Nothing is
+  signed or encrypted beyond HTTPS.
+- **At most 15 at once.** A 16th waits 200 ms and tries again, unless the game gave up on that
+  group of loads meanwhile (`:3785-3797`).
+- **Any HTTP answer counts as an answer.** `fetch` throws only when nothing came back (no
+  network, refused, reset); then the loader reports `IO_ERROR`. An answer of any status is
+  read as text and reported as `COMPLETE` (`:3754-3766`, `:3815`).
+
+**The upload** (`frame1.js:394-450`):
+
+1. **What starts it.** Every local save, `$IеOАT` (`frame2.js:3434`), writes
+   `localStorage["plazma_burst2"]` (`:3574`) and then calls the upload (`:3597`). The game
+   saves from the campaign, difficulty, equipment and settings screens, the name prompt, the
+   create match screen (its saved settings), quick saves, some trigger actions (`actions.js`), and the two
+   look-alike `JSON` functions when they record the device id or the first login
+   (`flash.js:7529`, `:7544`). There is no delay and no batching: each save is one upload.
+2. **When it is skipped.** During play of a level (`currentLabel` is `gaming`) with none of the
+   game's menus or its pause shown, and `system_non_stop` on (`frame1.js:396-402`); and when
+   the page has no login (`l` empty), with the trace "NetworkSave() canceled. Not logged in."
+   (`:404-416`).
+3. **What it sends.** `rq=save`, `l`, `p` and `str` (`:428-431`). `l` and `p` are the page's
+   start parameters, so the upload always goes to the account the page was loaded with.
+   `str` is the save text, built when the upload starts (`:409`).
+4. **The answer.** Ignored: the `COMPLETE` handler is empty (`:437-440`). The game never
+   learns whether the site took the save.
+5. **Retries.** Only on `IO_ERROR`: up to 10 tries in all (`:407`, `:442-447`). The counter
+   and the text are shared by all uploads, so a save during the retries resets the count to 10
+   and the retries send the newest text.
+6. **Order.** Uploads are not queued: two saves in a row are two requests in flight, and the
+   site gets them in whatever order they arrive.
+
+**The download** (`frame1.js:205-291`):
+
+1. **When.** Once, at start, with a login (`main.js:1179` → `frame1.js:205-214`); before the
+   game's own start-up continues (`main.js:1181-1185`).
+2. **What it sends.** `rq=load`, `l`, `p` (`:236-239`).
+3. **The answer.** Read once (`$оM0Т1`, `:256-259`) and written over the local save
+   (`:293-347`): `x`, an answer starting `Error: `, or `.` change nothing; anything else is
+   split at `;` and `=` and every value is stored, the three `first_*` values included. As any
+   HTTP answer counts, an error page from the site would be read as save text too.
+4. **Retries.** On `IO_ERROR`, up to 10 tries (`:210`, `:272-279`); after the last one the start
+   goes on with the local save as it is (`:287-291`). A text the parser throws on shows
+   "LoadSaveDataFromString decode error" and the start does not go on (`:264-268`).
+
+**What the site does** with an upload or a download (whether it checks the text, keeps
+versions, or merges) is not in the game's files.
 
 ### Received
 
