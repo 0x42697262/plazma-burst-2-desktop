@@ -5,7 +5,7 @@ import { COMMAND, EDIT_VERBS, FIELD_COUNT_ARGS, SUBCOMMAND, WORD_SEPARATOR } fro
 import { BACKUP_TEXT } from '../../text.ts';
 import { gameSave } from '../../adapters/game.ts';
 import { backupLocal } from '../../services/backup.ts';
-import { fieldShown, isProtectedField, isStorableText, parseFieldValue, uploadSkipsName, uploadSkipsValue } from '../../domain/fields.ts';
+import { fieldShown, isStorableText, parseFieldValue, uploadSkipsName, uploadSkipsValue } from '../../domain/fields.ts';
 import { TEXT } from './text.ts';
 
 const VERB_OF: Readonly<Record<string, string>> = Object.freeze({
@@ -47,7 +47,6 @@ function editField(args: readonly string[], { verb }: CommandContext): Promise<v
     print(TEXT.value(name, fieldShown(name, before)));
     return;
   }
-  if (isProtectedField(name)) throw new Error(TEXT.locked(name));
   if (action === EDIT_VERBS.del) {
     if (args.length !== FIELD_COUNT_ARGS.one) throw new Error(TEXT.usageError);
     if (!had) {

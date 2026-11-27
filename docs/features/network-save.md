@@ -50,8 +50,7 @@ Capabilities: `network_save.watch` (the wrapper's record, which `rep device` als
   `'script'`) is kept, with a warning that it stays local. The change is flushed to
   `localStorage` at once and goes online with the next upload; some settings show only after a
   reload. Before the first change of a session the local save is backed up.
-- **Locked:** `first_uid`, `first_login` and `first_login_proof` cannot be set or removed, and
-  there is no command to write a hand-made save text.
+- There is no command to write a hand-made save text.
 - `settings_guard` counts `netsave` as risky: a bind or profile that runs it asks first.
 
 ## The game's functions

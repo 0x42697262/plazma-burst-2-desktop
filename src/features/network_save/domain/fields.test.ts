@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fieldShown, isProtectedField, isStorableText, parseFieldValue, uploadSkipsName, uploadSkipsValue } from './fields.ts';
+import { fieldShown, isStorableText, parseFieldValue, uploadSkipsName, uploadSkipsValue } from './fields.ts';
 
 test('a typed value becomes what the game\'s own loader makes of the same text', () => {
   assert.equal(parseFieldValue('5'), 5);
@@ -20,9 +20,7 @@ test('values are shown with their type, the proof never', () => {
   assert.equal(fieldShown('first_login_proof', 'secret'), '‹hidden›');
 });
 
-test('the device id, the first account and its proof are locked; what the upload skips is known', () => {
-  for (const name of ['first_uid', 'first_login', 'first_login_proof']) assert.equal(isProtectedField(name), true, name);
-  assert.equal(isProtectedField('volume'), false);
+test('what the upload skips is known', () => {
   for (const name of ['skin_allowed_3', 'a b', 'a.b', 'a:b', 'a"b', 'a(b', 'a<b', '']) assert.equal(uploadSkipsName(name), true, name);
   for (const name of ['volume', "it's"]) assert.equal(uploadSkipsName(name), false, name);
   assert.equal(uploadSkipsValue('see document.cookie'), true);

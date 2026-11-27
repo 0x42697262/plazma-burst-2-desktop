@@ -5,8 +5,6 @@ import {
 
 export type FieldValue = string | number | boolean;
 
-const PROTECTED: ReadonlySet<string> = new Set(Object.values(SAVE_KEY));
-
 export const isStorableText = (text: string): boolean => text !== '' && text !== NOT_A_NUMBER && text !== UNDEFINED_TEXT;
 
 export function parseFieldValue(text: string): FieldValue {
@@ -19,8 +17,6 @@ export function fieldShown(name: string, value: unknown): string {
   if (name === SAVE_KEY.proof) return HIDDEN_VALUE;
   return typeof value === 'string' ? JSON.stringify(value) : String(value);
 }
-
-export const isProtectedField = (name: string): boolean => PROTECTED.has(name);
 
 export const uploadSkipsName = (name: string): boolean => !name || name.startsWith(UPLOAD_SKIPPED_START) || UPLOAD_SKIPPED_CHARACTERS.test(name);
 

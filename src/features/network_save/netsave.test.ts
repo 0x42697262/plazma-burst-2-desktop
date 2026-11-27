@@ -203,9 +203,6 @@ test('netsave set types the value as the game\'s loader does, backs up once, flu
   assert.match((await lines('netsave del cmpg_nick')).join('\n'), /Removed cmpg_nick \(was "some player"\)/);
   assert.equal('cmpg_nick' in data, false);
   assert.match((await lines('netsave set skin_allowed_2 1')).join('\n'), /stays in this install's save only/);
-  assert.match(errorsOf(game.run('netsave set first_uid x.y.z.w'))[0] ?? '', /first_uid is locked/);
-  assert.match(errorsOf(game.run('netsave del first_login'))[0] ?? '', /locked/);
   assert.match(errorsOf(game.run('netsave set volume NaN'))[0] ?? '', /cannot be stored/);
   assert.match(errorsOf(game.run('netsave get nothing_here'))[0] ?? '', /no field "nothing_here"/);
-  assert.equal(data.first_uid, ID);
 });
