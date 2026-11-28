@@ -79,3 +79,26 @@ test('rep players lists the reputation and skill the match sends for each player
   game.globals[game.names.mp] = false;
   assert.match(errorsOf(game.run('rep players'))[0] ?? '', /Not in a match/);
 });
+
+test('rep entry tags this login\'s entry by its relations and compares it with the entries seen earlier in this window', async () => {
+  const store = new Map<string, string>();
+  Object.defineProperty(globalThis, 'sessionStorage', { configurable: true, value: { getItem: (key: string) => store.get(key) ?? null, setItem: (key: string, value: string) => { store.set(key, value); } } });
+  const rows = (starts: number[]) => JSON.stringify(starts.map((since) => ({ is_mine: 1, from: 'you', to: 'bob', is_support: 1, personal_delta: 0, since, relative_since: -1, relative_cap_time_until: 1, is_active: true })));
+  let answer = rows([1700000000000, 1700000600000]);
+  const { net, names, printedAfter } = await lobbyGame(() => ['ok', answer, OWN]);
+  net[names.connUser] = { login: 'you', is_vpn: false };
+  const first = await printedAfter('rep entry');
+  assert.ok(first.some((line) => /^Entry [0-9a-f]{8}: 2 relations, the oldest from 2023-11-14T22:13 UTC$/.test(line)), first.join('\n'));
+  assert.ok(first.includes('Reputation 17'));
+  assert.ok(first.includes('Lobby VPN flag: false'));
+  assert.ok(first.some((line) => /no entry yet/.test(line)));
+  const second = await printedAfter('rep entry');
+  assert.ok(second.some((line) => /: the same entry \(reputation 17\)$/.test(line)), second.join('\n'));
+  answer = rows([1600000000000]);
+  const third = await printedAfter('rep entry');
+  assert.ok(third.some((line) => /nothing shared: another entry/.test(line)), third.join('\n'));
+  answer = rows([1700000600000, 1700000900000]);
+  const fourth = await printedAfter('rep entry');
+  assert.ok(fourth.some((line) => /shares 1 of 2 relations: likely the same/.test(line)), fourth.join('\n'));
+  Reflect.deleteProperty(globalThis, 'sessionStorage');
+});

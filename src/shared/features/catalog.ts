@@ -41,6 +41,7 @@ export const CATALOG: readonly FeatureDefinition[] = Object.freeze([
   consoleFeature(FEATURE.playerInfo, { capabilities: noNeeds(CAPABILITY.playerInfo) }),
   consoleFeature(FEATURE.reputation, { availableIn: LOCAL_AND_SERVER, capabilities: {
     [CAPABILITY.reputation.mine]: [], [CAPABILITY.reputation.relations]: [], [CAPABILITY.reputation.players]: [], [CAPABILITY.reputation.device]: [CAPABILITY.networkSave.watch],
+    [CAPABILITY.reputation.entry]: [],
   } }),
   consoleFeature(FEATURE.networkSave, { availableIn: LOCAL_AND_SERVER, capabilities: noNeeds(CAPABILITY.networkSave) }),
   consoleFeature(FEATURE.wire, { capabilities: {

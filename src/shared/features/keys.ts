@@ -71,7 +71,7 @@ export const CAPABILITY = Object.freeze({
   binds: Object.freeze({ bind: 'binds.bind', keyname: 'binds.keyname' }),
   guns: Object.freeze({ list: 'guns.list', give: 'guns.give', drop: 'guns.drop', gun: 'guns.gun', bullets: 'guns.bullets' }),
   playerInfo: Object.freeze({ pos: 'player_info.pos', chars: 'player_info.chars', uid: 'player_info.uid', accounts: 'player_info.accounts' }),
-  reputation: Object.freeze({ mine: 'reputation.mine', relations: 'reputation.relations', players: 'reputation.players', device: 'reputation.device' }),
+  reputation: Object.freeze({ mine: 'reputation.mine', relations: 'reputation.relations', players: 'reputation.players', device: 'reputation.device', entry: 'reputation.entry' }),
   networkSave: Object.freeze({ watch: 'network_save.watch', status: 'network_save.status', preview: 'network_save.preview', diff: 'network_save.diff', download: 'network_save.download', upload: 'network_save.upload', direct: 'network_save.direct', restore: 'network_save.restore', fields: 'network_save.fields', edit: 'network_save.edit' }),
   wire: Object.freeze({ send: 'wire.send', list: 'wire.list', help: 'wire.help', lobby: 'wire.lobby', match: 'wire.match' }),
   health: Object.freeze({ god: 'health.god', hp: 'health.hp', heal: 'health.heal', revive: 'health.revive' }),

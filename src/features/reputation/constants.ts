@@ -4,3 +4,7 @@ export const NAME_WIDTH = 20;
 export const SLOT_WIDTH = 2;
 export const NUMBER_WIDTH = 4;
 export const ANSWER_TIMEOUT_MS = 10000;
+export const HASH = Object.freeze({ offset: 0x811c9dc5, prime: 0x01000193 });
+export const TAG = Object.freeze({ radix: 16, length: 8, pad: '0', separator: ',' });
+export const ISO_MINUTE_LENGTH = 16;
+export const ENTRIES_KEPT = 10;
