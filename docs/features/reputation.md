@@ -6,8 +6,8 @@ Code: `src/features/reputation/`: the lobby request (`adapters/lobby.ts`), readi
 [reputation research](../research/reputation.md).
 
 Capabilities: `reputation.mine` (`rep`), `reputation.relations` (`rep relations`),
-`reputation.players` (`rep players`) and `reputation.device` (`rep device`, which needs
-`network_save.watch`, the wrapper's record of network saves). `reputation` is an alias of `rep`.
+`reputation.players` (`rep players`), `reputation.device` (`rep device`, which needs
+`network_save.watch`, the wrapper's record of network saves) and `reputation.entry` (`rep entry`). `reputation` is an alias of `rep`.
 
 | Command | Shows | From |
 |---|---|---|
@@ -15,6 +15,7 @@ Capabilities: `reputation.mine` (`rep`), `reputation.relations` (`rep relations`
 | `rep relations` | each relation: fit (endorsement) or unfit (report), from → to, its delta, since when and until when | the lobby, asked now |
 | `rep players` | everyone in this match: slot, nickname, reputation, skill | what the match already sent |
 | `rep device` (`rep id`) | the device id lobby logins send, its shape, the save's first account, and how the id got here | the game's save and the wrapper's record |
+| `rep entry` (`rep key`) | a tag for the stats entry this login got, its reputation, the lobby's VPN flag, and how it compares with the entries seen earlier in this window | the lobby, asked now |
 
 ## How it asks the lobby
 
@@ -38,6 +39,23 @@ Nothing else is sent, and nothing is stored.
 Reads the `reputation` and `skill` the match's state message puts on each player
 (`ping~skill*100~reputation`, the Tab scoreboard's Rep. column), slot by slot like
 `accounts`. Bots and map actors have none and show `-`.
+
+## `rep entry`
+
+The lobby picks a stats entry at login, partly from the device id, but never sends the
+entry's key (`connStats.key`) or its own device id (`connDevice`): both stay in the lobby
+server's memory. Each relation in the Relations view carries its fixed start time (`since`,
+`flash.js:2590-2603`), so `rep entry` hashes the sorted start times into an 8-digit tag:
+
+- **The same tag** is the same entry.
+- **A changed tag that shares relations** with an earlier one is most likely the same entry,
+  with relations started or dropped since (an ended relation drops out after a week).
+- **Nothing shared** is another entry. An entry with no relations has no tag.
+
+It also prints the reputation and the `is_vpn` flag from the lobby's login reply. Each run is
+kept in the window's `sessionStorage` (the last 10: time, tag, start times, reputation), which
+survives a reload but not closing the window, so: change the device id, upload it, reload, and
+run `rep entry` again.
 
 ## `rep device`
 
